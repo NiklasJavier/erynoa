@@ -3,6 +3,21 @@ set -e
 
 echo "🚀 Initializing God-Stack DevContainer..."
 
+# Fix GPG permissions if mounted
+if [ -d "$HOME/.gnupg" ]; then
+  echo "🔐 Configuring GPG..."
+  chmod 700 "$HOME/.gnupg" 2>/dev/null || true
+  chmod 600 "$HOME/.gnupg/"* 2>/dev/null || true
+  # Configure GPG to use the TTY
+  export GPG_TTY=$(tty)
+  echo "pinentry-mode loopback" >> "$HOME/.gnupg/gpg.conf" 2>/dev/null || true
+fi
+
+# Fix SSH permissions if mounted
+if [ -d "$HOME/.ssh" ]; then
+  echo "🔑 SSH keys available"
+fi
+
 # Start services via Docker-in-Docker
 echo "🐳 Starting infrastructure services..."
 cd /workspace/.devcontainer

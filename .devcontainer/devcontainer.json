@@ -9,8 +9,15 @@
       "multiUser": true,
       "extraNixConfig": "experimental-features = nix-command flakes"
     },
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/git:1": {}
   },
+
+  // SSH und GPG Agent Forwarding vom Host
+  "mounts": [
+    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,readonly",
+    "source=${localEnv:HOME}/.gnupg,target=/home/vscode/.gnupg,type=bind"
+  ],
 
   "customizations": {
     "vscode": {
