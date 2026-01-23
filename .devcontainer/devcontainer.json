@@ -4,13 +4,24 @@
   "service": "dev",
   "workspaceFolder": "/workspace",
 
-  // Nur docker-in-docker als Feature - Nix, git, direnv sind im Dockerfile
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    // Docker-in-Docker für die Services (DB, Zitadel, etc.)
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    
+    // Die offizielle Nix-Integration (ersetzt deine manuellen Skripte)
+    "ghcr.io/devcontainers/features/nix:1": {
+      "version": "latest",
+      "multiUser": true,
+      "flakeUri": "" // Wir nutzen direnv, daher hier leer lassen
+    },
+    
+    // Installiert direnv und nützliche Tools auf Systemebene
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "configureZshAsDefaultShell": true,
+      "installDirenv": true
+    }
   },
 
-  // SSH vom Host mounten (nur für Keys, nicht für Sockets)
-  // GPG: Keys werden im postCreateCommand kopiert, da .gnupg Unix-Sockets enthält
   "mounts": [
     "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh-host,type=bind,readonly"
   ],
@@ -25,21 +36,19 @@
         "fill-labs.dependi",
         "usernamehw.errorlens",
         "eamodio.gitlens",
-        "mkhl.direnv"
+        "mkhl.direnv",
+        "jnoortheen.nix-ide" // Empfohlen für Nix-Syntax
       ],
       "settings": {
         "rust-analyzer.check.command": "clippy",
-        "rust-analyzer.cargo.features": "all",
-        "editor.formatOnSave": true,
-        "editor.defaultFormatter": "rust-lang.rust-analyzer",
-        "[rust]": {
-          "editor.defaultFormatter": "rust-lang.rust-analyzer"
-        },
+        "nix.enableLanguageServer": true,
+        "nix.serverPath": "nil", // oder "nixd", sollte via flake kommen
         "direnv.restart.automatic": true
       }
     }
   },
 
+  // Ports Konfiguration bleibt gleich...
   "forwardPorts": [3000, 5432, 5433, 6379, 8080],
   "portsAttributes": {
     "3000": { "label": "API", "onAutoForward": "openBrowserOnce" },
@@ -48,27 +57,11 @@
     "6379": { "label": "Redis/Dragonfly", "onAutoForward": "ignore" },
     "8080": { "label": "ZITADEL", "onAutoForward": "notify" }
   },
-  "otherPortsAttributes": {
-    "onAutoForward": "ignore"
-  },
 
   "postCreateCommand": ".devcontainer/setup.sh",
   "postStartCommand": ".devcontainer/init.sh",
-  "postAttachCommand": "cd /workspace && direnv allow . 2>/dev/null; nix develop --command true 2>/dev/null &",
-
-  "containerEnv": {
-    "APP_DATABASE__HOST": "localhost",
-    "APP_DATABASE__PORT": "5432",
-    "APP_DATABASE__USERNAME": "godstack",
-    "APP_DATABASE__PASSWORD": "godstack",
-    "APP_DATABASE__DATABASE": "godstack",
-    "DATABASE_URL": "postgres://godstack:godstack@localhost:5432/godstack",
-    "APP_CACHE__URL": "redis://localhost:6379",
-    "APP_AUTH__ISSUER": "http://localhost:8080",
-    "APP_AUTH__CLIENT_ID": "godstack-backend",
-    "RUST_LOG": "debug",
-    "RUST_BACKTRACE": "1"
-  },
-
+  // Wir verlassen uns auf direnv, keine manuellen nix develop commands im attach nötig
+  // direnv hook wird durch das common-utils Feature gesetzt
+  
   "remoteUser": "vscode"
 }
