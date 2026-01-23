@@ -54,6 +54,7 @@
 
   "postCreateCommand": ".devcontainer/setup.sh",
   "postStartCommand": ".devcontainer/init.sh",
+  "postAttachCommand": "cd /workspace && direnv allow . 2>/dev/null; nix develop --command true 2>/dev/null &",
 
   "containerEnv": {
     "APP_DATABASE__HOST": "localhost",

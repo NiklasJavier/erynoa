@@ -3,6 +3,24 @@ set -e
 
 echo "🚀 Initializing God-Stack DevContainer..."
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Pre-build Nix environment (so it's ready when you open a terminal)
+# ─────────────────────────────────────────────────────────────────────────────
+echo "📦 Preparing Nix development environment..."
+cd /workspace
+
+# Build the dev shell in background - this caches all dependencies
+# Next time you enter the shell it will be instant
+if [ -f "flake.nix" ]; then
+  # Build devShell (downloads/builds all Nix dependencies)
+  nix develop --command true 2>/dev/null && echo "   ✅ Nix environment ready" || echo "   ⚠️  Nix environment will be built on first use"
+  
+  # Ensure direnv is allowed (for automatic activation in terminals)
+  if command -v direnv &> /dev/null; then
+    direnv allow . 2>/dev/null || true
+  fi
+fi
+
 # Setup GPG from host keys
 if [ -d "$HOME/.gnupg-host" ]; then
   echo "🔐 Configuring GPG..."
