@@ -1,4 +1,4 @@
-# Setup Guide (macOS Installation)
+# Setup Guide (macOS)
 
 Diese Anleitung beschreibt alle Schritte, um das **GS-Backend** Projekt auf einem frischen macOS-System einzurichten.
 
