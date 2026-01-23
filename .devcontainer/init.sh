@@ -74,9 +74,79 @@ AGENTEOF
   done
 fi
 
-# Fix SSH permissions if mounted
+# Fix SSH permissions and configure Git SSH signing
 if [ -d "$HOME/.ssh" ]; then
-  echo "🔑 SSH keys available"
+  echo "🔑 Configuring SSH..."
+  
+  # Fix permissions for SSH keys (they might be read-only from mount)
+  # Note: We work with the mounted keys as-is since they're read-only
+  
+  # Configure Git SSH signing - translate host paths to container paths
+  # Check if Git is configured to use SSH signing with a host-specific path
+  CURRENT_SIGNING_KEY=$(git config --global user.signingkey 2>/dev/null || true)
+  GPG_FORMAT=$(git config --global gpg.format 2>/dev/null || true)
+  
+  if [ "$GPG_FORMAT" = "ssh" ] && [ -n "$CURRENT_SIGNING_KEY" ]; then
+    # Extract just the filename from the host path
+    KEY_BASENAME=$(basename "$CURRENT_SIGNING_KEY")
+    CONTAINER_KEY_PATH="$HOME/.ssh/$KEY_BASENAME"
+    
+    # Check if the key exists in the container's .ssh directory
+    if [ -f "$CONTAINER_KEY_PATH" ]; then
+      echo "   Updating SSH signing key path: $KEY_BASENAME"
+      git config --global user.signingkey "$CONTAINER_KEY_PATH"
+    else
+      # Try to find any signing key
+      for key in "$HOME/.ssh/id_"*"_signing.pub" "$HOME/.ssh/id_"*"_signing"; do
+        if [ -f "$key" ]; then
+          echo "   Found signing key: $(basename "$key")"
+          git config --global user.signingkey "$key"
+          break
+        fi
+      done
+    fi
+    
+    # For SSH signing, Git needs the ssh-keygen binary to sign
+    # The private key must be accessible - check if agent has keys or if we need to add them
+    SIGNING_KEY=$(git config --global user.signingkey 2>/dev/null || true)
+    if [ -n "$SIGNING_KEY" ]; then
+      # Get the private key path (remove .pub if present)
+      PRIVATE_KEY="${SIGNING_KEY%.pub}"
+      
+      # Check if SSH agent has identities, if not try to add the signing key
+      if ! ssh-add -l >/dev/null 2>&1; then
+        # Start ssh-agent if not running
+        if [ -z "$SSH_AUTH_SOCK" ]; then
+          eval "$(ssh-agent -s)" >/dev/null 2>&1
+          echo "   Started SSH agent"
+        fi
+        
+        # Try to add the signing key (this will prompt for passphrase if needed)
+        if [ -f "$PRIVATE_KEY" ]; then
+          # Note: This may fail silently if key requires passphrase
+          # User will be prompted during commit if needed
+          ssh-add "$PRIVATE_KEY" 2>/dev/null || echo "   Note: SSH signing key may need passphrase during commit"
+        fi
+      fi
+    fi
+  fi
+  
+  # Fix allowed_signers file path if configured
+  CURRENT_ALLOWED_SIGNERS=$(git config --global gpg.ssh.allowedSignersFile 2>/dev/null || true)
+  if [ -n "$CURRENT_ALLOWED_SIGNERS" ]; then
+    SIGNERS_BASENAME=$(basename "$CURRENT_ALLOWED_SIGNERS")
+    CONTAINER_SIGNERS_PATH="$HOME/.ssh/$SIGNERS_BASENAME"
+    
+    if [ -f "$CONTAINER_SIGNERS_PATH" ]; then
+      echo "   Updating allowed_signers path: $SIGNERS_BASENAME"
+      git config --global gpg.ssh.allowedSignersFile "$CONTAINER_SIGNERS_PATH"
+    fi
+  fi
+  
+  # Show current signing configuration
+  echo "   SSH signing configured:"
+  echo "     Key: $(git config --global user.signingkey 2>/dev/null || echo 'not set')"
+  echo "     Format: $(git config --global gpg.format 2>/dev/null || echo 'not set')"
 fi
 
 # Start services via Docker-in-Docker
