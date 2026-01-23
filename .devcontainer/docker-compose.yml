@@ -2,11 +2,17 @@ name: godstack-dev
 
 services:
   dev:
-    image: mcr.microsoft.com/devcontainers/base:ubuntu
+    build:
+      context: .
+      dockerfile: Dockerfile
     volumes:
       - ..:/workspace:cached
       - nix-store:/nix
+      - apt-cache:/var/cache/apt
+      - apt-lib:/var/lib/apt
     command: sleep infinity
 
 volumes:
   nix-store:
+  apt-cache:
+  apt-lib:

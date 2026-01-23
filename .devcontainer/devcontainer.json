@@ -4,13 +4,9 @@
   "service": "dev",
   "workspaceFolder": "/workspace",
 
+  // Nur docker-in-docker als Feature - Nix, git, direnv sind im Dockerfile
   "features": {
-    "ghcr.io/devcontainers/features/nix:1": {
-      "multiUser": true,
-      "extraNixConfig": "experimental-features = nix-command flakes"
-    },
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
-    "ghcr.io/devcontainers/features/git:1": {}
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
 
   // SSH vom Host mounten (nur für Keys, nicht für Sockets)

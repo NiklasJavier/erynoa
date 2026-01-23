@@ -34,6 +34,12 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 echo "📦 Configuring direnv for automatic Nix environment..."
 
+# Ensure direnv is installed (fallback if feature fails)
+if ! command -v direnv &> /dev/null; then
+  echo "   Installing direnv..."
+  sudo apt-get update -qq && sudo apt-get install -y -qq direnv
+fi
+
 # Allow direnv in workspace
 cd /workspace
 direnv allow . 2>/dev/null || true
