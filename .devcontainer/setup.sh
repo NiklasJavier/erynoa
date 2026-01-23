@@ -5,6 +5,31 @@ set -e
 echo "🔧 One-time DevContainer setup..."
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 0. Setup SSH keys from host
+# ─────────────────────────────────────────────────────────────────────────────
+echo "🔑 Setting up SSH keys..."
+
+if [ -d "$HOME/.ssh-host" ]; then
+  mkdir -p "$HOME/.ssh"
+  # Copy SSH keys and config (exclude sockets)
+  find "$HOME/.ssh-host" -maxdepth 1 -type f \( -name "*.pub" -o -name "id_*" -o -name "config" -o -name "known_hosts*" -o -name "allowed_signers" \) -exec cp {} "$HOME/.ssh/" \; 2>/dev/null || true
+  # Copy directories (like priv-key, pub-keys)
+  for dir in priv-key pub-keys; do
+    if [ -d "$HOME/.ssh-host/$dir" ]; then
+      cp -r "$HOME/.ssh-host/$dir" "$HOME/.ssh/" 2>/dev/null || true
+    fi
+  done
+  # Set correct permissions
+  chmod 700 "$HOME/.ssh"
+  find "$HOME/.ssh" -type f -name "id_*" ! -name "*.pub" -exec chmod 600 {} \; 2>/dev/null || true
+  find "$HOME/.ssh" -type f -name "*.pub" -exec chmod 644 {} \; 2>/dev/null || true
+  [ -f "$HOME/.ssh/config" ] && chmod 600 "$HOME/.ssh/config"
+  echo "   SSH keys configured"
+else
+  echo "   ⚠️ No SSH keys found from host"
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 1. Setup direnv for automatic Nix environment loading
 # ─────────────────────────────────────────────────────────────────────────────
 echo "📦 Configuring direnv for automatic Nix environment..."
