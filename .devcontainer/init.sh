@@ -8,9 +8,17 @@ echo "🚀 Initializing God-Stack DevContainer..."
 # ─────────────────────────────────────────────────────────────────────────────
 echo "❄️  Starting Nix daemon..."
 if ! pgrep -x "nix-daemon" > /dev/null; then
-  sudo /nix/var/nix/profiles/default/bin/nix-daemon &
+  # Versuche, den Daemon aus dem Nix-Store zu starten, falls vorhanden
+  if [ -x "/nix/store/ca3zn1rq49w5xj0l9an9ksdxhay2xbxl-nix-2.33.1/bin/nix-daemon" ]; then
+    sudo /nix/store/ca3zn1rq49w5xj0l9an9ksdxhay2xbxl-nix-2.33.1/bin/nix-daemon &
+  elif [ -x "/nix/var/nix/profiles/default/bin/nix-daemon" ]; then
+    sudo /nix/var/nix/profiles/default/bin/nix-daemon &
+  else
+    echo "   ❌ nix-daemon nicht gefunden! Bitte prüfe die Nix-Installation."
+    exit 1
+  fi
   sleep 1
-  echo "   ✅ Nix daemon started"
+  echo "   ✅ Nix daemon gestartet"
 else
   echo "   ✅ Nix daemon already running"
 fi
