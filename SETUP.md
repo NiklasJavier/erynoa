@@ -172,8 +172,18 @@ just dev
 
 1. VS Code öffnen: `code .`
 2. `Cmd+Shift+P` → "Dev Containers: Reopen in Container"
-3. Warten bis der Container bereit ist
-4. Terminal öffnen: `just dev`
+3. Warten bis der Container bereit ist (Nix-Umgebung wird automatisch geladen)
+4. Terminal öffnen → alle Tools sind sofort verfügbar:
+   - `just dev` - Dev-Server starten
+   - `just db-migrate` - Migrationen ausführen
+   - `cargo check` - Projekt prüfen
+
+**Features des DevContainers:**
+- ✅ **Automatische Nix-Umgebung** via `direnv` - alle Tools (cargo, just, sqlx, etc.) sind direkt verfügbar
+- ✅ **Automatische `.env`** - wird aus `.env.example` erstellt falls nicht vorhanden
+- ✅ **Docker-in-Docker** - Services (DB, Cache, ZITADEL) laufen automatisch
+- ✅ **Migrationen** - werden beim Start automatisch ausgeführt
+- ✅ **SSH/GPG-Keys** - vom Host übernommen für Git-Signing
 
 ---
 

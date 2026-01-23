@@ -10,7 +10,8 @@
       "extraNixConfig": "experimental-features = nix-command flakes"
     },
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
-    "ghcr.io/devcontainers/features/git:1": {}
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/direnv:1": {}
   },
 
   // SSH und GPG vom Host (Keys werden kopiert, nicht gemountet für GPG-Agent-Kompatibilität)
@@ -28,7 +29,8 @@
         "vadimcn.vscode-lldb",
         "fill-labs.dependi",
         "usernamehw.errorlens",
-        "eamodio.gitlens"
+        "eamodio.gitlens",
+        "mkhl.direnv"
       ],
       "settings": {
         "rust-analyzer.check.command": "clippy",
@@ -37,7 +39,8 @@
         "editor.defaultFormatter": "rust-lang.rust-analyzer",
         "[rust]": {
           "editor.defaultFormatter": "rust-lang.rust-analyzer"
-        }
+        },
+        "direnv.restart.automatic": true
       }
     }
   },
@@ -54,18 +57,19 @@
     "onAutoForward": "ignore"
   },
 
-  "postCreateCommand": "nix develop --command bash -c 'echo Nix shell ready'",
+  "postCreateCommand": ".devcontainer/setup.sh",
   "postStartCommand": ".devcontainer/init.sh",
 
   "containerEnv": {
     "APP_DATABASE__HOST": "localhost",
     "APP_DATABASE__PORT": "5432",
-    "APP_DATABASE__USER": "godstack",
+    "APP_DATABASE__USERNAME": "godstack",
     "APP_DATABASE__PASSWORD": "godstack",
-    "APP_DATABASE__NAME": "godstack",
+    "APP_DATABASE__DATABASE": "godstack",
+    "DATABASE_URL": "postgres://godstack:godstack@localhost:5432/godstack",
     "APP_CACHE__URL": "redis://localhost:6379",
     "APP_AUTH__ISSUER": "http://localhost:8080",
-    "APP_AUTH__AUDIENCE": "godstack-api",
+    "APP_AUTH__CLIENT_ID": "godstack-backend",
     "RUST_LOG": "debug",
     "RUST_BACKTRACE": "1"
   },

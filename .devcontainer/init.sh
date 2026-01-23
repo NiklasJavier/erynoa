@@ -171,7 +171,16 @@ echo "✅ Cache ready!"
 # Enter nix shell and run migrations
 echo "📦 Running database migrations..."
 cd /workspace
-nix develop --command sqlx migrate run 2>/dev/null || echo "⚠️  Migrations skipped (run manually with: just db-migrate)"
+
+# Ensure DATABASE_URL is set (from containerEnv or .env)
+if [ -z "$DATABASE_URL" ]; then
+  export DATABASE_URL="postgres://godstack:godstack@localhost:5432/godstack"
+fi
+
+# Run migrations using nix develop
+nix develop --command bash -c "sqlx database create 2>/dev/null || true; sqlx migrate run" 2>/dev/null || {
+  echo "⚠️  Migrations skipped (run manually with: just db-migrate)"
+}
 
 echo ""
 echo "✅ DevContainer ready!"
