@@ -26,12 +26,26 @@ pub struct JwksCache {
 impl JwksCache {
     /// Erstellt einen neuen JWKS Cache
     pub async fn new(issuer: &str, cache_duration_secs: u64) -> Result<Self> {
-        let jwks_url = format!("{}/.well-known/jwks.json", issuer.trim_end_matches('/'));
-        
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(10))
             .build()
             .context("Failed to create HTTP client")?;
+
+        // Fetch JWKS URL from OpenID Configuration
+        let openid_config_url = format!("{}/.well-known/openid-configuration", issuer.trim_end_matches('/'));
+        let openid_config: serde_json::Value = client
+            .get(&openid_config_url)
+            .send()
+            .await
+            .context("Failed to fetch OpenID configuration")?
+            .json()
+            .await
+            .context("Failed to parse OpenID configuration")?;
+
+        let jwks_url = openid_config["jwks_uri"]
+            .as_str()
+            .context("jwks_uri not found in OpenID configuration")?
+            .to_string();
 
         let cache = Self {
             keys: Arc::new(RwLock::new(HashMap::new())),

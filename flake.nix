@@ -85,7 +85,15 @@
             just
             sqlx-cli
             docker-compose
+            # Build dependencies for jemalloc
+            autoconf
+            automake
+            libtool
+            jemalloc
           ];
+
+          # Help jemalloc build find the correct glibc headers
+          JEMALLOC_SYS_WITH_MALLOC_CONF = "background_thread:true";
           
           RUST_LOG = "debug";
           RUST_BACKTRACE = "1";

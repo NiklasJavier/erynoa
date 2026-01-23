@@ -61,9 +61,13 @@ secrecy = { version = "0.8", features = ["serde"] }
 once_cell = "1"
 parking_lot = "0.12"
 
-# Memory Allocator (Jemalloc)
-[target.'cfg(not(target_env = "msvc"))'.dependencies]
+# Memory Allocator (Jemalloc) - optional, disabled in dev by default due to Nix build issues
+[target.'cfg(all(not(target_env = "msvc"), feature = "jemalloc"))'.dependencies]
 tikv-jemallocator = { version = "0.6", features = ["background_threads"] }
+
+[features]
+default = []
+jemalloc = []
 
 [dev-dependencies]
 tokio-test = "0.4"

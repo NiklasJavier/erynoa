@@ -13,10 +13,10 @@
     "ghcr.io/devcontainers/features/git:1": {}
   },
 
-  // SSH und GPG Agent Forwarding vom Host
+  // SSH und GPG vom Host (Keys werden kopiert, nicht gemountet für GPG-Agent-Kompatibilität)
   "mounts": [
     "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,readonly",
-    "source=${localEnv:HOME}/.gnupg,target=/home/vscode/.gnupg,type=bind"
+    "source=${localEnv:HOME}/.gnupg,target=/home/vscode/.gnupg-host,type=bind,readonly"
   ],
 
   "customizations": {
@@ -44,11 +44,14 @@
 
   "forwardPorts": [3000, 5432, 5433, 6379, 8080],
   "portsAttributes": {
-    "3000": { "label": "API", "onAutoForward": "notify" },
-    "5432": { "label": "PostgreSQL (App)", "onAutoForward": "silent" },
-    "5433": { "label": "PostgreSQL (ZITADEL)", "onAutoForward": "silent" },
-    "6379": { "label": "Redis/Dragonfly", "onAutoForward": "silent" },
+    "3000": { "label": "API", "onAutoForward": "openBrowserOnce" },
+    "5432": { "label": "PostgreSQL (App)", "onAutoForward": "ignore" },
+    "5433": { "label": "PostgreSQL (ZITADEL)", "onAutoForward": "ignore" },
+    "6379": { "label": "Redis/Dragonfly", "onAutoForward": "ignore" },
     "8080": { "label": "ZITADEL", "onAutoForward": "notify" }
+  },
+  "otherPortsAttributes": {
+    "onAutoForward": "ignore"
   },
 
   "postCreateCommand": "nix develop --command bash -c 'echo Nix shell ready'",
