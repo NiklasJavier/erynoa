@@ -4,81 +4,58 @@ set -e
 echo "🚀 Initializing God-Stack DevContainer..."
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Start Nix daemon (required for multi-user Nix in devcontainer)
+# 1. Nix Environment Pre-flight
 # ─────────────────────────────────────────────────────────────────────────────
-echo "❄️  Starting Nix daemon..."
-if ! pgrep -x "nix-daemon" > /dev/null; then
-  # Versuche, den Daemon aus dem Nix-Store zu starten, falls vorhanden
-  if [ -x "/nix/store/ca3zn1rq49w5xj0l9an9ksdxhay2xbxl-nix-2.33.1/bin/nix-daemon" ]; then
-    sudo /nix/store/ca3zn1rq49w5xj0l9an9ksdxhay2xbxl-nix-2.33.1/bin/nix-daemon &
-  elif [ -x "/nix/var/nix/profiles/default/bin/nix-daemon" ]; then
-    sudo /nix/var/nix/profiles/default/bin/nix-daemon &
-  else
-    echo "   ❌ nix-daemon nicht gefunden! Bitte prüfe die Nix-Installation."
-    exit 1
-  fi
-  sleep 1
-  echo "   ✅ Nix daemon gestartet"
-else
-  echo "   ✅ Nix daemon already running"
-fi
+# Hinweis: Der Nix-Daemon läuft bereits durch das DevContainer Feature.
+echo "📦 Checking Nix development environment..."
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Pre-build Nix environment (so it's ready when you open a terminal)
-# ─────────────────────────────────────────────────────────────────────────────
-echo "📦 Preparing Nix development environment..."
 cd /workspace
 
-# Build the dev shell in background - this caches all dependencies
-# Next time you enter the shell it will be instant
 if [ -f "flake.nix" ]; then
-  # Build devShell (downloads/builds all Nix dependencies)
-  /nix/var/nix/profiles/default/bin/nix develop --command true 2>/dev/null && echo "   ✅ Nix environment ready" || echo "   ⚠️  Nix environment will be built on first use"
+  # Pre-warm: Baut die Umgebung einmal, damit Caches gefüllt sind.
+  # Wir unterdrücken den Output, außer es gibt Fehler.
+  /nix/var/nix/profiles/default/bin/nix develop --command true 2>/dev/null && echo "   ✅ Nix environment ready" || echo "   ⚠️  Nix environment build failed or will happen on first use"
   
-  # Ensure direnv is allowed (for automatic activation in terminals)
+  # Direnv aktivieren
   if command -v direnv &> /dev/null; then
     direnv allow . 2>/dev/null || true
   fi
 fi
 
-# Setup GPG from host keys
+# ─────────────────────────────────────────────────────────────────────────────
+# 2. GPG Setup (Keys vom Host importieren)
+# ─────────────────────────────────────────────────────────────────────────────
+# Wir kopieren die Keys, da Socket-Forwarding oft instabil ist bei GPG.
 if [ -d "$HOME/.gnupg-host" ]; then
   echo "🔐 Configuring GPG..."
   
-  # Create fresh .gnupg directory if needed
+  # Verzeichnis vorbereiten
   mkdir -p "$HOME/.gnupg"
   chmod 700 "$HOME/.gnupg"
   
-  # Copy keys from host (not sockets)
-  for f in "$HOME/.gnupg-host/"*.gpg "$HOME/.gnupg-host/"*.kbx "$HOME/.gnupg-host/private-keys-v1.d" "$HOME/.gnupg-host/trustdb.gpg" "$HOME/.gnupg-host/pubring.kbx"; do
-    if [ -e "$f" ]; then
-      cp -r "$f" "$HOME/.gnupg/" 2>/dev/null || true
-    fi
-  done
+  # Keys kopieren (Fehler ignorieren, falls keine da sind)
+  cp -r "$HOME/.gnupg-host/"*.gpg "$HOME/.gnupg/" 2>/dev/null || true
+  cp -r "$HOME/.gnupg-host/"*.kbx "$HOME/.gnupg/" 2>/dev/null || true
+  cp -r "$HOME/.gnupg-host/trustdb.gpg" "$HOME/.gnupg/" 2>/dev/null || true
   
-  # Copy private keys directory
+  # Private Keys (Unterordner)
   if [ -d "$HOME/.gnupg-host/private-keys-v1.d" ]; then
     mkdir -p "$HOME/.gnupg/private-keys-v1.d"
     cp -r "$HOME/.gnupg-host/private-keys-v1.d/"* "$HOME/.gnupg/private-keys-v1.d/" 2>/dev/null || true
   fi
   
-  # Copy keyboxd data if using modern GPG
-  if [ -d "$HOME/.gnupg-host/public-keys.d" ]; then
-    cp -r "$HOME/.gnupg-host/public-keys.d" "$HOME/.gnupg/" 2>/dev/null || true
-  fi
-  
-  # Fix permissions
-  chmod 700 "$HOME/.gnupg" 2>/dev/null || true
+  # Berechtigungen korrigieren (GPG ist hier sehr strikt)
+  chmod 700 "$HOME/.gnupg"
   find "$HOME/.gnupg" -type f -exec chmod 600 {} \; 2>/dev/null || true
   find "$HOME/.gnupg" -type d -exec chmod 700 {} \; 2>/dev/null || true
 fi
 
-# Configure GPG for container use (works for both new and existing .gnupg)
+# GPG Konfiguration für Container-Nutzung schreiben
 if [ -d "$HOME/.gnupg" ]; then
-  # Remove host-specific sockets and locks
+  # Alte Locks/Sockets löschen
   rm -f "$HOME/.gnupg/S."* "$HOME/.gnupg/"*.lock 2>/dev/null || true
   
-  # Write Linux-compatible config (overwrite macOS-specific settings)
+  # Config für VS Code Terminal optimieren (Pinentry Loopback)
   cat > "$HOME/.gnupg/gpg.conf" << 'GPGEOF'
 use-agent
 pinentry-mode loopback
@@ -93,148 +70,85 @@ max-cache-ttl 34560000
 disable-scdaemon
 AGENTEOF
 
-  # Restart GPG agent
+  # Agent neu starten
   gpgconf --kill all 2>/dev/null || true
   gpg-agent --daemon 2>/dev/null || true
   
-  # Configure Git to use GPG
+  # Git Config global setzen
   git config --global gpg.program gpg
   
-  # Show available keys
-  echo "   Available GPG keys:"
-  gpg --list-secret-keys --keyid-format=long 2>/dev/null | grep -E "sec|uid" | head -8 || echo "   No keys found"
-  
-  # Add GPG_TTY to shell profiles for interactive use
-  for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
-    if [ -f "$rc" ]; then
-      grep -q "GPG_TTY" "$rc" || echo 'export GPG_TTY=$(tty)' >> "$rc"
-    fi
-  done
+  echo "   ✅ GPG configured"
 fi
 
-# Fix SSH permissions and configure Git SSH signing
+# ─────────────────────────────────────────────────────────────────────────────
+# 3. SSH Setup (Signing & Auth)
+# ─────────────────────────────────────────────────────────────────────────────
 if [ -d "$HOME/.ssh" ]; then
   echo "🔑 Configuring SSH..."
   
-  # Fix permissions for SSH keys (they might be read-only from mount)
-  # Note: We work with the mounted keys as-is since they're read-only
-  
-  # Configure Git SSH signing - translate host paths to container paths
-  # Check if Git is configured to use SSH signing with a host-specific path
+  # Signing Key für Git übernehmen, falls auf dem Host konfiguriert
   CURRENT_SIGNING_KEY=$(git config --global user.signingkey 2>/dev/null || true)
   GPG_FORMAT=$(git config --global gpg.format 2>/dev/null || true)
   
   if [ "$GPG_FORMAT" = "ssh" ] && [ -n "$CURRENT_SIGNING_KEY" ]; then
-    # Extract just the filename from the host path
     KEY_BASENAME=$(basename "$CURRENT_SIGNING_KEY")
     CONTAINER_KEY_PATH="$HOME/.ssh/$KEY_BASENAME"
     
-    # Check if the key exists in the container's .ssh directory
     if [ -f "$CONTAINER_KEY_PATH" ]; then
-      echo "   Updating SSH signing key path: $KEY_BASENAME"
       git config --global user.signingkey "$CONTAINER_KEY_PATH"
-    else
-      # Try to find any signing key
-      for key in "$HOME/.ssh/id_"*"_signing.pub" "$HOME/.ssh/id_"*"_signing"; do
-        if [ -f "$key" ]; then
-          echo "   Found signing key: $(basename "$key")"
-          git config --global user.signingkey "$key"
-          break
-        fi
-      done
-    fi
-    
-    # For SSH signing, Git needs the ssh-keygen binary to sign
-    # The private key must be accessible - check if agent has keys or if we need to add them
-    SIGNING_KEY=$(git config --global user.signingkey 2>/dev/null || true)
-    if [ -n "$SIGNING_KEY" ]; then
-      # Get the private key path (remove .pub if present)
-      PRIVATE_KEY="${SIGNING_KEY%.pub}"
-      
-      # Check if SSH agent has identities, if not try to add the signing key
-      if ! ssh-add -l >/dev/null 2>&1; then
-        # Start ssh-agent if not running
-        if [ -z "$SSH_AUTH_SOCK" ]; then
-          eval "$(ssh-agent -s)" >/dev/null 2>&1
-          echo "   Started SSH agent"
-        fi
-        
-        # Try to add the signing key (this will prompt for passphrase if needed)
-        if [ -f "$PRIVATE_KEY" ]; then
-          # Note: This may fail silently if key requires passphrase
-          # User will be prompted during commit if needed
-          ssh-add "$PRIVATE_KEY" 2>/dev/null || echo "   Note: SSH signing key may need passphrase during commit"
-        fi
-      fi
+      echo "   ✅ SSH signing key linked: $KEY_BASENAME"
     fi
   fi
-  
-  # Fix allowed_signers file path if configured
+
+  # Allowed Signers fixen
   CURRENT_ALLOWED_SIGNERS=$(git config --global gpg.ssh.allowedSignersFile 2>/dev/null || true)
   if [ -n "$CURRENT_ALLOWED_SIGNERS" ]; then
     SIGNERS_BASENAME=$(basename "$CURRENT_ALLOWED_SIGNERS")
     CONTAINER_SIGNERS_PATH="$HOME/.ssh/$SIGNERS_BASENAME"
-    
     if [ -f "$CONTAINER_SIGNERS_PATH" ]; then
-      echo "   Updating allowed_signers path: $SIGNERS_BASENAME"
       git config --global gpg.ssh.allowedSignersFile "$CONTAINER_SIGNERS_PATH"
     fi
   fi
-  
-  # Show current signing configuration
-  echo "   SSH signing configured:"
-  echo "     Key: $(git config --global user.signingkey 2>/dev/null || echo 'not set')"
-  echo "     Format: $(git config --global gpg.format 2>/dev/null || echo 'not set')"
 fi
 
-# Start services via Docker-in-Docker
+# ─────────────────────────────────────────────────────────────────────────────
+# 4. Infrastructure Services (Docker-in-Docker)
+# ─────────────────────────────────────────────────────────────────────────────
 echo "🐳 Starting infrastructure services..."
 cd /workspace/.devcontainer
+
+# Services starten
 docker compose -f services.yml up -d
 
-# Wait for database to be ready
+# Warten auf Datenbank
 echo "⏳ Waiting for database..."
 until docker compose -f services.yml exec -T db pg_isready -U godstack >/dev/null 2>&1; do
-  sleep 2
+  sleep 1
 done
-echo "✅ Database ready!"
+echo "   ✅ Database ready!"
 
-# Wait for cache to be ready
+# Warten auf Cache
 echo "⏳ Waiting for cache..."
 until docker compose -f services.yml exec -T cache redis-cli ping >/dev/null 2>&1; do
-  sleep 2
+  sleep 1
 done
-echo "✅ Cache ready!"
+echo "   ✅ Cache ready!"
 
-# Enter nix shell and run migrations
+# ─────────────────────────────────────────────────────────────────────────────
+# 5. Migrations
+# ─────────────────────────────────────────────────────────────────────────────
 echo "📦 Running database migrations..."
 cd /workspace
 
-# Ensure DATABASE_URL is set (from containerEnv or .env)
+# DATABASE_URL setzen, falls leer
 if [ -z "$DATABASE_URL" ]; then
   export DATABASE_URL="postgres://godstack:godstack@localhost:5432/godstack"
 fi
 
-# Run migrations using nix develop
+# Wir nutzen 'nix develop', um sicherzustellen, dass sqlx-cli verfügbar ist
 nix develop --command bash -c "sqlx database create 2>/dev/null || true; sqlx migrate run" 2>/dev/null || {
-  echo "⚠️  Migrations skipped (run manually with: just db-migrate)"
+  echo "   ⚠️  Migrations skipped (check logs or run 'just db-migrate')"
 }
 
 echo ""
-echo "✅ DevContainer ready!"
-echo ""
-echo "📍 Services (running in Docker-in-Docker):"
-echo "   Database:  localhost:5432 (OrioleDB)"
-echo "   Cache:     localhost:6379 (DragonflyDB)"
-echo "   Auth:      http://localhost:8080 (ZITADEL)"
-echo ""
-echo "🛠️  Commands:"
-echo "   just dev        - Start dev server"
-echo "   just test       - Run tests"
-echo "   just db-migrate - Run migrations"
-echo "   just services   - Show service status"
-echo ""
-echo "🔐 ZITADEL Setup:"
-echo "   Open http://localhost:8080"
-echo "   Default admin: zitadel-admin@zitadel.localhost"
-echo ""
+echo "✅ DevContainer initialization complete!"
