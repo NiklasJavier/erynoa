@@ -1,0 +1,8 @@
+# Production
+
+[application]
+environment = "production"
+
+[database]
+max_connections = 50
+min_connections = 10

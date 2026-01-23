@@ -1,0 +1,25 @@
+# Cargo Configuration für God-Stack Backend
+# ============================================================================
+
+[build]
+# Nutze alle CPU-Kerne für parallele Builds
+jobs = -1
+
+[target.x86_64-unknown-linux-musl]
+# Statisches Linking für Container
+rustflags = ["-C", "target-feature=+crt-static", "-C", "link-self-contained=yes"]
+
+[target.aarch64-unknown-linux-musl]
+# ARM64 Support (Apple Silicon, Graviton)
+rustflags = ["-C", "target-feature=+crt-static", "-C", "link-self-contained=yes"]
+
+[env]
+# SQLx Offline Mode (keine DB-Verbindung beim Build nötig)
+SQLX_OFFLINE = "true"
+
+[alias]
+# Nützliche Shortcuts
+dev = "run --release"
+w = "watch -x 'run --release'"
+t = "test --all-features"
+lint = "clippy --all-targets --all-features -- -D warnings"
