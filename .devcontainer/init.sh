@@ -4,6 +4,18 @@ set -e
 echo "🚀 Initializing God-Stack DevContainer..."
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Start Nix daemon (required for multi-user Nix in devcontainer)
+# ─────────────────────────────────────────────────────────────────────────────
+echo "❄️  Starting Nix daemon..."
+if ! pgrep -x "nix-daemon" > /dev/null; then
+  sudo /nix/var/nix/profiles/default/bin/nix-daemon &
+  sleep 1
+  echo "   ✅ Nix daemon started"
+else
+  echo "   ✅ Nix daemon already running"
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Pre-build Nix environment (so it's ready when you open a terminal)
 # ─────────────────────────────────────────────────────────────────────────────
 echo "📦 Preparing Nix development environment..."
@@ -13,7 +25,7 @@ cd /workspace
 # Next time you enter the shell it will be instant
 if [ -f "flake.nix" ]; then
   # Build devShell (downloads/builds all Nix dependencies)
-  nix develop --command true 2>/dev/null && echo "   ✅ Nix environment ready" || echo "   ⚠️  Nix environment will be built on first use"
+  /nix/var/nix/profiles/default/bin/nix develop --command true 2>/dev/null && echo "   ✅ Nix environment ready" || echo "   ⚠️  Nix environment will be built on first use"
   
   # Ensure direnv is allowed (for automatic activation in terminals)
   if command -v direnv &> /dev/null; then

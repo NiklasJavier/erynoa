@@ -116,6 +116,9 @@ alias build="cd /workspace && just build"
 alias test="cd /workspace && just test"
 alias migrate="cd /workspace && just db-migrate"
 alias logs="docker compose -f /workspace/.devcontainer/services.yml logs -f"
+
+# Nix path alias (daemon handles permissions)
+alias nix="/nix/var/nix/profiles/default/bin/nix"
 '
 
 for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
