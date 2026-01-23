@@ -92,19 +92,39 @@ db-reset:
 # Infrastructure (Docker)
 # ─────────────────────────────────────────────────────
 
-# Start infrastructure (DB + Cache)
+# Start infrastructure (DB + Cache + ZITADEL) - DevContainer
+services:
+    docker compose -f .devcontainer/services.yml up -d
+
+# Stop services - DevContainer
+services-down:
+    docker compose -f .devcontainer/services.yml down
+
+# View service logs - DevContainer
+services-logs service="":
+    docker compose -f .devcontainer/services.yml logs -f {{service}}
+
+# Restart services - DevContainer
+services-restart:
+    docker compose -f .devcontainer/services.yml restart
+
+# Service status - DevContainer
+services-ps:
+    docker compose -f .devcontainer/services.yml ps
+
+# Start infrastructure (DB + Cache) - Host
 infra:
     docker compose -f docker/docker-compose.yml up -d
 
-# Start with ZITADEL
+# Start with ZITADEL - Host
 infra-auth:
     docker compose -f docker/docker-compose.yml --profile auth up -d
 
-# Stop infrastructure
+# Stop infrastructure - Host
 infra-down:
     docker compose -f docker/docker-compose.yml --profile auth down
 
-# View logs
+# View logs - Host
 logs service="":
     docker compose -f docker/docker-compose.yml logs -f {{service}}
 
@@ -112,13 +132,14 @@ logs service="":
 # Full Stack
 # ─────────────────────────────────────────────────────
 
-# Start infra + run dev server
-start: infra
-    @sleep 2
+# Start services + run dev server (DevContainer)
+start: services
+    @sleep 5
     just dev
 
 # Clean all
 clean:
     cargo clean
     rm -f result
-    docker compose -f docker/docker-compose.yml --profile auth down -v
+    docker compose -f .devcontainer/services.yml down -v 2>/dev/null || true
+    docker compose -f docker/docker-compose.yml --profile auth down -v 2>/dev/null || true

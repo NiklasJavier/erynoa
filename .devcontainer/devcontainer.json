@@ -35,10 +35,11 @@
     }
   },
 
-  "forwardPorts": [3000, 5432, 6379, 8080],
+  "forwardPorts": [3000, 5432, 5433, 6379, 8080],
   "portsAttributes": {
     "3000": { "label": "API", "onAutoForward": "notify" },
-    "5432": { "label": "PostgreSQL", "onAutoForward": "silent" },
+    "5432": { "label": "PostgreSQL (App)", "onAutoForward": "silent" },
+    "5433": { "label": "PostgreSQL (ZITADEL)", "onAutoForward": "silent" },
     "6379": { "label": "Redis/Dragonfly", "onAutoForward": "silent" },
     "8080": { "label": "ZITADEL", "onAutoForward": "notify" }
   },
@@ -47,13 +48,13 @@
   "postStartCommand": ".devcontainer/init.sh",
 
   "containerEnv": {
-    "APP_DATABASE__HOST": "db",
+    "APP_DATABASE__HOST": "localhost",
     "APP_DATABASE__PORT": "5432",
     "APP_DATABASE__USER": "godstack",
     "APP_DATABASE__PASSWORD": "godstack",
     "APP_DATABASE__NAME": "godstack",
-    "APP_CACHE__URL": "redis://cache:6379",
-    "APP_AUTH__ISSUER": "http://zitadel:8080",
+    "APP_CACHE__URL": "redis://localhost:6379",
+    "APP_AUTH__ISSUER": "http://localhost:8080",
     "APP_AUTH__AUDIENCE": "godstack-api",
     "RUST_LOG": "debug",
     "RUST_BACKTRACE": "1"

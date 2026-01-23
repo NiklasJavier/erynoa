@@ -1,6 +1,4 @@
-# Infrastructure only - API runs locally via Nix
-
-name: godstack
+name: godstack-services
 
 services:
   db:
@@ -11,12 +9,13 @@ services:
       POSTGRES_DB: godstack
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports: ["5432:5432"]
+    ports:
+      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U godstack -h localhost -p 5432"]
       interval: 5s
       timeout: 3s
-      retries: 5
+      retries: 10
       start_period: 10s
     command:
       - postgres
@@ -27,17 +26,6 @@ services:
       - -c
       - listen_addresses=*
 
-  cache:
-    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
-    ports: ["6379:6379"]
-    volumes:
-      - dragonfly:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
   zitadel-db:
     image: postgres:16-alpine
     environment:
@@ -46,14 +34,26 @@ services:
       POSTGRES_DB: zitadel
     volumes:
       - zitadel-pgdata:/var/lib/postgresql/data
-    ports: ["5433:5432"]
+    ports:
+      - "5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U zitadel -h localhost"]
       interval: 5s
       timeout: 3s
-      retries: 5
+      retries: 10
       start_period: 10s
-    profiles: [auth]
+
+  cache:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - dragonfly:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   zitadel:
     image: ghcr.io/zitadel/zitadel:latest
@@ -73,9 +73,16 @@ services:
       ZITADEL_EXTERNALPORT: "8080"
       ZITADEL_EXTERNALDOMAIN: "localhost"
     depends_on:
-      zitadel-db: { condition: service_healthy }
-    ports: ["8080:8080"]
-    profiles: [auth]
+      zitadel-db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/debug/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
 
 volumes:
   pgdata:
