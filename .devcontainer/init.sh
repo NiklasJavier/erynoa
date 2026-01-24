@@ -83,10 +83,24 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. SSH Setup (Signing & Auth)
 # ─────────────────────────────────────────────────────────────────────────────
+echo "🔑 Configuring SSH..."
+
+# SSH-Agent vom Host prüfen
+if [ -S "$SSH_AUTH_SOCK" ]; then
+  echo "   ✅ SSH-Agent vom Host verbunden"
+  ssh-add -l 2>/dev/null && echo "   ✅ SSH Keys im Agent geladen" || echo "   ⚠️  Keine Keys im SSH-Agent (führe 'ssh-add' auf dem Host aus)"
+else
+  echo "   ⚠️  SSH-Agent nicht verbunden - Fallback auf lokale Keys"
+  # Fallback: Lokalen SSH-Agent starten und Keys laden
+  if [ -d "$HOME/.ssh" ]; then
+    eval "$(ssh-agent -s)" > /dev/null 2>&1
+    # Alle private keys ohne Passphrase hinzufügen
+    find "$HOME/.ssh" -type f -name "id_*" ! -name "*.pub" -exec ssh-add {} \; 2>/dev/null || true
+  fi
+fi
+
+# Signing Key für Git übernehmen, falls auf dem Host konfiguriert
 if [ -d "$HOME/.ssh" ]; then
-  echo "🔑 Configuring SSH..."
-  
-  # Signing Key für Git übernehmen, falls auf dem Host konfiguriert
   CURRENT_SIGNING_KEY=$(git config --global user.signingkey 2>/dev/null || true)
   GPG_FORMAT=$(git config --global gpg.format 2>/dev/null || true)
   

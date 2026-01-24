@@ -23,8 +23,15 @@
   },
 
   "mounts": [
-    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh-host,type=bind,readonly"
+    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh-host,type=bind,readonly",
+    // SSH-Agent Socket vom macOS Host durchleiten
+    "source=${localEnv:SSH_AUTH_SOCK},target=/ssh-agent,type=bind"
   ],
+
+  // SSH-Agent Environment Variable im Container setzen
+  "remoteEnv": {
+    "SSH_AUTH_SOCK": "/ssh-agent"
+  },
 
   "customizations": {
     "vscode": {

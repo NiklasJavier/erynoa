@@ -10,6 +10,10 @@ services:
       - nix-store:/nix
       - apt-cache:/var/cache/apt
       - apt-lib:/var/lib/apt
+      # SSH-Agent vom Host durchleiten (für git push)
+      - ${SSH_AUTH_SOCK:-/dev/null}:/ssh-agent:ro
+    environment:
+      - SSH_AUTH_SOCK=/ssh-agent
     command: sleep infinity
 
 volumes:
