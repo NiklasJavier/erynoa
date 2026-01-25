@@ -8,7 +8,7 @@
 # - Test User
 #
 # Verwendung:
-#   ./infra/scripts/setup-zitadel.sh
+#   ./scripts/setup/setup-zitadel.sh
 #
 # ============================================================================
 set -e

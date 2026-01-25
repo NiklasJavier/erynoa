@@ -14,6 +14,9 @@ service UserService {
   // Get returns a single user by ID
   rpc Get(GetUserRequest) returns (GetUserResponse);
   
+  // GetCurrent returns the current authenticated user
+  rpc GetCurrent(GetCurrentUserRequest) returns (GetUserResponse);
+  
   // Create creates a new user
   rpc Create(CreateUserRequest) returns (CreateUserResponse);
   
@@ -47,6 +50,8 @@ message ListUsersResponse {
 message GetUserRequest {
   string id = 1;
 }
+
+message GetCurrentUserRequest {}
 
 message GetUserResponse {
   User user = 1;

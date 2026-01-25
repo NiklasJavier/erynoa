@@ -35,15 +35,19 @@ test_service() {
     echo -n "  Testing $name... "
     
     local attempt=0
+    local http_code=""
     while [ $attempt -lt $max_retries ]; do
-        if response=$(curl -s -w "\n%{http_code}" --max-time 5 "$url" 2>/dev/null); then
-            http_code=$(echo "$response" | tail -n1)
+        # Use -o /dev/null to suppress body, -w to get only HTTP code
+        # Use -f to fail on HTTP errors, but we check the code manually
+        if response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "$url" 2>/dev/null); then
+            # Trim whitespace from response
+            http_code=$(echo "$response" | tr -d '[:space:]')
             # Prüfe ob HTTP Code dem erwarteten Status entspricht
             if [ "$http_code" = "$expected_status" ]; then
                 echo -e "${GREEN}✓${NC}"
                 ((PASSED++))
                 return 0
-            elif [ "$expected_status" = "any" ] && [ "$http_code" != "000" ]; then
+            elif [ "$expected_status" = "any" ] && [ "$http_code" != "000" ] && [ -n "$http_code" ]; then
                 # Für "any" akzeptiere jeden Code außer 000 (nicht erreichbar)
                 echo -e "${GREEN}✓${NC}"
                 ((PASSED++))
@@ -74,21 +78,86 @@ echo ""
 
 # Test services with retries (Frontend/Backend brauchen Zeit zum Starten)
 test_service "Frontend" "${FRONTEND_URL}" "200" 10 3
-test_service "Backend Health" "${API_URL}${API_VERSION}/health" "200" 10 3
-test_service "Backend Info" "${API_URL}${API_VERSION}/info" "200" 10 3
+
+# Test Backend via Connect-RPC (POST requests with JSON)
+echo -n "  Testing Backend Health (Connect-RPC)... "
+backend_health_attempt=0
+backend_health_ok=false
+while [ $backend_health_attempt -lt 10 ]; do
+    # Connect-RPC endpoint: /api/v1/connect/godstack.v1.HealthService/Check
+    # Expects POST with empty JSON body: {}
+    if response=$(curl -s -X POST \
+        -H "Content-Type: application/json" \
+        -H "Connect-Protocol-Version: 1" \
+        -d '{}' \
+        --max-time 5 \
+        "${API_URL}${API_VERSION}/connect/godstack.v1.HealthService/Check" 2>/dev/null); then
+        # Check if response contains "status" or "SERVING_STATUS" (successful Connect-RPC response)
+        if echo "$response" | grep -qiE '"status"|"SERVING_STATUS"'; then
+            echo -e "${GREEN}✓${NC}"
+            ((PASSED++))
+            backend_health_ok=true
+            break
+        fi
+    fi
+    backend_health_attempt=$((backend_health_attempt + 1))
+    if [ $backend_health_attempt -lt 10 ]; then
+        sleep 3
+    fi
+done
+
+if [ "$backend_health_ok" != "true" ]; then
+    echo -e "${RED}✗ (nicht erreichbar nach 10 Versuchen)${NC}"
+    ((FAILED++))
+fi
+
+echo -n "  Testing Backend Info (Connect-RPC)... "
+backend_info_attempt=0
+backend_info_ok=false
+while [ $backend_info_attempt -lt 10 ]; do
+    # Connect-RPC endpoint: /api/v1/connect/godstack.v1.InfoService/GetInfo
+    if response=$(curl -s -X POST \
+        -H "Content-Type: application/json" \
+        -H "Connect-Protocol-Version: 1" \
+        -d '{}' \
+        --max-time 5 \
+        "${API_URL}${API_VERSION}/connect/godstack.v1.InfoService/GetInfo" 2>/dev/null); then
+        # Check if response contains "version" (successful Connect-RPC response)
+        if echo "$response" | grep -qi '"version"'; then
+            echo -e "${GREEN}✓${NC}"
+            ((PASSED++))
+            backend_info_ok=true
+            break
+        fi
+    fi
+    backend_info_attempt=$((backend_info_attempt + 1))
+    if [ $backend_info_attempt -lt 10 ]; then
+        sleep 3
+    fi
+done
+
+if [ "$backend_info_ok" != "true" ]; then
+    echo -e "${RED}✗ (nicht erreichbar nach 10 Versuchen)${NC}"
+    ((FAILED++))
+fi
+
 test_service "ZITADEL OIDC" "${ZITADEL_URL}/.well-known/openid-configuration" "200" 5 2
 test_service "MinIO Health" "${MINIO_URL}/minio/health/live" "200" 5 2
 
-# Test database (via backend /ready endpoint)
-# REST gibt {"services":{"database":{"status":"connected"}}} zurück
-# Connect-RPC gibt {"database":{"healthy":true}} zurück
-echo -n "  Testing Database (via Backend)... "
+# Test database (via backend Connect-RPC Ready endpoint)
+# Connect-RPC Ready gibt {"ready":true,"database":{"healthy":true,...}} zurück
+echo -n "  Testing Database (via Backend Connect-RPC)... "
 db_attempt=0
 db_connected=false
 while [ $db_attempt -lt 10 ]; do
-    if ready_response=$(curl -sf --max-time 5 "${API_URL}${API_VERSION}/ready" 2>/dev/null); then
-        # Prüfe beide Formate: REST ("status":"connected") und Connect-RPC ("healthy":true)
-        if echo "$ready_response" | grep -qiE '"database".*"status".*"connected"|"database".*"healthy".*true' 2>/dev/null; then
+    if ready_response=$(curl -s -X POST \
+        -H "Content-Type: application/json" \
+        -H "Connect-Protocol-Version: 1" \
+        -d '{}' \
+        --max-time 5 \
+        "${API_URL}${API_VERSION}/connect/godstack.v1.HealthService/Ready" 2>/dev/null); then
+        # Prüfe Connect-RPC Format: "database":{"healthy":true}
+        if echo "$ready_response" | grep -qiE '"database".*"healthy".*true' 2>/dev/null; then
             echo -e "${GREEN}✓${NC}"
             ((PASSED++))
             db_connected=true
@@ -106,14 +175,19 @@ if [ "$db_connected" != "true" ]; then
     ((FAILED++))
 fi
 
-# Test cache (via backend /ready endpoint)
-echo -n "  Testing Cache (via Backend)... "
+# Test cache (via backend Connect-RPC Ready endpoint)
+echo -n "  Testing Cache (via Backend Connect-RPC)... "
 cache_attempt=0
 cache_connected=false
 while [ $cache_attempt -lt 10 ]; do
-    if ready_response=$(curl -sf --max-time 5 "${API_URL}${API_VERSION}/ready" 2>/dev/null); then
-        # Prüfe beide Formate: REST ("status":"connected") und Connect-RPC ("healthy":true)
-        if echo "$ready_response" | grep -qiE '"cache".*"status".*"connected"|"cache".*"healthy".*true' 2>/dev/null; then
+    if ready_response=$(curl -s -X POST \
+        -H "Content-Type: application/json" \
+        -H "Connect-Protocol-Version: 1" \
+        -d '{}' \
+        --max-time 5 \
+        "${API_URL}${API_VERSION}/connect/godstack.v1.HealthService/Ready" 2>/dev/null); then
+        # Prüfe Connect-RPC Format: "cache":{"healthy":true}
+        if echo "$ready_response" | grep -qiE '"cache".*"healthy".*true' 2>/dev/null; then
             echo -e "${GREEN}✓${NC}"
             ((PASSED++))
             cache_connected=true

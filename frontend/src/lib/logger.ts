@@ -9,9 +9,10 @@
  * - Structured metadata support
  * - Error tracking with stack traces
  * - Log levels (debug, info, warn, error)
+ * - Extensible error tracking service integration
  */
 
-import { isDevelopment, isProduction } from "./api-config";
+import { isDevelopment } from "./api-config";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -20,11 +21,22 @@ export interface LogMeta {
 }
 
 /**
+ * Error Tracking Service Interface
+ * 
+ * Can be implemented by error tracking services like Sentry, LogRocket, etc.
+ */
+interface ErrorTrackingService {
+  captureException(error: Error, context?: LogMeta): void;
+  captureMessage(message: string, level: LogLevel, context?: LogMeta): void;
+}
+
+/**
  * Logger configuration
  */
 interface LoggerConfig {
   level: LogLevel;
   enableStackTraces: boolean;
+  errorTrackingService?: ErrorTrackingService;
 }
 
 /**
@@ -33,6 +45,7 @@ interface LoggerConfig {
 const defaultConfig: LoggerConfig = {
   level: isDevelopment() ? "debug" : "info",
   enableStackTraces: isDevelopment(),
+  errorTrackingService: undefined, // Can be set via setErrorTrackingService()
 };
 
 /**
@@ -84,7 +97,7 @@ function formatMessage(
  * Provides consistent logging interface similar to backend's tracing
  */
 class Logger {
-  private config: LoggerConfig;
+  public config: LoggerConfig;
 
   constructor(config: Partial<LoggerConfig> = {}) {
     this.config = { ...defaultConfig, ...config };
@@ -131,10 +144,14 @@ class Logger {
     const formatted = formatMessage("error", message, meta, error);
     console.error(formatted);
 
-    // In production, could send to error tracking service
-    if (isProduction() && error) {
-      // TODO: Integrate with error tracking service (e.g., Sentry)
-      // errorTrackingService.captureException(error, { extra: meta });
+    // Send to error tracking service if configured
+    if (error && this.config.errorTrackingService) {
+      try {
+        this.config.errorTrackingService.captureException(error, meta);
+      } catch (trackingError) {
+        // Don't let error tracking break the app
+        console.warn("Error tracking service failed:", trackingError);
+      }
     }
   }
 
@@ -176,6 +193,27 @@ class Logger {
  * Use this for general application logging
  */
 export const logger = new Logger();
+
+/**
+ * Set error tracking service for the default logger
+ * 
+ * @example
+ * ```typescript
+ * // With Sentry (when installed)
+ * import * as Sentry from "@sentry/browser";
+ * setErrorTrackingService({
+ *   captureException: (error, context) => {
+ *     Sentry.captureException(error, { extra: context });
+ *   },
+ *   captureMessage: (message, level, context) => {
+ *     Sentry.captureMessage(message, { level, extra: context });
+ *   },
+ * });
+ * ```
+ */
+export function setErrorTrackingService(service: ErrorTrackingService): void {
+  logger.config.errorTrackingService = service;
+}
 
 /**
  * Create a logger for a specific module/component

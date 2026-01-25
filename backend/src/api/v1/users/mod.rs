@@ -1,13 +1,8 @@
 //! Users API
 //!
-//! User management endpoints
+//! User management endpoints (Connect-RPC only)
 
-mod handler;
-mod models;
-mod routes;
-#[cfg(feature = "connect")]
-mod connect;
+mod handlers;
 
-pub use routes::create_users_routes;
 #[cfg(feature = "connect")]
-pub use connect::{list_users_handler, get_user_handler};
+pub use handlers::{list_users_handler, get_user_handler, get_current_user_handler};

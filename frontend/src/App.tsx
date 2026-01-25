@@ -9,7 +9,8 @@ import { createSignal, onMount, Show, type ParentComponent } from "solid-js";
 import { AuthProvider, useAuth } from "./lib/auth";
 import { ThemeProvider } from "./lib/theme";
 import { fetchConfig, type AppConfig } from "./lib/config";
-import { initApiClient, initStorageClient } from "./api";
+import { ConfigProvider } from "./lib/features";
+import { createAuthenticatedClients, initStorageClient } from "./api";
 import { Layout } from "./components/Layout";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
@@ -77,14 +78,16 @@ function App() {
         >
           {(cfg) => {
             return (
-              <AuthProvider 
-                issuer={cfg().auth.issuer} 
-                clientId={cfg().auth.clientId}
-              >
-                <ApiInitializer>
-                  <AppRouter />
-                </ApiInitializer>
-              </AuthProvider>
+              <ConfigProvider config={cfg()}>
+                <AuthProvider 
+                  issuer={cfg().auth.issuer} 
+                  clientId={cfg().auth.clientId}
+                >
+                  <ApiInitializer>
+                    <AppRouter />
+                  </ApiInitializer>
+                </AuthProvider>
+              </ConfigProvider>
             );
           }}
         </Show>
@@ -114,12 +117,10 @@ const ApiInitializer: ParentComponent = (props) => {
   const auth = useAuth();
 
   onMount(() => {
-    // Initialize API client with the auth token getter
-    initApiClient(() => auth.getAccessToken());
+    // Initialize Connect-RPC clients with the auth token getter
+    createAuthenticatedClients(() => auth.getAccessToken());
     // Initialize Storage client with the same auth token getter
     initStorageClient(() => auth.getAccessToken());
-    // Logger is already imported dynamically in fetchConfig error handler
-    // No need to log here as it's just initialization
   });
 
   return <>{props.children}</>;

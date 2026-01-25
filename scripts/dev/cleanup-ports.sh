@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Cleanup stuck development processes (only Frontend + Backend)
-# Usage: ./infra/scripts/cleanup-ports.sh
+# Usage: ./scripts/dev/cleanup-ports.sh
 
 # Don't fail on errors - some processes might not exist
 set +e

@@ -4,6 +4,7 @@
 
 use axum::{
     extract::Request,
+    http::StatusCode,
     middleware::Next,
     response::Response,
 };
@@ -30,13 +31,25 @@ pub async fn logging_middleware(request: Request, next: Next) -> Response {
             "Request failed"
         );
     } else if status.is_client_error() {
-        tracing::warn!(
-            method = %method,
-            path = %path,
-            status = %status.as_u16(),
-            duration_ms = duration.as_millis(),
-            "Client error"
-        );
+        // Log 404 errors at debug level (deprecated endpoints, etc.)
+        // Other client errors (400, 401, 403) are still warnings
+        if status == StatusCode::NOT_FOUND {
+            tracing::debug!(
+                method = %method,
+                path = %path,
+                status = %status.as_u16(),
+                duration_ms = duration.as_millis(),
+                "Not found (deprecated endpoint or invalid path)"
+            );
+        } else {
+            tracing::warn!(
+                method = %method,
+                path = %path,
+                status = %status.as_u16(),
+                duration_ms = duration.as_millis(),
+                "Client error"
+            );
+        }
     } else {
         info!(
             method = %method,

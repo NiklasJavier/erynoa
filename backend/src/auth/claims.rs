@@ -8,9 +8,10 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use axum_connect::parts::RpcFromRequestParts;
-use axum_connect::error::RpcIntoError;
 
 use crate::error::ApiError;
+#[cfg(feature = "connect")]
+use crate::error::ApiErrorToRpc;
 
 /// JWT Claims aus einem ZITADEL Token
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -163,8 +164,9 @@ where
             .get::<Claims>()
             .cloned()
             .ok_or_else(|| {
-                (axum_connect::error::RpcErrorCode::Unauthenticated, "Missing authentication".to_string())
-                    .rpc_into_error()
+                // Use ApiErrorToRpc trait for consistent error conversion
+                ApiError::Unauthorized("Missing authentication".into())
+                    .to_rpc_error()
             })
     }
 }

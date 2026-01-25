@@ -6,6 +6,7 @@
 import { Show } from "solid-js";
 import { useAuth, getUserDisplayName } from "../lib/auth";
 import { useTheme } from "../lib/theme";
+import { useFeatureFlags } from "../lib/features";
 import { getZitadelConsoleUrl } from "../lib/service-urls";
 import {
   Card,
@@ -24,6 +25,7 @@ import { ProtectedRoute } from "../components/ProtectedRoute";
 function SettingsContent() {
   const auth = useAuth();
   const { theme } = useTheme();
+  const { isFeatureEnabled } = useFeatureFlags();
 
   return (
     <div class="space-y-6">
@@ -176,6 +178,45 @@ function SettingsContent() {
               </Button>
             </a>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Feature Flags Card - Show enabled features */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Feature Flags</CardTitle>
+          <CardDescription>
+            Aktivierte Features in dieser Umgebung.
+          </CardDescription>
+        </CardHeader>
+        <CardContent class="space-y-4">
+          <div class="space-y-3">
+            <div class="flex justify-between items-center">
+              <div>
+                <p class="font-medium">Registrierung</p>
+                <p class="text-sm text-muted-foreground">
+                  Neue Benutzer können sich registrieren
+                </p>
+              </div>
+              <Badge variant={isFeatureEnabled("registration") ? "default" : "secondary"}>
+                {isFeatureEnabled("registration") ? "Aktiviert" : "Deaktiviert"}
+              </Badge>
+            </div>
+            <div class="flex justify-between items-center">
+              <div>
+                <p class="font-medium">Social Login</p>
+                <p class="text-sm text-muted-foreground">
+                  Anmeldung über soziale Netzwerke
+                </p>
+              </div>
+              <Badge variant={isFeatureEnabled("socialLogin") ? "default" : "secondary"}>
+                {isFeatureEnabled("socialLogin") ? "Aktiviert" : "Deaktiviert"}
+              </Badge>
+            </div>
+          </div>
+          <p class="text-xs text-muted-foreground">
+            Feature Flags werden vom Backend konfiguriert und können dynamisch geändert werden.
+          </p>
         </CardContent>
       </Card>
     </div>

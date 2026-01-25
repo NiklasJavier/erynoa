@@ -6,3 +6,8 @@ environment = "production"
 [database]
 max_connections = 50
 min_connections = 10
+
+[features]
+# Feature Flags für Production
+registration = false      # Registrierung standardmäßig deaktiviert in Production
+social_login = false     # Social Login standardmäßig deaktiviert

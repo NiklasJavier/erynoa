@@ -19,6 +19,9 @@ pub struct Settings {
     pub cache: CacheSettings,
     pub auth: AuthSettings,
     pub storage: StorageSettings,
+    /// Feature Flags für die Anwendung
+    #[serde(default)]
+    pub features: FeatureFlags,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -115,6 +118,34 @@ pub struct StorageSettings {
     pub default_bucket: String,
     /// Max Upload-Größe in Bytes
     pub max_upload_size: u64,
+}
+
+/// Feature Flags für die Anwendung
+#[derive(Debug, Clone, Deserialize)]
+pub struct FeatureFlags {
+    /// Benutzer-Registrierung aktiviert
+    #[serde(default = "default_true")]
+    pub registration: bool,
+    /// Social Login aktiviert
+    #[serde(default = "default_false")]
+    pub social_login: bool,
+}
+
+impl Default for FeatureFlags {
+    fn default() -> Self {
+        Self {
+            registration: true,
+            social_login: false,
+        }
+    }
+}
+
+fn default_true() -> bool {
+    true
+}
+
+fn default_false() -> bool {
+    false
 }
 
 /// Umgebungs-Typen

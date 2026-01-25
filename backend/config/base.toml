@@ -48,3 +48,8 @@ access_key_id = "godstack"
 secret_access_key = "godstack123"
 default_bucket = "godstack"
 max_upload_size = 104857600  # 100 MB
+
+[features]
+# Feature Flags für die Anwendung
+registration = true      # Benutzer-Registrierung aktiviert
+social_login = false     # Social Login aktiviert

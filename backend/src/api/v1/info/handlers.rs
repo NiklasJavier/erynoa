@@ -27,8 +27,8 @@ pub async fn get_info_handler(
             api: state.config.application.api_url.clone(),
         }),
         features: Some(FeatureFlags {
-            registration: false, // TODO: from config
-            social_login: false, // TODO: from config
+            registration: state.config.features.registration,
+            social_login: state.config.features.social_login,
         }),
     }
 }

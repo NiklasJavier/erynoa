@@ -71,27 +71,28 @@ Alle Befehle: `just --list`
 
 ### 📚 Hauptdokumentation
 
-- **[ESSENTIAL_GUIDE.md](docs/ESSENTIAL_GUIDE.md)** - **Alles was du brauchst** (konsolidierte Dokumentation)
-  - Quick Start, TODOs, Architektur, Befehle, Konfiguration, Troubleshooting
+- **[docs/README.md](docs/README.md)** - **Dokumentations-Übersicht** mit Quick Start
+- **[ESSENTIAL_GUIDE.md](docs/ESSENTIAL_GUIDE.md)** - Konsolidierter Guide mit allen wichtigen Informationen
 
-### 🚀 Setup & Entwicklung
+### 🚀 Guides (Schritt-für-Schritt Anleitungen)
 
-- [DEV_SETUP.md](DEV_SETUP.md) - Development Environment Setup
-- [DOCKER.md](DOCKER.md) - Docker & DevContainer Setup
-- [SETUP.md](SETUP.md) - macOS Setup Guide
+- [Getting Started](docs/guides/getting-started.md) - Erste Schritte mit dem Projekt
+- [Setup](docs/guides/setup.md) - Entwicklungsumgebung einrichten
+- [ZITADEL Setup](docs/guides/zitadel.md) - Authentifizierung konfigurieren
 
-### 📋 Development Guides
+### 📗 Reference (Technische Referenz)
 
-- [docs/development/TODOS.md](docs/development/TODOS.md) - Offene Aufgaben & Prioritäten
-- [docs/development/STYLE_GUIDE.md](docs/development/STYLE_GUIDE.md) - Code Standards & Naming Conventions
-- [docs/development/architecture.md](docs/development/architecture.md) - System-Architektur
-- [docs/development/testing.md](docs/development/testing.md) - Testing Guide
-- [docs/development/connections.md](docs/development/connections.md) - Service-Verbindungen
-- [docs/development/SERVICE_CONFIG.md](docs/development/SERVICE_CONFIG.md) - Service-Konfiguration
+- [Architecture](docs/reference/architecture.md) - Systemarchitektur und Design-Entscheidungen
+- [Configuration](docs/reference/config.md) - Service-Konfiguration und Verbindungen
+- [Connections](docs/reference/connections.md) - API-Verbindungen und Harmonisierung
 
-### 🔐 Guides
+### 📙 Development (Development-spezifisch)
 
-- [docs/guides/ZITADEL_SETUP.md](docs/guides/ZITADEL_SETUP.md) - ZITADEL Konfiguration
+- [Style Guide](docs/development/style-guide.md) - Code-Stil und Best Practices
+- [Testing](docs/development/testing.md) - Test-Strategien und -Tools
+- [TODOs](docs/development/todos.md) - Offene Aufgaben und Prioritäten
+- [REST Deprecation Plan](docs/development/REST_DEPRECATION_PLAN.md) - Plan zur REST-API Entfernung
+- [Structure Improvements](docs/development/STRUCTURE_IMPROVEMENTS.md) - Strukturverbesserungen
 
 ## 🧪 Testing
 

@@ -8,10 +8,14 @@ use axum::Router;
 // Import generated service types
 use crate::gen::godstack::v1::{HealthService, InfoService, UserService, StorageService};
 
-// Import handler functions (via public re-exports)
+// Import handler functions (via public re-exports from handlers.rs)
+#[cfg(feature = "connect")]
 use crate::api::v1::health::{health_check_handler, ready_check_handler};
+#[cfg(feature = "connect")]
 use crate::api::v1::info::get_info_handler;
-use crate::api::v1::users::{list_users_handler, get_user_handler};
+#[cfg(feature = "connect")]
+use crate::api::v1::users::{list_users_handler, get_user_handler, get_current_user_handler};
+#[cfg(feature = "connect")]
 use crate::api::v1::storage::{
     upload_handler, list_objects_handler, delete_object_handler, head_object_handler,
     get_presigned_upload_url_handler, get_presigned_download_url_handler,
@@ -38,6 +42,7 @@ pub fn create_connect_routes(_state: AppState) -> Router<AppState> {
     // Apply User Service handlers
     let router = UserService::list(list_users_handler)(router);
     let router = UserService::get(get_user_handler)(router);
+    let router = UserService::get_current(get_current_user_handler)(router);
     
     // Apply Storage Service handlers
     let router = StorageService::upload(upload_handler)(router);

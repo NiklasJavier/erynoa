@@ -92,9 +92,9 @@ dev:
     if [ ! -f ".data/.minio-setup-complete" ]; then
         echo "  → MinIO Setup wird ausgeführt..."
         # Prüfe beide möglichen Pfade für Setup-Scripts
-        if [ -f "infra/scripts/setup/setup-minio.sh" ]; then
-            chmod +x infra/scripts/setup/setup-minio.sh
-            ./infra/scripts/setup/setup-minio.sh || echo "  ⚠ MinIO Setup übersprungen"
+        if [ -f "scripts/setup/setup-minio.sh" ]; then
+            chmod +x scripts/setup/setup-minio.sh
+            ./scripts/setup/setup-minio.sh || echo "  ⚠ MinIO Setup übersprungen"
         elif [ -f "infra/scripts/setup-minio.sh" ]; then
             chmod +x infra/scripts/setup-minio.sh
             ./infra/scripts/setup-minio.sh || echo "  ⚠ MinIO Setup übersprungen"
@@ -120,9 +120,9 @@ dev:
             done
         fi
         # Prüfe beide möglichen Pfade für Setup-Scripts
-        if [ -f "infra/scripts/setup/setup-zitadel.sh" ]; then
-            chmod +x infra/scripts/setup/setup-zitadel.sh
-            ./infra/scripts/setup/setup-zitadel.sh || echo "  ⚠ ZITADEL Setup übersprungen"
+        if [ -f "scripts/setup/setup-zitadel.sh" ]; then
+            chmod +x scripts/setup/setup-zitadel.sh
+            ./scripts/setup/setup-zitadel.sh || echo "  ⚠ ZITADEL Setup übersprungen"
         elif [ -f "infra/scripts/setup-zitadel.sh" ]; then
             chmod +x infra/scripts/setup-zitadel.sh
             ./infra/scripts/setup-zitadel.sh || echo "  ⚠ ZITADEL Setup übersprungen"
@@ -163,7 +163,7 @@ dev:
     echo "━━━ [5/5] Health Check ━━━"
     if command -v curl > /dev/null 2>&1; then
         echo "  Führe Health Check aus..."
-        /workspace/scripts/dev-check.sh || echo "  ⚠ Einige Services noch nicht bereit (wird automatisch neu geprüft)"
+        /workspace/scripts/dev/dev-check.sh || echo "  ⚠ Einige Services noch nicht bereit (wird automatisch neu geprüft)"
     else
         echo "  ⚠ curl nicht verfügbar - Health Check übersprungen"
     fi
@@ -318,7 +318,7 @@ db-reset:
 
 # Clean up stuck development processes
 cleanup:
-    @./infra/scripts/cleanup-ports.sh
+    @./scripts/dev/cleanup-ports.sh
 
 # ═══════════════════════════════════════════════════════
 # FRONTEND
@@ -382,8 +382,8 @@ restart-dev:
 
 # MinIO Setup (Buckets + Policies)
 minio-setup:
-    @chmod +x /workspace/infra/scripts/setup-minio.sh
-    @/workspace/infra/scripts/setup-minio.sh
+    @chmod +x /workspace/scripts/setup/setup-minio.sh
+    @/workspace/scripts/setup/setup-minio.sh
 
 # Open MinIO Console
 minio:
@@ -428,16 +428,16 @@ init:
     # MinIO Setup
     cd /workspace
     if [ ! -f ".data/.minio-setup-complete" ]; then
-        chmod +x infra/scripts/setup-minio.sh
-        ./infra/scripts/setup-minio.sh || true
+        chmod +x scripts/setup/setup-minio.sh
+        ./scripts/setup/setup-minio.sh || true
     fi
     
     # ZITADEL Setup
     if [ ! -f ".data/zitadel-setup-complete" ]; then
         echo "⏳ Warte auf ZITADEL..."
         sleep 20
-        chmod +x infra/scripts/setup-zitadel.sh
-        ./infra/scripts/setup-zitadel.sh || true
+        chmod +x scripts/setup/setup-zitadel.sh
+        ./scripts/setup/setup-zitadel.sh || true
     fi
     
     echo ""
@@ -464,8 +464,8 @@ zitadel-guide:
 
 # ZITADEL automatisches Setup (Projekt + Apps + Test-User)
 zitadel-setup:
-    @chmod +x /workspace/infra/scripts/setup-zitadel.sh
-    @/workspace/infra/scripts/setup-zitadel.sh
+    @chmod +x /workspace/scripts/setup/setup-zitadel.sh
+    @/workspace/scripts/setup/setup-zitadel.sh
 
 # ZITADEL reset (löscht alle Daten und startet neu)
 zitadel-reset:
@@ -511,7 +511,7 @@ reset:
 
 # Health Check für Development Environment
 dev-check:
-    /workspace/scripts/dev-check.sh
+    /workspace/scripts/dev/dev-check.sh
 
 # Status aller Services anzeigen
 status:
@@ -533,7 +533,8 @@ status:
     MINIO_URL="${MINIO_URL:-http://localhost:9000}"
     MINIO_CONSOLE_URL="${MINIO_CONSOLE_URL:-http://localhost:9001}"
     
-    curl -sf ${API_URL}/api/v1/health > /dev/null 2>&1 && echo "  ✓ Backend:   ${API_URL}" || echo "  ✗ Backend:   nicht erreichbar"
+    # Test Backend via Connect-RPC
+    curl -sf -X POST -H "Content-Type: application/json" -d '{}' ${API_URL}/api/v1/connect/godstack.v1.HealthService/Check > /dev/null 2>&1 && echo "  ✓ Backend:   ${API_URL}" || echo "  ✗ Backend:   nicht erreichbar"
     curl -sf ${FRONTEND_URL}/ > /dev/null 2>&1 && echo "  ✓ Frontend:  ${FRONTEND_URL}" || echo "  ✗ Frontend:  nicht erreichbar"
     curl -sf ${ZITADEL_URL}/debug/ready > /dev/null 2>&1 && echo "  ✓ ZITADEL:   ${ZITADEL_URL}" || echo "  ✗ ZITADEL:   nicht erreichbar"
     curl -sf ${MINIO_URL}/minio/health/live > /dev/null 2>&1 && echo "  ✓ MinIO:     ${MINIO_CONSOLE_URL} (Console)" || echo "  ✗ MinIO:     nicht erreichbar"

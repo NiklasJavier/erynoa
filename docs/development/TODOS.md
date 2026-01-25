@@ -6,7 +6,7 @@ Dieses Dokument sammelt alle TODOs, FIXMEs und bekannten Verbesserungen aus dem 
 
 **Letzte Aktualisierung**: 2026-01-25
 
-**Status**: Phase 1 Abschluss und High Priority TODOs abgeschlossen ✅
+**Status**: Alle TODOs abgeschlossen ✅
 
 ---
 
@@ -32,17 +32,21 @@ Dieses Dokument sammelt alle TODOs, FIXMEs und bekannten Verbesserungen aus dem 
 
 ### Frontend
 
-4. **Storage Upload - Progress Tracking**
+4. ✅ **Storage Upload - Progress Tracking** (Abgeschlossen)
    - **Datei**: `frontend/src/api/storage/connect-client.ts:62`
-   - **TODO**: Add progress tracking for Connect-RPC uploads
-   - **Kontext**: Connect-RPC doesn't natively support upload progress. Consider using presigned URLs for large files
-   - **Schätzung**: 4-6 Stunden
+   - **Status**: Implementiert mit automatischer Presigned URL für große Dateien (>5MB)
+   - **Implementiert**: 
+     - Große Dateien verwenden automatisch Presigned URLs mit XMLHttpRequest Progress
+     - Kleine Dateien verwenden direkten Connect-RPC Upload mit simuliertem Progress
+     - Progress-Tracking funktioniert für beide Fälle
 
-5. **User Service - GetCurrentUser**
+5. ✅ **User Service - GetCurrentUser** (Abgeschlossen)
    - **Datei**: `frontend/src/api/users/connect-client.ts:90`
-   - **TODO**: Implement GetCurrentUser RPC method
-   - **Kontext**: Currently throws error, needs backend RPC method or token parsing
-   - **Schätzung**: 3-4 Stunden
+   - **Status**: Backend RPC-Methode implementiert und Frontend-Client aktualisiert
+   - **Implementiert**: 
+     - `GetCurrent` RPC-Methode im Backend (`get_current_user_handler`)
+     - Frontend verwendet jetzt `getCurrent()` RPC-Methode
+     - Lädt User aus Datenbank falls UUID, sonst aus JWT Claims
 
 ---
 
@@ -50,31 +54,43 @@ Dieses Dokument sammelt alle TODOs, FIXMEs und bekannten Verbesserungen aus dem 
 
 ### Backend
 
-6. **Error Handling - RpcError Conversion**
+6. ✅ **Error Handling - RpcError Conversion** (Abgeschlossen)
    - **Datei**: `backend/src/auth/claims.rs:155`
-   - **TODO**: Improve error conversion from ApiError to RpcError
-   - **Kontext**: Currently basic conversion, could be more comprehensive
-   - **Schätzung**: 2-3 Stunden
+   - **Status**: Verwendet jetzt `ApiErrorToRpc` Trait für konsistente Fehlerkonvertierung
+   - **Implementiert**: 
+     - `claims.rs` verwendet jetzt `ApiError::Unauthorized(...).to_rpc_error()` statt inline Konvertierung
+     - Konsistente Fehlerbehandlung über `error/rpc.rs` Modul
 
-7. **Storage Service - Error Handling**
+7. ✅ **Storage Service - Error Handling** (Abgeschlossen)
    - **Datei**: `backend/src/api/v1/storage/connect.rs`
-   - **TODO**: Add proper error handling for storage operations
-   - **Kontext**: Some operations return empty responses on error, should return proper RpcError
-   - **Schätzung**: 3-4 Stunden
+   - **Status**: Alle Storage-Handler geben jetzt `Result<T, RpcError>` zurück
+   - **Implementiert**: 
+     - Alle Handler konvertieren `anyhow::Error` zu `ApiError::Internal`, dann zu `RpcError`
+     - Spezifische Fehlerbehandlung für Bucket-Operationen (NotFound, Conflict)
+     - Proper error logging mit `tracing::error!`
+     - Keine leeren Responses mehr bei Fehlern
 
 ### Frontend
 
-8. **Feature Flags**
-   - **Datei**: `frontend/src/lib/config.ts`
-   - **TODO**: Implement feature flags from config
-   - **Kontext**: Config has `features` object, but not used in UI
-   - **Schätzung**: 2-3 Stunden
+8. ✅ **Feature Flags** (Abgeschlossen)
+   - **Datei**: `frontend/src/lib/features.tsx`
+   - **Status**: Feature Flags Context und Hook implementiert
+   - **Implementiert**: 
+     - `ConfigProvider` macht Config (inkl. Feature Flags) verfügbar
+     - `useFeatureFlags()` Hook für einfachen Zugriff
+     - `useConfig()` Hook für vollständige Config
+     - Feature Flags werden in Settings-Seite angezeigt
+     - Beispiel-Implementierung für zukünftige Verwendung
 
-9. **Error Boundary - Connect-RPC Errors**
+9. ✅ **Error Boundary - Connect-RPC Errors** (Abgeschlossen)
    - **Datei**: `frontend/src/components/ErrorBoundary.tsx`
-   - **TODO**: Improve error boundary to handle Connect-RPC errors
-   - **Kontext**: Should display user-friendly messages for RPC errors
-   - **Schätzung**: 2-3 Stunden
+   - **Status**: Error Boundary erkennt und behandelt Connect-RPC Fehler
+   - **Implementiert**: 
+     - Erkennt `ConnectError` Instanzen automatisch
+     - Mappt Error Codes zu benutzerfreundlichen deutschen Meldungen
+     - Zeigt Service/Method Kontext für RPC Fehler
+     - Zeigt Stack Trace nur in Development
+     - Verbesserte UI mit besserer Struktur und "Seite neu laden" Button
 
 ---
 
@@ -82,31 +98,44 @@ Dieses Dokument sammelt alle TODOs, FIXMEs und bekannten Verbesserungen aus dem 
 
 ### Backend
 
-10. **REST Client Deprecation**
-    - **Datei**: `backend/src/api/v1/*/routes.rs`
-    - **TODO**: Plan deprecation timeline for REST endpoints
-    - **Kontext**: Connect-RPC is now primary, REST should be deprecated
-    - **Schätzung**: Planning only
+10. ✅ **REST Client Deprecation** (Abgeschlossen)
+    - **Datei**: `docs/development/REST_DEPRECATION_PLAN.md`
+    - **Status**: Deprecation-Plan erstellt
+    - **Implementiert**: 
+      - Vollständiger Deprecation-Plan mit Timeline
+      - Migration Guide dokumentiert
+      - Betroffene Endpoints aufgelistet
+      - Plan für v2.0.0 Removal
 
-11. **Documentation - API Examples**
-    - **Datei**: Various handler files
-    - **TODO**: Add more comprehensive doc examples
-    - **Kontext**: Some handlers lack usage examples
-    - **Schätzung**: 4-6 Stunden
+11. ✅ **Documentation - API Examples** (Abgeschlossen)
+    - **Datei**: `backend/src/api/v1/*/connect.rs`
+    - **Status**: Umfassende Doc-Beispiele hinzugefügt
+    - **Implementiert**: 
+      - Detaillierte Beispiele für User Service Handler (List, Get, GetCurrent)
+      - Detaillierte Beispiele für Storage Service Handler (Upload)
+      - Request/Response Beispiele in JSON-Format
+      - Error-Dokumentation
+      - Authentication/Authorization Hinweise
 
 ### Frontend
 
-12. **REST Client Removal**
-    - **Datei**: `frontend/src/api/rest/`
-    - **TODO**: Remove deprecated REST client exports
-    - **Kontext**: Marked as deprecated, should be removed in next major version
-    - **Schätzung**: 1-2 Stunden
+12. ✅ **REST Client Removal** (Abgeschlossen)
+    - **Datei**: `frontend/src/api/rest/` (entfernt)
+    - **Status**: REST Client vollständig entfernt
+    - **Implementiert**: 
+      - `rest/client.ts` gelöscht
+      - `rest/endpoints.ts` gelöscht
+      - `rest/` Verzeichnis entfernt
+      - Exports aus `api/index.ts` entfernt
+      - `App.tsx` verwendet jetzt `createAuthenticatedClients` statt `initApiClient`
 
-13. **Type Definitions Cleanup**
+13. ✅ **Type Definitions Cleanup** (Abgeschlossen)
     - **Datei**: `frontend/src/api/types/index.ts`
-    - **TODO**: Remove deprecated type definitions
-    - **Kontext**: Legacy types marked as deprecated, should be removed
-    - **Schätzung**: 1-2 Stunden
+    - **Status**: Deprecated Types entfernt
+    - **Implementiert**: 
+      - Alle deprecated Interface-Definitionen entfernt
+      - Nur noch Error-Types exportiert (werden noch verwendet)
+      - Kommentare aktualisiert mit Hinweisen zu feature-basierten Exports
 
 ---
 
@@ -144,9 +173,9 @@ Dieses Dokument sammelt alle TODOs, FIXMEs und bekannten Verbesserungen aus dem 
 ## 📊 Statistics
 
 - **Total TODOs**: 13
-- **High Priority**: 5
-- **Medium Priority**: 4
-- **Low Priority**: 4
+- **High Priority**: 5 (alle abgeschlossen ✅)
+- **Medium Priority**: 4 (alle abgeschlossen ✅)
+- **Low Priority**: 4 (alle abgeschlossen ✅)
 
 ---
 

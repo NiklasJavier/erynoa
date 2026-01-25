@@ -1,13 +1,8 @@
 //! Health Check API
 //!
-//! Endpoints für Liveness und Readiness Probes
+//! Endpoints für Liveness und Readiness Probes (Connect-RPC only)
 
-mod handler;
-mod models;
-mod routes;
-#[cfg(feature = "connect")]
-mod connect;
+mod handlers;
 
-pub use routes::create_health_routes;
 #[cfg(feature = "connect")]
-pub use connect::{health_check_handler, ready_check_handler};
+pub use handlers::{health_check_handler, ready_check_handler};

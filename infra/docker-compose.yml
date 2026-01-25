@@ -121,7 +121,7 @@ services:
       cache:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
+      test: ["CMD", "curl", "-f", "-X", "POST", "-H", "Content-Type: application/json", "-d", "{}", "http://localhost:3000/api/v1/connect/godstack.v1.HealthService/Check"]
       interval: 10s
       timeout: 5s
       retries: 5

@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateUserRequest, CreateUserResponse, DeleteUserRequest, DeleteUserResponse, GetUserRequest, GetUserResponse, ListUsersRequest, ListUsersResponse, UpdateUserRequest, UpdateUserResponse } from "./user_pb.js";
+import { CreateUserRequest, CreateUserResponse, DeleteUserRequest, DeleteUserResponse, GetCurrentUserRequest, GetUserRequest, GetUserResponse, ListUsersRequest, ListUsersResponse, UpdateUserRequest, UpdateUserResponse } from "./user_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -33,6 +33,17 @@ export const UserService = {
     get: {
       name: "Get",
       I: GetUserRequest,
+      O: GetUserResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * GetCurrent returns the current authenticated user
+     *
+     * @generated from rpc godstack.v1.UserService.GetCurrent
+     */
+    getCurrent: {
+      name: "GetCurrent",
+      I: GetCurrentUserRequest,
       O: GetUserResponse,
       kind: MethodKind.Unary,
     },

@@ -8,6 +8,7 @@ import { createAuthenticatedClients } from "../connect/services";
 import { 
   ListUsersRequest,
   GetUserRequest,
+  GetCurrentUserRequest,
 } from "../../gen/godstack/v1/user_pb";
 import type { User } from "./types";
 import { toUser } from "./types";
@@ -61,9 +62,15 @@ export class ConnectUsersClient {
    * Get current user (from token)
    */
   async getCurrentUser(): Promise<User> {
-    // For now, we'll need to extract user ID from token
-    // This might require a separate endpoint or token parsing
-    // For Connect-RPC, we can add a GetCurrentUser RPC method
-    throw new Error("GetCurrentUser not yet implemented via Connect-RPC");
+    const request = new GetCurrentUserRequest({});
+
+    const response = await this.getClient().getCurrent(request);
+    const user = response.user;
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    return toUser(user);
   }
 }
