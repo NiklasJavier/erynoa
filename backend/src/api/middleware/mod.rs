@@ -7,7 +7,8 @@ mod cors;
 mod error_handler;
 mod logging;
 
-pub use auth::auth_middleware;
+// auth_middleware is currently unused (auth is handled via Claims extractor)
+// pub use auth::auth_middleware;
 pub use cors::build_cors;
 // error_handler is a placeholder for future global error handling
 // pub use error_handler::error_handler;

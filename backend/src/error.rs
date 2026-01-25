@@ -167,3 +167,6 @@ impl<T, E: fmt::Display> ResultExt<T> for std::result::Result<T, E> {
         self.map_err(|e| ApiError::Internal(anyhow::anyhow!("{}: {}", msg, e)))
     }
 }
+
+#[cfg(feature = "connect")]
+pub mod rpc;

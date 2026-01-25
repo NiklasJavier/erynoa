@@ -22,7 +22,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev \
     cmake \
     clang \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
+
+# Installiere buf für Proto-Code-Generierung (für Frontend)
+RUN BUF_VERSION=1.36.0 && \
+    curl -sSL "https://github.com/bufbuild/buf/releases/download/v${BUF_VERSION}/buf-Linux-x86_64" \
+    -o "/usr/local/bin/buf" && \
+    chmod +x /usr/local/bin/buf
 
 # Installiere cargo-watch für Hot-Reload
 RUN cargo install cargo-watch --locked
@@ -30,9 +37,10 @@ RUN cargo install cargo-watch --locked
 WORKDIR /workspace/backend
 
 # WICHTIG: Kopiere NICHT alle Dateien - sie werden via Volume gemountet!
-# Nur den Cargo.toml und Cargo.lock für Dependency-Locking
+# Nur den Cargo.toml, Cargo.lock und build.rs für Dependency-Locking
 COPY backend/Cargo.toml ./Cargo.toml
 COPY backend/Cargo.lock ./Cargo.lock
+COPY backend/build.rs ./build.rs
 
 # Pre-fetch dependencies (für schnellere Rebuilds)
 # Das speichert die Dependencies im Docker Layer für schnellere Builds
@@ -93,8 +101,15 @@ echo "========================================="
 
 # --poll für bessere Kompatibilität in Container-Umgebungen
 # --why zeigt an welche Datei den Rebuild ausgelöst hat
-# Nur existierende Pfade überwachen (config ist im backend-Verzeichnis)
-exec cargo watch --poll --why -x run -w src -w Cargo.toml -w config
+# Überwache auch proto/ für Connect-RPC Code-Generierung
+# Note: buf generate wird nur ausgeführt wenn proto/ sich ändert (via -s)
+exec cargo watch --poll --why \
+  -x "run --features connect" \
+  -w src \
+  -w Cargo.toml \
+  -w config \
+  -w ../proto \
+  -s "cd /workspace && buf generate 2>/dev/null || echo '⚠️  buf generate skipped (not critical)'"
 EOF
 
 RUN chmod +x /entrypoint.sh

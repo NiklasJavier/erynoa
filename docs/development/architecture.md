@@ -36,25 +36,59 @@ backend/src/api/
 
 ## Frontend API-Struktur
 
-### Client-Organisation
+### Feature-basierte Organisation (Phase 2)
 
 ```
 frontend/src/api/
-├── index.ts                  # Hauptexport
-├── types/                    # Shared Types
-├── rest/                     # REST Client
-├── connect/                  # Connect-RPC Client
-└── storage/                  # Storage Client
+├── health/                   # Health Service
+│   ├── types.ts              # Protobuf types + helpers
+│   └── index.ts              # Public API
+├── info/                     # Info Service
+│   ├── types.ts
+│   └── index.ts
+├── users/                    # User Service
+│   ├── connect-client.ts     # Connect-RPC client
+│   ├── types.ts              # Protobuf types + helpers
+│   └── index.ts
+├── storage/                   # Storage Service
+│   ├── connect-client.ts
+│   ├── types.ts
+│   └── index.ts
+├── connect/                  # Connect-RPC Transport
+│   ├── transport.ts          # Transport configuration
+│   └── services.ts           # Service clients
+└── rest/                     # REST Client (deprecated)
+    ├── client.ts
+    └── endpoints.ts
 ```
 
 **Vorteile:**
-- Klare Trennung der Clients
-- Zentrale Types ohne Duplikation
-- Einfacheres Warten
+- Konsistente Struktur mit Backend
+- Protobuf-Types als Single Source of Truth
+- Klare Feature-Trennung
+- Einfacheres Testing
 
 ---
 
-## Weitere Informationen
+## 🔌 Connect-RPC/gRPC-Web
 
-- [API Restrukturierung](API_RESTRUCTURE_COMPLETE.md)
-- [Frontend API Konsolidierung](FRONTEND_API_RESTRUCTURE_COMPLETE.md)
+Das Projekt verwendet Connect-RPC für die Frontend-Backend-Kommunikation:
+
+- **Protobuf** für Type-Safe Serialisierung
+- **gRPC-Web** für Browser-Kompatibilität
+- **Feature-basierte** Service-Organisation
+- **Automatische** Code-Generierung
+
+Siehe [Connect-RPC Guide](CONNECT_RPC_GUIDE.md) für Details.
+
+---
+
+## 📚 Weitere Informationen
+
+- [API Restrukturierung](../changelog/API_RESTRUCTURE_COMPLETE.md)
+- [Frontend API Konsolidierung](../changelog/FRONTEND_API_RESTRUCTURE_COMPLETE.md)
+- [Connect-RPC Guide](CONNECT_RPC_GUIDE.md)
+- [Style Guide](STYLE_GUIDE.md)
+- [Testing Guide](testing.md)
+- [Harmonization Roadmap](HARMONIZATION_ROADMAP.md)
+- [TODO Management](TODOS.md)

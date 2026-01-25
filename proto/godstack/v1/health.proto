@@ -32,6 +32,7 @@ message ReadyResponse {
   ServiceStatus database = 2;
   ServiceStatus cache = 3;
   ServiceStatus auth = 4;
+  ServiceStatus storage = 5;
 }
 
 message ServiceStatus {

@@ -12,7 +12,7 @@ use axum::{
     response::Response,
 };
 
-use crate::auth::Claims;
+// use crate::auth::Claims; // Wird aktuell nicht verwendet (auth_middleware ist deaktiviert)
 use crate::error::ApiError;
 use crate::server::AppState;
 
@@ -26,6 +26,7 @@ use crate::server::AppState;
 /// optionalen Parameter verwenden.
 ///
 /// Diese Middleware sollte nur auf protected routes angewendet werden.
+#[allow(dead_code)]
 pub async fn auth_middleware(
     State(state): State<AppState>,
     mut request: Request,

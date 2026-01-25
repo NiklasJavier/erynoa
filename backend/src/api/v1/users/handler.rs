@@ -22,7 +22,7 @@ pub async fn get_current_user(claims: Claims) -> Json<UserResponse> {
     })
 }
 
-/// GET /users/:id
+/// GET /users/{id}
 pub async fn get_user(
     Path(user_id): Path<Uuid>,
     claims: Claims,

@@ -12,22 +12,15 @@ import {
   For,
   batch,
 } from "solid-js";
-import StorageBrowser from "../components/storage/StorageBrowser";
+import { StorageBrowser } from "../components/storage/StorageBrowser";
 import { useUpload } from "../hooks/useStorage";
-import { storage, type StorageObject } from "../api";
-
-interface BucketInfo {
-  name: string;
-  size: number;
-  files: number;
-  created?: string;
-}
+import { storage } from "../api";
+import { logger } from "../lib/logger";
 
 const StoragePage: Component = () => {
   const [buckets, setBuckets] = createSignal<string[]>(["uploads"]);
   const [selectedBucket, setSelectedBucket] = createSignal("uploads");
   const [refreshTrigger, setRefreshTrigger] = createSignal(0);
-  const [bucketInfo, setBucketInfo] = createSignal<Record<string, BucketInfo>>({});
   const [showUploadModal, setShowUploadModal] = createSignal(false);
   const [showNewBucketModal, setShowNewBucketModal] = createSignal(false);
   const [newBucketName, setNewBucketName] = createSignal("");
@@ -46,18 +39,16 @@ const StoragePage: Component = () => {
   const loadBuckets = async () => {
     setLoadingBuckets(true);
     try {
-      const response = await fetch("/api/v1/storage/buckets", {
-        method: "GET",
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setBuckets(data.buckets || ["uploads"]);
-        if (!buckets().includes(selectedBucket())) {
-          setSelectedBucket(buckets()[0]);
-        }
+      const bucketList = await storage.listBuckets();
+      setBuckets(bucketList.length > 0 ? bucketList : ["uploads"]);
+      if (!buckets().includes(selectedBucket())) {
+        setSelectedBucket(buckets()[0]);
       }
     } catch (error) {
-      console.error("Failed to load buckets:", error);
+      logger.error("Failed to load buckets", error instanceof Error ? error : new Error(String(error)), {
+        component: "StoragePage",
+        action: "loadBuckets",
+      });
     } finally {
       setLoadingBuckets(false);
     }
@@ -71,22 +62,17 @@ const StoragePage: Component = () => {
     }
 
     try {
-      const response = await fetch("/api/v1/storage/buckets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
-      });
-
-      if (response.ok) {
-        setNewBucketName("");
-        setShowNewBucketModal(false);
-        await loadBuckets();
-        setSelectedBucket(name);
-      } else {
-        alert("Bucket konnte nicht erstellt werden");
-      }
+      await storage.createBucket(name);
+      setNewBucketName("");
+      setShowNewBucketModal(false);
+      await loadBuckets();
+      setSelectedBucket(name);
     } catch (error) {
-      console.error("Failed to create bucket:", error);
+      logger.error("Failed to create bucket", error instanceof Error ? error : new Error(String(error)), {
+        component: "StoragePage",
+        action: "createBucket",
+        bucketName: name,
+      });
       alert("Fehler beim Erstellen des Buckets");
     }
   };
@@ -101,20 +87,17 @@ const StoragePage: Component = () => {
     }
 
     try {
-      const response = await fetch(`/api/v1/storage/buckets/${bucket}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        await loadBuckets();
-        if (selectedBucket() === bucket) {
-          setSelectedBucket(buckets()[0]);
-        }
-      } else {
-        alert("Bucket konnte nicht gelöscht werden");
+      await storage.deleteBucket(bucket);
+      await loadBuckets();
+      if (selectedBucket() === bucket) {
+        setSelectedBucket(buckets()[0]);
       }
     } catch (error) {
-      console.error("Failed to delete bucket:", error);
+      logger.error("Failed to delete bucket", error instanceof Error ? error : new Error(String(error)), {
+        component: "StoragePage",
+        action: "deleteBucket",
+        bucketName: bucket,
+      });
       alert("Fehler beim Löschen des Buckets");
     }
   };
@@ -128,7 +111,12 @@ const StoragePage: Component = () => {
         await upload()(file);
         setRefreshTrigger((k) => k + 1);
       } catch (error) {
-        console.error("Upload failed:", error);
+        logger.error("Upload failed", error instanceof Error ? error : new Error(String(error)), {
+          component: "StoragePage",
+          action: "uploadFile",
+          fileName: file.name,
+          bucket: selectedBucket(),
+        });
       }
     }
 
@@ -151,7 +139,12 @@ const StoragePage: Component = () => {
         await upload()(file);
         setRefreshTrigger((k) => k + 1);
       } catch (error) {
-        console.error("Upload failed:", error);
+        logger.error("Upload failed", error instanceof Error ? error : new Error(String(error)), {
+          component: "StoragePage",
+          action: "uploadFile",
+          fileName: file.name,
+          bucket: selectedBucket(),
+        });
       }
     }
   };
@@ -180,10 +173,10 @@ const StoragePage: Component = () => {
         <div class="mb-6 flex gap-3 flex-wrap">
           <button
             onClick={() => setShowUploadModal(true)}
-            disabled={isUploading()}
+            disabled={isUploading()()}
             class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
           >
-            📤 {isUploading() ? "Wird hochgeladen..." : "Hochladen"}
+            📤 {isUploading()() ? "Wird hochgeladen..." : "Hochladen"}
           </button>
           <button
             onClick={() => setShowNewBucketModal(true)}
@@ -270,7 +263,7 @@ const StoragePage: Component = () => {
                     type="file"
                     multiple
                     onChange={handleUpload}
-                    disabled={isUploading()}
+                    disabled={isUploading()()}
                     class="hidden"
                   />
                   <div class="border-2 border-dashed border-blue-300 dark:border-blue-600 rounded-lg p-6 text-center hover:border-blue-500 dark:hover:border-blue-400 transition-colors">
@@ -278,7 +271,7 @@ const StoragePage: Component = () => {
                       📁 Dateien hier ablegen oder klicken zum Upload
                     </p>
                     <p class="text-sm text-blue-600 dark:text-blue-400 mt-1">
-                      {isUploading()
+                      {isUploading()()
                         ? "Wird hochgeladen..."
                         : "Zu: " + selectedBucket()}
                     </p>
@@ -314,14 +307,14 @@ const StoragePage: Component = () => {
                   handleUpload(e);
                   setShowUploadModal(false);
                 }}
-                disabled={isUploading()}
+                disabled={isUploading()()}
                 class="w-full"
               />
             </label>
             <div class="mt-4 flex gap-2 justify-end">
               <button
                 onClick={() => setShowUploadModal(false)}
-                disabled={isUploading()}
+                disabled={isUploading()()}
                 class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 Abbrechen

@@ -1,0 +1,13 @@
+# Generated code (will be created by build.rs)
+src/gen/
+
+# Rust build artifacts
+target/
+**/*.rs.bk
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

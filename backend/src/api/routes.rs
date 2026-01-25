@@ -9,6 +9,9 @@ use super::constants::API_VERSION;
 use super::middleware::{build_cors, logging_middleware};
 use super::v1::{health, info, storage, users};
 
+#[cfg(feature = "connect")]
+use super::v1::connect_routes;
+
 /// Erstellt den Haupt-Router mit allen API-Features
 pub fn create_router(state: AppState) -> Router {
     let cors = build_cors(&state);
@@ -27,10 +30,18 @@ pub fn create_router(state: AppState) -> Router {
         .merge(users::create_users_routes())
         .merge(storage::create_storage_routes());
 
+    // Connect-RPC routes (gRPC-Web)
+    #[cfg(feature = "connect")]
+    let connect_routes = connect_routes::create_connect_routes(state.clone());
+    
     // Kombiniere alle Routen
     let api = Router::new()
         .merge(public_routes)
         .merge(protected_routes);
+    
+    // Add Connect-RPC routes if enabled
+    #[cfg(feature = "connect")]
+    let api = api.nest("/connect", connect_routes);
 
     // Haupt-Router mit Middleware und State
     Router::new()

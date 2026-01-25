@@ -8,6 +8,7 @@ import { createPromiseClient, type PromiseClient } from "@connectrpc/connect";
 import { UserService } from "../../gen/godstack/v1/user_connect";
 import { HealthService } from "../../gen/godstack/v1/health_connect";
 import { InfoService } from "../../gen/godstack/v1/info_connect";
+import { StorageService } from "../../gen/godstack/v1/storage_connect";
 import { createBaseTransport, createAuthenticatedTransport } from "./transport";
 
 // Base transport (no auth)
@@ -17,11 +18,13 @@ const baseTransport = createBaseTransport();
 export const userClient = createPromiseClient(UserService, baseTransport);
 export const healthClient = createPromiseClient(HealthService, baseTransport);
 export const infoClient = createPromiseClient(InfoService, baseTransport);
+export const storageClient = createPromiseClient(StorageService, baseTransport);
 
 // Export client types
 export type UserClient = PromiseClient<typeof UserService>;
 export type HealthClient = PromiseClient<typeof HealthService>;
 export type InfoClient = PromiseClient<typeof InfoService>;
+export type StorageClient = PromiseClient<typeof StorageService>;
 
 /**
  * Create authenticated service clients
@@ -33,5 +36,6 @@ export function createAuthenticatedClients(getToken: () => Promise<string | null
     users: createPromiseClient(UserService, transport),
     health: createPromiseClient(HealthService, transport),
     info: createPromiseClient(InfoService, transport),
+    storage: createPromiseClient(StorageService, transport),
   };
 }

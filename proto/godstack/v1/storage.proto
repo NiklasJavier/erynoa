@@ -1,0 +1,159 @@
+syntax = "proto3";
+
+package godstack.v1;
+
+option go_package = "godstack/v1;godstackv1";
+
+import "google/protobuf/timestamp.proto";
+
+// StorageService provides S3-compatible storage operations
+service StorageService {
+  // Upload uploads a file to storage
+  rpc Upload(UploadRequest) returns (UploadResponse);
+  
+  // List lists objects in a bucket
+  rpc List(ListObjectsRequest) returns (ListObjectsResponse);
+  
+  // Delete deletes an object
+  rpc Delete(DeleteObjectRequest) returns (DeleteObjectResponse);
+  
+  // Head checks if an object exists
+  rpc Head(HeadObjectRequest) returns (HeadObjectResponse);
+  
+  // GetPresignedUploadUrl generates a presigned URL for direct upload
+  rpc GetPresignedUploadUrl(GetPresignedUploadUrlRequest) returns (GetPresignedUploadUrlResponse);
+  
+  // GetPresignedDownloadUrl generates a presigned URL for download
+  rpc GetPresignedDownloadUrl(GetPresignedDownloadUrlRequest) returns (GetPresignedDownloadUrlResponse);
+  
+  // ListBuckets lists all buckets
+  rpc ListBuckets(ListBucketsRequest) returns (ListBucketsResponse);
+  
+  // CreateBucket creates a new bucket
+  rpc CreateBucket(CreateBucketRequest) returns (CreateBucketResponse);
+  
+  // DeleteBucket deletes a bucket
+  rpc DeleteBucket(DeleteBucketRequest) returns (DeleteBucketResponse);
+}
+
+// UploadRequest contains file data and metadata
+message UploadRequest {
+  // File content (bytes)
+  bytes file = 1;
+  // File name
+  string filename = 2;
+  // Content type (MIME type)
+  string content_type = 3;
+  // Optional bucket name (uses default if not specified)
+  optional string bucket = 4;
+}
+
+// UploadResponse contains upload result
+message UploadResponse {
+  string key = 1;
+  string bucket = 2;
+  string url = 3;
+  string etag = 4;
+}
+
+// ListObjectsRequest contains list parameters
+message ListObjectsRequest {
+  // Optional prefix filter
+  optional string prefix = 1;
+  // Optional bucket name
+  optional string bucket = 2;
+  // Maximum number of objects to return
+  int32 max_keys = 3;
+}
+
+// ListObjectsResponse contains list of objects
+message ListObjectsResponse {
+  repeated ObjectInfo objects = 1;
+  int32 count = 2;
+}
+
+// ObjectInfo contains object metadata
+message ObjectInfo {
+  string key = 1;
+  int64 size = 2;
+  optional string content_type = 3;
+  optional google.protobuf.Timestamp last_modified = 4;
+}
+
+// DeleteObjectRequest contains object identifier
+message DeleteObjectRequest {
+  string key = 1;
+  optional string bucket = 2;
+}
+
+// DeleteObjectResponse is empty
+message DeleteObjectResponse {}
+
+// HeadObjectRequest contains object identifier
+message HeadObjectRequest {
+  string key = 1;
+  optional string bucket = 2;
+}
+
+// HeadObjectResponse indicates if object exists
+message HeadObjectResponse {
+  bool exists = 1;
+}
+
+// GetPresignedUploadUrlRequest contains upload parameters
+message GetPresignedUploadUrlRequest {
+  string key = 1;
+  optional string bucket = 2;
+  // Expiration time in seconds
+  int64 expires_in = 3;
+  optional string content_type = 4;
+}
+
+// GetPresignedUploadUrlResponse contains presigned URL
+message GetPresignedUploadUrlResponse {
+  string url = 1;
+  int64 expires_in_secs = 2;
+  string method = 3;
+}
+
+// GetPresignedDownloadUrlRequest contains download parameters
+message GetPresignedDownloadUrlRequest {
+  string key = 1;
+  optional string bucket = 2;
+  // Expiration time in seconds
+  int64 expires_in = 3;
+}
+
+// GetPresignedDownloadUrlResponse contains presigned URL
+message GetPresignedDownloadUrlResponse {
+  string url = 1;
+  int64 expires_in_secs = 2;
+  string method = 3;
+}
+
+// ListBucketsRequest is empty
+message ListBucketsRequest {}
+
+// ListBucketsResponse contains list of bucket names
+message ListBucketsResponse {
+  repeated string buckets = 1;
+}
+
+// CreateBucketRequest contains bucket name
+message CreateBucketRequest {
+  string name = 1;
+}
+
+// CreateBucketResponse contains bucket info
+message CreateBucketResponse {
+  string name = 1;
+  string message = 2;
+}
+
+// DeleteBucketRequest contains bucket name
+message DeleteBucketRequest {
+  string name = 1;
+}
+
+// DeleteBucketResponse is empty
+message DeleteBucketResponse {}

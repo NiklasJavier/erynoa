@@ -1,15 +1,16 @@
 /**
  * Storage API Client
  * S3-compatible storage operations via backend
+ * 
+ * REST-based implementation (Connect-RPC available via connect-client.ts)
  */
 
 import { getApiBaseUrl, API_VERSION } from "../../lib/api-config";
 import type {
-  StorageObject,
   UploadResult,
   PresignedUrl,
   ListObjectsResponse,
-} from "../types";
+} from "./types";
 
 /**
  * Storage Client für S3-kompatible Operationen

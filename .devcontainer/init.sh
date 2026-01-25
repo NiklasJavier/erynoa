@@ -5,6 +5,26 @@ set +e
 echo "🚀 Initializing God-Stack DevContainer..."
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 0. Fix Docker credentials for Cursor compatibility
+# ─────────────────────────────────────────────────────────────────────────────
+echo "🐳 Fixing Docker credentials for Cursor compatibility..."
+if [ -f "$HOME/.docker/config.json" ]; then
+  # Check if config contains VS Code Remote Containers credential helper
+  if grep -q "dev-containers-" "$HOME/.docker/config.json" 2>/dev/null; then
+    echo "   Fixing Docker config (removing VS Code Remote Containers credential helper)..."
+    # Backup original config
+    cp "$HOME/.docker/config.json" "$HOME/.docker/config.json.backup" 2>/dev/null || true
+    # Remove the problematic credsStore
+    cat > "$HOME/.docker/config.json" << 'DOCKEREOF'
+{}
+DOCKEREOF
+    echo "   ✅ Docker config fixed"
+  else
+    echo "   ✅ Docker config OK"
+  fi
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 1. Nix Environment Pre-flight
 # ─────────────────────────────────────────────────────────────────────────────
 # Hinweis: Der Nix-Daemon läuft bereits durch das DevContainer Feature.

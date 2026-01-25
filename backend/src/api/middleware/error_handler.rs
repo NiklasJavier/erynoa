@@ -15,6 +15,7 @@ use axum::{
 /// 
 /// Aktuell wird Error-Handling über IntoResponse für ApiError gehandhabt.
 /// Diese Middleware kann für zukünftige Error-Transformationen erweitert werden.
+#[allow(dead_code)]
 pub async fn error_handler(request: Request, next: Next) -> Response {
     next.run(request).await
 }

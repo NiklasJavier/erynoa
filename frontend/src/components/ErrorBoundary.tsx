@@ -13,11 +13,23 @@ interface ErrorInfo {
 export const ErrorBoundary: ParentComponent = (props) => {
   const [error, setError] = createSignal<ErrorInfo | null>(null);
 
-  onError((err) => {
+  onError(async (err) => {
     const message = err instanceof Error ? err.message : String(err);
     const stack = err instanceof Error ? err.stack : undefined;
     setError({ message, stack });
-    console.error("Error caught by boundary:", message, stack);
+    
+    // Dynamically import logger to avoid circular dependencies
+    try {
+      const { logger } = await import("../lib/logger");
+      logger.error("Error caught by boundary", err instanceof Error ? err : new Error(message), {
+        component: "ErrorBoundary",
+        stack,
+      });
+    } catch (logError) {
+      // Fallback to console if logger fails
+      console.error("Error caught by boundary:", message, stack);
+      console.error("Logger import failed:", logError);
+    }
   });
 
   return (

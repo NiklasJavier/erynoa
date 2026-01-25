@@ -4,6 +4,8 @@
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
+// Note: tikv-jemallocator is optional and only compiled when jemalloc feature is enabled
+
 use godstack_api::{
     config::{Settings, version::VERSION},
     server::Server,

@@ -136,19 +136,9 @@ dev:
         fi
     fi
     
-    # 4. Optional: Health Check
+    # 4. Starte Frontend + Backend mit sichtbaren Logs
     echo ""
-    echo "━━━ [4/5] Optional: Health Check ━━━"
-    if command -v curl > /dev/null 2>&1; then
-        echo "  Führe Health Check aus..."
-        /workspace/scripts/dev-check.sh || echo "  ⚠ Einige Services noch nicht bereit (normal beim ersten Start)"
-    else
-        echo "  ⚠ curl nicht verfügbar - Health Check übersprungen"
-    fi
-    
-    # 5. Starte Frontend + Backend mit sichtbaren Logs
-    echo ""
-    echo "━━━ [5/5] Starte Frontend + Backend (Hot-Reload) ━━━"
+    echo "━━━ [4/5] Starte Frontend + Backend (Hot-Reload) ━━━"
     echo ""
     echo "  Ctrl+C stoppt Frontend & Backend, Services laufen weiter."
     echo "  Komplett stoppen: just docker-stop"
@@ -160,7 +150,37 @@ dev:
     cd /workspace/infra
     # Trap Ctrl+C um eine saubere Nachricht anzuzeigen
     trap 'echo ""; echo ""; echo "━━━ Frontend + Backend gestoppt ━━━"; echo "  Services laufen weiter. Status: just status"; echo "  Neustart: just dev"; echo ""' INT
-    docker compose up --build frontend backend
+    
+    # Starte Frontend und Backend im Hintergrund
+    docker compose up --build -d frontend backend
+    
+    # Warte bis Container gestartet sind und Services bereit sind
+    echo "  ⏳ Warte auf Frontend und Backend Start..."
+    sleep 8
+    
+    # 5. Health Check (nach Start von Frontend + Backend)
+    echo ""
+    echo "━━━ [5/5] Health Check ━━━"
+    if command -v curl > /dev/null 2>&1; then
+        echo "  Führe Health Check aus..."
+        /workspace/scripts/dev-check.sh || echo "  ⚠ Einige Services noch nicht bereit (wird automatisch neu geprüft)"
+    else
+        echo "  ⚠ curl nicht verfügbar - Health Check übersprungen"
+    fi
+    
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  Frontend & Backend laufen im Hintergrund"
+    echo "  Logs anzeigen: just docker-logs"
+    echo "  Status prüfen: just status"
+    echo "  Health Check:  just dev-check"
+    echo ""
+    echo "  Zum Anhalten: just docker-stop"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    
+    # Zeige Logs von Frontend und Backend (blockierend)
+    docker compose logs -f frontend backend
     
 # Dev ohne ZITADEL (minimal)
 dev-minimal:

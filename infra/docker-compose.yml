@@ -27,6 +27,13 @@ services:
     volumes:
       - ../frontend:/workspace/frontend
       - /workspace/frontend/node_modules
+      # Proto für Code-Generierung
+      - ../proto:/workspace/proto:cached
+      # Buf-Konfiguration (im Workspace-Root)
+      - ../buf.gen.yaml:/workspace/buf.gen.yaml:cached
+      - ../buf.yaml:/workspace/buf.yaml:cached
+      # Gen-Verzeichnis für Hot-Reload
+      - ../frontend/src/gen:/workspace/frontend/src/gen:cached
     environment:
       - NODE_ENV=development
       - VITE_API_URL=http://localhost:3000
@@ -55,13 +62,19 @@ services:
       - ../backend/Cargo.lock:/workspace/backend/Cargo.lock:cached
       - ../backend/config:/workspace/backend/config:cached
       - ../backend/migrations:/workspace/backend/migrations:cached
+      - ../backend/build.rs:/workspace/backend/build.rs:cached
       # Separate Volume für target/ - verhindert Konflikte zwischen Host und Container
       - backend-target:/workspace/backend/target
       # Cargo Registry Cache - beschleunigt Dependency Downloads
       - cargo-registry:/usr/local/cargo/registry
       - cargo-git:/usr/local/cargo/git
-      # Proto für eventuelle Code-Generierung
+      # Proto für Code-Generierung (Backend + Frontend)
       - ../proto:/workspace/proto:cached
+      # Buf-Konfiguration (für Frontend-Generierung)
+      - ../buf.gen.yaml:/workspace/buf.gen.yaml:cached
+      - ../buf.yaml:/workspace/buf.yaml:cached
+      # Backend gen/ für Hot-Reload (wird von build.rs erstellt)
+      - ../backend/src/gen:/workspace/backend/src/gen:cached
     working_dir: /workspace/backend
     environment:
       - RUST_LOG=godstack_api=debug,info

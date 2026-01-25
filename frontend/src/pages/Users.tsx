@@ -4,7 +4,9 @@
  */
 
 import { Show, For, createResource, Suspense } from "solid-js";
-import { api, type User } from "../api";
+import { type User, toUser } from "../api/users";
+import { createAuthenticatedClients } from "../api/connect/services";
+import { useAuth } from "../lib/auth";
 import {
   Card,
   CardContent,
@@ -14,10 +16,14 @@ import {
   getInitials,
 } from "../components/ui";
 import { ProtectedRoute } from "../components/ProtectedRoute";
-import { formatDate } from "../lib/utils";
 
 function UserList() {
-  const [users] = createResource(() => api.users.list());
+  const auth = useAuth();
+  const [users] = createResource(async () => {
+    const clients = createAuthenticatedClients(() => auth.getAccessToken());
+    const response = await clients.users.list({ pageSize: 20 });
+    return response.users.map(toUser);
+  });
 
   return (
     <div class="space-y-6">
@@ -64,7 +70,7 @@ function UserCard(props: { user: User }) {
       <CardContent class="flex items-center gap-4 py-4">
         <Avatar>
           <AvatarFallback>
-            {getInitials(props.user.name || props.user.email)}
+            {getInitials(props.user.name || props.user.email || "")}
           </AvatarFallback>
         </Avatar>
         

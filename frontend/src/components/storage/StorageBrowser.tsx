@@ -14,6 +14,7 @@ import {
 } from "solid-js";
 import { storage, type StorageObject } from "../../api";
 import { useStorageList, useDeleteFile } from "../../hooks/useStorage";
+import { logger } from "../../lib/logger";
 
 interface FileNode extends StorageObject {
   path: string;
@@ -253,7 +254,11 @@ export const StorageBrowser: SolidComponent<StorageBrowserProps> = (props) => {
       const url = await storage.getDownloadUrl(key, props.bucket);
       window.open(url, "_blank");
     } catch (e) {
-      console.error("Download failed:", e);
+      logger.error("Download failed", e instanceof Error ? e : new Error(String(e)), {
+        component: "StorageBrowser",
+        action: "download",
+        key,
+      });
     } finally {
       setDownloadingKey(null);
     }
@@ -287,7 +292,11 @@ export const StorageBrowser: SolidComponent<StorageBrowserProps> = (props) => {
         const url = await storage.getDownloadUrl(node.key, props.bucket);
         props.onSelect(node.key, url);
       } catch (e) {
-        console.error("Failed to open file:", e);
+        logger.error("Failed to open file", e instanceof Error ? e : new Error(String(e)), {
+          component: "StorageBrowser",
+          action: "openFile",
+          key: node.key,
+        });
       }
     }
   };

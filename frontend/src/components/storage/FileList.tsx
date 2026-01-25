@@ -7,6 +7,7 @@ import { For, Show, createSignal } from "solid-js";
 import type { Component } from "solid-js";
 import { useStorageList, useDeleteFile, formatFileSize, getFileIcon } from "../../hooks/useStorage";
 import { storage } from "../../api";
+import { logger } from "../../lib/logger";
 
 interface FileListProps {
   bucket?: string;
@@ -28,7 +29,11 @@ export const FileList: Component<FileListProps> = (props) => {
       // Open in new tab or trigger download
       window.open(url, "_blank");
     } catch (e) {
-      console.error("Download failed:", e);
+      logger.error("Download failed", e instanceof Error ? e : new Error(String(e)), {
+        component: "FileList",
+        action: "download",
+        key,
+      });
     } finally {
       setDownloadingKey(null);
     }
@@ -50,7 +55,11 @@ export const FileList: Component<FileListProps> = (props) => {
       const url = await storage.getDownloadUrl(key, props.bucket);
       props.onSelect(key, url);
     } catch (e) {
-      console.error("Failed to get URL:", e);
+      logger.error("Failed to get URL", e instanceof Error ? e : new Error(String(e)), {
+        component: "FileList",
+        action: "getUrl",
+        key,
+      });
     }
   };
 

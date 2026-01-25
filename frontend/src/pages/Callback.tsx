@@ -5,6 +5,7 @@
 
 import { createSignal, onMount, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
+import { logger } from "../lib/logger";
 
 export default function Callback() {
   const navigate = useNavigate();
@@ -17,14 +18,18 @@ export default function Callback() {
       
       if (!settingsKey) {
         // No OIDC state found - might be a direct navigation
-        console.log("No OIDC state found, redirecting to home...");
+        logger.warn("No OIDC state found, redirecting to home", {
+          component: "Callback",
+        });
         navigate("/", { replace: true });
         return;
       }
 
       // The AuthProvider should handle this, but we add a timeout fallback
       const timeout = setTimeout(() => {
-        console.log("Callback timeout - redirecting to home");
+        logger.warn("Callback timeout - redirecting to home", {
+          component: "Callback",
+        });
         navigate("/", { replace: true });
       }, 5000);
 
@@ -33,7 +38,9 @@ export default function Callback() {
       return () => clearTimeout(timeout);
       
     } catch (err) {
-      console.error("Callback error:", err);
+      logger.error("Callback error", err instanceof Error ? err : new Error(String(err)), {
+        component: "Callback",
+      });
       setError(err instanceof Error ? err.message : "Authentication failed");
     }
   });

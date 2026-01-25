@@ -4,7 +4,8 @@
  */
 
 import { getApiBaseUrl } from "../../lib/api-config";
-import type { ApiErrorResponse } from "../types/errors";
+import type { ApiErrorResponse, ErrorCode } from "../types/errors";
+import { logger } from "../../lib/logger";
 
 export class RestClient {
   private baseUrl: string;
@@ -79,14 +80,17 @@ export class RestClient {
         try {
           return await response.json();
         } catch (parseError) {
-          console.error("Failed to parse JSON response:", parseError);
+          logger.error("Failed to parse JSON response", parseError instanceof Error ? parseError : new Error(String(parseError)), {
+            endpoint,
+            status: response.status,
+          });
           throw new Error(`Failed to parse response: ${parseError instanceof Error ? parseError.message : "Unknown error"}`);
         }
       }
       
       return {} as T;
     } catch (error) {
-      console.error(`API request failed for ${endpoint}:`, error);
+      logger.error(`API request failed for ${endpoint}`, error instanceof Error ? error : new Error(String(error)));
       throw error;
     }
   }

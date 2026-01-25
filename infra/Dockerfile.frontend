@@ -1,18 +1,96 @@
 # Frontend Dockerfile mit Vite Hot-Reloading
 FROM node:20-alpine
 
+WORKDIR /workspace
+
+# Installiere buf für Proto-Code-Generierung
+RUN apk add --no-cache curl unzip && \
+    BUF_VERSION=1.36.0 && \
+    curl -sSL "https://github.com/bufbuild/buf/releases/download/v${BUF_VERSION}/buf-Linux-x86_64" \
+    -o "/usr/local/bin/buf" && \
+    chmod +x /usr/local/bin/buf && \
+    apk del curl unzip
+
 WORKDIR /workspace/frontend
 
 # Installiere npm Abhängigkeiten
 COPY frontend/package*.json ./
 RUN npm ci
 
+# Installiere chokidar-cli für Proto-Watching (optional, für manuelles Watching)
+RUN npm install --save-dev chokidar-cli || true
+
 # Kopiere Frontend Code
 COPY frontend .
+
+# Generiere Proto-Code beim Start wird im Entrypoint gemacht
 
 # Exponiere Port für Vite Dev Server
 EXPOSE 5173
 
-# Starte Vite mit Hot-Reload (Host muss 0.0.0.0 sein für Docker)
-# Das Code wird via Volume gemountet und ändert sich automatisch
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+# Erstelle Proto-Watch Script (Node.js-basiert für Alpine)
+RUN cat > /workspace/proto-watch.js << 'EOF'
+const { watch } = require('fs');
+const { spawn } = require('child_process');
+
+console.log('🔄 Watching proto/ directory for changes...');
+
+watch('/workspace/proto', { recursive: true }, (eventType, filename) => {
+  if (filename && filename.endsWith('.proto')) {
+    console.log(`🔄 Proto file changed: ${filename}, regenerating...`);
+    const buf = spawn('buf', ['generate'], {
+      cwd: '/workspace',
+      stdio: 'inherit',
+      shell: true,
+      env: { ...process.env }
+    });
+    buf.on('close', (code) => {
+      if (code === 0) {
+        console.log('✅ Proto code regenerated');
+      } else {
+        console.log('⚠️  Proto generation failed (code: ' + code + ')');
+      }
+    });
+    buf.on('error', (err) => {
+      console.log('⚠️  Proto generation error:', err.message);
+    });
+  }
+});
+EOF
+
+# Erstelle Entrypoint-Script für Proto-Watching + Vite
+RUN cat > /entrypoint.sh << 'EOF'
+#!/bin/sh
+set -e
+
+echo "========================================="
+echo "Frontend Container Starting..."
+echo "========================================="
+
+# Generiere Proto-Code beim Start
+echo "[1/2] Generating Proto code..."
+cd /workspace
+if [ -f "buf.gen.yaml" ]; then
+  buf generate 2>&1 && echo "✅ Proto code generated" || echo "⚠️  Proto generation failed (will retry on file changes)"
+else
+  echo "⚠️  buf.gen.yaml not found, skipping proto generation"
+fi
+
+# Starte Proto-Watcher im Hintergrund
+echo "[2/3] Starting Proto file watcher..."
+node /workspace/proto-watch.js &
+WATCHER_PID=$!
+
+# Starte Vite Dev Server
+echo "[3/3] Starting Vite Dev Server..."
+echo "========================================="
+echo "Proto changes will trigger regeneration"
+echo "========================================="
+
+cd /workspace/frontend
+exec npm run dev -- --host 0.0.0.0 --port 5173
+EOF
+
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

@@ -1,28 +1,40 @@
 /**
  * Shared API Types
  * 
- * Zentrale Type-Definitionen für alle API-Clients
+ * @deprecated Use feature-based type exports instead:
+ * - import { User, toUser } from "./api/users"
+ * - import { StorageObject, toStorageObject } from "./api/storage"
+ * - import { HealthResponse } from "./api/health"
+ * - import { GetInfoResponse } from "./api/info"
+ * 
+ * This file is kept for backwards compatibility only.
  */
 
 // Common Types
-// Re-export error types
+// Re-export error types (still used)
 export * from "./errors";
 
-// Legacy ApiError removed - use ApiErrorResponse from errors.ts instead
-// If you need backward compatibility, use toLegacyError() helper from errors.ts
-
-// Health Check Types
+// Legacy Types - Deprecated, use Protobuf types from feature modules instead
+/**
+ * @deprecated Use types from "./api/health" instead
+ */
 export interface HealthResponse {
   status: string;
   version: string;
 }
 
+/**
+ * @deprecated Use types from "./api/health" instead
+ */
 export interface ServiceStatus {
   status: string;
   latency_ms?: number;
   error?: string;
 }
 
+/**
+ * @deprecated Use types from "./api/health" instead
+ */
 export interface ReadinessResponse {
   status: string;
   services: {
@@ -34,7 +46,9 @@ export interface ReadinessResponse {
   uptime_secs?: number;
 }
 
-// Info Types
+/**
+ * @deprecated Use types from "./api/info" instead
+ */
 export interface InfoResponse {
   version: string;
   environment: string;
@@ -44,7 +58,9 @@ export interface InfoResponse {
   api_url: string;
 }
 
-// User Types
+/**
+ * @deprecated Use types from "./api/users" instead
+ */
 export interface User {
   id: string;
   email: string | null;
@@ -52,7 +68,9 @@ export interface User {
   roles: string[];
 }
 
-// Storage Types
+/**
+ * @deprecated Use types from "./api/storage" instead
+ */
 export interface StorageObject {
   key: string;
   size: number;
@@ -61,6 +79,9 @@ export interface StorageObject {
   etag?: string;
 }
 
+/**
+ * @deprecated Use types from "./api/storage" instead
+ */
 export interface UploadResult {
   key: string;
   bucket: string;
@@ -68,11 +89,17 @@ export interface UploadResult {
   etag?: string;
 }
 
+/**
+ * @deprecated Use types from "./api/storage" instead
+ */
 export interface PresignedUrl {
   url: string;
   expires_in: number;
 }
 
+/**
+ * @deprecated Use types from "./api/storage" instead
+ */
 export interface ListObjectsResponse {
   objects: StorageObject[];
   count: number;

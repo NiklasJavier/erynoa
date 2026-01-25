@@ -41,7 +41,10 @@ function App() {
       const cfg = await fetchConfig();
       setConfig(cfg);
     } catch (err) {
-      console.error("Failed to load config:", err);
+      const { logger } = await import("./lib/logger");
+      logger.error("Failed to load config", err instanceof Error ? err : new Error(String(err)), {
+        component: "App",
+      });
       setError("Konfiguration konnte nicht geladen werden");
     }
   });
@@ -115,7 +118,8 @@ const ApiInitializer: ParentComponent = (props) => {
     initApiClient(() => auth.getAccessToken());
     // Initialize Storage client with the same auth token getter
     initStorageClient(() => auth.getAccessToken());
-    console.log("API and Storage clients initialized with auth token getter");
+    // Logger is already imported dynamically in fetchConfig error handler
+    // No need to log here as it's just initialization
   });
 
   return <>{props.children}</>;

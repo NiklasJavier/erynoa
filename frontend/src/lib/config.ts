@@ -1,18 +1,19 @@
 /**
  * API Configuration
- * Loaded from backend /api/v1/info endpoint
+ * Loaded from backend via Connect-RPC Info Service
  */
 
-// Backend response type
-interface BackendInfoResponse {
-  version: string;
-  environment: string;
-  auth_issuer: string;
-  auth_client_id: string;
-  frontend_url: string;
-  api_url: string;
-}
+import { GetInfoRequest } from "../api/info";
+import { logger } from "./logger";
+import { validateConfig } from "./config-schema";
+import { getApiBaseUrl } from "./api-config";
 
+/**
+ * Application Configuration
+ * 
+ * @deprecated Use Config from "./config-schema" instead
+ * Kept for backwards compatibility
+ */
 export interface AppConfig {
   environment: string;
   version: string;
@@ -30,43 +31,61 @@ export interface AppConfig {
   };
 }
 
-// Import centralized API config
-import { getApiBaseUrl, API_VERSION } from "./api-config";
+// Re-export Config type from schema as primary type
+export type { Config } from "./config-schema";
 
 /**
- * Fetch application configuration from backend
+ * Fetch application configuration from backend using Connect-RPC
  * This enables dynamic configuration without rebuilding the frontend
  */
 export async function fetchConfig(): Promise<AppConfig> {
   try {
-    const apiUrl = getApiBaseUrl();
-    console.log("Fetching config from:", `${apiUrl}${API_VERSION}/info`);
-    const response = await fetch(`${apiUrl}${API_VERSION}/info`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch config: ${response.status}`);
+    // Dynamically import infoClient to avoid circular dependencies
+    const { infoClient } = await import("../api/connect/services");
+    const request = new GetInfoRequest({});
+    const response = await infoClient.getInfo(request);
+    
+    logger.info("Config loaded successfully via Connect-RPC", {
+      version: response.version,
+      environment: response.environment,
+    });
+    
+    // Validate response
+    if (!response) {
+      logger.error("Empty response from info service");
+      throw new Error("Empty response from info service");
     }
-    const data: BackendInfoResponse = await response.json();
-    console.log("Config loaded successfully:", data);
     
     // Map backend response to frontend config
-    return {
-      environment: data.environment,
-      version: data.version,
+    const config = {
+      environment: response.environment || "development",
+      version: response.version || "0.1.0",
       auth: {
-        issuer: data.auth_issuer,
-        clientId: data.auth_client_id,
+        issuer: response.auth?.issuer || "",
+        clientId: response.auth?.clientId || "",
       },
       urls: {
-        frontend: data.frontend_url,
-        api: data.api_url,
+        frontend: response.urls?.frontend || "",
+        api: response.urls?.api || "",
       },
       features: {
-        registration: true,
-        socialLogin: false,
+        registration: response.features?.registration || false,
+        socialLogin: response.features?.socialLogin || false,
       },
     };
+
+    // Validate configuration against schema
+    try {
+      return validateConfig(config) as AppConfig;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.warn("Config validation failed, using unvalidated config", {
+        validationError: errorMessage,
+      }, error instanceof Error ? error : undefined);
+      return config;
+    }
   } catch (error) {
-    console.error("Failed to fetch config, using defaults:", error);
+    logger.error("Failed to fetch config, using defaults", error instanceof Error ? error : new Error(String(error)));
     // Fallback configuration - imported from config-defaults.ts
     // This ensures values stay in sync with backend/config/base.toml
     const { DEFAULT_CONFIG } = await import("./config-defaults");

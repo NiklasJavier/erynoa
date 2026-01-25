@@ -4,5 +4,5 @@
 
 mod pagination;
 
-// Re-export pagination types
-pub use pagination::{PaginationQuery, PaginatedResponse};
+// Re-export pagination types (currently unused, but available for future use)
+// pub use pagination::{PaginationQuery, PaginatedResponse};

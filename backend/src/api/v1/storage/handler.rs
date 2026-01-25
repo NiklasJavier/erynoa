@@ -63,7 +63,7 @@ pub async fn upload_file(
     }))
 }
 
-/// POST /storage/upload/:bucket - Datei in spezifischen Bucket hochladen
+/// POST /storage/upload/{bucket} - Datei in spezifischen Bucket hochladen
 pub async fn upload_file_to_bucket(
     State(state): State<AppState>,
     Path(bucket): Path<String>,
@@ -112,7 +112,7 @@ pub async fn upload_file_to_bucket(
     }))
 }
 
-/// GET /storage/presigned/upload/:key - Presigned URL für Upload generieren
+/// GET /storage/presigned/upload/{key} - Presigned URL für Upload generieren
 pub async fn get_presigned_upload_url(
     State(state): State<AppState>,
     Path(key): Path<String>,
@@ -139,7 +139,7 @@ pub async fn get_presigned_upload_url(
     }))
 }
 
-/// GET /storage/presigned/download/:key - Presigned URL für Download generieren
+/// GET /storage/presigned/download/{key} - Presigned URL für Download generieren
 pub async fn get_presigned_download_url(
     State(state): State<AppState>,
     Path(key): Path<String>,
@@ -193,7 +193,7 @@ pub async fn list_objects(
     }))
 }
 
-/// DELETE /storage/:key - Objekt löschen
+/// DELETE /storage/{key} - Objekt löschen
 pub async fn delete_object(
     State(state): State<AppState>,
     Path(key): Path<String>,
@@ -210,7 +210,7 @@ pub async fn delete_object(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// HEAD /storage/:key - Prüfen ob Objekt existiert
+/// HEAD /storage/{key} - Prüfen ob Objekt existiert
 pub async fn head_object(
     State(state): State<AppState>,
     Path(key): Path<String>,
@@ -268,7 +268,7 @@ pub async fn create_bucket(
     ))
 }
 
-/// DELETE /storage/buckets/:bucket - Bucket löschen
+/// DELETE /storage/buckets/{bucket} - Bucket löschen
 pub async fn delete_bucket(
     State(state): State<AppState>,
     Path(bucket): Path<String>,

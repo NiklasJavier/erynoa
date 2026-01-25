@@ -94,6 +94,8 @@
             # Frontend tools
             nodejs_20
             nodePackages.npm
+            # Protobuf tools
+            buf
           ];
 
           JEMALLOC_SYS_WITH_MALLOC_CONF = "background_thread:true";

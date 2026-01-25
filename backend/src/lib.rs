@@ -2,6 +2,7 @@
 //!
 //! High-Performance Rust Backend mit:
 //! - **Axum** HTTP/2 + REST API
+//! - **Connect-RPC/gRPC-Web** für type-safe API (optional)
 //! - **SQLx** PostgreSQL/OrioleDB
 //! - **fred** DragonflyDB Cache
 //! - **ZITADEL** JWT Auth
@@ -15,6 +16,10 @@ pub mod error;
 pub mod server;
 pub mod storage;
 pub mod telemetry;
+
+// Generated Connect-RPC code (available after build with --features connect)
+#[cfg(feature = "connect")]
+pub mod gen;
 
 pub use error::{ApiError, Result};
 pub use server::AppState;

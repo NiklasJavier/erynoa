@@ -155,6 +155,11 @@ export class ReadyResponse extends Message<ReadyResponse> {
    */
   auth?: ServiceStatus;
 
+  /**
+   * @generated from field: godstack.v1.ServiceStatus storage = 5;
+   */
+  storage?: ServiceStatus;
+
   constructor(data?: PartialMessage<ReadyResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -167,6 +172,7 @@ export class ReadyResponse extends Message<ReadyResponse> {
     { no: 2, name: "database", kind: "message", T: ServiceStatus },
     { no: 3, name: "cache", kind: "message", T: ServiceStatus },
     { no: 4, name: "auth", kind: "message", T: ServiceStatus },
+    { no: 5, name: "storage", kind: "message", T: ServiceStatus },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ReadyResponse {

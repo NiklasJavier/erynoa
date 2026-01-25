@@ -6,3 +6,6 @@ pub mod health;
 pub mod info;
 pub mod storage;
 pub mod users;
+
+#[cfg(feature = "connect")]
+pub mod connect_routes;

@@ -5,6 +5,7 @@ edition = "2021"
 authors = ["Erynoa Team"]
 description = "God-Stack Backend - High-Performance Rust API"
 license = "MIT"
+build = "build.rs"
 
 [lib]
 path = "src/lib.rs"
@@ -16,9 +17,10 @@ path = "src/main.rs"
 [dependencies]
 # Async Runtime & Web Framework
 tokio = { version = "1", features = ["full"] }
-axum = { version = "0.7", features = ["http2", "macros", "multipart"] }
-tower = "0.4"
-tower-http = { version = "0.5", features = [
+# Note: axum-connect 0.5 requires axum >= 0.8
+axum = { version = "0.8", features = ["http2", "macros", "multipart"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = [
     "cors", "trace", "compression-gzip", "compression-zstd",
     "timeout", "request-id"
 ] }
@@ -67,13 +69,22 @@ once_cell = "1"
 parking_lot = "0.12"
 url = "2"
 
+# Connect-RPC / gRPC-Web
+axum-connect = "0.5"
+prost = "0.13"
+prost-types = "0.13"
+async-trait = "0.1"
+
 # Memory Allocator (Jemalloc) - optional, disabled in dev by default due to Nix build issues
-[target.'cfg(all(not(target_env = "msvc"), feature = "jemalloc"))'.dependencies]
-tikv-jemallocator = { version = "0.6", features = ["background_threads"] }
+tikv-jemallocator = { version = "0.6", features = ["background_threads"], optional = true }
 
 [features]
 default = []
-jemalloc = []
+jemalloc = ["dep:tikv-jemallocator"]
+connect = [] # Enable Connect-RPC/gRPC-Web support
+
+[build-dependencies]
+axum-connect-build = "0.3"
 
 [dev-dependencies]
 tokio-test = "0.4"

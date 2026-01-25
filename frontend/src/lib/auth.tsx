@@ -5,6 +5,7 @@
 
 import { UserManager, User, WebStorageStateStore } from "oidc-client-ts";
 import { createSignal, createContext, useContext, type ParentComponent, onMount } from "solid-js";
+import { createLogger } from "./logger";
 
 export interface AuthState {
   user: User | null;
@@ -31,7 +32,9 @@ export function initAuth(issuer: string, clientId: string) {
   const redirectUri = `${window.location.origin}/callback`;
   const postLogoutRedirectUri = window.location.origin;
 
-  console.log("Creating UserManager with config:", {
+  const authLogger = createLogger({ module: "auth" });
+  
+  authLogger.debug("Creating UserManager with config", {
     authority: issuer,
     client_id: clientId,
     redirect_uri: redirectUri,
@@ -65,27 +68,27 @@ export function initAuth(issuer: string, clientId: string) {
 
   // Handle silent renew errors
   userManager.events.addSilentRenewError((error) => {
-    console.error("Silent renew error:", error);
+      authLogger.error("Silent renew error", error instanceof Error ? error : new Error(String(error)));
   });
 
   // Handle user loaded events
   userManager.events.addUserLoaded((user) => {
-    console.log("User loaded:", user?.profile?.preferred_username);
+    authLogger.info("User loaded", { username: user?.profile?.preferred_username });
   });
 
   // Handle user unloaded events
   userManager.events.addUserUnloaded(() => {
-    console.log("User unloaded");
+    authLogger.info("User unloaded");
   });
 
   // Handle access token expiring
   userManager.events.addAccessTokenExpiring(() => {
-    console.log("Access token expiring, will renew automatically");
+    authLogger.debug("Access token expiring, will renew automatically");
   });
 
   // Handle access token expired
   userManager.events.addAccessTokenExpired(() => {
-    console.log("Access token expired");
+    authLogger.warn("Access token expired");
   });
 
   return userManager;
@@ -105,11 +108,12 @@ export const AuthProvider: ParentComponent<{ issuer: string; clientId: string }>
 
   onMount(async () => {
     // Initialize UserManager
-    console.log("Initializing Auth with:", { issuer: props.issuer, clientId: props.clientId });
+    const authLogger = createLogger({ module: "auth" });
+    authLogger.info("Initializing Auth", { issuer: props.issuer, clientId: props.clientId });
     
     // Validate auth config
     if (!props.issuer || !props.clientId) {
-      console.error("Invalid auth config:", { issuer: props.issuer, clientId: props.clientId });
+      authLogger.error("Invalid auth config", undefined, { issuer: props.issuer, clientId: props.clientId });
       setState({
         user: null,
         isAuthenticated: false,
@@ -120,7 +124,7 @@ export const AuthProvider: ParentComponent<{ issuer: string; clientId: string }>
     }
     
     const manager = initAuth(props.issuer, props.clientId);
-    console.log("UserManager initialized:", {
+    authLogger.info("UserManager initialized", {
       authority: manager.settings.authority,
       client_id: manager.settings.client_id,
       redirect_uri: manager.settings.redirect_uri,
@@ -129,9 +133,9 @@ export const AuthProvider: ParentComponent<{ issuer: string; clientId: string }>
     try {
       // Check if we're handling a callback
       if (window.location.pathname === "/callback") {
-        console.log("Processing OIDC callback...");
+        authLogger.debug("Processing OIDC callback");
         const user = await manager.signinRedirectCallback();
-        console.log("Callback processed successfully, user:", user?.profile?.preferred_username);
+        authLogger.info("Callback processed successfully", { username: user?.profile?.preferred_username });
         setState({
           user,
           isAuthenticated: true,
@@ -152,7 +156,10 @@ export const AuthProvider: ParentComponent<{ issuer: string; clientId: string }>
         error: null,
       });
     } catch (error) {
-      console.error("Auth initialization error:", error);
+      authLogger.error("Auth initialization error", error instanceof Error ? error : new Error(String(error)), {
+        issuer: props.issuer,
+        clientId: props.clientId,
+      });
       setState({
         user: null,
         isAuthenticated: false,
@@ -167,9 +174,13 @@ export const AuthProvider: ParentComponent<{ issuer: string; clientId: string }>
   });
 
   const login = async () => {
-    console.log("Login button clicked");
+    const authLogger = createLogger({ module: "auth" });
+    authLogger.debug("Login button clicked");
+    
     if (!userManager) {
-      console.error("UserManager not initialized!");
+      authLogger.error("UserManager not initialized", undefined, {
+        action: "login",
+      });
       setState((s) => ({
         ...s,
         error: "Authentication not initialized. Please refresh the page.",
@@ -179,28 +190,23 @@ export const AuthProvider: ParentComponent<{ issuer: string; clientId: string }>
     
     try {
       // Ensure metadata is loaded before redirect
-      console.log("Loading OIDC metadata...");
+      authLogger.debug("Loading OIDC metadata");
       await userManager.metadataService.getMetadata();
-      console.log("Metadata loaded successfully");
+      authLogger.debug("Metadata loaded successfully");
       
-      console.log("Starting OIDC redirect...", {
+      authLogger.info("Starting OIDC redirect", {
         authority: userManager.settings.authority,
         client_id: userManager.settings.client_id,
         redirect_uri: userManager.settings.redirect_uri,
-        metadata: {
-          authorization_endpoint: userManager.metadataService.getAuthorizationEndpoint(),
-        },
+        authorization_endpoint: userManager.metadataService.getAuthorizationEndpoint(),
       });
       
       await userManager.signinRedirect();
-      console.log("Redirect initiated successfully");
+      authLogger.debug("Redirect initiated successfully");
     } catch (error) {
-      console.error("Login error:", error);
       const errorMessage = error instanceof Error ? error.message : "Login failed";
-      console.error("Login error details:", {
-        error,
-        message: errorMessage,
-        stack: error instanceof Error ? error.stack : undefined,
+      authLogger.error("Login error", error instanceof Error ? error : new Error(String(error)), {
+        action: "login",
         userManagerSettings: userManager ? {
           authority: userManager.settings.authority,
           client_id: userManager.settings.client_id,
@@ -215,11 +221,15 @@ export const AuthProvider: ParentComponent<{ issuer: string; clientId: string }>
   };
 
   const logout = async () => {
+    const authLogger = createLogger({ module: "auth" });
     if (!userManager) return;
     try {
+      authLogger.debug("Initiating logout");
       await userManager.signoutRedirect();
     } catch (error) {
-      console.error("Logout error:", error);
+      authLogger.error("Logout error", error instanceof Error ? error : new Error(String(error)), {
+        action: "logout",
+      });
     }
   };
 

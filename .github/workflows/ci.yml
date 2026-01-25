@@ -1,0 +1,258 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # ============================================================================
+  # Backend: Format Check
+  # ============================================================================
+  backend-fmt:
+    name: Backend Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            backend/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      
+      - name: Check formatting
+        working-directory: backend
+        run: cargo fmt --all -- --check
+
+  # ============================================================================
+  # Backend: Clippy Lint
+  # ============================================================================
+  backend-clippy:
+    name: Backend Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            backend/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      
+      - name: Run Clippy
+        working-directory: backend
+        run: cargo clippy -- -D warnings
+
+  # ============================================================================
+  # Backend: Tests
+  # ============================================================================
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            backend/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      
+      - name: Run tests
+        working-directory: backend
+        run: cargo test --verbose
+        env:
+          # Tests können ohne echte Services laufen (Mock/Test Mode)
+          DATABASE_URL: postgresql://test:test@localhost/test
+          CACHE_URL: redis://localhost:6379
+          RUST_LOG: debug
+
+  # ============================================================================
+  # Backend: Build Check
+  # ============================================================================
+  backend-build:
+    name: Backend Build Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            backend/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      
+      - name: Check build
+        working-directory: backend
+        run: cargo check --all-features
+
+  # ============================================================================
+  # Frontend: TypeScript Check
+  # ============================================================================
+  frontend-tsc:
+    name: Frontend TypeScript Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      
+      - name: TypeScript check
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+  # ============================================================================
+  # Frontend: Build Check
+  # ============================================================================
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      
+      - name: Generate Protobuf types
+        run: |
+          # Install buf if not available
+          if ! command -v buf &> /dev/null; then
+            curl -sSL "https://github.com/bufbuild/buf/releases/latest/download/buf-$(uname -s)-$(uname -m)" -o /tmp/buf
+            chmod +x /tmp/buf
+            sudo mv /tmp/buf /usr/local/bin/buf
+          fi
+          buf generate
+      
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+  # ============================================================================
+  # Protobuf: Lint
+  # ============================================================================
+  proto-lint:
+    name: Protobuf Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install buf
+        uses: bufbuild/buf-setup-action@v1
+        with:
+          version: latest
+      
+      - name: Lint proto files
+        run: buf lint
+
+  # ============================================================================
+  # Protobuf: Format Check
+  # ============================================================================
+  proto-fmt:
+    name: Protobuf Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install buf
+        uses: bufbuild/buf-setup-action@v1
+        with:
+          version: latest
+      
+      - name: Check formatting
+        run: buf format --diff --exit-code
+
+  # ============================================================================
+  # All Checks Summary
+  # ============================================================================
+  ci-summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs:
+      - backend-fmt
+      - backend-clippy
+      - backend-test
+      - backend-build
+      - frontend-tsc
+      - frontend-build
+      - proto-lint
+      - proto-fmt
+    if: always()
+    steps:
+      - name: Check all jobs
+        run: |
+          echo "✅ All CI checks completed"
+          echo "Backend Format: ${{ needs.backend-fmt.result }}"
+          echo "Backend Clippy: ${{ needs.backend-clippy.result }}"
+          echo "Backend Tests: ${{ needs.backend-test.result }}"
+          echo "Backend Build: ${{ needs.backend-build.result }}"
+          echo "Frontend TypeScript: ${{ needs.frontend-tsc.result }}"
+          echo "Frontend Build: ${{ needs.frontend-build.result }}"
+          echo "Protobuf Lint: ${{ needs.proto-lint.result }}"
+          echo "Protobuf Format: ${{ needs.proto-fmt.result }}"

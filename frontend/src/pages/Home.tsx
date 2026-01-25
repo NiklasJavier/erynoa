@@ -3,9 +3,8 @@
  * Shows service status and system health
  */
 
-import { Show, createResource, For, createSignal, onMount } from "solid-js";
+import { Show, For, createSignal, onMount } from "solid-js";
 import { useAuth, getUserDisplayName } from "../lib/auth";
-import { api } from "../api";
 import {
   Card,
   CardHeader,
@@ -14,12 +13,18 @@ import {
   CardContent,
   Badge,
 } from "../components/ui";
+import { infoClient, healthClient } from "../api/connect/services";
+import { GetInfoRequest } from "../api/info";
+import { ReadyRequest } from "../api/health";
+import { logger } from "../lib/logger";
 
 interface ServiceStatus {
   name: string;
   status: "online" | "offline";
   description: string;
   url?: string;
+  latency?: number;
+  message?: string;
 }
 
 export default function Home() {
@@ -29,21 +34,68 @@ export default function Home() {
 
   onMount(async () => {
     try {
-      // Fetch service status from backend
-      const response = await fetch("/api/v1/status", { method: "GET" });
-      if (response.ok) {
-        const data = await response.json();
-        setServices(data.services || []);
-      }
+      // Fetch info and health status from backend using Connect-RPC
+      const [infoResponse, readyResponse] = await Promise.all([
+        infoClient.getInfo(new GetInfoRequest({})),
+        healthClient.ready(new ReadyRequest({})),
+      ]);
+      
+      // Map ready response to service status with real health data
+      const serviceList: ServiceStatus[] = [
+        {
+          name: "API Server",
+          status: readyResponse.ready ? "online" : "offline",
+          description: "Backend Connect-RPC API",
+          url: infoResponse.urls?.api,
+          latency: 0, // API latency is the request itself
+          message: readyResponse.ready ? "operational" : "unavailable",
+        },
+        {
+          name: "Database",
+          status: readyResponse.database?.healthy ? "online" : "offline",
+          description: "PostgreSQL Database",
+          latency: readyResponse.database ? Number(readyResponse.database.latencyMs) : undefined,
+          message: readyResponse.database?.message || "unknown",
+        },
+        {
+          name: "Cache",
+          status: readyResponse.cache?.healthy ? "online" : "offline",
+          description: "DragonflyDB Cache",
+          latency: readyResponse.cache ? Number(readyResponse.cache.latencyMs) : undefined,
+          message: readyResponse.cache?.message || "unknown",
+        },
+        {
+          name: "S3 Storage",
+          status: readyResponse.storage?.healthy ? "online" : "offline",
+          description: "MinIO Object Storage",
+          latency: readyResponse.storage ? Number(readyResponse.storage.latencyMs) : undefined,
+          message: readyResponse.storage?.message || "unknown",
+        },
+        {
+          name: "Authentication",
+          status: readyResponse.auth?.healthy ? "online" : "offline",
+          description: "ZITADEL Auth Service",
+          url: infoResponse.auth?.issuer,
+          latency: readyResponse.auth ? Number(readyResponse.auth.latencyMs) : undefined,
+          message: readyResponse.auth?.message || "unknown",
+        },
+      ];
+      setServices(serviceList);
     } catch (error) {
-      console.error("Failed to fetch service status:", error);
-      // Fallback status based on what we know is running
+      logger.error("Failed to fetch service status", error instanceof Error ? error : new Error(String(error)), {
+        component: "Home",
+        action: "fetchServiceStatus",
+      });
+      
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Fallback status with error message
       setServices([
-        { name: "API Server", status: "online", description: "Backend REST API", url: SERVICE_URLS.api },
-        { name: "Database", status: "online", description: "PostgreSQL Database", url: SERVICE_URLS.database },
-        { name: "Cache", status: "online", description: "DragonflyDB Cache", url: SERVICE_URLS.cache },
-        { name: "S3 Storage", status: "online", description: "MinIO Object Storage", url: SERVICE_URLS.minio },
-        { name: "Authentication", status: "online", description: "ZITADEL Auth Service", url: SERVICE_URLS.zitadel },
+        { name: "API Server", status: "offline", description: "Backend Connect-RPC API", message: `Error: ${errorMessage.substring(0, 50)}` },
+        { name: "Database", status: "offline", description: "PostgreSQL Database", message: "Unable to check" },
+        { name: "Cache", status: "offline", description: "DragonflyDB Cache", message: "Unable to check" },
+        { name: "S3 Storage", status: "offline", description: "MinIO Object Storage", message: "Unable to check" },
+        { name: "Authentication", status: "offline", description: "ZITADEL Auth Service", message: "Unable to check" },
       ]);
     } finally {
       setLoading(false);
@@ -91,13 +143,23 @@ export default function Home() {
                         <div class="flex-1">
                           <div class="font-semibold text-sm">{service.name}</div>
                           <div class="text-xs text-muted-foreground">{service.description}</div>
+                          {service.message && (
+                            <div class="text-xs text-muted-foreground mt-1">
+                              Status: {service.message}
+                            </div>
+                          )}
+                          {service.latency !== undefined && service.latency > 0 && (
+                            <div class="text-xs text-muted-foreground mt-1">
+                              Response Time: {service.latency}ms
+                            </div>
+                          )}
                           {service.url && (
                             <div class="text-xs text-muted-foreground mt-1 font-mono break-all">
                               {service.url}
                             </div>
                           )}
                         </div>
-                        <div class="ml-4">
+                        <div class="ml-4 flex flex-col items-end gap-2">
                           <Badge
                             variant={service.status === "online" ? "default" : "destructive"}
                             class="whitespace-nowrap"
@@ -107,6 +169,11 @@ export default function Home() {
                             }`} />
                             {service.status === "online" ? "Online" : "Offline"}
                           </Badge>
+                          {service.latency !== undefined && service.latency > 0 && (
+                            <div class="text-xs text-muted-foreground">
+                              {service.latency}ms
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
