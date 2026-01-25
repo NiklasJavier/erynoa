@@ -1,4 +1,14 @@
-# Base Configuration
+# ============================================================================
+# Base Configuration - Godstack Backend
+# ============================================================================
+# Diese Datei enthält die Standard-Konfiguration.
+# Überschreibungen:
+#   1. config/local.toml oder config/production.toml (je nach APP_ENVIRONMENT)
+#   2. Umgebungsvariablen (APP_<SECTION>__<KEY>, z.B. APP_DATABASE__HOST)
+#
+# Im Docker-Container werden die Service-Namen (db, cache, zitadel, minio)
+# über Umgebungsvariablen in docker-compose.yml gesetzt.
+# ============================================================================
 
 [application]
 host = "0.0.0.0"
@@ -25,15 +35,16 @@ default_ttl = 3600
 
 [auth]
 issuer = "http://localhost:8080"
+# internal_issuer wird im Docker-Container gesetzt (für zitadel:8080)
 client_id = "godstack-backend"
-frontend_client_id = "godstack-frontend"
+frontend_client_id = "godstack-frontend"  # Wird von setup-zitadel.sh aktualisiert
 jwks_cache_duration = 3600
-audiences = ["godstack-backend", "godstack-frontend"]
+audiences = ["godstack-api", "godstack-backend", "godstack-frontend"]
 
 [storage]
 endpoint = "http://localhost:9000"
 region = "us-east-1"
 access_key_id = "godstack"
 secret_access_key = "godstack123"
-default_bucket = "uploads"
+default_bucket = "godstack"
 max_upload_size = 104857600  # 100 MB

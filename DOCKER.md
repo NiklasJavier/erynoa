@@ -1,147 +1,106 @@
 # 🐳 Docker Development Setup
 
-Dieses Setup ermöglicht es, Frontend und Backend in Docker-Containern mit **Hot-Reloading** auszuführen.
+## Übersicht
 
-Die Docker-Konfiguration befindet sich im `infra/` Ordner (logisch zusammen mit anderen Infrastruktur-Komponenten).
+Das Projekt verwendet einen **Container-in-Container** Ansatz:
+- Der DevContainer enthält Docker + Docker Compose
+- Alle Services laufen als Container innerhalb des DevContainers
+- Hot-Reloading funktioniert durch Volume-Mounts
+
+```
+┌── DevContainer ─────────────────────────────────────────┐
+│                                                          │
+│  ┌── Docker Compose ──────────────────────────────────┐ │
+│  │  frontend (5173)  backend (3000)  db (5432)        │ │
+│  │  minio (9000/9001)  cache (6379)  zitadel (8080)   │ │
+│  └────────────────────────────────────────────────────┘ │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+```
 
 ## Features
 
-- ✅ **Frontend Hot-Reload**: Änderungen in Solid.js werden sofort im Browser aktualisiert
-- ✅ **Backend Hot-Reload**: Änderungen in Rust werden automatisch neu kompiliert und gestartet
-- ✅ **Isolierte Services**: PostgreSQL (OrioleDB), DragonflyDB (Cache), MinIO (S3) laufen alle im Docker
-- ✅ **Volume Mounts**: Code-Änderungen werden sofort in Container reflektiert
-- ✅ **Netzwerk**: Alle Services sind automatisch verbunden
+- ✅ **Frontend Hot-Reload**: Vite HMR (<100ms Updates)
+- ✅ **Backend Hot-Reload**: cargo-watch (5-15s Rebuild)
+- ✅ **Isolierte Services**: Alle Abhängigkeiten containerisiert
+- ✅ **Volume Mounts**: Code-Änderungen sofort sichtbar
+- ✅ **Health Checks**: Automatische Abhängigkeitsprüfung
 
 ## Quick Start
 
-### Mit `just` Kommandos:
-
 ```bash
-# Starte alles mit Hot-Reloading
-just docker-dev
-
-# Logs anschauen
-just docker-logs
-
-# Backend-Shell (zum Debuggen)
-just docker-backend-shell
-
-# Frontend-Shell
-just docker-frontend-shell
-
-# Stoppt alles
-just docker-stop
+just dev
 ```
 
-### Mit Docker-Compose direkt:
+Siehe [DEV_SETUP.md](DEV_SETUP.md) für ausführliche Dokumentation.
 
-```bash
-# Starte alles (muss aus infra/ aufgerufen werden)
-cd infra
-docker-compose up --build
+## Services
 
-# In separatem Terminal: Logs
-docker-compose logs -f
+| Service | Port | Container Name | Beschreibung |
+|---------|------|----------------|--------------|
+| Frontend | 5173 | frontend | SolidJS + Vite |
+| Backend | 3000 | backend | Rust + Axum |
+| Database | 5432 | db | PostgreSQL (OrioleDB) |
+| Cache | 6379 | cache | DragonflyDB (Redis) |
+| Storage | 9000/9001 | minio | MinIO (S3) |
+| Auth | 8080 | zitadel | ZITADEL (OIDC) |
 
-# Shell in Backend
-docker-compose exec backend sh
+## Befehle
 
-# Shell in Frontend
-docker-compose exec frontend sh
+| Befehl | Beschreibung |
+|--------|--------------|
+| `just dev` | Startet alles mit sichtbaren Logs |
+| `just status` | Zeigt Service-Status |
+| `just docker-stop` | Stoppt alle Container |
+| `just docker-logs` | Alle Container-Logs |
+| `just docker-backend-shell` | Shell im Backend-Container |
 
-# Stoppt alles
-docker-compose down
-```
-
-## Ports
-
-| Service | Port | URL |
-|---------|------|-----|
-| Frontend (Vite) | 5173 | http://localhost:5173 |
-| Backend (API) | 3000 | http://localhost:3000 |
-| PostgreSQL | 5432 | `postgres://godstack:godstack@localhost:5432/godstack` |
-| DragonflyDB (Cache) | 6379 | `redis://localhost:6379` |
-| MinIO (S3) | 9000/9001 | http://localhost:9001 (Admin) |
-| ZITADEL (Auth) | 8080 | http://localhost:8080 (mit `--profile auth`) |
-
-## Umgebungsvariablen
-
-Die folgenden Umgebungsvariablen sind in `docker-compose.yml` definiert:
-
-### Backend
-- `RUST_LOG=debug`
-- `DATABASE_URL=postgresql://godstack:godstack@postgres:5432/godstack`
-- `REDIS_URL=redis://cache:6379`
-- `S3_ENDPOINT=http://s3:9000`
-- `AUTH_ISSUER=http://zitadel:8080`
-- `FRONTEND_URL=http://localhost:5173`
-- `API_URL=http://localhost:3000`
+## Hot-Reloading
 
 ### Frontend
-- `VITE_API_URL=http://localhost:3000`
+- **Tool**: Vite mit HMR
+- **Command**: `npm run dev -- --host 0.0.0.0`
+- **Mount**: `/workspace/frontend → /app`
+- **Speed**: <100ms
 
-## How Hot-Reloading Works
-
-### Frontend (Vite)
-- Vite läuft mit `npm run dev -- --host 0.0.0.0`
-- Dateien im `/workspace/frontend` Volume werden überwacht
-- Browser wird automatisch aktualisiert via WebSocket (HMR)
-- Konfiguriert in `frontend/vite.config.ts`
-
-### Backend (Cargo-Watch)
-- Cargo-Watch läuft als Hauptprozess: `cargo watch -x run --bin godstack-api`
-- Dateien im `/workspace/backend` Volume werden überwacht
-- Server wird automatisch neu gestartet bei Code-Änderungen
-- Schneller als kompletter Neu-Build dank Cargo-Caching
+### Backend
+- **Tool**: cargo-watch
+- **Command**: `cargo watch -w src -w Cargo.toml -w config -w ../proto -x run`
+- **Mount**: `/workspace/backend → /app`, `/workspace/proto → /proto`
+- **Speed**: 5-15 Sekunden
 
 ## Troubleshooting
 
-### Port bereits belegt
+### Container starten nicht
 ```bash
-# Nutze andere Ports in docker-compose.yml
-# Oder kill die Prozesse:
-lsof -ti :5173 | xargs kill -9  # Frontend
-lsof -ti :3000 | xargs kill -9  # Backend
+just reset
+just dev
 ```
 
-### Container bauen sich nicht neu
+### Port belegt
 ```bash
-# Erzwinge Rebuild
-docker-compose build --no-cache
-docker-compose up --build
+just docker-stop
+lsof -i :3000  # Check welcher Prozess
 ```
 
-### Volume-Mount funktioniert nicht
+### Logs prüfen
 ```bash
-# Überprüfe ob Volumes korrekt mounted sind
-docker inspect <container-name> | grep -A 20 Mounts
-
-# Oder nutze bind mount direkt:
-docker-compose exec backend ls -la /workspace/backend/src
+just docker-logs          # Alle
+just docker-logs-backend  # Nur Backend
+just docker-logs-frontend # Nur Frontend
 ```
 
-### Logs überprüfen
+### Container Shell
 ```bash
-# Alle Logs
-docker-compose logs -f
-
-# Nur Backend
-docker-compose logs -f backend
-
-# Nur Frontend
-docker-compose logs -f frontend
+just docker-backend-shell
+cargo check  # Debug Kompilierung
 ```
 
 ## Dateien
 
-- `infra/docker-compose.yml` - Main Docker-Konfiguration mit allen Services
-- `infra/Dockerfile.frontend` - Frontend Container (Node.js + Vite)
-- `infra/Dockerfile.backend` - Backend Container (Rust + Cargo-Watch)
-- `infra/start.sh` - Hilfsskript zum Starten aller Services
-- `justfile` - Convenience Commands (just docker-dev, etc.)
-
-## Weitere Info
-
-- [Docker-Compose Dokumentation](https://docs.docker.com/compose/)
-- [Vite HMR Dokumentation](https://vitejs.dev/config/server-options.html#server-hmr)
-- [Cargo-Watch](https://github.com/watchexec/cargo-watch)
+| Datei | Zweck |
+|-------|-------|
+| `infra/docker-compose.yml` | Service-Definitionen |
+| `infra/Dockerfile.backend` | Backend Container |
+| `infra/Dockerfile.frontend` | Frontend Container |
+| `infra/scripts/setup-*.sh` | Init-Skripte |

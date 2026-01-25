@@ -1,166 +1,185 @@
-# 🚀 Development Setup - Frontend + Backend + Services
+# 🚀 Development Setup - Container-in-Container Entwicklung
 
 ## Architektur
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Development Environment                       │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│  Frontend (Docker)          Backend (Local)        Services       │
-│  ─────────────────          ───────────────        ─────────     │
-│  Port: 5173 🟢              Port: 3000 🟢          DB: 5432 🟢   │
-│  Vite HMR enabled           cargo watch            Cache: 6379   │
-│  Hot-reload on save         Hot-reload on save     MinIO: 9000   │
-│                                                     ZITADEL: 8080 │
-│  Stack: Solid.js            Stack: Rust/Axum                    │
-│  Build: npm                 Build: cargo                         │
-│                                                                   │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                     Dev Container (VS Code)                          │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                       │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │              Docker Compose Services                          │    │
+│  ├─────────────────────────────────────────────────────────────┤    │
+│  │                                                               │    │
+│  │  Frontend (Container)     Backend (Container)                 │    │
+│  │  ─────────────────────    ────────────────────                │    │
+│  │  Port: 5173               Port: 3000                          │    │
+│  │  Vite HMR ✓               cargo watch ✓                       │    │
+│  │  Hot-reload on save       Hot-reload on save                  │    │
+│  │                                                               │    │
+│  │  ─────────────────────────────────────────────────────────   │    │
+│  │                    Hintergrund-Services                       │    │
+│  │  ─────────────────────────────────────────────────────────   │    │
+│  │  PostgreSQL (db)      :5432   │  MinIO (minio)    :9000/9001 │    │
+│  │  DragonflyDB (cache)  :6379   │  ZITADEL (zitadel):8080      │    │
+│  │                                                               │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                       │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ## 🚀 Quick Start
 
-### Option 1: Full Development (Recommended)
 ```bash
 just dev
 ```
-Dies startet:
-- Frontend in Docker (:5173)
-- Backend lokal (:3000) mit `cargo watch`
-- Services (DB, Cache, MinIO, ZITADEL)
 
-### Option 2: Nur Services + Frontend
-```bash
-just docker-dev
+Das ist alles! Dieser Befehl:
+1. Startet Hintergrund-Services (DB, Cache, MinIO, ZITADEL)
+2. Wartet auf Health-Checks
+3. Führt Init-Skripte aus (nur beim ersten Mal)
+4. Startet Frontend + Backend mit Hot-Reload und sichtbaren Logs
+
+**URLs:**
+| Service | URL | Beschreibung |
+|---------|-----|--------------|
+| Frontend | http://localhost:5173 | SolidJS App |
+| Backend | http://localhost:3000 | Rust API |
+| ZITADEL | http://localhost:8080 | Auth Console |
+| MinIO | http://localhost:9001 | Storage Console |
+
+**Test Login:**
+- User: `testuser` / Password: `Test123!`
+- Admin: `zitadel-admin` / Password: `Password1!`
+
+## 📁 Projektstruktur
+
 ```
-Dann in separatem Terminal:
-```bash
-just dev-backend
+/workspace
+├── backend/                 # Rust API Server
+│   ├── src/                 # Source Code
+│   ├── config/              # Konfigurationsdateien
+│   │   ├── base.toml        # Standard-Konfig
+│   │   ├── local.toml       # Local Overrides (auto-generated)
+│   │   └── production.toml  # Production Overrides
+│   ├── migrations/          # SQL Migrations
+│   └── tests/               # Integration Tests
+│
+├── frontend/                # SolidJS Frontend
+│   ├── src/
+│   │   ├── api/             # API Client (Connect-RPC)
+│   │   ├── components/      # UI Komponenten
+│   │   ├── lib/             # Auth, Config, Utils
+│   │   └── pages/           # Seiten
+│   └── dist/                # Production Build
+│
+├── infra/                   # Infrastructure
+│   ├── docker-compose.yml   # Service-Definitionen
+│   ├── Dockerfile.backend   # Backend Container
+│   ├── Dockerfile.frontend  # Frontend Container
+│   ├── scripts/             # Setup-Skripte
+│   │   ├── setup-zitadel.sh # ZITADEL Initialisierung
+│   │   └── setup-minio.sh   # MinIO Buckets
+│   └── zitadel/             # ZITADEL Init-Config
+│
+├── proto/                   # Protobuf Definitionen
+├── docs/                    # Dokumentation
+├── .data/                   # Lokale Daten (gitignored)
+└── justfile                 # Task Runner
 ```
 
-### Option 3: Nur Backend lokal
-```bash
-just dev-backend
-```
+## 🔧 Wichtige Befehle
 
-## 📁 Struktur
+### Entwicklung
 
-### Docker Services (`/workspace/infra/docker-compose.yml`)
+| Befehl | Beschreibung |
+|--------|--------------|
+| `just dev` | **Startet alles** - Frontend + Backend + Services |
+| `just status` | Zeigt Status aller Services |
+| `just restart-dev` | Schneller Neustart von Frontend + Backend |
+| `just docker-stop` | Stoppt alle Container |
+
+### Einzelne Services
+
+| Befehl | Beschreibung |
+|--------|--------------|
+| `just dev-backend` | Nur Backend (Services müssen laufen) |
+| `just dev-frontend` | Nur Frontend (Services müssen laufen) |
+| `just services` | Nur Hintergrund-Services starten |
+
+### Setup & Reset
+
+| Befehl | Beschreibung |
+|--------|--------------|
+| `just init` | Initialisierung ohne Dev-Server |
+| `just zitadel-setup` | ZITADEL neu konfigurieren |
+| `just minio-setup` | MinIO Buckets erstellen |
+| `just reset` | **Alles löschen** und neu starten |
+
+### Logs & Debug
+
+| Befehl | Beschreibung |
+|--------|--------------|
+| `just docker-logs` | Alle Container-Logs |
+| `just docker-logs-backend` | Nur Backend-Logs |
+| `just docker-backend-shell` | Shell im Backend-Container |
+
+## ⚙️ Konfiguration
+
+### Konfigurationspriorität (höchste zuerst):
+1. **Umgebungsvariablen** (`APP_DATABASE__HOST=db`)
+2. **local.toml** (auto-generated, gitignored)
+3. **base.toml** (Standard-Werte)
+
+### Docker-Compose Umgebungsvariablen
+
+Die wichtigsten Overrides in `docker-compose.yml`:
 ```yaml
-services:
-  frontend:      # Solid.js + Vite (:5173)
-  db:            # PostgreSQL OrioleDB (:5432)
-  cache:         # DragonflyDB (:6379)
-  minio:         # S3-compatible (:9000-9001)
-  zitadel:       # Auth (:8080)
+environment:
+  # Database → Docker Service Name
+  - APP_DATABASE__HOST=db
+  # Cache → Docker Service Name  
+  - APP_CACHE__URL=redis://cache:6379
+  # Auth → Externe + Interne URL
+  - APP_AUTH__ISSUER=http://localhost:8080
+  - APP_AUTH__INTERNAL_ISSUER=http://zitadel:8080
+  # Storage → Docker Service Name
+  - APP_STORAGE__ENDPOINT=http://minio:9000
 ```
 
-**Wichtig:** Backend ist **NICHT** in Docker - läuft lokal für schnellere Entwicklung!
+## 🔄 Hot-Reloading
 
-### Backend lokal (`/workspace/backend/`)
-```bash
-cargo watch -x run -w src -w config
-```
-Automatisches Neukompilieren bei Dateiänderungen in `src/` oder `config/`
+### Backend (Rust)
+- **Tool**: `cargo-watch`
+- **Watched**: `src/`, `Cargo.toml`, `config/`, `proto/`
+- **Rebuild-Zeit**: ~5-15 Sekunden
 
-## 🔧 Environment Variables
-
-Backend nutzt diese für lokale Entwicklung:
-```env
-DATABASE_URL=postgresql://godstack:godstack@localhost:5432/godstack
-REDIS_URL=redis://localhost:6379
-S3_ENDPOINT=http://localhost:9000
-RUST_LOG=debug
-FRONTEND_URL=http://localhost:5173
-API_URL=http://localhost:3000
-```
-
-Diese sind in der Dockerfile und im `.env` konfiguriert.
-
-## 🔥 Hot-Reload
-
-### Frontend
-- **Tool:** Vite HMR (Hot Module Replacement)
-- **Trigger:** Jede Änderung in `/workspace/frontend/src/`
-- **Auswirkung:** Browser aktualisiert Module ohne Reload
-- **Sichtbar:** Browser zeigt "HMR ready" in DevTools
-
-### Backend
-- **Tool:** `cargo watch`
-- **Trigger:** Jede Änderung in `/workspace/backend/src/`
-- **Auswirkung:** Server wird neu kompiliert und gestartet
-- **Sichtbar:** Terminal zeigt Build-Meldungen
-
-## 📝 Beispiel - Code ändern
-
-### Frontend ändern
-1. Öffne `/workspace/frontend/src/pages/Home.tsx`
-2. Ändere einen Text z.B. "Dashboard" → "Dashboard 2"
-3. Speichern (Ctrl+S)
-4. Browser aktualisiert automatisch ohne Reload ✨
-
-### Backend ändern
-1. Öffne `/workspace/backend/src/api/handlers/status.rs`
-2. Ändere die Response z.B. Feldname oder Wert
-3. Speichern (Ctrl+S)
-4. Terminal zeigt: `[Running 'cargo run']`
-5. Server wird neu gestartet, kein neuer Build nötig!
+### Frontend (Vite)
+- **Tool**: Vite HMR
+- **Watched**: Alle Dateien in `src/`
+- **Rebuild-Zeit**: <100ms
 
 ## 🐛 Troubleshooting
 
-### Frontend lädt nicht
+### Services starten nicht
 ```bash
-curl http://localhost:5173
-# Sollte HTML zurückgeben
+just reset
+just dev
 ```
 
-### Backend stellt keine Verbindung zur DB her
+### ZITADEL Client-ID ungültig
 ```bash
-# Prüfe DB-Health:
-curl http://localhost:5432  # oder
-docker-compose -f infra/docker-compose.yml ps | grep db
+just zitadel-reset
 ```
 
 ### Backend kompiliert nicht
 ```bash
-cd /workspace/backend
-cargo check  # Schnellere Syntax-Prüfung
-cargo build --verbose  # Mit Details
+just docker-backend-shell
+cargo check  # Zeigt Fehler
 ```
 
-### Ports bereits in Verwendung
+### Port bereits belegt
 ```bash
-lsof -i :5173   # Welcher Prozess nutzt Port?
-kill -9 <PID>   # Wenn nötig
+just docker-stop
+lsof -i :3000  # oder :5173, :8080
 ```
-
-## 📊 Status Commands
-
-```bash
-# Alle Docker-Services prüfen
-docker-compose -f infra/docker-compose.yml ps
-
-# Backend Log live ansehen
-tail -f /tmp/backend.log
-
-# Frontend ist unter http://localhost:5173 erreichbar
-# Backend ist unter http://localhost:3000 erreichbar
-
-# Status-Endpoint testen
-curl http://localhost:3000/api/v1/status | jq .
-```
-
-## 🎯 Nächste Schritte
-
-1. ✅ `just dev` ausführen
-2. ✅ Frontend öffnen: http://localhost:5173
-3. ✅ Eine Datei ändern → Hot-Reload testen
-4. ✅ Backend-API testen: `curl http://localhost:3000/api/v1/status`
-
-## 📚 Weitere Infos
-
-- Frontend Code: `/workspace/frontend/`
-- Backend Code: `/workspace/backend/`
-- Docker Config: `/workspace/infra/docker-compose.yml`
-- Just Commands: `/workspace/justfile`

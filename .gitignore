@@ -29,6 +29,9 @@ debug/
 # Docker
 docker-compose.override.yml
 
+# Local configs (auto-generated)
+backend/config/local.toml
+
 # Database
 *.db
 *.sqlite
