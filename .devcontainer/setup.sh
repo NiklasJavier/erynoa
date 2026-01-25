@@ -30,7 +30,20 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 1. Setup direnv for automatic Nix environment loading
+# 1. Configure Nix experimental features
+# ─────────────────────────────────────────────────────────────────────────────
+echo "❄️  Configuring Nix..."
+
+mkdir -p "$HOME/.config/nix"
+if [ ! -f "$HOME/.config/nix/nix.conf" ] || ! grep -q "experimental-features" "$HOME/.config/nix/nix.conf"; then
+  echo "experimental-features = nix-command flakes" > "$HOME/.config/nix/nix.conf"
+  echo "   Nix flakes enabled"
+else
+  echo "   Nix already configured"
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 2. Setup direnv for automatic Nix environment loading
 # ─────────────────────────────────────────────────────────────────────────────
 echo "📦 Configuring direnv for automatic Nix environment..."
 
@@ -60,7 +73,7 @@ for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
 done
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2. Create .env file if not exists
+# 3. Create .env file if not exists
 # ─────────────────────────────────────────────────────────────────────────────
 echo "📝 Ensuring .env file exists..."
 
@@ -87,6 +100,7 @@ APP_CACHE__URL=redis://localhost:6379
 # Auth (ZITADEL)
 APP_AUTH__ISSUER=http://localhost:8080
 APP_AUTH__CLIENT_ID=godstack-backend
+APP_AUTH__FRONTEND_CLIENT_ID=godstack-frontend
 ENVEOF
   echo "   Created .env from template"
 else
@@ -115,7 +129,7 @@ alias dev="cd /workspace && just dev"
 alias build="cd /workspace && just build"
 alias test="cd /workspace && just test"
 alias migrate="cd /workspace && just db-migrate"
-alias logs="docker compose -f /workspace/.devcontainer/services.yml logs -f"
+alias logs="docker compose -f /workspace/infra/docker-compose.yml logs -f"
 
 # Nix path alias (daemon handles permissions)
 alias nix="/nix/var/nix/profiles/default/bin/nix"

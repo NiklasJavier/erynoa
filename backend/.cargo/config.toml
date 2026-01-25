@@ -1,0 +1,16 @@
+# Cargo Configuration für God-Stack Backend
+# ============================================================================
+
+[build]
+# Nutze alle CPU-Kerne für parallele Builds
+jobs = -1
+
+[env]
+# SQLx Offline Mode (keine DB-Verbindung beim Build nötig)
+SQLX_OFFLINE = "true"
+
+[alias]
+# Nützliche Shortcuts
+dev = "run --release"
+t = "test --all-features"
+lint = "clippy --all-targets --all-features -- -D warnings"

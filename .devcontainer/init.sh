@@ -1,5 +1,6 @@
 #!/bin/bash
-set -e
+# Fehler nicht blockierend - wir wollen, dass der DevContainer lädt auch wenn einzelne Schritte fehlschlagen
+set +e
 
 echo "🚀 Initializing God-Stack DevContainer..."
 
@@ -9,9 +10,9 @@ echo "🚀 Initializing God-Stack DevContainer..."
 # Hinweis: Der Nix-Daemon läuft bereits durch das DevContainer Feature.
 echo "📦 Checking Nix development environment..."
 
-cd /workspace
+cd /workspace/backend
 
-if [ -f "flake.nix" ]; then
+if [ -f "../flake.nix" ]; then
   # Pre-warm: Baut die Umgebung einmal, damit Caches gefüllt sind.
   # Wir unterdrücken den Output, außer es gibt Fehler.
   /nix/var/nix/profiles/default/bin/nix develop --command true 2>/dev/null && echo "   ✅ Nix environment ready" || echo "   ⚠️  Nix environment build failed or will happen on first use"
@@ -129,30 +130,44 @@ fi
 # 4. Infrastructure Services (Docker-in-Docker)
 # ─────────────────────────────────────────────────────────────────────────────
 echo "🐳 Starting infrastructure services..."
-cd /workspace/.devcontainer
+cd /workspace
 
-# Services starten
-docker compose -f services.yml up -d
+# Services starten (aus infra/docker-compose.yml) - mit Timeout falls Docker nicht läuft
+if command -v docker &> /dev/null && docker ps >/dev/null 2>&1; then
+  docker compose -f infra/docker-compose.yml up -d || {
+    echo "   ⚠️  Docker services failed to start"
+  }
 
-# Warten auf Datenbank
-echo "⏳ Waiting for database..."
-until docker compose -f services.yml exec -T db pg_isready -U godstack >/dev/null 2>&1; do
-  sleep 1
-done
-echo "   ✅ Database ready!"
+  # Warten auf Datenbank (mit max 30 Sekunden Timeout)
+  echo "⏳ Waiting for database..."
+  for i in {1..30}; do
+    if docker compose -f infra/docker-compose.yml exec -T db pg_isready -U godstack >/dev/null 2>&1; then
+      echo "   ✅ Database ready!"
+      break
+    fi
+    [ $i -eq 30 ] && echo "   ⚠️  Database not ready after 30s - continuing anyway"
+    sleep 1
+  done
 
-# Warten auf Cache
-echo "⏳ Waiting for cache..."
-until docker compose -f services.yml exec -T cache redis-cli ping >/dev/null 2>&1; do
-  sleep 1
-done
-echo "   ✅ Cache ready!"
+  # Warten auf Cache (mit max 30 Sekunden Timeout)
+  echo "⏳ Waiting for cache..."
+  for i in {1..30}; do
+    if docker compose -f infra/docker-compose.yml exec -T cache redis-cli ping >/dev/null 2>&1; then
+      echo "   ✅ Cache ready!"
+      break
+    fi
+    [ $i -eq 30 ] && echo "   ⚠️  Cache not ready after 30s - continuing anyway"
+    sleep 1
+  done
+else
+  echo "   ⚠️  Docker not available - skipping infrastructure startup"
+fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 5. Migrations
 # ─────────────────────────────────────────────────────────────────────────────
 echo "📦 Running database migrations..."
-cd /workspace
+cd /workspace/backend
 
 # DATABASE_URL setzen, falls leer
 if [ -z "$DATABASE_URL" ]; then
@@ -160,7 +175,8 @@ if [ -z "$DATABASE_URL" ]; then
 fi
 
 # Wir nutzen 'nix develop', um sicherzustellen, dass sqlx-cli verfügbar ist
-nix develop --command bash -c "sqlx database create 2>/dev/null || true; sqlx migrate run" 2>/dev/null || {
+# Das muss in backend/ ausgeführt werden, wo die migrations/ sind
+cd /workspace && nix develop --command bash -c "cd /workspace/backend && sqlx database create 2>/dev/null || true; sqlx migrate run" 2>/dev/null || {
   echo "   ⚠️  Migrations skipped (check logs or run 'just db-migrate')"
 }
 

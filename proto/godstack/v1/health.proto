@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package godstack.v1;
+
+option go_package = "godstack/v1;godstackv1";
+
+// HealthService provides health check endpoints
+service HealthService {
+  // Check returns the health status of the service
+  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);
+  
+  // Ready returns detailed readiness status including dependencies
+  rpc Ready(ReadyRequest) returns (ReadyResponse);
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  enum ServingStatus {
+    SERVING_STATUS_UNSPECIFIED = 0;
+    SERVING_STATUS_SERVING = 1;
+    SERVING_STATUS_NOT_SERVING = 2;
+  }
+  
+  ServingStatus status = 1;
+}
+
+message ReadyRequest {}
+
+message ReadyResponse {
+  bool ready = 1;
+  ServiceStatus database = 2;
+  ServiceStatus cache = 3;
+  ServiceStatus auth = 4;
+}
+
+message ServiceStatus {
+  bool healthy = 1;
+  string message = 2;
+  int64 latency_ms = 3;
+}

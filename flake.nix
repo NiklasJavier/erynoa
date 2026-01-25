@@ -1,5 +1,5 @@
 {
-  description = "God-Stack Backend";
+  description = "Godstack Monorepo";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -23,8 +23,9 @@
 
         craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
 
-        src = pkgs.lib.cleanSourceWith {
-          src = craneLib.path ./.;
+        # Backend source
+        backendSrc = pkgs.lib.cleanSourceWith {
+          src = craneLib.path ./backend;
           filter = path: type:
             (craneLib.filterCargoSources path type)
             || (builtins.match ".*config.*" path != null)
@@ -32,7 +33,7 @@
         };
 
         commonArgs = {
-          inherit src;
+          src = backendSrc;
           strictDeps = true;
           buildInputs = pkgs.lib.optionals pkgs.stdenv.isDarwin [
             pkgs.darwin.apple_sdk.frameworks.Security
@@ -48,8 +49,8 @@
           inherit cargoArtifacts;
           postInstall = ''
             mkdir -p $out/share/godstack
-            cp -r ${./config} $out/share/godstack/config
-            cp -r ${./migrations} $out/share/godstack/migrations
+            cp -r ${./backend/config} $out/share/godstack/config
+            cp -r ${./backend/migrations} $out/share/godstack/migrations
           '';
         });
 
@@ -85,16 +86,17 @@
             just
             sqlx-cli
             docker-compose
-            # Build dependencies for jemalloc
+            # Build dependencies
             autoconf
             automake
             libtool
             jemalloc
+            # Frontend tools
+            nodejs_20
+            nodePackages.npm
           ];
 
-          # Help jemalloc build find the correct glibc headers
           JEMALLOC_SYS_WITH_MALLOC_CONF = "background_thread:true";
-          
           RUST_LOG = "debug";
           RUST_BACKTRACE = "1";
         };
@@ -105,7 +107,7 @@
             inherit cargoArtifacts;
             cargoClippyExtraArgs = "--all-targets -- -D warnings";
           });
-          fmt = craneLib.cargoFmt { inherit src; };
+          fmt = craneLib.cargoFmt { src = backendSrc; };
         };
       }
     );

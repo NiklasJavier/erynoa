@@ -1,16 +1,45 @@
-# God-Stack Backend
+# Godstack Monorepo
 
-High-Performance Rust Backend Template.
+Full-Stack Application mit Rust Backend und SolidJS Frontend.
+
+## Struktur
+
+```
+├── backend/           # Rust API Server
+│   ├── src/           # Rust Source Code
+│   ├── config/        # Konfigurationsdateien
+│   ├── migrations/    # SQL Migrations
+│   └── tests/         # Integration Tests
+├── frontend/          # SolidJS Frontend
+│   ├── src/           # TypeScript Source
+│   │   ├── api/       # API Client
+│   │   ├── components/# UI Komponenten
+│   │   ├── lib/       # Utilities & Auth
+│   │   └── pages/     # Seiten
+│   └── dist/          # Production Build
+├── scripts/           # Utility Scripts
+├── docker/            # Docker Configs für Host
+└── .devcontainer/     # DevContainer Setup
+```
 
 ## Tech Stack
 
+### Backend
 - **Runtime**: Rust + Tokio + Jemalloc
 - **Framework**: Axum (HTTP/2)
 - **Database**: OrioleDB (PostgreSQL)
 - **Cache**: DragonflyDB
-- **Auth**: ZITADEL (JWT)
-- **TLS**: rustls (no OpenSSL)
+- **Auth**: ZITADEL (JWT/OIDC)
 - **Build**: Nix + Crane
+
+### Frontend
+- **Framework**: SolidJS (fine-grained Reactivity)
+- **Routing**: @solidjs/router
+- **State**: TanStack Solid Query
+- **Styling**: Tailwind CSS
+- **UI**: Ark UI (headless components)
+- **Auth**: oidc-client-ts (PKCE flow)
+- **Build**: Vite 5
 
 ## Quick Start
 
@@ -36,108 +65,93 @@ just infra
 just dev
 ```
 
-## Build
+## Befehle
 
-Alle Builds laufen über Nix - kein Docker Build notwendig.
+### Entwicklung (Full-Stack)
+
+| Befehl | Beschreibung |
+|--------|--------------|
+| `just dev` | **Startet Backend + Frontend zusammen** |
+| `just bootstrap` | Setup + ZITADEL Init + Full-Stack |
+
+### Backend
+
+| Befehl | Beschreibung |
+|--------|--------------|
+| `just dev-backend` | Nur Backend mit Hot-Reload |
+| `just run` | Backend einmal ausführen |
+| `just check` | Cargo check |
+| `just test` | Tests ausführen |
+| `just lint` | Clippy Linting |
+| `just fmt` | Code formatieren |
+
+### Frontend
+
+| Befehl | Beschreibung |
+|--------|--------------|
+| `just frontend-dev` | Frontend + Backend (mit Abhängigkeit) |
+| `just frontend-only` | Nur Frontend (ohne Backend) |
+| `just frontend-build` | Frontend Build |
+| `just frontend-install` | Dependencies installieren |
+
+### Datenbank
+
+| Befehl | Beschreibung |
+|--------|--------------|
+| `just db-migrate` | Migrations ausführen |
+| `just db-new <name>` | Neue Migration erstellen |
+| `just db-reset` | Datenbank zurücksetzen |
+
+### Services
+
+| Befehl | Beschreibung |
+|--------|--------------|
+| `just services` | Alle Services starten |
+| `just services-down` | Services stoppen |
+| `just services-logs` | Logs anzeigen |
+
+### ZITADEL
+
+| Befehl | Beschreibung |
+|--------|--------------|
+| `just zitadel` | ZITADEL Console öffnen |
+| `just zitadel-setup` | ZITADEL automatisch einrichten |
+| `just zitadel-reset` | ZITADEL zurücksetzen |
+
+### Build
 
 ```bash
 # Standard Build
-nix build
-# oder: just build
+just build
 
-# Static musl Binary (single file, ~15MB)
-nix build .#static
-# oder: just build-static
+# Static musl Binary
+just build-static
 
-# Docker Image via Nix (minimal scratch image)
-nix build .#docker
-docker load < result
-# oder: just docker-load
+# Docker Image
+just docker-load
 ```
 
-## Structure
+## Konfiguration
 
-```
-src/
-├── main.rs          # Entry point
-├── lib.rs           # Module exports
-├── server.rs        # Server & AppState
-├── api/             # REST handlers
-│   ├── routes.rs
-│   ├── middleware.rs
-│   └── handlers/
-├── auth/            # JWT validation
-├── db/              # SQLx pool
-├── cache/           # Redis pool
-├── config/          # Settings
-├── error.rs         # Error types
-└── telemetry.rs     # Logging
-
-config/              # TOML configs
-docker/              # Dockerfile + Compose
-migrations/          # SQL migrations
-```
-
-## Commands
+Umgebungsvariablen in `.env`:
 
 ```bash
-# Development
-just dev          # Dev server mit hot reload
-just run          # Run once
-just check        # cargo check
-
-# Build (via Nix)
-just build        # Standard build
-just build-static # Static musl binary
-just build-docker # Docker image via Nix
-just docker-load  # Build + load into Docker
-
-# Test & Quality
-just test         # Run tests
-just lint         # Clippy
-just fmt          # Format code
-just ci           # fmt + lint + test
-just ci-nix       # nix flake check
-
-# Database
-just db-migrate   # Run migrations
-just db-reset     # Reset DB
-just db-prepare   # SQLx offline mode
-
-# Infrastructure
-just infra        # Start DB + Cache
-just infra-auth   # Start with ZITADEL
-just infra-down   # Stop all
-just logs         # View logs
-
-# Full Stack
-just start        # infra + dev server
-just clean        # Clean all
-```
-
-## API Endpoints
-
-```
-GET  /api/v1/health  # Liveness probe
-GET  /api/v1/ready   # Readiness probe
-GET  /api/v1/info    # Public config
-
-# Protected (JWT required)
-GET  /api/v1/me      # Current user
-GET  /api/v1/users   # List users (admin)
-GET  /api/v1/users/:id
-```
-
-## Environment
-
-Copy `.env.example` to `.env` or use `APP_*` env vars:
-
-```bash
+APP_ENVIRONMENT=local
 APP_DATABASE__HOST=localhost
+APP_DATABASE__PORT=5432
 APP_CACHE__URL=redis://localhost:6379
 APP_AUTH__ISSUER=http://localhost:8080
 ```
 
-## License
+## API Endpoints
+
+| Endpoint | Beschreibung |
+|----------|--------------|
+| `GET /api/v1/health` | Health Check |
+| `GET /api/v1/ready` | Readiness Check (DB, Cache, Auth) |
+| `GET /api/v1/info` | API Info |
+| `GET /api/v1/users` | User List (Auth required) |
+
+## Lizenz
 
 MIT

@@ -1,0 +1,18 @@
+# Frontend Dockerfile mit Vite Hot-Reloading
+FROM node:20-alpine
+
+WORKDIR /workspace/frontend
+
+# Installiere npm Abhängigkeiten
+COPY frontend/package*.json ./
+RUN npm ci
+
+# Kopiere Frontend Code
+COPY frontend .
+
+# Exponiere Port für Vite Dev Server
+EXPOSE 5173
+
+# Starte Vite mit Hot-Reload (Host muss 0.0.0.0 sein für Docker)
+# Das Code wird via Volume gemountet und ändert sich automatisch
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]

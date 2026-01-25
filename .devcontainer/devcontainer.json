@@ -1,5 +1,5 @@
 {
-  "name": "God-Stack Backend",
+  "name": "Godstack Monorepo",
   "dockerComposeFile": "docker-compose.yml",
   "service": "dev",
   "workspaceFolder": "/workspace",
@@ -55,14 +55,17 @@
     }
   },
 
-  // Ports Konfiguration bleibt gleich...
-  "forwardPorts": [3000, 5432, 5433, 6379, 8080],
+  // Ports für Development
+  "forwardPorts": [3000, 5173, 5432, 5433, 6379, 8080, 9000, 9001],
   "portsAttributes": {
-    "3000": { "label": "API", "onAutoForward": "openBrowserOnce" },
+    "3000": { "label": "Backend API", "onAutoForward": "notify" },
+    "5173": { "label": "Frontend (Vite)", "onAutoForward": "openBrowserOnce" },
     "5432": { "label": "PostgreSQL (App)", "onAutoForward": "ignore" },
     "5433": { "label": "PostgreSQL (ZITADEL)", "onAutoForward": "ignore" },
     "6379": { "label": "Redis/Dragonfly", "onAutoForward": "ignore" },
-    "8080": { "label": "ZITADEL", "onAutoForward": "notify" }
+    "8080": { "label": "ZITADEL Auth", "onAutoForward": "notify" },
+    "9000": { "label": "MinIO S3", "onAutoForward": "ignore" },
+    "9001": { "label": "MinIO Console", "onAutoForward": "notify" }
   },
 
   "postCreateCommand": ".devcontainer/setup.sh",

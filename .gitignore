@@ -23,6 +23,9 @@ debug/
 /result
 .direnv/
 
+# Data / Temporary Files
+.data/
+
 # Docker
 docker-compose.override.yml
 

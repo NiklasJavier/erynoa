@@ -1,0 +1,39 @@
+# Base Configuration
+
+[application]
+host = "0.0.0.0"
+port = 3000
+environment = "local"
+frontend_url = "http://localhost:5173"
+api_url = "http://localhost:3000"
+
+[database]
+host = "localhost"
+port = 5432
+username = "godstack"
+password = "godstack"
+database = "godstack"
+max_connections = 20
+min_connections = 5
+connect_timeout = 10
+idle_timeout = 300
+
+[cache]
+url = "redis://localhost:6379"
+pool_size = 10
+default_ttl = 3600
+
+[auth]
+issuer = "http://localhost:8080"
+client_id = "godstack-backend"
+frontend_client_id = "godstack-frontend"
+jwks_cache_duration = 3600
+audiences = ["godstack-backend", "godstack-frontend"]
+
+[storage]
+endpoint = "http://localhost:9000"
+region = "us-east-1"
+access_key_id = "godstack"
+secret_access_key = "godstack123"
+default_bucket = "uploads"
+max_upload_size = 104857600  # 100 MB
