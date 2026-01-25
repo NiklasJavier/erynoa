@@ -30,9 +30,8 @@ export interface AppConfig {
   };
 }
 
-// In development, Frontend spricht direkt mit dem Backend an
-// In production, same origin is used
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+// Import centralized API config
+import { getApiBaseUrl, API_VERSION } from "./api-config";
 
 /**
  * Fetch application configuration from backend
@@ -40,11 +39,14 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
  */
 export async function fetchConfig(): Promise<AppConfig> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/info`);
+    const apiUrl = getApiBaseUrl();
+    console.log("Fetching config from:", `${apiUrl}${API_VERSION}/info`);
+    const response = await fetch(`${apiUrl}${API_VERSION}/info`);
     if (!response.ok) {
       throw new Error(`Failed to fetch config: ${response.status}`);
     }
     const data: BackendInfoResponse = await response.json();
+    console.log("Config loaded successfully:", data);
     
     // Map backend response to frontend config
     return {
@@ -65,24 +67,12 @@ export async function fetchConfig(): Promise<AppConfig> {
     };
   } catch (error) {
     console.error("Failed to fetch config, using defaults:", error);
-    // Fallback configuration for development
-    return {
-      environment: "local",
-      version: "0.1.0",
-      auth: {
-        issuer: "http://localhost:8080",
-        clientId: "godstack-frontend",
-      },
-      urls: {
-        frontend: "http://localhost:5173",
-        api: "http://localhost:3000",
-      },
-      features: {
-        registration: true,
-        socialLogin: false,
-      },
-    };
+    // Fallback configuration - imported from config-defaults.ts
+    // This ensures values stay in sync with backend/config/base.toml
+    const { DEFAULT_CONFIG } = await import("./config-defaults");
+    return DEFAULT_CONFIG;
   }
 }
 
-export { API_BASE_URL };
+// Re-export for backwards compatibility
+export { getApiBaseUrl };

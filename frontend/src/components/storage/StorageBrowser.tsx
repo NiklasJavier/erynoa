@@ -12,8 +12,7 @@ import {
   batch,
   createMemo,
 } from "solid-js";
-import type { StorageObject } from "../../api/storage";
-import { storage } from "../../api/storage";
+import { storage, type StorageObject } from "../../api";
 import { useStorageList, useDeleteFile } from "../../hooks/useStorage";
 
 interface FileNode extends StorageObject {

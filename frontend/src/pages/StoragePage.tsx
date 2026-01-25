@@ -14,8 +14,7 @@ import {
 } from "solid-js";
 import StorageBrowser from "../components/storage/StorageBrowser";
 import { useUpload } from "../hooks/useStorage";
-import { storage } from "../api/storage";
-import type { StorageObject } from "../api/storage";
+import { storage, type StorageObject } from "../api";
 
 interface BucketInfo {
   name: string;

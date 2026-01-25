@@ -26,11 +26,14 @@ Das ist alles! Dieser Befehl startet:
 │   └── migrations/    # SQL Migrations
 ├── frontend/          # SolidJS Frontend
 │   └── src/           # TypeScript + Components
-├── infra/             # Docker & Scripts
+├── infra/             # Infrastructure & Deployment
 │   ├── docker-compose.yml
+│   ├── Dockerfile.*   # Container Builds
+│   ├── Caddyfile      # Reverse Proxy Config
 │   ├── scripts/       # Setup-Skripte
 │   └── zitadel/       # ZITADEL Init
 ├── proto/             # Protobuf Definitionen
+├── docs/              # Dokumentation
 └── justfile           # Task Runner
 ```
 

@@ -9,8 +9,7 @@ import { createSignal, onMount, Show, type ParentComponent } from "solid-js";
 import { AuthProvider, useAuth } from "./lib/auth";
 import { ThemeProvider } from "./lib/theme";
 import { fetchConfig, type AppConfig } from "./lib/config";
-import { initApiClient } from "./api/client";
-import { initStorageClient } from "./api/storage";
+import { initApiClient, initStorageClient } from "./api";
 import { Layout } from "./components/Layout";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 

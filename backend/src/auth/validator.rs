@@ -76,8 +76,6 @@ impl JwtValidator {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     // Tests kommen hier hin
     // Für echte Tests brauchen wir einen Mock ZITADEL Server
 }

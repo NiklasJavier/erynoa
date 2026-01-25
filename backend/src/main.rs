@@ -5,7 +5,7 @@
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 use godstack_api::{
-    config::Settings,
+    config::{Settings, version::VERSION},
     server::Server,
     telemetry::{get_subscriber, init_subscriber},
 };
@@ -18,7 +18,7 @@ async fn main() -> anyhow::Result<()> {
     let settings = Settings::load().expect("Failed to load configuration");
     
     tracing::info!(
-        version = env!("CARGO_PKG_VERSION"),
+        version = VERSION,
         env = %settings.application.environment.as_str(),
         port = settings.application.port,
         "🚀 Starting God-Stack API"

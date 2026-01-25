@@ -31,6 +31,13 @@ export function initAuth(issuer: string, clientId: string) {
   const redirectUri = `${window.location.origin}/callback`;
   const postLogoutRedirectUri = window.location.origin;
 
+  console.log("Creating UserManager with config:", {
+    authority: issuer,
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    post_logout_redirect_uri: postLogoutRedirectUri,
+  });
+
   userManager = new UserManager({
     authority: issuer,
     client_id: clientId,
@@ -42,11 +49,43 @@ export function initAuth(issuer: string, clientId: string) {
     userStore: new WebStorageStateStore({ store: window.localStorage }),
     // ZITADEL specific
     loadUserInfo: true,
+    // PKCE is enabled by default in oidc-client-ts for public clients
+    // Explicitly set to ensure compatibility with ZITADEL
+    extraQueryParams: {},
+    // Ensure metadata is loaded correctly
+    metadata: {
+      issuer: issuer,
+      authorization_endpoint: `${issuer}/oauth/v2/authorize`,
+      token_endpoint: `${issuer}/oauth/v2/token`,
+      userinfo_endpoint: `${issuer}/oidc/v1/userinfo`,
+      end_session_endpoint: `${issuer}/oidc/v1/end_session`,
+      jwks_uri: `${issuer}/.well-known/jwks.json`,
+    },
   });
 
   // Handle silent renew errors
   userManager.events.addSilentRenewError((error) => {
     console.error("Silent renew error:", error);
+  });
+
+  // Handle user loaded events
+  userManager.events.addUserLoaded((user) => {
+    console.log("User loaded:", user?.profile?.preferred_username);
+  });
+
+  // Handle user unloaded events
+  userManager.events.addUserUnloaded(() => {
+    console.log("User unloaded");
+  });
+
+  // Handle access token expiring
+  userManager.events.addAccessTokenExpiring(() => {
+    console.log("Access token expiring, will renew automatically");
+  });
+
+  // Handle access token expired
+  userManager.events.addAccessTokenExpired(() => {
+    console.log("Access token expired");
   });
 
   return userManager;
@@ -66,7 +105,26 @@ export const AuthProvider: ParentComponent<{ issuer: string; clientId: string }>
 
   onMount(async () => {
     // Initialize UserManager
+    console.log("Initializing Auth with:", { issuer: props.issuer, clientId: props.clientId });
+    
+    // Validate auth config
+    if (!props.issuer || !props.clientId) {
+      console.error("Invalid auth config:", { issuer: props.issuer, clientId: props.clientId });
+      setState({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: "Invalid authentication configuration",
+      });
+      return;
+    }
+    
     const manager = initAuth(props.issuer, props.clientId);
+    console.log("UserManager initialized:", {
+      authority: manager.settings.authority,
+      client_id: manager.settings.client_id,
+      redirect_uri: manager.settings.redirect_uri,
+    });
 
     try {
       // Check if we're handling a callback
@@ -109,14 +167,49 @@ export const AuthProvider: ParentComponent<{ issuer: string; clientId: string }>
   });
 
   const login = async () => {
-    if (!userManager) return;
-    try {
-      await userManager.signinRedirect();
-    } catch (error) {
-      console.error("Login error:", error);
+    console.log("Login button clicked");
+    if (!userManager) {
+      console.error("UserManager not initialized!");
       setState((s) => ({
         ...s,
-        error: error instanceof Error ? error.message : "Login failed",
+        error: "Authentication not initialized. Please refresh the page.",
+      }));
+      return;
+    }
+    
+    try {
+      // Ensure metadata is loaded before redirect
+      console.log("Loading OIDC metadata...");
+      await userManager.metadataService.getMetadata();
+      console.log("Metadata loaded successfully");
+      
+      console.log("Starting OIDC redirect...", {
+        authority: userManager.settings.authority,
+        client_id: userManager.settings.client_id,
+        redirect_uri: userManager.settings.redirect_uri,
+        metadata: {
+          authorization_endpoint: userManager.metadataService.getAuthorizationEndpoint(),
+        },
+      });
+      
+      await userManager.signinRedirect();
+      console.log("Redirect initiated successfully");
+    } catch (error) {
+      console.error("Login error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Login failed";
+      console.error("Login error details:", {
+        error,
+        message: errorMessage,
+        stack: error instanceof Error ? error.stack : undefined,
+        userManagerSettings: userManager ? {
+          authority: userManager.settings.authority,
+          client_id: userManager.settings.client_id,
+          redirect_uri: userManager.settings.redirect_uri,
+        } : null,
+      });
+      setState((s) => ({
+        ...s,
+        error: errorMessage,
       }));
     }
   };

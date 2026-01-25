@@ -60,11 +60,8 @@ services:
       # Cargo Registry Cache - beschleunigt Dependency Downloads
       - cargo-registry:/usr/local/cargo/registry
       - cargo-git:/usr/local/cargo/git
-      # Shared Config und Proto
-      - ../config:/workspace/config:cached
+      # Proto für eventuelle Code-Generierung
       - ../proto:/workspace/proto:cached
-      # Environment Variables (optional, falls vorhanden)
-      - ../.env:/workspace/.env:cached
     working_dir: /workspace/backend
     environment:
       - RUST_LOG=godstack_api=debug,info

@@ -6,7 +6,7 @@
 import { For, Show, createSignal } from "solid-js";
 import type { Component } from "solid-js";
 import { useStorageList, useDeleteFile, formatFileSize, getFileIcon } from "../../hooks/useStorage";
-import { storage } from "../../api/storage";
+import { storage } from "../../api";
 
 interface FileListProps {
   bucket?: string;

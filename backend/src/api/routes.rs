@@ -1,47 +1,41 @@
 //! API Routes
+//!
+//! Haupt-Router der alle Feature-Router zusammenführt
 
 use crate::server::AppState;
-use axum::{
-    http::{HeaderValue, Method},
-    routing::get,
-    Router,
-};
-use std::time::Duration;
-use tower_http::cors::CorsLayer;
+use axum::{middleware::from_fn, Router};
 
-use super::handlers;
+use super::constants::API_VERSION;
+use super::middleware::{build_cors, logging_middleware};
+use super::v1::{health, info, storage, users};
 
+/// Erstellt den Haupt-Router mit allen API-Features
 pub fn create_router(state: AppState) -> Router {
     let cors = build_cors(&state);
 
-    // Build API routes - explicitly typed as Router<AppState>
-    let api: Router<AppState> = Router::new()
-        // Public routes (no auth)
-        .route("/health", get(handlers::health::health_check))
-        .route("/ready", get(handlers::health::readiness_check))
-        .route("/info", get(handlers::info::get_info))
-        .route("/status", get(handlers::status::get_status))
-        // Protected routes
-        .route("/me", get(handlers::users::get_current_user))
-        .route("/users", get(handlers::users::list_users))
-        .route("/users/:id", get(handlers::users::get_user));
+    // Public routes (keine Auth erforderlich)
+    let public_routes = Router::new()
+        .merge(health::create_health_routes())
+        .merge(info::create_info_routes());
 
-    // Wrap with layers and provide state
+    // Protected routes (Auth erforderlich)
+    // Note: Auth-Middleware wird aktuell nicht als Layer verwendet,
+    // da Claims direkt als Extractor in Handlern verwendet werden.
+    // Die auth_middleware kann später für automatische Token-Validierung
+    // auf bestimmten Routen verwendet werden.
+    let protected_routes = Router::new()
+        .merge(users::create_users_routes())
+        .merge(storage::create_storage_routes());
+
+    // Kombiniere alle Routen
+    let api = Router::new()
+        .merge(public_routes)
+        .merge(protected_routes);
+
+    // Haupt-Router mit Middleware und State
     Router::new()
-        .nest("/api/v1", api)
+        .nest(API_VERSION, api)
         .layer(cors)
+        .layer(from_fn(logging_middleware))
         .with_state(state)
-}
-
-fn build_cors(state: &AppState) -> CorsLayer {
-    if state.config.application.environment.is_production() {
-        let origin = state.config.application.frontend_url.clone();
-        CorsLayer::new()
-            .allow_origin(origin.as_str().parse::<HeaderValue>().unwrap())
-            .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
-            .allow_credentials(true)
-            .max_age(Duration::from_secs(86400))
-    } else {
-        CorsLayer::very_permissive()
-    }
 }

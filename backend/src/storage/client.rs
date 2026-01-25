@@ -387,8 +387,6 @@ impl StorageClient {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     // Integration tests würden einen laufenden MinIO-Server benötigen
     // Diese sind in tests/storage.rs
 }

@@ -4,8 +4,7 @@
  */
 
 import { createSignal, createResource } from "solid-js";
-import { storage } from "../api/storage";
-import type { UploadResult } from "../api/storage";
+import { storage, type UploadResult } from "../api";
 
 export interface UploadState {
   file: File;

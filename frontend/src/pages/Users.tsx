@@ -4,7 +4,7 @@
  */
 
 import { Show, For, createResource, Suspense } from "solid-js";
-import { api, type User } from "../api/client";
+import { api, type User } from "../api";
 import {
   Card,
   CardContent,

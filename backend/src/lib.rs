@@ -19,5 +19,5 @@ pub mod telemetry;
 pub use error::{ApiError, Result};
 pub use server::AppState;
 
-/// Crate version from Cargo.toml
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+// Re-export version from config module (centralized)
+pub use config::version::{VERSION, NAME, DESCRIPTION};

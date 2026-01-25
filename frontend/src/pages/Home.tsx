@@ -5,7 +5,7 @@
 
 import { Show, createResource, For, createSignal, onMount } from "solid-js";
 import { useAuth, getUserDisplayName } from "../lib/auth";
-import { api } from "../api/client";
+import { api } from "../api";
 import {
   Card,
   CardHeader,
@@ -39,11 +39,11 @@ export default function Home() {
       console.error("Failed to fetch service status:", error);
       // Fallback status based on what we know is running
       setServices([
-        { name: "API Server", status: "online", description: "Backend REST API", url: "http://localhost:3000" },
-        { name: "Database", status: "online", description: "PostgreSQL Database", url: "postgresql://localhost:5432" },
-        { name: "Cache", status: "online", description: "DragonflyDB Cache", url: "redis://localhost:6379" },
-        { name: "S3 Storage", status: "online", description: "MinIO Object Storage", url: "http://localhost:9000" },
-        { name: "Authentication", status: "online", description: "ZITADEL Auth Service", url: "http://localhost:8080" },
+        { name: "API Server", status: "online", description: "Backend REST API", url: SERVICE_URLS.api },
+        { name: "Database", status: "online", description: "PostgreSQL Database", url: SERVICE_URLS.database },
+        { name: "Cache", status: "online", description: "DragonflyDB Cache", url: SERVICE_URLS.cache },
+        { name: "S3 Storage", status: "online", description: "MinIO Object Storage", url: SERVICE_URLS.minio },
+        { name: "Authentication", status: "online", description: "ZITADEL Auth Service", url: SERVICE_URLS.zitadel },
       ]);
     } finally {
       setLoading(false);

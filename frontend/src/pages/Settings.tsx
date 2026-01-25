@@ -6,6 +6,7 @@
 import { Show } from "solid-js";
 import { useAuth, getUserDisplayName } from "../lib/auth";
 import { useTheme } from "../lib/theme";
+import { getZitadelConsoleUrl } from "../lib/service-urls";
 import {
   Card,
   CardHeader,
@@ -87,7 +88,7 @@ function SettingsContent() {
           <p class="text-xs text-muted-foreground">
             Profildaten werden in ZITADEL verwaltet. 
             <a 
-              href="http://localhost:8080/ui/console" 
+              href={getZitadelConsoleUrl()} 
               target="_blank" 
               class="text-primary hover:underline ml-1"
             >
@@ -151,7 +152,7 @@ function SettingsContent() {
               </p>
             </div>
             <a 
-              href="http://localhost:8080/ui/console/users/me?id=security"
+              href={getZitadelConsoleUrl("users/me?id=security")}
               target="_blank"
             >
               <Button variant="outline">
@@ -167,7 +168,7 @@ function SettingsContent() {
               </p>
             </div>
             <a 
-              href="http://localhost:8080/ui/console/users/me?id=security"
+              href={getZitadelConsoleUrl("users/me?id=security")}
               target="_blank"
             >
               <Button variant="outline">

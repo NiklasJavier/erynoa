@@ -88,12 +88,13 @@ sleep 3
 echo "========================================="
 echo "Starting cargo watch with hot-reload..."
 echo "Code changes in src/ will trigger rebuild"
-echo "Watching: src/, Cargo.toml, config/, proto/, .env"
+echo "Watching: src/, Cargo.toml, config/"
 echo "========================================="
 
 # --poll für bessere Kompatibilität in Container-Umgebungen
 # --why zeigt an welche Datei den Rebuild ausgelöst hat
-exec cargo watch --poll --why -x run -w src -w Cargo.toml -w ../config -w ../proto -w ../.env
+# Nur existierende Pfade überwachen (config ist im backend-Verzeichnis)
+exec cargo watch --poll --why -x run -w src -w Cargo.toml -w config
 EOF
 
 RUN chmod +x /entrypoint.sh

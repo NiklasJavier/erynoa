@@ -73,10 +73,11 @@ Das ist alles! Dieser Befehl:
 │   │   └── pages/           # Seiten
 │   └── dist/                # Production Build
 │
-├── infra/                   # Infrastructure
+├── infra/                   # Infrastructure & Deployment
 │   ├── docker-compose.yml   # Service-Definitionen
 │   ├── Dockerfile.backend   # Backend Container
 │   ├── Dockerfile.frontend  # Frontend Container
+│   ├── Caddyfile            # Reverse Proxy Config
 │   ├── scripts/             # Setup-Skripte
 │   │   ├── setup-zitadel.sh # ZITADEL Initialisierung
 │   │   └── setup-minio.sh   # MinIO Buckets

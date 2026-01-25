@@ -2,6 +2,11 @@
 //!
 //! Lädt Konfiguration aus Environment und Config-Dateien
 
+pub mod version;
+pub mod constants;
+
+pub use version::{VERSION, NAME, DESCRIPTION};
+
 use secrecy::{ExposeSecret, Secret};
 use serde::{Deserialize, Deserializer};
 use std::convert::{TryFrom, TryInto};

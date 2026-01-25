@@ -19,21 +19,28 @@ dev:
     echo "║     🚀 Godstack Development Environment                            ║"
     echo "╚════════════════════════════════════════════════════════════════════╝"
     echo ""
-    echo "  Frontend:  http://localhost:5173  (Vite HMR)"
-    echo "  Backend:   http://localhost:3000  (cargo watch)"
-    echo "  ZITADEL:   http://localhost:8080  (Auth)"
-    echo "  MinIO:     http://localhost:9001  (Storage Console)"
+    # Service URLs - Harmonized with frontend/src/lib/service-urls.ts and backend/src/config/constants.rs
+    FRONTEND_URL="${FRONTEND_URL:-http://localhost:5173}"
+    API_URL="${API_URL:-http://localhost:3000}"
+    ZITADEL_URL="${ZITADEL_URL:-http://localhost:8080}"
+    MINIO_URL="${MINIO_URL:-http://localhost:9000}"
+    MINIO_CONSOLE_URL="${MINIO_CONSOLE_URL:-http://localhost:9001}"
+    
+    echo "  Frontend:  ${FRONTEND_URL}  (Vite HMR)"
+    echo "  Backend:   ${API_URL}  (cargo watch)"
+    echo "  ZITADEL:   ${ZITADEL_URL}  (Auth)"
+    echo "  MinIO:     ${MINIO_CONSOLE_URL}  (Storage Console)"
     echo ""
     
     # 1. Starte Hintergrund-Services (DB, Cache, MinIO, ZITADEL)
-    echo "━━━ [1/4] Starte Hintergrund-Services ━━━"
+    echo "━━━ [1/5] Starte Hintergrund-Services ━━━"
     cd /workspace/infra
     docker compose --profile auth up -d db cache minio zitadel-db zitadel-init zitadel
     echo "✓ Hintergrund-Services gestartet"
     
     # 2. Warte auf Services
     echo ""
-    echo "━━━ [2/4] Warte auf Services ━━━"
+    echo "━━━ [2/5] Warte auf Services ━━━"
     echo -n "  Warte auf PostgreSQL..."
     until docker compose exec -T db pg_isready -U godstack -h localhost > /dev/null 2>&1; do
         sleep 1
@@ -49,20 +56,25 @@ dev:
     echo " ✓"
     
     echo -n "  Warte auf MinIO..."
-    until curl -sf http://localhost:9000/minio/health/live > /dev/null 2>&1; do
+    until curl -sf ${MINIO_URL}/minio/health/live > /dev/null 2>&1; do
         sleep 1
         echo -n "."
     done
     echo " ✓"
     
     echo -n "  Warte auf ZITADEL..."
+    ZITADEL_READY=false
     for i in {1..60}; do
-        if curl -sf http://localhost:8080/debug/ready > /dev/null 2>&1; then
+        # Prüfe sowohl /debug/ready als auch OIDC endpoint
+            if curl -sf ${ZITADEL_URL:-http://localhost:8080}/debug/ready > /dev/null 2>&1 || \
+               curl -sf ${ZITADEL_URL:-http://localhost:8080}/.well-known/openid-configuration > /dev/null 2>&1; then
             echo " ✓"
+            ZITADEL_READY=true
             break
         fi
         if [ $i -eq 60 ]; then
             echo " (Timeout - wird später geprüft)"
+            echo "    ⚠ ZITADEL startet langsam, kann bis zu 2 Minuten dauern"
         fi
         sleep 2
         echo -n "."
@@ -70,23 +82,53 @@ dev:
     
     # 3. Initialisierungsskripte (nur wenn nötig)
     echo ""
-    echo "━━━ [3/4] Initialisierung ━━━"
+    echo "━━━ [3/5] Initialisierung ━━━"
     cd /workspace
+    
+    # Erstelle .data Verzeichnis falls nicht vorhanden
+    mkdir -p .data
     
     # MinIO Setup
     if [ ! -f ".data/.minio-setup-complete" ]; then
         echo "  → MinIO Setup wird ausgeführt..."
-        chmod +x infra/scripts/setup-minio.sh
-        ./infra/scripts/setup-minio.sh || echo "  ⚠ MinIO Setup übersprungen"
+        # Prüfe beide möglichen Pfade für Setup-Scripts
+        if [ -f "infra/scripts/setup/setup-minio.sh" ]; then
+            chmod +x infra/scripts/setup/setup-minio.sh
+            ./infra/scripts/setup/setup-minio.sh || echo "  ⚠ MinIO Setup übersprungen"
+        elif [ -f "infra/scripts/setup-minio.sh" ]; then
+            chmod +x infra/scripts/setup-minio.sh
+            ./infra/scripts/setup-minio.sh || echo "  ⚠ MinIO Setup übersprungen"
+        else
+            echo "  ⚠ MinIO Setup-Script nicht gefunden"
+        fi
     else
         echo "  ✓ MinIO bereits eingerichtet"
     fi
     
-    # ZITADEL Setup
+    # ZITADEL Setup - Warte bis ZITADEL bereit ist
     if [ ! -f ".data/zitadel-setup-complete" ]; then
         echo "  → ZITADEL Setup wird ausgeführt..."
-        chmod +x infra/scripts/setup-zitadel.sh
-        ./infra/scripts/setup-zitadel.sh || echo "  ⚠ ZITADEL Setup übersprungen"
+        # Warte zusätzlich auf ZITADEL falls noch nicht bereit
+        if [ "$ZITADEL_READY" != "true" ]; then
+            echo "    Warte auf ZITADEL..."
+            for i in {1..30}; do
+                if curl -sf ${ZITADEL_URL}/.well-known/openid-configuration > /dev/null 2>&1; then
+                    echo "    ✓ ZITADEL bereit"
+                    break
+                fi
+                sleep 2
+            done
+        fi
+        # Prüfe beide möglichen Pfade für Setup-Scripts
+        if [ -f "infra/scripts/setup/setup-zitadel.sh" ]; then
+            chmod +x infra/scripts/setup/setup-zitadel.sh
+            ./infra/scripts/setup/setup-zitadel.sh || echo "  ⚠ ZITADEL Setup übersprungen"
+        elif [ -f "infra/scripts/setup-zitadel.sh" ]; then
+            chmod +x infra/scripts/setup-zitadel.sh
+            ./infra/scripts/setup-zitadel.sh || echo "  ⚠ ZITADEL Setup übersprungen"
+        else
+            echo "  ⚠ ZITADEL Setup-Script nicht gefunden"
+        fi
     else
         echo "  ✓ ZITADEL bereits eingerichtet"
         if [ -f ".data/zitadel-client-id" ]; then
@@ -94,12 +136,23 @@ dev:
         fi
     fi
     
-    # 4. Starte Frontend + Backend mit sichtbaren Logs
+    # 4. Optional: Health Check
     echo ""
-    echo "━━━ [4/4] Starte Frontend + Backend (Hot-Reload) ━━━"
+    echo "━━━ [4/5] Optional: Health Check ━━━"
+    if command -v curl > /dev/null 2>&1; then
+        echo "  Führe Health Check aus..."
+        /workspace/scripts/dev-check.sh || echo "  ⚠ Einige Services noch nicht bereit (normal beim ersten Start)"
+    else
+        echo "  ⚠ curl nicht verfügbar - Health Check übersprungen"
+    fi
+    
+    # 5. Starte Frontend + Backend mit sichtbaren Logs
+    echo ""
+    echo "━━━ [5/5] Starte Frontend + Backend (Hot-Reload) ━━━"
     echo ""
     echo "  Ctrl+C stoppt Frontend & Backend, Services laufen weiter."
     echo "  Komplett stoppen: just docker-stop"
+    echo "  Health Check:     just dev-check"
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
@@ -317,7 +370,9 @@ minio:
     @echo "Opening MinIO Console..."
     @echo "Login: godstack / godstack123"
     @echo ""
-    @$BROWSER "http://localhost:9001" || echo "Öffne: http://localhost:9001"
+    #!/usr/bin/env bash
+    MINIO_CONSOLE_URL="${MINIO_CONSOLE_URL:-http://localhost:9001}"
+    $BROWSER "${MINIO_CONSOLE_URL}" || echo "Öffne: ${MINIO_CONSOLE_URL}"
 
 # MinIO reset (löscht alle Daten)
 minio-reset:
@@ -375,11 +430,13 @@ init:
 
 # Open ZITADEL Console
 zitadel:
-    @echo "Opening ZITADEL Console..."
-    @echo "Login: zitadel-admin / Password1!"
-    @echo "Test User: testuser / Test123!"
-    @echo ""
-    @$BROWSER "http://localhost:8080/ui/console" || echo "Öffne: http://localhost:8080/ui/console"
+    #!/usr/bin/env bash
+    ZITADEL_URL="${ZITADEL_URL:-http://localhost:8080}"
+    echo "Opening ZITADEL Console..."
+    echo "Login: zitadel-admin / Password1!"
+    echo "Test User: testuser / Test123!"
+    echo ""
+    $BROWSER "${ZITADEL_URL}/ui/console" || echo "Öffne: ${ZITADEL_URL}/ui/console"
 
 # ZITADEL setup guide
 zitadel-guide:
@@ -399,7 +456,9 @@ zitadel-reset:
     cd /workspace/infra && docker compose --profile auth up -d zitadel-db zitadel-init zitadel
     @echo "Warte 30 Sekunden auf Init..."
     @sleep 30
-    @curl -sf http://localhost:8080/debug/ready && echo " ✓ ZITADEL bereit" || echo " ⚠ ZITADEL noch nicht bereit"
+    #!/usr/bin/env bash
+    ZITADEL_URL="${ZITADEL_URL:-http://localhost:8080}"
+    curl -sf ${ZITADEL_URL}/debug/ready && echo " ✓ ZITADEL bereit" || echo " ⚠ ZITADEL noch nicht bereit"
     @just zitadel-setup
 
 # ═══════════════════════════════════════════════════════
@@ -430,6 +489,10 @@ reset:
     rm -rf /workspace/.data/
     echo "✅ Reset abgeschlossen. Starte mit: just dev"
 
+# Health Check für Development Environment
+dev-check:
+    /workspace/scripts/dev-check.sh
+
 # Status aller Services anzeigen
 status:
     #!/usr/bin/env bash
@@ -443,8 +506,15 @@ status:
     echo "───────────────────────────────────────────────────────"
     echo "  Health Checks:"
     echo "───────────────────────────────────────────────────────"
-    curl -sf http://localhost:3000/api/v1/health > /dev/null 2>&1 && echo "  ✓ Backend:   http://localhost:3000" || echo "  ✗ Backend:   nicht erreichbar"
-    curl -sf http://localhost:5173/ > /dev/null 2>&1 && echo "  ✓ Frontend:  http://localhost:5173" || echo "  ✗ Frontend:  nicht erreichbar"
-    curl -sf http://localhost:8080/debug/ready > /dev/null 2>&1 && echo "  ✓ ZITADEL:   http://localhost:8080" || echo "  ✗ ZITADEL:   nicht erreichbar"
-    curl -sf http://localhost:9000/minio/health/live > /dev/null 2>&1 && echo "  ✓ MinIO:     http://localhost:9001 (Console)" || echo "  ✗ MinIO:     nicht erreichbar"
+    # Service URLs - Harmonized with frontend/src/lib/service-urls.ts and backend/src/config/constants.rs
+    API_URL="${API_URL:-http://localhost:3000}"
+    FRONTEND_URL="${FRONTEND_URL:-http://localhost:5173}"
+    ZITADEL_URL="${ZITADEL_URL:-http://localhost:8080}"
+    MINIO_URL="${MINIO_URL:-http://localhost:9000}"
+    MINIO_CONSOLE_URL="${MINIO_CONSOLE_URL:-http://localhost:9001}"
+    
+    curl -sf ${API_URL}/api/v1/health > /dev/null 2>&1 && echo "  ✓ Backend:   ${API_URL}" || echo "  ✗ Backend:   nicht erreichbar"
+    curl -sf ${FRONTEND_URL}/ > /dev/null 2>&1 && echo "  ✓ Frontend:  ${FRONTEND_URL}" || echo "  ✗ Frontend:  nicht erreichbar"
+    curl -sf ${ZITADEL_URL}/debug/ready > /dev/null 2>&1 && echo "  ✓ ZITADEL:   ${ZITADEL_URL}" || echo "  ✗ ZITADEL:   nicht erreichbar"
+    curl -sf ${MINIO_URL}/minio/health/live > /dev/null 2>&1 && echo "  ✓ MinIO:     ${MINIO_CONSOLE_URL} (Console)" || echo "  ✗ MinIO:     nicht erreichbar"
     echo ""
