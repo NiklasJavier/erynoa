@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Erynoa - Services</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg-primary: #0a0e27;
+            --bg-secondary: #111827;
+            --bg-card: #1f2937;
+            --bg-card-hover: #374151;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --accent-glow: rgba(59, 130, 246, 0.3);
+            --success: #10b981;
+            --text-primary: #f9fafb;
+            --text-secondary: #d1d5db;
+            --text-muted: #9ca3af;
+            --border: #374151;
+            --border-hover: #4b5563;
+            --shadow: rgba(0, 0, 0, 0.3);
+            --shadow-lg: rgba(0, 0, 0, 0.5);
+            --gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-2: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --gradient-3: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.15) 0px, transparent 50%),
+                radial-gradient(at 50% 50%, rgba(139, 92, 246, 0.1) 0px, transparent 50%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: var(--text-primary);
+            line-height: 1.6;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        /* Animated background particles */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(2px 2px at 20% 30%, rgba(59, 130, 246, 0.3), transparent),
+                radial-gradient(2px 2px at 60% 70%, rgba(16, 185, 129, 0.3), transparent),
+                radial-gradient(1px 1px at 50% 50%, rgba(139, 92, 246, 0.3), transparent);
+            background-size: 200% 200%;
+            animation: particleMove 20s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        @keyframes particleMove {
+            0%, 100% { background-position: 0% 0%, 100% 100%, 50% 50%; }
+            50% { background-position: 100% 100%, 0% 0%, 50% 50%; }
+        }
+        
+        .container {
+            background: var(--bg-secondary);
+            border-radius: 32px;
+            box-shadow: 
+                0 25px 50px -12px var(--shadow-lg),
+                0 0 0 1px var(--border),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            padding: 64px 48px;
+            max-width: 900px;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent), var(--success), #8b5cf6, var(--accent));
+            background-size: 200% 100%;
+            animation: gradientShift 3s ease infinite;
+            border-radius: 32px 32px 0 0;
+        }
+        
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 56px;
+            position: relative;
+        }
+        
+        .logo {
+            font-size: 56px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #10b981 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 16px;
+            letter-spacing: -0.03em;
+            text-shadow: 0 0 40px var(--accent-glow);
+            animation: logoGlow 3s ease-in-out infinite;
+        }
+        
+        @keyframes logoGlow {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.2); }
+        }
+        
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 18px;
+            font-weight: 400;
+            letter-spacing: 0.5px;
+        }
+        
+        .services {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 24px;
+            margin-bottom: 48px;
+        }
+        
+        .service-link {
+            display: flex;
+            flex-direction: column;
+            padding: 32px 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        
+        .service-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--accent);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .service-link::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s ease, height 0.6s ease;
+        }
+        
+        .service-link:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--accent);
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 
+                0 20px 40px -12px var(--shadow-lg),
+                0 0 0 1px var(--accent),
+                0 0 40px var(--accent-glow);
+        }
+        
+        .service-link:hover::before {
+            transform: scaleX(1);
+        }
+        
+        .service-link:hover::after {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .service-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            display: block;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .service-link:hover .service-icon {
+            transform: scale(1.1) rotate(5deg);
+        }
+        
+        .service-name {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+        }
+        
+        .service-description {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+        
+        .service-path {
+            font-size: 13px;
+            color: var(--accent);
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+            background: rgba(59, 130, 246, 0.1);
+            padding: 6px 12px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-top: 4px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .service-link:hover .service-path {
+            color: var(--text-primary);
+            background: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+        
+        .footer {
+            margin-top: 48px;
+            padding-top: 32px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+        
+        .footer-text {
+            color: var(--text-muted);
+            font-size: 14px;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 48px 32px;
+                border-radius: 24px;
+            }
+            
+            .logo {
+                font-size: 42px;
+            }
+            
+            .subtitle {
+                font-size: 16px;
+            }
+            
+            .services {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .service-link {
+                padding: 28px 20px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 32px 24px;
+            }
+            
+            .logo {
+                font-size: 36px;
+            }
+            
+            .service-icon {
+                font-size: 40px;
+            }
+            
+            .service-name {
+                font-size: 20px;
+            }
+        }
+        
+        /* Smooth scroll */
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        /* Selection color */
+        ::selection {
+            background: var(--accent);
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="logo">Erynoa</h1>
+            <p class="subtitle">Wählen Sie einen Service aus</p>
+        </div>
+        
+        <div class="services">
+            <a href="/console" class="service-link">
+                <span class="service-icon">⚙️</span>
+                <div class="service-name">Console</div>
+                <div class="service-description">Verwaltungs- und Konfigurationsoberfläche</div>
+                <div class="service-path">/console</div>
+            </a>
+            
+            <a href="/platform" class="service-link">
+                <span class="service-icon">🚀</span>
+                <div class="service-name">Platform</div>
+                <div class="service-description">Hauptplattform für Benutzer</div>
+                <div class="service-path">/platform</div>
+            </a>
+            
+            <a href="/docs" class="service-link">
+                <span class="service-icon">📚</span>
+                <div class="service-name">Docs</div>
+                <div class="service-description">Dokumentation und Anleitungen</div>
+                <div class="service-path">/docs</div>
+            </a>
+        </div>
+        
+        <div class="footer">
+            <p class="footer-text">
+                Erynoa Services • Port 3001
+            </p>
+        </div>
+    </div>
+</body>
+</html>

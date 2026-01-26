@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package erynoa.v1;
+
+option go_package = "erynoa/v1;erynoav1";
+
+import "google/protobuf/timestamp.proto";
+
+// UserService provides user management operations
+service UserService {
+  // List returns all users (requires authentication)
+  rpc List(ListUsersRequest) returns (ListUsersResponse);
+  
+  // Get returns a single user by ID
+  rpc Get(GetUserRequest) returns (GetUserResponse);
+  
+  // GetCurrent returns the current authenticated user
+  rpc GetCurrent(GetCurrentUserRequest) returns (GetUserResponse);
+  
+  // Create creates a new user
+  rpc Create(CreateUserRequest) returns (CreateUserResponse);
+  
+  // Update updates an existing user
+  rpc Update(UpdateUserRequest) returns (UpdateUserResponse);
+  
+  // Delete removes a user
+  rpc Delete(DeleteUserRequest) returns (DeleteUserResponse);
+}
+
+message User {
+  string id = 1;
+  string email = 2;
+  string name = 3;
+  string role = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message ListUsersRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListUsersResponse {
+  repeated User users = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message GetUserRequest {
+  string id = 1;
+}
+
+message GetCurrentUserRequest {}
+
+message GetUserResponse {
+  User user = 1;
+}
+
+message CreateUserRequest {
+  string email = 1;
+  string name = 2;
+  string role = 3;
+}
+
+message CreateUserResponse {
+  User user = 1;
+}
+
+message UpdateUserRequest {
+  string id = 1;
+  optional string email = 2;
+  optional string name = 3;
+  optional string role = 4;
+}
+
+message UpdateUserResponse {
+  User user = 1;
+}
+
+message DeleteUserRequest {
+  string id = 1;
+}
+
+message DeleteUserResponse {}

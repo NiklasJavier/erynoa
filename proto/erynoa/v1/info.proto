@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package erynoa.v1;
+
+option go_package = "erynoa/v1;erynoav1";
+
+// InfoService provides application configuration
+service InfoService {
+  // GetInfo returns public configuration for clients
+  rpc GetInfo(GetInfoRequest) returns (GetInfoResponse);
+}
+
+message GetInfoRequest {}
+
+message GetInfoResponse {
+  string version = 1;
+  string environment = 2;
+  AuthConfig auth = 3;
+  UrlConfig urls = 4;
+  FeatureFlags features = 5;
+}
+
+message AuthConfig {
+  string issuer = 1;
+  string client_id = 2;
+}
+
+message UrlConfig {
+  string console = 1;
+  string platform = 2;
+  string docs = 3;
+  string api = 4;
+}
+
+message FeatureFlags {
+  bool registration = 1;
+  bool social_login = 2;
+}
