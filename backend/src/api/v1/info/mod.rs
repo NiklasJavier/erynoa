@@ -1,6 +1,6 @@
 //! Info API
 //!
-//! Public configuration endpoint for frontend (Connect-RPC only)
+//! Public configuration endpoint for control (Connect-RPC only)
 
 mod handlers;
 

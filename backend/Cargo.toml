@@ -1,9 +1,9 @@
 [package]
-name = "godstack-api"
+name = "erynoa-api"
 version = "0.1.0"
 edition = "2021"
 authors = ["Erynoa Team"]
-description = "God-Stack Backend - High-Performance Rust API"
+description = "Erynoa Backend - High-Performance Rust API"
 license = "MIT"
 build = "build.rs"
 
@@ -11,7 +11,7 @@ build = "build.rs"
 path = "src/lib.rs"
 
 [[bin]]
-name = "godstack-api"
+name = "erynoa-api"
 path = "src/main.rs"
 
 [dependencies]

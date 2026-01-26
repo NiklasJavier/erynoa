@@ -6,7 +6,7 @@ use axum_connect::pbjson_types::Timestamp;
 
 use crate::auth::Claims;
 use crate::server::AppState;
-use crate::gen::godstack::v1::{
+use crate::gen::erynoa::v1::{
     ListUsersRequest, ListUsersResponse, GetUserRequest, GetUserResponse,
     GetCurrentUserRequest,
     User as ProtoUser,

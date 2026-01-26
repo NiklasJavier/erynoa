@@ -8,7 +8,7 @@ use crate::server::AppState;
 use crate::error::ApiError;
 #[cfg(feature = "connect")]
 use crate::error::ApiErrorToRpc;
-use crate::gen::godstack::v1::{
+use crate::gen::erynoa::v1::{
     UploadRequest, UploadResponse, ListObjectsRequest, ListObjectsResponse,
     DeleteObjectRequest, DeleteObjectResponse, HeadObjectRequest, HeadObjectResponse,
     GetPresignedUploadUrlRequest, GetPresignedUploadUrlResponse,
@@ -46,7 +46,7 @@ fn sanitize_filename(name: &str) -> String {
 ///   "file": [/* binary data */],
 ///   "filename": "document.pdf",
 ///   "content_type": "application/pdf",
-///   "bucket": "godstack"
+///   "bucket": "erynoa"
 /// }
 /// ```
 /// 
@@ -54,8 +54,8 @@ fn sanitize_filename(name: &str) -> String {
 /// ```json
 /// {
 ///   "key": "2024/01/25/123e4567-e89b-12d3-a456-426614174000-document.pdf",
-///   "bucket": "godstack",
-///   "url": "/godstack/2024/01/25/123e4567-e89b-12d3-a456-426614174000-document.pdf",
+///   "bucket": "erynoa",
+///   "url": "/erynoa/2024/01/25/123e4567-e89b-12d3-a456-426614174000-document.pdf",
 ///   "etag": "\"abc123def456\""
 /// }
 /// ```

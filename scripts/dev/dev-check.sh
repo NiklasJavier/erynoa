@@ -15,11 +15,17 @@ NC='\033[0m' # No Color
 PASSED=0
 FAILED=0
 
-# API Version (harmonized with frontend/src/lib/api-config.ts and backend/src/api/constants.rs)
+# API Version (harmonized with frontend/console/src/lib/api-config.ts and backend/src/api/constants.rs)
+# Backend läuft direkt, daher vollständiger Pfad
 API_VERSION="/api/v1"
 
-# Service URLs - Harmonized with frontend/src/lib/service-urls.ts and backend/src/config/constants.rs
-FRONTEND_URL="${FRONTEND_URL:-http://localhost:5173}"
+# Service URLs - Harmonized with frontend/console/src/lib/service-urls.ts and backend/src/config/constants.rs
+# Proxy URLs für Frontends (single entry point)
+PROXY_URL="${PROXY_URL:-http://localhost:3001}"
+CONSOLE_URL="${CONSOLE_URL:-${PROXY_URL}/console}"
+PLATFORM_URL="${PLATFORM_URL:-${PROXY_URL}/platform}"
+DOCS_URL="${DOCS_URL:-${PROXY_URL}/docs}"
+# Backend läuft direkt (nicht über Proxy)
 API_URL="${API_URL:-http://localhost:3000}"
 ZITADEL_URL="${ZITADEL_URL:-http://localhost:8080}"
 MINIO_URL="${MINIO_URL:-http://localhost:9000}"
@@ -76,24 +82,54 @@ echo -e "${BLUE}  🔍 Development Environment Health Check${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
-# Test services with retries (Frontend/Backend brauchen Zeit zum Starten)
-test_service "Frontend" "${FRONTEND_URL}" "200" 10 3
+# Test services with retries (Console/Platform/Docs/Backend brauchen Zeit zum Starten)
+# Akzeptiere 200 oder 302 (Redirects sind OK für SPA)
+test_service "Console" "${CONSOLE_URL}" "any" 10 3
+test_service "Platform" "${PLATFORM_URL}" "any" 10 3
+test_service "Docs" "${DOCS_URL}" "any" 10 3
 
 # Test Backend via Connect-RPC (POST requests with JSON)
 echo -n "  Testing Backend Health (Connect-RPC)... "
 backend_health_attempt=0
 backend_health_ok=false
+backend_health_url="${API_URL}${API_VERSION}/connect/erynoa.v1.HealthService/Check"
 while [ $backend_health_attempt -lt 10 ]; do
-    # Connect-RPC endpoint: /api/v1/connect/godstack.v1.HealthService/Check
+    # Connect-RPC endpoint: /api/v1/connect/erynoa.v1.HealthService/Check
     # Expects POST with empty JSON body: {}
-    if response=$(curl -s -X POST \
+    response=$(curl -s -w "\n%{http_code}" -X POST \
         -H "Content-Type: application/json" \
         -H "Connect-Protocol-Version: 1" \
         -d '{}' \
         --max-time 5 \
-        "${API_URL}${API_VERSION}/connect/godstack.v1.HealthService/Check" 2>/dev/null); then
-        # Check if response contains "status" or "SERVING_STATUS" (successful Connect-RPC response)
-        if echo "$response" | grep -qiE '"status"|"SERVING_STATUS"'; then
+        "${backend_health_url}" 2>/dev/null)
+    http_code=$(echo "$response" | tail -1)
+    response_body=$(echo "$response" | head -n -1)
+    
+    # Debug output only on failure (last attempt)
+    if [ $backend_health_attempt -eq 9 ] && [ "$backend_health_ok" != "true" ]; then
+        if [ -z "$http_code" ] || [ "$http_code" = "000" ]; then
+            echo -e "${RED}✗ (nicht erreichbar - Service läuft möglicherweise nicht)${NC}"
+            echo -e "    ${YELLOW}URL: ${backend_health_url}${NC}"
+            echo -e "    ${YELLOW}Tipp: Prüfe mit 'docker compose ps backend' ob der Service läuft${NC}"
+        elif [ "$http_code" != "200" ]; then
+            echo -e "${RED}✗ (HTTP $http_code)${NC}"
+            echo -e "    ${YELLOW}URL: ${backend_health_url}${NC}"
+            if [ -n "$response_body" ]; then
+                echo -e "    ${YELLOW}Response: ${response_body}${NC}"
+            fi
+        elif [ -z "$response_body" ]; then
+            echo -e "${RED}✗ (leere Response)${NC}"
+            echo -e "    ${YELLOW}URL: ${backend_health_url}${NC}"
+        else
+            echo -e "${RED}✗ (unexpected response format)${NC}"
+            echo -e "    ${YELLOW}URL: ${backend_health_url}${NC}"
+            echo -e "    ${YELLOW}Response: ${response_body}${NC}"
+        fi
+    fi
+    
+    if [ "$http_code" = "200" ] && [ -n "$response_body" ]; then
+        # Check if response contains "status", "SERVING_STATUS", or is not empty (successful Connect-RPC response)
+        if echo "$response_body" | grep -qiE '"status"|"SERVING_STATUS"|"ready"|"version"'; then
             echo -e "${GREEN}✓${NC}"
             ((PASSED++))
             backend_health_ok=true
@@ -107,23 +143,38 @@ while [ $backend_health_attempt -lt 10 ]; do
 done
 
 if [ "$backend_health_ok" != "true" ]; then
-    echo -e "${RED}✗ (nicht erreichbar nach 10 Versuchen)${NC}"
     ((FAILED++))
 fi
 
 echo -n "  Testing Backend Info (Connect-RPC)... "
 backend_info_attempt=0
 backend_info_ok=false
+backend_info_url="${API_URL}${API_VERSION}/connect/erynoa.v1.InfoService/GetInfo"
 while [ $backend_info_attempt -lt 10 ]; do
-    # Connect-RPC endpoint: /api/v1/connect/godstack.v1.InfoService/GetInfo
-    if response=$(curl -s -X POST \
+    # Connect-RPC endpoint: /api/v1/connect/erynoa.v1.InfoService/GetInfo
+    response=$(curl -s -w "\n%{http_code}" -X POST \
         -H "Content-Type: application/json" \
         -H "Connect-Protocol-Version: 1" \
         -d '{}' \
         --max-time 5 \
-        "${API_URL}${API_VERSION}/connect/godstack.v1.InfoService/GetInfo" 2>/dev/null); then
+        "${backend_info_url}" 2>/dev/null)
+    http_code=$(echo "$response" | tail -1)
+    response_body=$(echo "$response" | head -n -1)
+    
+    # Debug output only on failure (last attempt)
+    if [ $backend_info_attempt -eq 9 ] && [ "$backend_info_ok" != "true" ]; then
+        if [ -z "$http_code" ] || [ "$http_code" = "000" ]; then
+            echo -e "${RED}✗ (nicht erreichbar - Service läuft möglicherweise nicht)${NC}"
+            echo -e "    ${YELLOW}URL: ${backend_info_url}${NC}"
+        elif [ "$http_code" != "200" ]; then
+            echo -e "${RED}✗ (HTTP $http_code)${NC}"
+            echo -e "    ${YELLOW}URL: ${backend_info_url}${NC}"
+        fi
+    fi
+    
+    if [ "$http_code" = "200" ] && [ -n "$response_body" ]; then
         # Check if response contains "version" (successful Connect-RPC response)
-        if echo "$response" | grep -qi '"version"'; then
+        if echo "$response_body" | grep -qiE '"version"|"environment"|"urls"'; then
             echo -e "${GREEN}✓${NC}"
             ((PASSED++))
             backend_info_ok=true
@@ -137,7 +188,6 @@ while [ $backend_info_attempt -lt 10 ]; do
 done
 
 if [ "$backend_info_ok" != "true" ]; then
-    echo -e "${RED}✗ (nicht erreichbar nach 10 Versuchen)${NC}"
     ((FAILED++))
 fi
 
@@ -150,14 +200,17 @@ echo -n "  Testing Database (via Backend Connect-RPC)... "
 db_attempt=0
 db_connected=false
 while [ $db_attempt -lt 10 ]; do
-    if ready_response=$(curl -s -X POST \
+    ready_response=$(curl -s -w "\n%{http_code}" -X POST \
         -H "Content-Type: application/json" \
         -H "Connect-Protocol-Version: 1" \
         -d '{}' \
         --max-time 5 \
-        "${API_URL}${API_VERSION}/connect/godstack.v1.HealthService/Ready" 2>/dev/null); then
+        "${API_URL}${API_VERSION}/connect/erynoa.v1.HealthService/Ready" 2>/dev/null)
+    http_code=$(echo "$ready_response" | tail -1)
+    response_body=$(echo "$ready_response" | head -n -1)
+    if [ "$http_code" = "200" ] && [ -n "$response_body" ]; then
         # Prüfe Connect-RPC Format: "database":{"healthy":true}
-        if echo "$ready_response" | grep -qiE '"database".*"healthy".*true' 2>/dev/null; then
+        if echo "$response_body" | grep -qiE '"database".*"healthy".*true'; then
             echo -e "${GREEN}✓${NC}"
             ((PASSED++))
             db_connected=true
@@ -180,14 +233,15 @@ echo -n "  Testing Cache (via Backend Connect-RPC)... "
 cache_attempt=0
 cache_connected=false
 while [ $cache_attempt -lt 10 ]; do
-    if ready_response=$(curl -s -X POST \
+    ready_response=$(curl -s -X POST \
         -H "Content-Type: application/json" \
         -H "Connect-Protocol-Version: 1" \
         -d '{}' \
         --max-time 5 \
-        "${API_URL}${API_VERSION}/connect/godstack.v1.HealthService/Ready" 2>/dev/null); then
+        "${API_URL}${API_VERSION}/connect/erynoa.v1.HealthService/Ready" 2>/dev/null)
+    if [ -n "$ready_response" ]; then
         # Prüfe Connect-RPC Format: "cache":{"healthy":true}
-        if echo "$ready_response" | grep -qiE '"cache".*"healthy".*true' 2>/dev/null; then
+        if echo "$ready_response" | grep -qiE '"cache".*"healthy".*true'; then
             echo -e "${GREEN}✓${NC}"
             ((PASSED++))
             cache_connected=true

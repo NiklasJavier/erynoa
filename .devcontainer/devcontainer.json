@@ -59,7 +59,7 @@
   "forwardPorts": [3000, 5173, 5432, 5433, 6379, 8080, 9000, 9001],
   "portsAttributes": {
     "3000": { "label": "Backend API", "onAutoForward": "notify" },
-    "5173": { "label": "Frontend (Vite)", "onAutoForward": "openBrowserOnce" },
+    "5173": { "label": "Control (Vite)", "onAutoForward": "openBrowserOnce" },
     "5432": { "label": "PostgreSQL (App)", "onAutoForward": "ignore" },
     "5433": { "label": "PostgreSQL (ZITADEL)", "onAutoForward": "ignore" },
     "6379": { "label": "Redis/Dragonfly", "onAutoForward": "ignore" },

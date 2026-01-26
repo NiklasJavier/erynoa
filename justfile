@@ -1,4 +1,4 @@
-# Godstack Monorepo - Justfile
+# Erynoa Monorepo - Justfile
 
 set dotenv-load
 
@@ -9,25 +9,32 @@ default:
 # DEVELOPMENT (Container-in-Container)
 # ═══════════════════════════════════════════════════════
 
-# [DEFAULT] Dev server - Frontend + Backend mit Hot-Reload in Containern, Services im Hintergrund
+# [DEFAULT] Dev server - Console + Backend mit Hot-Reload in Containern, Services im Hintergrund
 dev:
     #!/usr/bin/env bash
     set -e
     
     echo ""
     echo "╔════════════════════════════════════════════════════════════════════╗"
-    echo "║     🚀 Godstack Development Environment                            ║"
+    echo "║     🚀 Erynoa Development Environment                              ║"
     echo "╚════════════════════════════════════════════════════════════════════╝"
     echo ""
-    # Service URLs - Harmonized with frontend/src/lib/service-urls.ts and backend/src/config/constants.rs
-    FRONTEND_URL="${FRONTEND_URL:-http://localhost:5173}"
-    API_URL="${API_URL:-http://localhost:3000}"
+    # Service URLs - Harmonized with frontend/console/src/lib/service-urls.ts and backend/src/config/constants.rs
+    # Proxy URLs (recommended - single entry point)
+    PROXY_URL="${PROXY_URL:-http://localhost:3001}"
+    CONSOLE_URL="${CONSOLE_URL:-${PROXY_URL}/console}"
+    PLATFORM_URL="${PLATFORM_URL:-${PROXY_URL}/platform}"
+    DOCS_URL="${DOCS_URL:-${PROXY_URL}/docs}"
+    API_URL="${API_URL:-${PROXY_URL}/api}"
     ZITADEL_URL="${ZITADEL_URL:-http://localhost:8080}"
     MINIO_URL="${MINIO_URL:-http://localhost:9000}"
     MINIO_CONSOLE_URL="${MINIO_CONSOLE_URL:-http://localhost:9001}"
     
-    echo "  Frontend:  ${FRONTEND_URL}  (Vite HMR)"
-    echo "  Backend:   ${API_URL}  (cargo watch)"
+    echo "  Proxy:     ${PROXY_URL}  (Caddy Reverse Proxy)"
+    echo "  Console:   ${CONSOLE_URL}"
+    echo "  Platform:  ${PLATFORM_URL}"
+    echo "  Docs:      ${DOCS_URL}"
+    echo "  Backend:   ${API_URL}"
     echo "  ZITADEL:   ${ZITADEL_URL}  (Auth)"
     echo "  MinIO:     ${MINIO_CONSOLE_URL}  (Storage Console)"
     echo ""
@@ -42,7 +49,7 @@ dev:
     echo ""
     echo "━━━ [2/5] Warte auf Services ━━━"
     echo -n "  Warte auf PostgreSQL..."
-    until docker compose exec -T db pg_isready -U godstack -h localhost > /dev/null 2>&1; do
+    until docker compose exec -T db pg_isready -U erynoa -h localhost > /dev/null 2>&1; do
         sleep 1
         echo -n "."
     done
@@ -105,27 +112,34 @@ dev:
         echo "  ✓ MinIO bereits eingerichtet"
     fi
     
-    # ZITADEL Setup - Warte bis ZITADEL bereit ist
+    # ZITADEL Setup - Warte bis ZITADEL bereit ist und PAT generiert wurde
     if [ ! -f ".data/zitadel-setup-complete" ]; then
-        echo "  → ZITADEL Setup wird ausgeführt..."
+        echo "  → ZITADEL Setup wird automatisch ausgeführt..."
         # Warte zusätzlich auf ZITADEL falls noch nicht bereit
         if [ "$ZITADEL_READY" != "true" ]; then
-            echo "    Warte auf ZITADEL..."
-            for i in {1..30}; do
+            echo "    Warte auf ZITADEL Initialisierung..."
+            for i in {1..60}; do
                 if curl -sf ${ZITADEL_URL}/.well-known/openid-configuration > /dev/null 2>&1; then
                     echo "    ✓ ZITADEL bereit"
                     break
                 fi
                 sleep 2
+                if [ $((i % 10)) -eq 0 ]; then
+                    echo -n "    ."
+                fi
             done
+            echo ""
         fi
+        # Warte zusätzlich auf PAT-Generierung (ZITADEL braucht Zeit für Init)
+        echo "    Warte auf automatische PAT-Generierung..."
+        sleep 10
         # Prüfe beide möglichen Pfade für Setup-Scripts
         if [ -f "scripts/setup/setup-zitadel.sh" ]; then
             chmod +x scripts/setup/setup-zitadel.sh
-            ./scripts/setup/setup-zitadel.sh || echo "  ⚠ ZITADEL Setup übersprungen"
+            ./scripts/setup/setup-zitadel.sh || echo "  ⚠ ZITADEL Setup übersprungen (kann später mit 'just zitadel-setup' wiederholt werden)"
         elif [ -f "infra/scripts/setup-zitadel.sh" ]; then
             chmod +x infra/scripts/setup-zitadel.sh
-            ./infra/scripts/setup-zitadel.sh || echo "  ⚠ ZITADEL Setup übersprungen"
+            ./infra/scripts/setup-zitadel.sh || echo "  ⚠ ZITADEL Setup übersprungen (kann später mit 'just zitadel-setup' wiederholt werden)"
         else
             echo "  ⚠ ZITADEL Setup-Script nicht gefunden"
         fi
@@ -136,11 +150,11 @@ dev:
         fi
     fi
     
-    # 4. Starte Frontend + Backend mit sichtbaren Logs
+    # 4. Starte alle Frontends + Backend + Proxy mit sichtbaren Logs
     echo ""
-    echo "━━━ [4/5] Starte Frontend + Backend (Hot-Reload) ━━━"
+    echo "━━━ [4/5] Starte Frontends + Backend + Proxy (Hot-Reload) ━━━"
     echo ""
-    echo "  Ctrl+C stoppt Frontend & Backend, Services laufen weiter."
+    echo "  Ctrl+C stoppt Frontends & Backend, Services laufen weiter."
     echo "  Komplett stoppen: just docker-stop"
     echo "  Health Check:     just dev-check"
     echo ""
@@ -149,16 +163,16 @@ dev:
     
     cd /workspace/infra
     # Trap Ctrl+C um eine saubere Nachricht anzuzeigen
-    trap 'echo ""; echo ""; echo "━━━ Frontend + Backend gestoppt ━━━"; echo "  Services laufen weiter. Status: just status"; echo "  Neustart: just dev"; echo ""' INT
+    trap 'echo ""; echo ""; echo "━━━ Frontends + Backend gestoppt ━━━"; echo "  Services laufen weiter. Status: just status"; echo "  Neustart: just dev"; echo ""' INT
     
-    # Starte Frontend und Backend im Hintergrund
-    docker compose up --build -d frontend backend
+    # Starte alle Frontends, Backend und Proxy im Hintergrund
+    docker compose up --build -d console platform docs backend proxy
     
     # Warte bis Container gestartet sind und Services bereit sind
-    echo "  ⏳ Warte auf Frontend und Backend Start..."
-    sleep 8
+    echo "  ⏳ Warte auf Frontends, Backend und Proxy Start..."
+    sleep 10
     
-    # 5. Health Check (nach Start von Frontend + Backend)
+    # 5. Health Check (nach Start von Console + Backend)
     echo ""
     echo "━━━ [5/5] Health Check ━━━"
     if command -v curl > /dev/null 2>&1; then
@@ -170,7 +184,7 @@ dev:
     
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  Frontend & Backend laufen im Hintergrund"
+    echo "  Frontends, Backend & Proxy laufen im Hintergrund"
     echo "  Logs anzeigen: just docker-logs"
     echo "  Status prüfen: just status"
     echo "  Health Check:  just dev-check"
@@ -179,8 +193,8 @@ dev:
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
     
-    # Zeige Logs von Frontend und Backend (blockierend)
-    docker compose logs -f frontend backend
+    # Zeige Logs von allen Frontends, Backend und Proxy (blockierend)
+    docker compose logs -f console platform docs backend proxy
     
 # Dev ohne ZITADEL (minimal)
 dev-minimal:
@@ -190,15 +204,23 @@ dev-minimal:
     cd /workspace/infra
     docker compose up -d db cache minio
     sleep 5
-    docker compose up --build frontend backend
+    docker compose up --build console backend
 
 # Nur Backend mit Hot-Reload (Services müssen laufen)
 dev-backend:
     cd /workspace/infra && docker compose up --build backend
 
-# Nur Frontend mit Hot-Reload (Services müssen laufen)  
-dev-frontend:
-    cd /workspace/infra && docker compose up --build frontend
+# Nur Console mit Hot-Reload (Services müssen laufen)  
+dev-console:
+    cd /workspace/infra && docker compose up --build console
+
+# Nur Platform mit Hot-Reload (Services müssen laufen)  
+dev-platform:
+    cd /workspace/infra && docker compose up --build platform
+
+# Nur Docs mit Hot-Reload (Services müssen laufen)  
+dev-docs:
+    cd /workspace/infra && docker compose up --build docs
 
 # ═══════════════════════════════════════════════════════
 # DOCKER SERVICES
@@ -220,16 +242,30 @@ docker-logs:
 docker-logs-backend:
     cd /workspace/infra && docker compose logs -f backend
 
-# Frontend-Logs anzeigen
-docker-logs-frontend:
-    cd /workspace/infra && docker compose logs -f frontend
+# Console-Logs anzeigen
+docker-logs-console:
+    cd /workspace/infra && docker compose logs -f console
+
+# Platform-Logs anzeigen
+docker-logs-platform:
+    cd /workspace/infra && docker compose logs -f platform
+
+# Docs-Logs anzeigen
+docker-logs-docs:
+    cd /workspace/infra && docker compose logs -f docs
 
 # Shell in Container
 docker-backend-shell:
     cd /workspace/infra && docker compose exec backend bash
 
-docker-frontend-shell:
-    cd /workspace/infra && docker compose exec frontend sh
+docker-console-shell:
+    cd /workspace/infra && docker compose exec console sh
+
+docker-platform-shell:
+    cd /workspace/infra && docker compose exec platform sh
+
+docker-docs-shell:
+    cd /workspace/infra && docker compose exec docs sh
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Protobuf / Connect-RPC
@@ -239,7 +275,7 @@ docker-frontend-shell:
 proto-gen:
     @echo "🔧 Generating TypeScript from Protobuf..."
     buf generate
-    @echo "✅ Generated files in frontend/src/gen/"
+    @echo "✅ Generated files in frontend/console/src/gen/, frontend/platform/src/gen/, and frontend/docs/src/gen/"
 
 # Lint proto files
 proto-lint:
@@ -321,28 +357,76 @@ cleanup:
     @./scripts/dev/cleanup-ports.sh
 
 # ═══════════════════════════════════════════════════════
-# FRONTEND
+# CONSOLE
 # ═══════════════════════════════════════════════════════
 
-# Frontend dev server (standalone)
-frontend-only:
-    cd frontend && npm run dev
+# Console dev server (standalone)
+console-only:
+    cd frontend/console && npm run dev
 
-# Frontend dev with Backend dependency
-frontend-dev:
+# Console dev with Backend dependency
+console-dev:
     just docker-dev
 
-# Frontend build
-frontend-build:
-    cd frontend && npm run build
+# Console build
+console-build:
+    cd frontend/console && npm run build
 
-# Frontend install dependencies
-frontend-install:
-    cd frontend && npm install
+# Console install dependencies
+console-install:
+    cd frontend/console && npm install
 
-# Frontend preview production build
-frontend-preview: frontend-build
-    cd frontend && npm run preview
+# Console preview production build
+console-preview: console-build
+    cd frontend/console && npm run preview
+
+# ═══════════════════════════════════════════════════════
+# PLATFORM
+# ═══════════════════════════════════════════════════════
+
+# Platform dev server (standalone)
+platform-only:
+    cd frontend/platform && npm run dev
+
+# Platform dev with Backend dependency
+platform-dev:
+    just docker-dev
+
+# Platform build
+platform-build:
+    cd frontend/platform && npm run build
+
+# Platform install dependencies
+platform-install:
+    cd frontend/platform && npm install
+
+# Platform preview production build
+platform-preview: platform-build
+    cd frontend/platform && npm run preview
+
+# ═══════════════════════════════════════════════════════
+# DOCS
+# ═══════════════════════════════════════════════════════
+
+# Docs dev server (standalone)
+docs-only:
+    cd frontend/docs && npm run dev
+
+# Docs dev with Backend dependency
+docs-dev:
+    just docker-dev
+
+# Docs build
+docs-build:
+    cd frontend/docs && npm run build
+
+# Docs install dependencies
+docs-install:
+    cd frontend/docs && npm install
+
+# Docs preview production build
+docs-preview: docs-build
+    cd frontend/docs && npm run preview
 
 # ═══════════════════════════════════════════════════════
 # INFRASTRUCTURE
@@ -372,9 +456,9 @@ services-restart:
 services-ps:
     cd /workspace/infra && docker compose --profile auth ps -a
 
-# Restart nur Frontend + Backend (schneller als alles)
+# Restart nur Console + Backend (schneller als alles)
 restart-dev:
-    cd /workspace/infra && docker compose restart frontend backend
+    cd /workspace/infra && docker compose restart console backend
 
 # ═══════════════════════════════════════════════════════
 # MINIO / S3 STORAGE
@@ -388,7 +472,7 @@ minio-setup:
 # Open MinIO Console
 minio:
     @echo "Opening MinIO Console..."
-    @echo "Login: godstack / godstack123"
+    @echo "Login: erynoa / erynoa123"
     @echo ""
     #!/usr/bin/env bash
     MINIO_CONSOLE_URL="${MINIO_CONSOLE_URL:-http://localhost:9001}"
@@ -416,7 +500,7 @@ start: dev
 init:
     #!/usr/bin/env bash
     set -e
-    echo "🔧 Initialisiere Godstack..."
+    echo "🔧 Initialisiere Erynoa..."
     
     # Starte Services
     cd /workspace/infra
@@ -460,9 +544,10 @@ zitadel:
 
 # ZITADEL setup guide
 zitadel-guide:
-    @cat /workspace/docs/ZITADEL_SETUP.md
+    @cat /workspace/README/ZITADEL_SETUP.md
 
 # ZITADEL automatisches Setup (Projekt + Apps + Test-User)
+# Wartet automatisch auf PAT-Generierung durch ZITADEL
 zitadel-setup:
     @chmod +x /workspace/scripts/setup/setup-zitadel.sh
     @/workspace/scripts/setup/setup-zitadel.sh
@@ -471,7 +556,7 @@ zitadel-setup:
 zitadel-reset:
     cd /workspace/infra && docker compose --profile auth stop zitadel zitadel-db
     cd /workspace/infra && docker compose --profile auth rm -f zitadel zitadel-db
-    docker volume rm godstack-services_zitadel-pgdata godstack-services_zitadel-machinekey 2>/dev/null || true
+    docker volume rm erynoa-services_zitadel-pgdata erynoa-services_zitadel-machinekey 2>/dev/null || true
     rm -f /workspace/.data/zitadel-setup-complete /workspace/.data/zitadel-client-id
     cd /workspace/infra && docker compose --profile auth up -d zitadel-db zitadel-init zitadel
     @echo "Warte 30 Sekunden auf Init..."
@@ -489,12 +574,20 @@ zitadel-reset:
 clean-backend:
     cd /workspace/backend && cargo clean
 
-# Clean frontend
-clean-frontend:
-    rm -rf /workspace/frontend/node_modules /workspace/frontend/dist
+# Clean console
+clean-console:
+    rm -rf /workspace/frontend/console/node_modules /workspace/frontend/console/dist
+
+# Clean platform
+clean-platform:
+    rm -rf /workspace/frontend/platform/node_modules /workspace/frontend/platform/dist
+
+# Clean docs
+clean-docs:
+    rm -rf /workspace/frontend/docs/node_modules /workspace/frontend/docs/dist
 
 # Clean all
-clean: clean-backend clean-frontend
+clean: clean-backend clean-console clean-platform clean-docs
     rm -f result
     rm -rf /workspace/.data/
     cd /workspace/infra && docker compose --profile auth down -v 2>/dev/null || true
@@ -518,7 +611,7 @@ status:
     #!/usr/bin/env bash
     echo ""
     echo "═══════════════════════════════════════════════════════"
-    echo "  Godstack Service Status"
+    echo "  Erynoa Service Status"
     echo "═══════════════════════════════════════════════════════"
     echo ""
     cd /workspace/infra && docker compose --profile auth ps
@@ -526,16 +619,21 @@ status:
     echo "───────────────────────────────────────────────────────"
     echo "  Health Checks:"
     echo "───────────────────────────────────────────────────────"
-    # Service URLs - Harmonized with frontend/src/lib/service-urls.ts and backend/src/config/constants.rs
-    API_URL="${API_URL:-http://localhost:3000}"
-    FRONTEND_URL="${FRONTEND_URL:-http://localhost:5173}"
+    # Service URLs - Harmonized with frontend/console/src/lib/service-urls.ts and backend/src/config/constants.rs
+    PROXY_URL="${PROXY_URL:-http://localhost:3001}"
+    API_URL="${API_URL:-${PROXY_URL}/api}"
+    CONSOLE_URL="${CONSOLE_URL:-${PROXY_URL}/console}"
+    PLATFORM_URL="${PLATFORM_URL:-${PROXY_URL}/platform}"
+    DOCS_URL="${DOCS_URL:-${PROXY_URL}/docs}"
     ZITADEL_URL="${ZITADEL_URL:-http://localhost:8080}"
     MINIO_URL="${MINIO_URL:-http://localhost:9000}"
     MINIO_CONSOLE_URL="${MINIO_CONSOLE_URL:-http://localhost:9001}"
     
     # Test Backend via Connect-RPC
-    curl -sf -X POST -H "Content-Type: application/json" -d '{}' ${API_URL}/api/v1/connect/godstack.v1.HealthService/Check > /dev/null 2>&1 && echo "  ✓ Backend:   ${API_URL}" || echo "  ✗ Backend:   nicht erreichbar"
-    curl -sf ${FRONTEND_URL}/ > /dev/null 2>&1 && echo "  ✓ Frontend:  ${FRONTEND_URL}" || echo "  ✗ Frontend:  nicht erreichbar"
+    curl -sf -X POST -H "Content-Type: application/json" -d '{}' ${API_URL}/api/v1/connect/erynoa.v1.HealthService/Check > /dev/null 2>&1 && echo "  ✓ Backend:   ${API_URL}" || echo "  ✗ Backend:   nicht erreichbar"
+    curl -sf ${CONSOLE_URL}/ > /dev/null 2>&1 && echo "  ✓ Console:   ${CONSOLE_URL}" || echo "  ✗ Console:   nicht erreichbar"
+    curl -sf ${PLATFORM_URL}/ > /dev/null 2>&1 && echo "  ✓ Platform:  ${PLATFORM_URL}" || echo "  ✗ Platform:  nicht erreichbar"
+    curl -sf ${DOCS_URL}/ > /dev/null 2>&1 && echo "  ✓ Docs:      ${DOCS_URL}" || echo "  ✗ Docs:      nicht erreichbar"
     curl -sf ${ZITADEL_URL}/debug/ready > /dev/null 2>&1 && echo "  ✓ ZITADEL:   ${ZITADEL_URL}" || echo "  ✗ ZITADEL:   nicht erreichbar"
     curl -sf ${MINIO_URL}/minio/health/live > /dev/null 2>&1 && echo "  ✓ MinIO:     ${MINIO_CONSOLE_URL} (Console)" || echo "  ✗ MinIO:     nicht erreichbar"
     echo ""

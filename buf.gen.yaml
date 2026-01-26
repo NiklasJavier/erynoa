@@ -1,11 +1,29 @@
 version: v2
 plugins:
-  # TypeScript/JavaScript code generation for frontend
+  # TypeScript/JavaScript code generation for console
   - remote: buf.build/bufbuild/es:v1.10.0
-    out: frontend/src/gen
+    out: frontend/console/src/gen
     opt:
       - target=ts
   - remote: buf.build/connectrpc/es:v1.6.1
-    out: frontend/src/gen
+    out: frontend/console/src/gen
+    opt:
+      - target=ts
+  # TypeScript/JavaScript code generation for platform
+  - remote: buf.build/bufbuild/es:v1.10.0
+    out: frontend/platform/src/gen
+    opt:
+      - target=ts
+  - remote: buf.build/connectrpc/es:v1.6.1
+    out: frontend/platform/src/gen
+    opt:
+      - target=ts
+  # TypeScript/JavaScript code generation for docs
+  - remote: buf.build/bufbuild/es:v1.10.0
+    out: frontend/docs/src/gen
+    opt:
+      - target=ts
+  - remote: buf.build/connectrpc/es:v1.6.1
+    out: frontend/docs/src/gen
     opt:
       - target=ts

@@ -6,7 +6,7 @@
 | Port | Service | Beschreibung | Auto-Forward |
 |------|---------|-------------|--------------|
 | **3000** | Backend API | Rust Axum Server | Notify |
-| **5173** | Frontend (Vite) | React Dev Server | Browser öffnen |
+| **5173** | Control (Vite) | SvelteKit Dev Server | Browser öffnen |
 
 ### Datenbanken & Cache
 | Port | Service | Beschreibung | Auto-Forward |

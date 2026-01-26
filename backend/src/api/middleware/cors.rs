@@ -22,7 +22,7 @@ pub fn build_cors(state: &AppState) -> CorsLayer {
     // In Production: explizite Header-Liste
     // Note: very_permissive() erlaubt bereits alle Headers, was für Connect-RPC ausreicht
     if state.config.application.environment.is_production() {
-        let origin = state.config.application.frontend_url.clone();
+        let origin = state.config.application.console_url.clone();
         CorsLayer::new()
             .allow_origin(origin.as_str().parse::<HeaderValue>().unwrap())
             .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::PATCH, Method::OPTIONS])

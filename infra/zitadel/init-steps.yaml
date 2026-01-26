@@ -57,10 +57,10 @@ DefaultInstance:
 # Erste Instanz mit Admin, Service Account und Test-User
 # ─────────────────────────────────────────────────────────────────────────────
 FirstInstance:
-  InstanceName: Godstack Dev
+  InstanceName: Erynoa Dev
   DefaultLanguage: de
   Org:
-    Name: Godstack
+    Name: Erynoa
     
     # Admin User (für Console Login)
     Human:
@@ -74,6 +74,7 @@ FirstInstance:
       PasswordChangeRequired: false
     
     # Service Account für automatisches Setup via API
+    # Dieser Machine User erhält automatisch IAM_OWNER Berechtigung
     Machine:
       Machine:
         UserName: setup-sa

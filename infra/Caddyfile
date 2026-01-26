@@ -1,16 +1,51 @@
-# Caddy Reverse Proxy
+# Caddy Reverse Proxy für Erynoa
+# Port 3001 - Einheitlicher Einstiegspunkt für alle Frontends
 
-:80 {
-    handle /api/* {
-        reverse_proxy api:3000 {
-            transport http {
-                versions h2c
-            }
+:3001 {
+    # Console Frontend
+    # Use handle (not handle_path) to preserve the /console prefix
+    # Vite dev server is configured with base: '/console/' so it expects the full path
+    handle /console* {
+        reverse_proxy console:5173 {
+            header_up Host {host}
+            header_up X-Forwarded-Proto {scheme}
         }
     }
     
+    # Platform Frontend
+    handle /platform* {
+        reverse_proxy platform:5174 {
+            header_up Host {host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    # Docs Frontend
+    handle /docs* {
+        reverse_proxy docs:5175 {
+            header_up Host {host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    # Root - Landing Page (must be last to catch everything else)
     handle {
-        respond "God-Stack API" 200
+        file_server {
+            root /etc/caddy
+            index landing.html
+        }
+    }
+    
+    log {
+        output stdout
+        format json
+    }
+}
+
+# Legacy Port 80 (für Backward Compatibility)
+:80 {
+    handle {
+        respond "God-Stack - Use port 3001 for frontends, port 3000 for API" 200
     }
     
     log {

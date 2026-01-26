@@ -29,8 +29,12 @@ pub struct ApplicationSettings {
     pub host: String,
     pub port: u16,
     pub environment: Environment,
-    /// Basis-URL für Frontend (CORS)
-    pub frontend_url: String,
+    /// Basis-URL für Console (CORS)
+    pub console_url: String,
+    /// Basis-URL für Platform (CORS)
+    pub platform_url: String,
+    /// Basis-URL für Docs (CORS)
+    pub docs_url: String,
     /// Öffentliche API-URL
     pub api_url: String,
 }
@@ -95,8 +99,12 @@ pub struct AuthSettings {
     pub internal_issuer: Option<String>,
     /// Client ID für das Backend (für Service-to-Service)
     pub client_id: String,
-    /// Client ID für das Frontend (für OIDC PKCE)
-    pub frontend_client_id: String,
+    /// Client ID für das Console (für OIDC PKCE)
+    pub console_client_id: String,
+    /// Client ID für das Platform (für OIDC PKCE)
+    pub platform_client_id: String,
+    /// Client ID für das Docs (für OIDC PKCE)
+    pub docs_client_id: String,
     /// JWKS Cache Duration in Sekunden
     pub jwks_cache_duration: u64,
     /// Erlaubte Audiences (kann als komma-separierter String oder Array angegeben werden)

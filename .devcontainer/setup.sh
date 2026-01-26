@@ -100,7 +100,7 @@ APP_CACHE__URL=redis://localhost:6379
 # Auth (ZITADEL)
 APP_AUTH__ISSUER=http://localhost:8080
 APP_AUTH__CLIENT_ID=godstack-backend
-APP_AUTH__FRONTEND_CLIENT_ID=godstack-frontend
+APP_AUTH__CONSOLE_CLIENT_ID=godstack-console
 ENVEOF
   echo "   Created .env from template"
 else

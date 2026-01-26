@@ -6,7 +6,7 @@ use crate::server::AppState;
 use axum::Router;
 
 // Import generated service types
-use crate::gen::godstack::v1::{HealthService, InfoService, UserService, StorageService};
+use crate::gen::erynoa::v1::{HealthService, InfoService, UserService, StorageService};
 
 // Import handler functions (via public re-exports from handlers.rs)
 #[cfg(feature = "connect")]
@@ -25,7 +25,7 @@ use crate::api::v1::storage::{
 /// Erstellt Router für Connect-RPC Services
 /// 
 /// Connect-RPC Services werden unter /api/v1/connect/ bereitgestellt
-/// z.B. /api/v1/connect/godstack.v1.HealthService/Check
+/// z.B. /api/v1/connect/erynoa.v1.HealthService/Check
 pub fn create_connect_routes(_state: AppState) -> Router<AppState> {
     // Start with empty router
     let router = Router::new();

@@ -4,7 +4,7 @@ use axum::extract::State;
 use std::time::Instant;
 
 use crate::server::AppState;
-use crate::gen::godstack::v1::{
+use crate::gen::erynoa::v1::{
     HealthCheckRequest, HealthCheckResponse, ReadyRequest, ReadyResponse,
     ServiceStatus, health_check_response::ServingStatus,
 };

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Comprehensive Test Suite
-# Tests Backend API, Frontend API, and Integration
+# Tests Backend API, Console API, and Integration
 
 set -e
 
@@ -114,58 +114,58 @@ run_test "Storage models exist" test -f backend/src/api/v1/storage/models.rs
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  3. Frontend API Structure Verification"
+echo "  3. Control API Structure Verification"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# Check Frontend API structure
+# Check Control API structure
 echo ""
-run_test "API index exists" test -f frontend/src/api/index.ts
-run_test "Types directory exists" test -d frontend/src/api/types
-run_test "REST client exists" test -d frontend/src/api/rest
-run_test "Connect client exists" test -d frontend/src/api/connect
-run_test "Storage client exists" test -d frontend/src/api/storage
+run_test "API index exists" test -f frontend/console/src/api/index.ts
+run_test "Types directory exists" test -d frontend/console/src/api/types
+run_test "REST client exists" test -d frontend/console/src/api/rest
+run_test "Connect client exists" test -d frontend/console/src/api/connect
+run_test "Storage client exists" test -d frontend/console/src/api/storage
 
 # Check specific files
 echo ""
-run_test "Types index exists" test -f frontend/src/api/types/index.ts
-run_test "REST client exists" test -f frontend/src/api/rest/client.ts
-run_test "REST endpoints exist" test -f frontend/src/api/rest/endpoints.ts
-run_test "Connect transport exists" test -f frontend/src/api/connect/transport.ts
-run_test "Connect services exist" test -f frontend/src/api/connect/services.ts
-run_test "Storage client exists" test -f frontend/src/api/storage/client.ts
+run_test "Types index exists" test -f frontend/console/src/api/types/index.ts
+run_test "REST client exists" test -f frontend/console/src/api/rest/client.ts
+run_test "REST endpoints exist" test -f frontend/console/src/api/rest/endpoints.ts
+run_test "Connect transport exists" test -f frontend/console/src/api/connect/transport.ts
+run_test "Connect services exist" test -f frontend/console/src/api/connect/services.ts
+run_test "Storage client exists" test -f frontend/console/src/api/storage/client.ts
 
 # Check old files are removed
 echo ""
-run_test "Old client.ts removed" test ! -f frontend/src/api/client.ts
-run_test "Old connect.ts removed" test ! -f frontend/src/api/connect.ts
-run_test "Old storage.ts removed" test ! -f frontend/src/api/storage.ts
+run_test "Old client.ts removed" test ! -f frontend/console/src/api/client.ts
+run_test "Old connect.ts removed" test ! -f frontend/console/src/api/connect.ts
+run_test "Old storage.ts removed" test ! -f frontend/console/src/api/storage.ts
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  4. Import Verification"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# Check imports in frontend files
+# Check imports in console files
 echo ""
-if grep -q 'from.*["\047]\.\.?/api["\047]' frontend/src/App.tsx 2>/dev/null; then
+if grep -q 'from.*["\047]\.\.?/api["\047]' frontend/console/src/App.tsx 2>/dev/null; then
     print_result 0 "App.tsx imports from api"
 else
     print_result 1 "App.tsx imports"
 fi
 
-if grep -q 'from.*["\047]\.\.?/api["\047]' frontend/src/pages/Home.tsx 2>/dev/null; then
+if grep -q 'from.*["\047]\.\.?/api["\047]' frontend/console/src/pages/Home.tsx 2>/dev/null; then
     print_result 0 "Home.tsx imports from api"
 else
     print_result 1 "Home.tsx imports"
 fi
 
-if grep -q 'from.*["\047]\.\.?/api["\047]' frontend/src/pages/Users.tsx 2>/dev/null; then
+if grep -q 'from.*["\047]\.\.?/api["\047]' frontend/console/src/pages/Users.tsx 2>/dev/null; then
     print_result 0 "Users.tsx imports from api"
 else
     print_result 1 "Users.tsx imports"
 fi
 
-if grep -q 'from.*["\047]\.\.?/api["\047]' frontend/src/pages/StoragePage.tsx 2>/dev/null; then
+if grep -q 'from.*["\047]\.\.?/api["\047]' frontend/console/src/pages/StoragePage.tsx 2>/dev/null; then
     print_result 0 "StoragePage.tsx imports from api"
 else
     print_result 1 "StoragePage.tsx imports"
@@ -179,7 +179,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 # Check test files
 echo ""
 run_test "Backend test file exists" test -f backend/tests/api.rs
-run_test "Test documentation exists" test -f docs/BACKEND_TEST_SUITE.md
+run_test "Test documentation exists" test -f README/BACKEND_TEST_SUITE.md
 
 # Count tests in test file
 if [ -f backend/tests/api.rs ]; then
@@ -194,10 +194,10 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 
 # Check documentation
 echo ""
-run_test "API restructure docs exist" test -f docs/API_RESTRUCTURE_COMPLETE.md
-run_test "Frontend API docs exist" test -f docs/FRONTEND_API_RESTRUCTURE_COMPLETE.md
-run_test "Test results docs exist" test -f docs/TEST_RESULTS.md
-run_test "Backend test suite docs exist" test -f docs/BACKEND_TEST_SUITE.md
+run_test "API restructure docs exist" test -f README/API_RESTRUCTURE_COMPLETE.md
+run_test "Console API docs exist" test -f README/CONSOLE_API_RESTRUCTURE_COMPLETE.md
+run_test "Test results docs exist" test -f README/TEST_RESULTS.md
+run_test "Backend test suite docs exist" test -f README/BACKEND_TEST_SUITE.md
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

@@ -49,7 +49,7 @@ impl StorageClient {
             settings.secret_access_key.expose_secret(),
             None,
             None,
-            "godstack",
+            "erynoa",
         );
 
         let s3_config = S3ConfigBuilder::new()

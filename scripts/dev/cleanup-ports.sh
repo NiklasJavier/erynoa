@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Cleanup stuck development processes (only Frontend + Backend)
+# Cleanup stuck development processes (only Control + Backend)
 # Usage: ./scripts/dev/cleanup-ports.sh
 
 # Don't fail on errors - some processes might not exist
@@ -14,7 +14,7 @@ pkill -f "cargo watch" 2>/dev/null || true
 
 sleep 0.5
 
-echo "  Stopping Vite/Frontend processes..."
+echo "  Stopping Vite/Control processes..."
 pkill -f "vite" 2>/dev/null || true
 pkill -f "npm run dev" 2>/dev/null || true
 

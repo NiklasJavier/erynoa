@@ -14,15 +14,17 @@
 host = "0.0.0.0"
 port = 3000
 environment = "local"
-frontend_url = "http://localhost:5173"
+console_url = "http://localhost:3001/console"
+platform_url = "http://localhost:3001/platform"
+docs_url = "http://localhost:3001/docs"
 api_url = "http://localhost:3000"
 
 [database]
 host = "localhost"
 port = 5432
-username = "godstack"
-password = "godstack"
-database = "godstack"
+username = "erynoa"
+password = "erynoa"
+database = "erynoa"
 max_connections = 20
 min_connections = 5
 connect_timeout = 10
@@ -36,17 +38,19 @@ default_ttl = 3600
 [auth]
 issuer = "http://localhost:8080"
 # internal_issuer wird im Docker-Container gesetzt (für zitadel:8080)
-client_id = "godstack-backend"
-frontend_client_id = "godstack-frontend"  # Wird von setup-zitadel.sh aktualisiert
+client_id = "erynoa-backend"
+console_client_id = "erynoa-console"  # Wird von setup-zitadel.sh aktualisiert
+platform_client_id = "erynoa-platform"  # Wird von setup-zitadel.sh aktualisiert
+docs_client_id = "erynoa-docs"  # Wird von setup-zitadel.sh aktualisiert
 jwks_cache_duration = 3600
-audiences = ["godstack-api", "godstack-backend", "godstack-frontend"]
+audiences = ["erynoa-api", "erynoa-backend", "erynoa-console", "erynoa-platform", "erynoa-docs"]
 
 [storage]
 endpoint = "http://localhost:9000"
 region = "us-east-1"
-access_key_id = "godstack"
-secret_access_key = "godstack123"
-default_bucket = "godstack"
+access_key_id = "erynoa"
+secret_access_key = "erynoa123"
+default_bucket = "erynoa"
 max_upload_size = 104857600  # 100 MB
 
 [features]

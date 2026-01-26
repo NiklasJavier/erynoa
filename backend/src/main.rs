@@ -1,4 +1,4 @@
-//! God-Stack Backend
+//! Erynoa Backend
 
 #[cfg(all(not(target_env = "msvc"), feature = "jemalloc"))]
 #[global_allocator]
@@ -6,7 +6,7 @@ static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 // Note: tikv-jemallocator is optional and only compiled when jemalloc feature is enabled
 
-use godstack_api::{
+use erynoa_api::{
     config::{Settings, version::VERSION},
     server::Server,
     telemetry::{get_subscriber, init_subscriber},
@@ -14,7 +14,7 @@ use godstack_api::{
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let subscriber = get_subscriber("godstack".into(), "info".into(), std::io::stdout);
+    let subscriber = get_subscriber("erynoa".into(), "info".into(), std::io::stdout);
     init_subscriber(subscriber);
 
     let settings = Settings::load().expect("Failed to load configuration");
@@ -23,7 +23,7 @@ async fn main() -> anyhow::Result<()> {
         version = VERSION,
         env = %settings.application.environment.as_str(),
         port = settings.application.port,
-        "🚀 Starting God-Stack API"
+        "🚀 Starting Erynoa API"
     );
 
     let server = Server::build(settings).await?;

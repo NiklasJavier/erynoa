@@ -1,6 +1,6 @@
-# Godstack Monorepo
+# Erynoa Monorepo
 
-Full-Stack Application mit Rust Backend und SolidJS Frontend.
+Full-Stack Application mit Rust Backend und SvelteKit Frontends.
 
 ## 🚀 Quick Start
 
@@ -9,8 +9,11 @@ just dev
 ```
 
 Startet alles:
-- **Frontend** auf http://localhost:5173 (Vite HMR)
-- **Backend** auf http://localhost:3000 (cargo-watch)
+- **Proxy** auf http://localhost:3001 (Caddy Reverse Proxy für Frontends)
+  - **Console** auf http://localhost:3001/console
+  - **Platform** auf http://localhost:3001/platform
+  - **Docs** auf http://localhost:3001/docs
+- **Backend** direkt auf http://localhost:3000 (Rust API, nicht über Proxy)
 - **ZITADEL** auf http://localhost:8080 (Auth)
 - **MinIO** auf http://localhost:9001 (S3 Storage)
 - PostgreSQL, DragonflyDB im Hintergrund
@@ -26,8 +29,10 @@ Startet alles:
 │   ├── src/           # Source Code
 │   ├── config/        # Konfiguration (TOML)
 │   └── migrations/    # SQL Migrations
-├── frontend/          # SolidJS Frontend
-│   └── src/           # TypeScript + Components
+├── frontend/          # Frontend Applications
+│   ├── console/       # Console (SvelteKit)
+│   ├── platform/      # Platform (SvelteKit)
+│   └── docs/          # Docs (SvelteKit)
 ├── infra/             # Infrastructure & Deployment
 │   ├── docker-compose.yml
 │   ├── Dockerfile.*   # Container Builds
@@ -44,7 +49,9 @@ Startet alles:
 | Komponente | Technologie |
 |------------|-------------|
 | **Backend** | Rust, Axum, Tokio, SQLx |
-| **Frontend** | SolidJS, TanStack Query, Tailwind |
+| **Console** | SvelteKit, Tailwind |
+| **Platform** | SvelteKit, Tailwind |
+| **Docs** | SvelteKit, Tailwind |
 | **API** | Connect-RPC/gRPC-Web (Protobuf) |
 | **Auth** | ZITADEL (OIDC/JWT) |
 | **Database** | PostgreSQL (OrioleDB) |
@@ -56,7 +63,7 @@ Startet alles:
 
 | Befehl | Beschreibung |
 |--------|--------------|
-| `just dev` | **Startet alles** (Frontend + Backend + Services) |
+| `just dev` | **Startet alles** (Console + Platform + Docs + Backend + Services) |
 | `just status` | Zeigt Status aller Services |
 | `just dev-check` | Health Check aller Services |
 | `just reset` | Alles löschen und neu starten |
@@ -104,7 +111,7 @@ cd backend && cargo test
 ### CI/CD
 GitHub Actions Workflows für:
 - Backend: Format, Clippy, Tests, Build
-- Frontend: TypeScript Check, Build
+- Console/Platform/Docs: TypeScript Check, Build
 - Protobuf: Lint, Format
 
 ## 📊 Projekt-Status

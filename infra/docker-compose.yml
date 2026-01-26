@@ -12,35 +12,109 @@
 #
 # ============================================================================
 
-name: godstack-services
+name: erynoa-services
 
 services:
   # ─────────────────────────────────────────────────────────────────────────
-  # Frontend - SvelteKit + Vite mit Hot-Reloading
+  # Console - SvelteKit + Vite mit Hot-Reloading
   # ─────────────────────────────────────────────────────────────────────────
-  frontend:
+  console:
     build:
       context: ..
-      dockerfile: infra/Dockerfile.frontend
+      dockerfile: infra/Dockerfile.console
     ports:
       - "5173:5173"
     volumes:
       # SvelteKit source code
-      - ../frontend/src:/workspace/frontend/src:cached
-      - ../frontend/static:/workspace/frontend/static:cached
+      - ../frontend/console/src:/workspace/console/src:cached
+      - ../frontend/console/static:/workspace/console/static:cached
       # SvelteKit config files
-      - ../frontend/svelte.config.js:/workspace/frontend/svelte.config.js:cached
-      - ../frontend/vite.config.ts:/workspace/frontend/vite.config.ts:cached
-      - ../frontend/tsconfig.json:/workspace/frontend/tsconfig.json:cached
+      - ../frontend/console/svelte.config.js:/workspace/console/svelte.config.js:cached
+      - ../frontend/console/vite.config.ts:/workspace/console/vite.config.ts:cached
+      - ../frontend/console/tsconfig.json:/workspace/console/tsconfig.json:cached
       # Exclude node_modules (use container's version)
-      - /workspace/frontend/node_modules
+      - /workspace/console/node_modules
       # Proto für Code-Generierung
       - ../proto:/workspace/proto:cached
       # Buf-Konfiguration (im Workspace-Root)
       - ../buf.gen.yaml:/workspace/buf.gen.yaml:cached
       - ../buf.yaml:/workspace/buf.yaml:cached
       # Gen-Verzeichnis für Hot-Reload
-      - ../frontend/src/gen:/workspace/frontend/src/gen:cached
+      - ../frontend/console/src/gen:/workspace/console/src/gen:cached
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:3000
+    networks:
+      - devnet
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Platform - SvelteKit + Vite mit Hot-Reloading
+  # ─────────────────────────────────────────────────────────────────────────
+  platform:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.platform
+    ports:
+      - "5174:5174"
+    volumes:
+      # SvelteKit source code
+      - ../frontend/platform/src:/workspace/platform/src:cached
+      - ../frontend/platform/static:/workspace/platform/static:cached
+      # SvelteKit config files
+      - ../frontend/platform/svelte.config.js:/workspace/platform/svelte.config.js:cached
+      - ../frontend/platform/vite.config.ts:/workspace/platform/vite.config.ts:cached
+      - ../frontend/platform/tsconfig.json:/workspace/platform/tsconfig.json:cached
+      # Exclude node_modules (use container's version)
+      - /workspace/platform/node_modules
+      # Proto für Code-Generierung
+      - ../proto:/workspace/proto:cached
+      # Buf-Konfiguration (im Workspace-Root)
+      - ../buf.gen.yaml:/workspace/buf.gen.yaml:cached
+      - ../buf.yaml:/workspace/buf.yaml:cached
+      # Gen-Verzeichnis für Hot-Reload
+      - ../frontend/platform/src/gen:/workspace/platform/src/gen:cached
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:3000
+    networks:
+      - devnet
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Docs - SvelteKit + Vite mit Hot-Reloading
+  # ─────────────────────────────────────────────────────────────────────────
+  docs:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.docs
+    ports:
+      - "5175:5175"
+    volumes:
+      # SvelteKit source code
+      - ../frontend/docs/src:/workspace/docs/src:cached
+      - ../frontend/docs/static:/workspace/docs/static:cached
+      # SvelteKit config files
+      - ../frontend/docs/svelte.config.js:/workspace/docs/svelte.config.js:cached
+      - ../frontend/docs/vite.config.ts:/workspace/docs/vite.config.ts:cached
+      - ../frontend/docs/tsconfig.json:/workspace/docs/tsconfig.json:cached
+      # Exclude node_modules (use container's version)
+      - /workspace/docs/node_modules
+      # Proto für Code-Generierung
+      - ../proto:/workspace/proto:cached
+      # Buf-Konfiguration (im Workspace-Root)
+      - ../buf.gen.yaml:/workspace/buf.gen.yaml:cached
+      - ../buf.yaml:/workspace/buf.yaml:cached
+      # Gen-Verzeichnis für Hot-Reload
+      - ../frontend/docs/src/gen:/workspace/docs/src/gen:cached
     environment:
       - NODE_ENV=development
       - VITE_API_URL=http://localhost:3000
@@ -75,29 +149,31 @@ services:
       # Cargo Registry Cache - beschleunigt Dependency Downloads
       - cargo-registry:/usr/local/cargo/registry
       - cargo-git:/usr/local/cargo/git
-      # Proto für Code-Generierung (Backend + Frontend)
+      # Proto für Code-Generierung (Backend + Console)
       - ../proto:/workspace/proto:cached
-      # Buf-Konfiguration (für Frontend-Generierung)
+      # Buf-Konfiguration (für Console-Generierung)
       - ../buf.gen.yaml:/workspace/buf.gen.yaml:cached
       - ../buf.yaml:/workspace/buf.yaml:cached
       # Backend gen/ für Hot-Reload (wird von build.rs erstellt)
       - ../backend/src/gen:/workspace/backend/src/gen:cached
     working_dir: /workspace/backend
     environment:
-      - RUST_LOG=godstack_api=debug,info
+      - RUST_LOG=erynoa_api=debug,info
       - APP_ENVIRONMENT=local
       # Application Settings
       - APP_APPLICATION__HOST=0.0.0.0
       - APP_APPLICATION__PORT=3000
       - APP_APPLICATION__ENVIRONMENT=local
-      - APP_APPLICATION__FRONTEND_URL=http://localhost:5173
+      - APP_APPLICATION__CONSOLE_URL=http://localhost:3001/console
+      - APP_APPLICATION__PLATFORM_URL=http://localhost:3001/platform
+      - APP_APPLICATION__DOCS_URL=http://localhost:3001/docs
       - APP_APPLICATION__API_URL=http://localhost:3000
       # Database Settings (using Docker service names instead of localhost)
       - APP_DATABASE__HOST=db
       - APP_DATABASE__PORT=5432
-      - APP_DATABASE__USERNAME=godstack
-      - APP_DATABASE__PASSWORD=godstack
-      - APP_DATABASE__DATABASE=godstack
+      - APP_DATABASE__USERNAME=erynoa
+      - APP_DATABASE__PASSWORD=erynoa
+      - APP_DATABASE__DATABASE=erynoa
       - APP_DATABASE__MAX_CONNECTIONS=10
       - APP_DATABASE__MIN_CONNECTIONS=2
       - APP_DATABASE__CONNECT_TIMEOUT=30
@@ -109,16 +185,16 @@ services:
       # Auth Settings (ZITADEL)
       - APP_AUTH__ISSUER=http://localhost:8080
       - APP_AUTH__INTERNAL_ISSUER=http://zitadel:8080
-      - APP_AUTH__CLIENT_ID=godstack-backend
-      # FRONTEND_CLIENT_ID kommt aus backend/config/local.toml (wird vom setup-zitadel.sh gesetzt)
+      - APP_AUTH__CLIENT_ID=erynoa-backend
+      # CONSOLE_CLIENT_ID, PLATFORM_CLIENT_ID und DOCS_CLIENT_ID kommen aus backend/config/local.toml (wird vom setup-zitadel.sh gesetzt)
       - APP_AUTH__JWKS_CACHE_DURATION=3600
-      - APP_AUTH__AUDIENCES=godstack-api,godstack-backend,godstack-frontend
+      - APP_AUTH__AUDIENCES=erynoa-api,erynoa-backend,erynoa-console,erynoa-platform,erynoa-docs
       # Storage Settings (MinIO S3)
       - APP_STORAGE__ENDPOINT=http://minio:9000
       - APP_STORAGE__REGION=us-east-1
-      - APP_STORAGE__ACCESS_KEY_ID=godstack
-      - APP_STORAGE__SECRET_ACCESS_KEY=godstack123
-      - APP_STORAGE__DEFAULT_BUCKET=godstack
+      - APP_STORAGE__ACCESS_KEY_ID=erynoa
+      - APP_STORAGE__SECRET_ACCESS_KEY=erynoa123
+      - APP_STORAGE__DEFAULT_BUCKET=erynoa
       - APP_STORAGE__MAX_UPLOAD_SIZE=104857600
     networks:
       - devnet
@@ -128,7 +204,7 @@ services:
       cache:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "-X", "POST", "-H", "Content-Type: application/json", "-d", "{}", "http://localhost:3000/api/v1/connect/godstack.v1.HealthService/Check"]
+      test: ["CMD", "curl", "-f", "-X", "POST", "-H", "Content-Type: application/json", "-d", "{}", "http://localhost:3000/api/v1/connect/erynoa.v1.HealthService/Check"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -141,15 +217,15 @@ services:
   db:
     image: orioledb/orioledb:latest-pg16
     environment:
-      POSTGRES_USER: godstack
-      POSTGRES_PASSWORD: godstack
-      POSTGRES_DB: godstack
+      POSTGRES_USER: erynoa
+      POSTGRES_PASSWORD: erynoa
+      POSTGRES_DB: erynoa
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U godstack -h localhost -p 5432"]
+      test: ["CMD-SHELL", "pg_isready -U erynoa -h localhost -p 5432"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -189,8 +265,8 @@ services:
     image: quay.io/minio/minio:latest
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: godstack
-      MINIO_ROOT_PASSWORD: godstack123
+      MINIO_ROOT_USER: erynoa
+      MINIO_ROOT_PASSWORD: erynoa123
     volumes:
       - minio-data:/data
     ports:
@@ -282,6 +358,26 @@ services:
       start_period: 30s
     networks:
       - devnet
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Caddy Reverse Proxy - Einheitlicher Einstiegspunkt auf Port 3001
+  # ─────────────────────────────────────────────────────────────────────────
+  proxy:
+    image: caddy:2-alpine
+    ports:
+      - "3001:3001"
+      - "80:80"  # Legacy support
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./landing.html:/etc/caddy/landing.html:ro
+    networks:
+      - devnet
+    depends_on:
+      - backend
+      - console
+      - platform
+      - docs
+    restart: unless-stopped
 
 volumes:
   pgdata:

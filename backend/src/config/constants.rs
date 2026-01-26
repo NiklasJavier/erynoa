@@ -1,13 +1,13 @@
 //! Configuration Constants
 //!
 //! Zentrale Konstanten für Service-URLs und Ports
-//! Harmonized with frontend/src/lib/service-urls.ts and docs/development/SERVICE_CONFIG.md
+//! Harmonized with frontend/console/src/lib/service-urls.ts and README/development/SERVICE_CONFIG.md
 
 /// Service URLs for local development
 /// These values should match backend/config/base.toml
 pub mod service_urls {
-    /// Frontend URL
-    pub const FRONTEND: &str = "http://localhost:5173";
+    /// Console URL
+    pub const CONSOLE: &str = "http://localhost:5173";
     
     /// API URL
     pub const API: &str = "http://localhost:3000";
@@ -33,8 +33,8 @@ pub mod service_urls {
 
 /// Service ports
 pub mod ports {
-    /// Frontend port
-    pub const FRONTEND: u16 = 5173;
+    /// Console port
+    pub const CONSOLE: u16 = 5173;
     
     /// API port
     pub const API: u16 = 3000;
