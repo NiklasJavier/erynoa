@@ -102,8 +102,23 @@ while [ $backend_health_attempt -lt 10 ]; do
         -d '{}' \
         --max-time 5 \
         "${backend_health_url}" 2>/dev/null)
-    http_code=$(echo "$response" | tail -1)
-    response_body=$(echo "$response" | head -n -1)
+    # Extract HTTP code and response body
+    # curl -w "\n%{http_code}" puts the HTTP code on a new line after the body
+    http_code=$(echo "$response" | tail -1 | tr -d '[:space:]\r')
+    # Use head -n -1 instead of sed '$d' for better compatibility
+    response_body=$(echo "$response" | head -n -1 | tr -d '\r')
+    
+    # Check if response is valid
+    if [ "$http_code" = "200" ] && [ -n "$response_body" ]; then
+        # Check if response contains "status" or "SERVING_STATUS" (successful Connect-RPC response)
+        # The response format is: {"status":"SERVING_STATUS_SERVING"}
+        if echo "$response_body" | grep -qiE '"status"|SERVING_STATUS'; then
+            echo -e "${GREEN}✓${NC}"
+            ((PASSED++))
+            backend_health_ok=true
+            break
+        fi
+    fi
     
     # Debug output only on failure (last attempt)
     if [ $backend_health_attempt -eq 9 ] && [ "$backend_health_ok" != "true" ]; then
@@ -124,16 +139,6 @@ while [ $backend_health_attempt -lt 10 ]; do
             echo -e "${RED}✗ (unexpected response format)${NC}"
             echo -e "    ${YELLOW}URL: ${backend_health_url}${NC}"
             echo -e "    ${YELLOW}Response: ${response_body}${NC}"
-        fi
-    fi
-    
-    if [ "$http_code" = "200" ] && [ -n "$response_body" ]; then
-        # Check if response contains "status", "SERVING_STATUS", or is not empty (successful Connect-RPC response)
-        if echo "$response_body" | grep -qiE '"status"|"SERVING_STATUS"|"ready"|"version"'; then
-            echo -e "${GREEN}✓${NC}"
-            ((PASSED++))
-            backend_health_ok=true
-            break
         fi
     fi
     backend_health_attempt=$((backend_health_attempt + 1))

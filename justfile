@@ -482,7 +482,7 @@ minio:
 minio-reset:
     cd /workspace/infra && docker compose stop minio
     cd /workspace/infra && docker compose rm -f minio
-    docker volume rm godstack-services_minio-data 2>/dev/null || true
+    docker volume rm erynoa-services_minio-data 2>/dev/null || true
     rm -f /workspace/.data/.minio-setup-complete /workspace/.data/.minio-credentials
     cd /workspace/infra && docker compose up -d minio
     @echo "Warte 10 Sekunden..."

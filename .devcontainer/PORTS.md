@@ -54,10 +54,10 @@ docker compose -f /workspace/infra/docker-compose.yml logs -f
 
 ### Datenbank
 - **Host:** localhost:5432
-- **User:** godstack
-- **Password:** godstack
-- **Database:** godstack
-- **Connection String:** `postgres://godstack:godstack@localhost:5432/godstack`
+- **User:** erynoa
+- **Password:** erynoa
+- **Database:** erynoa
+- **Connection String:** `postgres://erynoa:erynoa@localhost:5432/erynoa`
 
 ### Cache (Redis-kompatibel)
 - **Host:** localhost:6379
@@ -66,8 +66,8 @@ docker compose -f /workspace/infra/docker-compose.yml logs -f
 ### MinIO S3
 - **API:** http://localhost:9000
 - **Console:** http://localhost:9001
-- **Access Key:** godstack
-- **Secret Key:** godstack123
+- **Access Key:** erynoa
+- **Secret Key:** erynoa123
 
 ### ZITADEL (nur mit auth-profile)
 - **URL:** http://localhost:8080

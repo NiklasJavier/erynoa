@@ -101,14 +101,14 @@ export interface ErrorDetails {
 [database]
 host = "localhost"      # "db" im Docker
 port = 5432
-username = "godstack"
-password = "godstack"
-database = "godstack"
+username = "erynoa"
+password = "erynoa"
+database = "erynoa"
 ```
 
 **Connection String:**
 ```rust
-postgres://godstack:godstack@localhost:5432/godstack
+postgres://erynoa:erynoa@localhost:5432/erynoa
 ```
 
 ### Cache (DragonflyDB/Redis)
@@ -128,9 +128,9 @@ default_ttl = 3600
 [storage]
 endpoint = "http://localhost:9000"  # "http://minio:9000" im Docker
 region = "us-east-1"
-access_key_id = "godstack"
-secret_access_key = "godstack123"
-default_bucket = "godstack"
+access_key_id = "erynoa"
+secret_access_key = "erynoa123"
+default_bucket = "erynoa"
 ```
 
 ### Authentication (ZITADEL)
@@ -140,15 +140,15 @@ default_bucket = "godstack"
 [auth]
 issuer = "http://localhost:8080"      # Externe URL
 internal_issuer = "http://zitadel:8080"  # Interne URL (Docker)
-client_id = "godstack-backend"
-console_client_id = "godstack-console"
+client_id = "erynoa-backend"
+console_client_id = "erynoa-console"
 ```
 
 **Console Konfiguration:**
 ```typescript
 auth: {
   issuer: "http://localhost:8080",
-  clientId: "godstack-console",
+  clientId: "erynoa-console",
 }
 ```
 

@@ -1,4 +1,4 @@
-//! # God-Stack Backend
+//! # Erynoa Backend
 //!
 //! High-Performance Rust Backend mit:
 //! - **Axum** HTTP/2 + REST API

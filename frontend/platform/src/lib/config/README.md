@@ -220,9 +220,9 @@ lib/components/
 
 Der Browser-Tab-Titel wird automatisch aus `pageConfig` generiert:
 
-- `/` → "Godstack"
-- `/users` → "Users | Godstack"
-- `/settings` → "Settings | Godstack"
+- `/` → "Erynoa"
+- `/users` → "Users | Erynoa"
+- `/settings` → "Settings | Erynoa"
 
 Custom Title möglich:
 ```typescript

@@ -2,7 +2,7 @@
 
 **Letzte Aktualisierung**: 2026-01-25
 
-Willkommen zur Dokumentation des Godstack-Projekts. Diese Dokumentation ist in drei Hauptkategorien organisiert:
+Willkommen zur Dokumentation des Erynoa-Projekts. Diese Dokumentation ist in drei Hauptkategorien organisiert:
 
 ---
 

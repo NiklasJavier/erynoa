@@ -82,25 +82,25 @@ if [ ! -f /workspace/.env ]; then
 # Environment Variables
 
 APP_ENVIRONMENT=local
-RUST_LOG=info,godstack_api=debug
+RUST_LOG=info,erynoa_api=debug
 
 # Database
 APP_DATABASE__HOST=localhost
 APP_DATABASE__PORT=5432
-APP_DATABASE__USERNAME=godstack
-APP_DATABASE__PASSWORD=godstack
-APP_DATABASE__DATABASE=godstack
+APP_DATABASE__USERNAME=erynoa
+APP_DATABASE__PASSWORD=erynoa
+APP_DATABASE__DATABASE=erynoa
 
 # SQLx Migration URL (required for sqlx-cli)
-DATABASE_URL=postgres://godstack:godstack@localhost:5432/godstack
+DATABASE_URL=postgres://erynoa:erynoa@localhost:5432/erynoa
 
 # Cache
 APP_CACHE__URL=redis://localhost:6379
 
 # Auth (ZITADEL)
 APP_AUTH__ISSUER=http://localhost:8080
-APP_AUTH__CLIENT_ID=godstack-backend
-APP_AUTH__CONSOLE_CLIENT_ID=godstack-console
+APP_AUTH__CLIENT_ID=erynoa-backend
+APP_AUTH__CONSOLE_CLIENT_ID=erynoa-console
 ENVEOF
   echo "   Created .env from template"
 else
@@ -124,7 +124,7 @@ nix develop --command true 2>/dev/null || {
 echo "🔗 Adding helpful shell aliases..."
 
 ALIASES='
-# God-Stack DevContainer aliases
+# Erynoa DevContainer aliases
 alias dev="cd /workspace && just dev"
 alias build="cd /workspace && just build"
 alias test="cd /workspace && just test"
@@ -137,7 +137,7 @@ alias nix="/nix/var/nix/profiles/default/bin/nix"
 
 for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
   if [ -f "$rc" ]; then
-    if ! grep -q "God-Stack DevContainer aliases" "$rc"; then
+    if ! grep -q "Erynoa DevContainer aliases" "$rc"; then
       echo "$ALIASES" >> "$rc"
     fi
   fi

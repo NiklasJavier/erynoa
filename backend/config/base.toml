@@ -1,5 +1,5 @@
 # ============================================================================
-# Base Configuration - Godstack Backend
+# Base Configuration - Erynoa Backend
 # ============================================================================
 # Diese Datei enthält die Standard-Konfiguration.
 # Überschreibungen:
@@ -17,7 +17,7 @@ environment = "local"
 console_url = "http://localhost:3001/console"
 platform_url = "http://localhost:3001/platform"
 docs_url = "http://localhost:3001/docs"
-api_url = "http://localhost:3000"
+api_url = "http://localhost:3000/api"
 
 [database]
 host = "localhost"

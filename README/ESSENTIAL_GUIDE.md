@@ -145,7 +145,7 @@ Alle Befehle: `just --list`
 | Auth | `zitadel` |
 
 **Connection Strings im Docker:**
-- Database: `postgresql://godstack:godstack@db:5432/godstack`
+- Database: `postgresql://erynoa:erynoa@db:5432/erynoa`
 - Cache: `redis://cache:6379`
 - Storage: `http://minio:9000`
 - Auth: `http://zitadel:8080`
@@ -220,8 +220,8 @@ cd backend && cargo test
 
 1. ZITADEL Console öffnen: http://localhost:8080/ui/console
 2. Erstanmeldung: `zitadel-admin@zitadel.localhost` / `Password1!`
-3. Projekt erstellen: `godstack`
-4. API Application erstellen: `godstack-api`
+3. Projekt erstellen: `erynoa`
+4. API Application erstellen: `erynoa-api`
 5. Test-User erstellen: `testuser` / `Test123!`
 
 **Vollständiger Guide**: `docs/guides/ZITADEL_SETUP.md`
@@ -263,9 +263,9 @@ console_url = "http://localhost:5173"
 [database]
 host = "db"  # "localhost" außerhalb Docker
 port = 5432
-username = "godstack"
-password = "godstack"
-database = "godstack"
+username = "erynoa"
+password = "erynoa"
+database = "erynoa"
 
 [cache]
 url = "redis://cache:6379"  # "redis://localhost:6379" außerhalb Docker
@@ -273,15 +273,15 @@ url = "redis://cache:6379"  # "redis://localhost:6379" außerhalb Docker
 [storage]
 endpoint = "http://minio:9000"  # "http://localhost:9000" außerhalb Docker
 region = "us-east-1"
-access_key_id = "godstack"
-secret_access_key = "godstack123"
-default_bucket = "godstack"
+access_key_id = "erynoa"
+secret_access_key = "erynoa123"
+default_bucket = "erynoa"
 
 [auth]
 issuer = "http://localhost:8080"
 internal_issuer = "http://zitadel:8080"
-client_id = "godstack-backend"
-console_client_id = "godstack-console"
+client_id = "erynoa-backend"
+console_client_id = "erynoa-console"
 ```
 
 **Konfigurationspriorität:**

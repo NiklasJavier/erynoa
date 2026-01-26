@@ -102,3 +102,10 @@ export function getAppConfig(): Config {
 export function setConfig(config: Config): void {
 	cachedConfig = config;
 }
+
+/**
+ * Leere Config-Cache (z.B. nach Client-ID-Änderungen)
+ */
+export function clearConfigCache(): void {
+	cachedConfig = null;
+}

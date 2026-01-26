@@ -272,7 +272,7 @@ cat ~/.ssh/id_ed25519_signing.pub
 ```bash
 cp .env.example .env
 # Oder manuell setzen:
-export DATABASE_URL="postgres://godstack:godstack@localhost:5432/godstack"
+export DATABASE_URL="postgres://erynoa:erynoa@localhost:5432/erynoa"
 ```
 
 ### Port bereits belegt

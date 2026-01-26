@@ -2,7 +2,7 @@
 
 ## Übersicht
 
-Architektur-Dokumentation für das Godstack-Projekt.
+Architektur-Dokumentation für das Erynoa-Projekt.
 
 ---
 

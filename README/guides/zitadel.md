@@ -14,13 +14,13 @@ http://localhost:8080/ui/console
 
 ### 3. Projekt erstellen
 1. Projects → **New Project**
-2. Name: `godstack`
+2. Name: `erynoa`
 3. Speichern
 
 ### 4. API Application erstellen
 1. Im Projekt → Applications → **New**
 2. Type: **API**
-3. Name: `godstack-api`
+3. Name: `erynoa-api`
 4. Auth Method: **Basic** (einfacher für Tests)
 5. **Client ID und Secret notieren!**
 
@@ -36,7 +36,7 @@ http://localhost:8080/ui/console
    - ✓ "User must change password on next sign in" **deaktivieren**
 
 ### 6. Rollen erstellen
-1. Projekt `godstack` → Roles → **New**
+1. Projekt `erynoa` → Roles → **New**
 2. Erstelle:
    - Key: `admin`, Display: `Administrator`
    - Key: `user`, Display: `User`

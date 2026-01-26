@@ -2,7 +2,7 @@
 
 ## Übersicht
 
-Umfassender Guide für Tests im Godstack-Projekt.
+Umfassender Guide für Tests im Erynoa-Projekt.
 
 ---
 

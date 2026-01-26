@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# MinIO Auto-Setup für Godstack
+# MinIO Auto-Setup für Erynoa
 # ============================================================================
 # Erstellt automatisch Buckets und Policies für das System
 # ============================================================================
@@ -16,8 +16,8 @@ NC='\033[0m' # No Color
 
 # Config
 MINIO_ENDPOINT="http://localhost:9000"
-MINIO_ROOT_USER="godstack"
-MINIO_ROOT_PASSWORD="godstack123"
+MINIO_ROOT_USER="erynoa"
+MINIO_ROOT_PASSWORD="erynoa123"
 DATA_DIR="${DATA_DIR:-$(cd "$(dirname "$0")/../.." && pwd)/.data}"
 SETUP_MARKER="$DATA_DIR/.minio-setup-complete"
 
@@ -38,7 +38,7 @@ error() { echo -e "${BLUE}[MinIO]${NC} ${RED}✗${NC} $1" >&2; }
 print_banner() {
     echo -e "${BLUE}"
     echo "╔════════════════════════════════════════════════════════════════════╗"
-    echo "║          📦 MinIO Auto-Setup für Godstack                          ║"
+    echo "║          📦 MinIO Auto-Setup für Erynoa                            ║"
     echo "╚════════════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
 }
@@ -85,7 +85,7 @@ ensure_mc() {
 # Configure mc alias
 configure_mc() {
     log "Konfiguriere MinIO Client..."
-    mc alias set godstack "$MINIO_ENDPOINT" "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" --api S3v4 > /dev/null 2>&1
+    mc alias set erynoa "$MINIO_ENDPOINT" "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" --api S3v4 > /dev/null 2>&1
     success "MinIO Client konfiguriert"
 }
 
@@ -95,10 +95,10 @@ create_buckets() {
     echo "━━━ Buckets erstellen ━━━"
     
     for bucket in "${BUCKETS[@]}"; do
-        if mc ls "godstack/$bucket" > /dev/null 2>&1; then
+        if mc ls "erynoa/$bucket" > /dev/null 2>&1; then
             success "Bucket '$bucket' existiert bereits"
         else
-            mc mb "godstack/$bucket" > /dev/null 2>&1
+            mc mb "erynoa/$bucket" > /dev/null 2>&1
             success "Bucket '$bucket' erstellt"
         fi
     done
@@ -119,19 +119,19 @@ setup_policies() {
             "Resource": ["arn:aws:s3:::avatars/*"]
         }]
     }'
-    echo "$avatars_policy" | mc anonymous set-json /dev/stdin godstack/avatars 2>/dev/null || true
+    echo "$avatars_policy" | mc anonymous set-json /dev/stdin erynoa/avatars 2>/dev/null || true
     success "Avatars bucket: public read"
     
     # Uploads - private (default)
-    mc anonymous set none godstack/uploads > /dev/null 2>&1 || true
+    mc anonymous set none erynoa/uploads > /dev/null 2>&1 || true
     success "Uploads bucket: private"
     
     # Documents - private (default)
-    mc anonymous set none godstack/documents > /dev/null 2>&1 || true
+    mc anonymous set none erynoa/documents > /dev/null 2>&1 || true
     success "Documents bucket: private"
     
     # Temp - private with lifecycle
-    mc anonymous set none godstack/temp > /dev/null 2>&1 || true
+    mc anonymous set none erynoa/temp > /dev/null 2>&1 || true
     success "Temp bucket: private"
 }
 
@@ -170,7 +170,7 @@ create_service_account() {
     
     # Create new service account
     local sa_output
-    sa_output=$(mc admin user svcacct add godstack "$MINIO_ROOT_USER" --json 2>/dev/null || echo '{}')
+    sa_output=$(mc admin user svcacct add erynoa "$MINIO_ROOT_USER" --json 2>/dev/null || echo '{}')
     
     local access_key=$(echo "$sa_output" | grep -o '"accessKey":"[^"]*"' | cut -d'"' -f4)
     local secret_key=$(echo "$sa_output" | grep -o '"secretKey":"[^"]*"' | cut -d'"' -f4)
@@ -228,7 +228,7 @@ print_summary() {
 check_existing_setup() {
     if [ -f "$SETUP_MARKER" ]; then
         # Verify buckets still exist
-        if mc ls godstack/uploads > /dev/null 2>&1; then
+        if mc ls erynoa/uploads > /dev/null 2>&1; then
             local access_key=$(grep MINIO_ACCESS_KEY "$DATA_DIR/.minio-credentials" 2>/dev/null | cut -d= -f2)
             success "Setup bereits abgeschlossen"
             echo "   Endpoint: $MINIO_ENDPOINT"

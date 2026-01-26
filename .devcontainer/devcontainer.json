@@ -1,5 +1,5 @@
 {
-  "name": "Godstack Monorepo",
+  "name": "Erynoa Monorepo",
   "dockerComposeFile": "docker-compose.yml",
   "service": "dev",
   "workspaceFolder": "/workspace",

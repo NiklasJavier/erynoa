@@ -2,7 +2,7 @@
 # Fehler nicht blockierend - wir wollen, dass der DevContainer lädt auch wenn einzelne Schritte fehlschlagen
 set +e
 
-echo "🚀 Initializing God-Stack DevContainer..."
+echo "🚀 Initializing Erynoa DevContainer..."
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 0. Fix Docker credentials for Cursor compatibility
@@ -161,7 +161,7 @@ if command -v docker &> /dev/null && docker ps >/dev/null 2>&1; then
   # Warten auf Datenbank (mit max 30 Sekunden Timeout)
   echo "⏳ Waiting for database..."
   for i in {1..30}; do
-    if docker compose -f infra/docker-compose.yml exec -T db pg_isready -U godstack >/dev/null 2>&1; then
+    if docker compose -f infra/docker-compose.yml exec -T db pg_isready -U erynoa >/dev/null 2>&1; then
       echo "   ✅ Database ready!"
       break
     fi
@@ -191,7 +191,7 @@ cd /workspace/backend
 
 # DATABASE_URL setzen, falls leer
 if [ -z "$DATABASE_URL" ]; then
-  export DATABASE_URL="postgres://godstack:godstack@localhost:5432/godstack"
+  export DATABASE_URL="postgres://erynoa:erynoa@localhost:5432/erynoa"
 fi
 
 # Wir nutzen 'nix develop', um sicherzustellen, dass sqlx-cli verfügbar ist
