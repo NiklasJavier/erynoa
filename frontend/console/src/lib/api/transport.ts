@@ -84,12 +84,31 @@ function createAuthInterceptor(getToken: () => Promise<string | null>): Intercep
 }
 
 /**
+ * Frontend Identifier Interceptor
+ * Setzt einen Custom-Header, damit das Backend das Frontend identifizieren kann
+ */
+const frontendIdentifierInterceptor: Interceptor = (next) => async (req) => {
+  // Setze X-Frontend-Origin Header basierend auf window.location
+  if (typeof window !== 'undefined') {
+    const pathname = window.location.pathname;
+    if (pathname.startsWith('/platform')) {
+      req.header.set('X-Frontend-Origin', 'platform');
+    } else if (pathname.startsWith('/docs')) {
+      req.header.set('X-Frontend-Origin', 'docs');
+    } else if (pathname.startsWith('/console')) {
+      req.header.set('X-Frontend-Origin', 'console');
+    }
+  }
+  return next(req);
+};
+
+/**
  * Base Transport (ohne Auth)
  */
 export function createBaseTransport(): Transport {
   return createConnectTransport({
     baseUrl: getConnectBaseUrl(),
-    interceptors: [loggingInterceptor, errorInterceptor],
+    interceptors: [frontendIdentifierInterceptor, loggingInterceptor, errorInterceptor],
   });
 }
 
@@ -102,6 +121,7 @@ export function createAuthenticatedTransport(
   return createConnectTransport({
     baseUrl: getConnectBaseUrl(),
     interceptors: [
+      frontendIdentifierInterceptor,
       loggingInterceptor,
       createAuthInterceptor(getToken),
       errorInterceptor,

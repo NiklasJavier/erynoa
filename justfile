@@ -10,9 +10,33 @@ default:
 # ═══════════════════════════════════════════════════════
 
 # [DEFAULT] Dev server - Console + Backend mit Hot-Reload in Containern, Services im Hintergrund
-dev:
+# Usage: just dev [frontendname]
+#   just dev          - Startet alle Frontends (console, platform, docs)
+#   just dev console  - Startet nur Console
+#   just dev platform - Startet nur Platform
+#   just dev docs     - Startet nur Docs
+dev frontend="":
     #!/usr/bin/env bash
     set -e
+    
+    # Normalisiere Frontend-Name (lowercase)
+    FRONTEND_NAME=$(echo "{{frontend}}" | tr '[:upper:]' '[:lower:]')
+    
+    # Bestimme welche Frontends gestartet werden sollen
+    if [ -z "$FRONTEND_NAME" ]; then
+        # Kein Parameter: Alle Frontends starten
+        FRONTENDS="console platform docs"
+        FRONTEND_DISPLAY="alle Frontends (console, platform, docs)"
+    elif [ "$FRONTEND_NAME" = "console" ] || [ "$FRONTEND_NAME" = "platform" ] || [ "$FRONTEND_NAME" = "docs" ]; then
+        # Einzelnes Frontend
+        FRONTENDS="$FRONTEND_NAME"
+        FRONTEND_DISPLAY="$FRONTEND_NAME"
+    else
+        echo "❌ Ungültiger Frontend-Name: $FRONTEND_NAME"
+        echo "   Gültige Optionen: console, platform, docs"
+        echo "   Oder ohne Parameter für alle Frontends"
+        exit 1
+    fi
     
     echo ""
     echo "╔════════════════════════════════════════════════════════════════════╗"
@@ -30,6 +54,7 @@ dev:
     MINIO_URL="${MINIO_URL:-http://localhost:9000}"
     MINIO_CONSOLE_URL="${MINIO_CONSOLE_URL:-http://localhost:9001}"
     
+    echo "  Frontend:  ${FRONTEND_DISPLAY}"
     echo "  Proxy:     ${PROXY_URL}  (Caddy Reverse Proxy)"
     echo "  Console:   ${CONSOLE_URL}"
     echo "  Platform:  ${PLATFORM_URL}"
@@ -150,11 +175,11 @@ dev:
         fi
     fi
     
-    # 4. Starte alle Frontends + Backend + Proxy mit sichtbaren Logs
+    # 4. Starte Frontend(s) + Backend + Proxy mit sichtbaren Logs
     echo ""
-    echo "━━━ [4/5] Starte Frontends + Backend + Proxy (Hot-Reload) ━━━"
+    echo "━━━ [4/5] Starte ${FRONTEND_DISPLAY} + Backend + Proxy (Hot-Reload) ━━━"
     echo ""
-    echo "  Ctrl+C stoppt Frontends & Backend, Services laufen weiter."
+    echo "  Ctrl+C stoppt Frontend(s) & Backend, Services laufen weiter."
     echo "  Komplett stoppen: just docker-stop"
     echo "  Health Check:     just dev-check"
     echo ""
@@ -163,13 +188,14 @@ dev:
     
     cd /workspace/infra
     # Trap Ctrl+C um eine saubere Nachricht anzuzeigen
-    trap 'echo ""; echo ""; echo "━━━ Frontends + Backend gestoppt ━━━"; echo "  Services laufen weiter. Status: just status"; echo "  Neustart: just dev"; echo ""' INT
+    trap 'echo ""; echo ""; echo "━━━ Frontend(s) + Backend gestoppt ━━━"; echo "  Services laufen weiter. Status: just status"; echo "  Neustart: just dev"; echo ""' INT
     
-    # Starte alle Frontends, Backend und Proxy im Hintergrund
-    docker compose up --build -d console platform docs backend proxy
+    # Starte Frontend(s), Backend und Proxy im Hintergrund
+    # Backend und Proxy werden immer gestartet
+    docker compose up --build -d $FRONTENDS backend proxy
     
     # Warte bis Container gestartet sind und Services bereit sind
-    echo "  ⏳ Warte auf Frontends, Backend und Proxy Start..."
+    echo "  ⏳ Warte auf ${FRONTEND_DISPLAY}, Backend und Proxy Start..."
     sleep 10
     
     # 5. Health Check (nach Start von Console + Backend)
@@ -184,7 +210,7 @@ dev:
     
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  Frontends, Backend & Proxy laufen im Hintergrund"
+    echo "  ${FRONTEND_DISPLAY}, Backend & Proxy laufen im Hintergrund"
     echo "  Logs anzeigen: just docker-logs"
     echo "  Status prüfen: just status"
     echo "  Health Check:  just dev-check"
@@ -193,8 +219,8 @@ dev:
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
     
-    # Zeige Logs von allen Frontends, Backend und Proxy (blockierend)
-    docker compose logs -f console platform docs backend proxy
+    # Zeige Logs von Frontend(s), Backend und Proxy (blockierend)
+    docker compose logs -f $FRONTENDS backend proxy
     
 # Dev ohne ZITADEL (minimal)
 dev-minimal:

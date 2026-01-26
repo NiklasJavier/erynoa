@@ -69,11 +69,12 @@ function createAuthStore() {
         );
         
         const config = await Promise.race([configPromise, timeoutPromise]);
-        console.log('[AuthStore] Config loaded:', config.environment);
+        console.log('[AuthStore] Config loaded:', config.environment, 'clientId:', config.auth.clientId, 'consoleUrl:', config.urls.console);
         
-        // Initialisiere OIDC
-        initAuth(config.auth.issuer, config.auth.clientId);
-        console.log('[AuthStore] OIDC initialized');
+        // Initialisiere OIDC mit Client-ID und Console-URL vom Backend
+        // Verwende Console-URL aus Config für exakte Redirect-URI-Übereinstimmung mit Zitadel
+        initAuth(config.auth.issuer, config.auth.clientId, config.urls.console);
+        console.log('[AuthStore] OIDC initialized with clientId:', config.auth.clientId, 'redirectUri:', `${config.urls.console}/callback`);
         
         // Prüfe ob User bereits eingeloggt
         let user = null;
@@ -144,23 +145,66 @@ function createAuthStore() {
       update(s => ({ ...s, isLoading: true, error: null }));
       try {
         // Ensure OIDC is initialized before handling callback
-        if (!getAuth()) {
-          console.log('[AuthStore] OIDC not initialized, loading config...');
-          const config = await fetchConfig();
-          initAuth(config.auth.issuer, config.auth.clientId);
-          console.log('[AuthStore] OIDC initialized for callback');
-        }
+        // Always reload config to ensure we have the latest clientId
+        console.log('[AuthStore] Loading config for callback (force reload)...');
+        const config = await fetchConfig(true); // Force reload
+        console.log('[AuthStore] Config loaded for callback:', {
+          clientId: config.auth.clientId,
+          issuer: config.auth.issuer,
+          consoleUrl: config.urls.console
+        });
+        // Verwende Console-URL aus Config für exakte Redirect-URI-Übereinstimmung mit Zitadel
+        initAuth(config.auth.issuer, config.auth.clientId, config.urls.console);
+        console.log('[AuthStore] OIDC initialized for callback with clientId:', config.auth.clientId, 'redirectUri:', `${config.urls.console}/callback`);
         
         const user = await oidcHandleCallback();
+        console.log('[AuthStore] Callback processed, user:', {
+          username: user?.profile?.preferred_username,
+          expired: user?.expired,
+          expires_at: user?.expires_at,
+          access_token: user?.access_token ? 'present' : 'missing'
+        });
+        
+        // Verify user was set correctly BEFORE updating state
+        if (!user) {
+          throw new Error('No user returned from callback');
+        }
+        
+        // Check if user is expired (should not be after fresh callback)
+        if (user.expired) {
+          console.warn('[AuthStore] User is expired after callback, this should not happen');
+          // Try to refresh the user
+          try {
+            const refreshedUser = await getUser();
+            if (refreshedUser && !refreshedUser.expired) {
+              console.log('[AuthStore] User refreshed successfully');
+              update(s => ({
+                ...s,
+                user: refreshedUser,
+                isLoading: false,
+                isInitialized: true,
+              }));
+              return refreshedUser;
+            }
+          } catch (refreshError) {
+            console.error('[AuthStore] Failed to refresh user:', refreshError);
+          }
+          throw new Error('User expired after callback');
+        }
+        
+        // Update state with user
         update(s => ({
           ...s,
           user,
           isLoading: false,
           isInitialized: true,
         }));
+        
+        console.log('[AuthStore] User state updated successfully, isAuthenticated should be true now');
         return user;
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Callback failed';
+        console.error('[AuthStore] Callback error:', error);
         update(s => ({ ...s, isLoading: false, error: message }));
         throw error;
       }
@@ -193,6 +237,29 @@ export const authStore = createAuthStore();
 
 // Derived Stores für einfacheren Zugriff
 export const user: Readable<User | null> = derived(authStore, $auth => $auth.user);
-export const isAuthenticated: Readable<boolean> = derived(authStore, $auth => !!$auth.user && !$auth.user.expired);
+// isAuthenticated: User muss existieren und nicht expired sein
+// Wichtig: Prüfe auch, ob der User einen Access Token hat
+export const isAuthenticated: Readable<boolean> = derived(
+  authStore, 
+  $auth => {
+    const hasUser = !!$auth.user;
+    const notExpired = $auth.user ? !$auth.user.expired : false;
+    const hasToken = $auth.user ? !!$auth.user.access_token : false;
+    const result = hasUser && notExpired && hasToken;
+    
+    // Debug logging
+    if (hasUser && !result) {
+      console.log('[Auth] User exists but not authenticated:', {
+        hasUser,
+        notExpired,
+        hasToken,
+        expired: $auth.user?.expired,
+        expires_at: $auth.user?.expires_at
+      });
+    }
+    
+    return result;
+  }
+);
 export const isLoading: Readable<boolean> = derived(authStore, $auth => $auth.isLoading);
 export const authError: Readable<string | null> = derived(authStore, $auth => $auth.error);

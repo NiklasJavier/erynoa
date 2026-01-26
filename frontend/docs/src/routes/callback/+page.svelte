@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { authStore } from '$lib/auth';
+	import { getUser } from '$lib/auth/oidc';
 	import { Loader2, AlertCircle } from 'lucide-svelte';
 	import * as Card from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
@@ -10,14 +11,33 @@
 
 	onMount(async () => {
 		try {
-			await authStore.handleCallback();
+			console.log('[Callback] Starting callback processing...');
+			const user = await authStore.handleCallback();
+			console.log('[Callback] Callback processed successfully, user:', {
+				username: user?.profile?.preferred_username,
+				expired: user?.expired,
+				hasAccessToken: !!user?.access_token
+			});
+			
+			// Warte länger, damit der State vollständig aktualisiert wird
+			// und alle reactive updates durchgelaufen sind
+			await new Promise(resolve => setTimeout(resolve, 300));
+			
+			// Verifiziere nochmal, dass der User gesetzt ist
+			const currentUser = await getUser();
+			if (!currentUser || currentUser.expired) {
+				throw new Error('User not properly authenticated after callback');
+			}
+			
+			console.log('[Callback] User verified, redirecting...');
 			
 			// Hole gespeicherte Return URL oder nutze Dashboard als Default
 			const returnUrl = sessionStorage.getItem('auth_return_url') || '/';
 			sessionStorage.removeItem('auth_return_url');
 			console.log('[Callback] Redirecting to:', returnUrl);
 			
-			goto(returnUrl);
+			// Verwende replace statt goto, um die Callback-URL aus der History zu entfernen
+			goto(returnUrl, { replaceState: true });
 		} catch (err) {
 			console.error('[Callback] Error:', err);
 			error = err instanceof Error ? err.message : 'Authentication failed';

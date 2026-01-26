@@ -53,11 +53,16 @@ let cachedConfig: Config | null = null;
 /**
  * Lade Konfiguration vom Backend
  */
-export async function fetchConfig(): Promise<Config> {
-	if (cachedConfig) return cachedConfig;
+export async function fetchConfig(forceReload = false): Promise<Config> {
+	if (cachedConfig && !forceReload) return cachedConfig;
 	if (!browser) return DEFAULT_CONFIG;
 
 	try {
+		// Clear cache if forcing reload
+		if (forceReload) {
+			cachedConfig = null;
+		}
+		
 		const { infoClient } = await import('$lib/api/clients');
 		const client = infoClient();
 		const response = await client.getInfo({});
@@ -81,10 +86,18 @@ export async function fetchConfig(): Promise<Config> {
 
 		// Validiere und cache
 		cachedConfig = ConfigSchema.parse(config);
-		console.log('[Config] Loaded from backend:', cachedConfig.environment);
+		console.log('[Config] Loaded from backend:', {
+			environment: cachedConfig.environment,
+			clientId: cachedConfig.auth.clientId,
+			issuer: cachedConfig.auth.issuer
+		});
 		return cachedConfig;
 	} catch (error) {
-		console.warn('[Config] Failed to load from backend, using defaults', error);
+		console.error('[Config] Failed to load from backend, using defaults', error);
+		// Log detailed error for debugging
+		if (error instanceof Error) {
+			console.error('[Config] Error details:', error.message, error.stack);
+		}
 		return DEFAULT_CONFIG;
 	}
 }

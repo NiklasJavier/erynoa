@@ -11,7 +11,7 @@
 		
 		try {
 			status = 'Testing fetch...';
-			const response = await fetch('http://localhost:3000/api/v1/connect/godstack.v1.InfoService/GetInfo', {
+			const response = await fetch('http://localhost:3000/api/v1/connect/erynoa.v1.InfoService/GetInfo', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',

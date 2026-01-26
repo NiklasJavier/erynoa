@@ -143,7 +143,12 @@ while [ $backend_health_attempt -lt 10 ]; do
     fi
     backend_health_attempt=$((backend_health_attempt + 1))
     if [ $backend_health_attempt -lt 10 ]; then
-        sleep 3
+        # Increase sleep time for first few attempts (backend might be starting)
+        if [ $backend_health_attempt -lt 3 ]; then
+            sleep 5
+        else
+            sleep 3
+        fi
     fi
 done
 

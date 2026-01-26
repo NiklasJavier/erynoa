@@ -55,7 +55,7 @@ export const api = {
 };
 
 // Re-export generated types
-export * from '$gen/godstack/v1/user_pb';
-export * from '$gen/godstack/v1/health_pb';
-export * from '$gen/godstack/v1/info_pb';
-export * from '$gen/godstack/v1/storage_pb';
+export * from '$gen/erynoa/v1/user_pb';
+export * from '$gen/erynoa/v1/health_pb';
+export * from '$gen/erynoa/v1/info_pb';
+export * from '$gen/erynoa/v1/storage_pb';

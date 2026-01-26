@@ -5,10 +5,10 @@
  */
 
 import { createPromiseClient, type PromiseClient } from '@connectrpc/connect';
-import { UserService } from '$gen/godstack/v1/user_connect';
-import { HealthService } from '$gen/godstack/v1/health_connect';
-import { InfoService } from '$gen/godstack/v1/info_connect';
-import { StorageService } from '$gen/godstack/v1/storage_connect';
+import { UserService } from '$gen/erynoa/v1/user_connect';
+import { HealthService } from '$gen/erynoa/v1/health_connect';
+import { InfoService } from '$gen/erynoa/v1/info_connect';
+import { StorageService } from '$gen/erynoa/v1/storage_connect';
 import { createBaseTransport, createAuthenticatedTransport } from './transport';
 
 // Client Types

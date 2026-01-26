@@ -18,22 +18,60 @@ export interface AuthState {
 
 // Singleton UserManager
 let userManager: UserManager | null = null;
+let currentClientId: string | null = null;
 
 /**
  * Initialisiere den OIDC UserManager
+ * Wird neu initialisiert, wenn sich clientId ändert
+ * 
+ * @param issuer - Zitadel Issuer URL
+ * @param clientId - OIDC Client ID
+ * @param consoleUrl - Vollständige Console URL (z.B. http://localhost:3001/console) für Redirect-URIs
  */
-export function initAuth(issuer: string, clientId: string): UserManager {
+export function initAuth(issuer: string, clientId: string, consoleUrl?: string): UserManager {
   if (!browser) {
     throw new Error('Auth can only be initialized in the browser');
   }
   
-  if (userManager) return userManager;
+  // Re-initialize if clientId changed
+  if (userManager && currentClientId === clientId) {
+    return userManager;
+  }
   
-  // Berücksichtige Base-Path für Proxy-Routing
-  const redirectUri = `${window.location.origin}${base}/callback`;
-  const postLogoutRedirectUri = `${window.location.origin}${base}`;
+  // Reset if clientId changed
+  if (userManager && currentClientId !== clientId) {
+    console.log('[Auth] Client ID changed, re-initializing UserManager', { old: currentClientId, new: clientId });
+    userManager = null;
+  }
+  
+  currentClientId = clientId;
+  
+  // Verwende Console-URL aus Config für exakte Übereinstimmung mit Zitadel
+  // Falls nicht angegeben, Fallback auf dynamische Generierung
+  // Normalisiere URL: entferne trailing slash, füge /callback hinzu
+  let redirectUri: string;
+  let postLogoutRedirectUri: string;
+  
+  if (consoleUrl) {
+    // Entferne trailing slash falls vorhanden
+    const normalizedUrl = consoleUrl.replace(/\/+$/, '');
+    redirectUri = `${normalizedUrl}/callback`;
+    postLogoutRedirectUri = normalizedUrl;
+  } else {
+    // Fallback auf dynamische Generierung
+    redirectUri = `${window.location.origin}${base}/callback`;
+    postLogoutRedirectUri = `${window.location.origin}${base}`;
+  }
 
-  console.log('[Auth] Initializing with:', { issuer, clientId, redirectUri });
+  console.log('[Auth] Initializing with:', { 
+    issuer, 
+    clientId, 
+    redirectUri, 
+    postLogoutRedirectUri,
+    consoleUrl,
+    windowLocation: window.location.href,
+    base 
+  });
 
   userManager = new UserManager({
     authority: issuer,
