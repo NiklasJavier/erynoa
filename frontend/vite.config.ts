@@ -1,27 +1,15 @@
-import { defineConfig } from 'vite'
-import solid from 'vite-plugin-solid'
+import tailwindcss from '@tailwindcss/vite';
+import { sveltekit } from '@sveltejs/kit/vite';
+import { defineConfig } from 'vite';
 
 export default defineConfig({
-  plugins: [solid()],
-  server: {
-    port: 5173,
-    host: '0.0.0.0',
-    // Hot-Reload Konfiguration für Docker
-    hmr: {
-      host: 'localhost',
-      port: 5173,
-      protocol: 'ws',
-    },
-    // Kein Proxy nötig - API läuft auf dem Host und wird direkt angesprochen
-    // Der Frontend setzt VITE_API_URL oder nutzt das Fallback
-  },
-  build: {
-    target: 'esnext',
-    minify: 'esbuild',
-  },
-  resolve: {
-    alias: {
-      '@': '/src',
-    },
-  },
-})
+	plugins: [tailwindcss(), sveltekit()],
+	server: {
+		port: 5173,
+		strictPort: true,
+		host: true,
+	},
+	preview: {
+		port: 5173,
+	},
+});

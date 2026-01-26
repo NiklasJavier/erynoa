@@ -1,5 +1,5 @@
-   1.959331835s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="godstack_api"}: cargo::core::compiler::fingerprint: fingerprint error for godstack-api v0.1.0 (/workspace/backend)/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("godstack_api", ["lib"], "/workspace/backend/src/lib.rs", Edition2021) }
-   1.959492126s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="godstack_api"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/godstack-api-ea8dc08fd4104c86/lib-godstack_api`
+   3.441430252s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="godstack_api"}: cargo::core::compiler::fingerprint: fingerprint error for godstack-api v0.1.0 (/workspace/backend)/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("godstack_api", ["lib"], "/workspace/backend/src/lib.rs", Edition2021) }
+   3.441746877s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="godstack_api"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/godstack-api-ea8dc08fd4104c86/lib-godstack_api`
 
 Caused by:
     No such file or directory (os error 2)
@@ -47,8 +47,8 @@ Stack backtrace:
   27: __libc_start_call_main
   28: __libc_start_main@@GLIBC_2.34
   29: <unknown>
-   2.553661335s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for godstack-api v0.1.0 (/workspace/backend)/RunCustomBuild/TargetInner { ..: custom_build_target("build-script-build", "/workspace/backend/build.rs", Edition2021) }
-   2.553775335s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/godstack-api-eaefbf0ee2306723/run-build-script-build-script-build`
+   5.169036836s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for godstack-api v0.1.0 (/workspace/backend)/RunCustomBuild/TargetInner { ..: custom_build_target("build-script-build", "/workspace/backend/build.rs", Edition2021) }
+   5.169077044s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/godstack-api-eaefbf0ee2306723/run-build-script-build-script-build`
 
 Caused by:
     No such file or directory (os error 2)
@@ -98,8 +98,8 @@ Stack backtrace:
   29: __libc_start_call_main
   30: __libc_start_main@@GLIBC_2.34
   31: <unknown>
-   2.555135168s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for godstack-api v0.1.0 (/workspace/backend)/Build/TargetInner { ..: custom_build_target("build-script-build", "/workspace/backend/build.rs", Edition2021) }
-   2.555158002s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/godstack-api-b161baea7c5a78bd/build-script-build-script-build`
+   5.170198961s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for godstack-api v0.1.0 (/workspace/backend)/Build/TargetInner { ..: custom_build_target("build-script-build", "/workspace/backend/build.rs", Edition2021) }
+   5.170355211s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/godstack-api-b161baea7c5a78bd/build-script-build-script-build`
 
 Caused by:
     No such file or directory (os error 2)
@@ -149,8 +149,8 @@ Stack backtrace:
   29: __libc_start_call_main
   30: __libc_start_main@@GLIBC_2.34
   31: <unknown>
-   2.556796918s  INFO prepare_target{force=false package_id=axum-connect-build v0.3.2 target="axum_connect_build"}: cargo::core::compiler::fingerprint: fingerprint error for axum-connect-build v0.3.2/Build/TargetInner { name_inferred: true, ..: lib_target("axum_connect_build", ["lib"], "/home/vscode/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-connect-build-0.3.2/src/lib.rs", Edition2021) }
-   2.556813835s  INFO prepare_target{force=false package_id=axum-connect-build v0.3.2 target="axum_connect_build"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/axum-connect-build-9a16fcd9f289d547/lib-axum_connect_build`
+   5.172341336s  INFO prepare_target{force=false package_id=axum-connect-build v0.3.2 target="axum_connect_build"}: cargo::core::compiler::fingerprint: fingerprint error for axum-connect-build v0.3.2/Build/TargetInner { name_inferred: true, ..: lib_target("axum_connect_build", ["lib"], "/home/vscode/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-connect-build-0.3.2/src/lib.rs", Edition2021) }
+   5.172372169s  INFO prepare_target{force=false package_id=axum-connect-build v0.3.2 target="axum_connect_build"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/axum-connect-build-9a16fcd9f289d547/lib-axum_connect_build`
 
 Caused by:
     No such file or directory (os error 2)
@@ -201,8 +201,8 @@ Stack backtrace:
   30: __libc_start_call_main
   31: __libc_start_main@@GLIBC_2.34
   32: <unknown>
-   2.568133127s  INFO prepare_target{force=false package_id=protoc-fetcher v0.1.2 target="protoc_fetcher"}: cargo::core::compiler::fingerprint: fingerprint error for protoc-fetcher v0.1.2/Build/TargetInner { ..: lib_target("protoc_fetcher", ["lib"], "/home/vscode/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/protoc-fetcher-0.1.2/src/lib.rs", Edition2021) }
-   2.568184835s  INFO prepare_target{force=false package_id=protoc-fetcher v0.1.2 target="protoc_fetcher"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/protoc-fetcher-91e6478b143612bd/lib-protoc_fetcher`
+   5.192593836s  INFO prepare_target{force=false package_id=protoc-fetcher v0.1.2 target="protoc_fetcher"}: cargo::core::compiler::fingerprint: fingerprint error for protoc-fetcher v0.1.2/Build/TargetInner { ..: lib_target("protoc_fetcher", ["lib"], "/home/vscode/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/protoc-fetcher-0.1.2/src/lib.rs", Edition2021) }
+   5.192622378s  INFO prepare_target{force=false package_id=protoc-fetcher v0.1.2 target="protoc_fetcher"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/protoc-fetcher-91e6478b143612bd/lib-protoc_fetcher`
 
 Caused by:
     No such file or directory (os error 2)
@@ -254,8 +254,8 @@ Stack backtrace:
   31: __libc_start_call_main
   32: __libc_start_main@@GLIBC_2.34
   33: <unknown>
-   2.569384377s  INFO prepare_target{force=false package_id=reqwest v0.12.28 target="reqwest"}: cargo::core::compiler::fingerprint: fingerprint error for reqwest v0.12.28/Build/TargetInner { ..: lib_target("reqwest", ["lib"], "/home/vscode/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-0.12.28/src/lib.rs", Edition2021) }
-   2.569403877s  INFO prepare_target{force=false package_id=reqwest v0.12.28 target="reqwest"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/reqwest-f4c9669ccfb64d94/lib-reqwest`
+   5.193656503s  INFO prepare_target{force=false package_id=reqwest v0.12.28 target="reqwest"}: cargo::core::compiler::fingerprint: fingerprint error for reqwest v0.12.28/Build/TargetInner { ..: lib_target("reqwest", ["lib"], "/home/vscode/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-0.12.28/src/lib.rs", Edition2021) }
+   5.193691211s  INFO prepare_target{force=false package_id=reqwest v0.12.28 target="reqwest"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/reqwest-f4c9669ccfb64d94/lib-reqwest`
 
 Caused by:
     No such file or directory (os error 2)
@@ -308,8 +308,8 @@ Stack backtrace:
   32: __libc_start_call_main
   33: __libc_start_main@@GLIBC_2.34
   34: <unknown>
-   2.593610418s  INFO prepare_target{force=false package_id=hyper-tls v0.6.0 target="hyper_tls"}: cargo::core::compiler::fingerprint: fingerprint error for hyper-tls v0.6.0/Build/TargetInner { name_inferred: true, ..: lib_target("hyper_tls", ["lib"], "/home/vscode/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hyper-tls-0.6.0/src/lib.rs", Edition2018) }
-   2.593664668s  INFO prepare_target{force=false package_id=hyper-tls v0.6.0 target="hyper_tls"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/hyper-tls-19528dc5e9a63449/lib-hyper_tls`
+   5.232514128s  INFO prepare_target{force=false package_id=hyper-tls v0.6.0 target="hyper_tls"}: cargo::core::compiler::fingerprint: fingerprint error for hyper-tls v0.6.0/Build/TargetInner { name_inferred: true, ..: lib_target("hyper_tls", ["lib"], "/home/vscode/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hyper-tls-0.6.0/src/lib.rs", Edition2018) }
+   5.232551461s  INFO prepare_target{force=false package_id=hyper-tls v0.6.0 target="hyper_tls"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/hyper-tls-19528dc5e9a63449/lib-hyper_tls`
 
 Caused by:
     No such file or directory (os error 2)
@@ -363,8 +363,8 @@ Stack backtrace:
   33: __libc_start_call_main
   34: __libc_start_main@@GLIBC_2.34
   35: <unknown>
-   2.599317168s  INFO prepare_target{force=false package_id=native-tls v0.2.14 target="native_tls"}: cargo::core::compiler::fingerprint: fingerprint error for native-tls v0.2.14/Build/TargetInner { ..: lib_target("native_tls", ["lib"], "/home/vscode/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/native-tls-0.2.14/src/lib.rs", Edition2015) }
-   2.599465127s  INFO prepare_target{force=false package_id=native-tls v0.2.14 target="native_tls"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/native-tls-de1a9167ef2c32e8/lib-native_tls`
+   5.239544461s  INFO prepare_target{force=false package_id=native-tls v0.2.14 target="native_tls"}: cargo::core::compiler::fingerprint: fingerprint error for native-tls v0.2.14/Build/TargetInner { ..: lib_target("native_tls", ["lib"], "/home/vscode/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/native-tls-0.2.14/src/lib.rs", Edition2015) }
+   5.239659211s  INFO prepare_target{force=false package_id=native-tls v0.2.14 target="native_tls"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/native-tls-de1a9167ef2c32e8/lib-native_tls`
 
 Caused by:
     No such file or directory (os error 2)
@@ -419,8 +419,8 @@ Stack backtrace:
   34: __libc_start_call_main
   35: __libc_start_main@@GLIBC_2.34
   36: <unknown>
-   2.601726710s  INFO prepare_target{force=false package_id=native-tls v0.2.14 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for native-tls v0.2.14/RunCustomBuild/TargetInner { ..: custom_build_target("build-script-build", "/home/vscode/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/native-tls-0.2.14/build.rs", Edition2015) }
-   2.601746293s  INFO prepare_target{force=false package_id=native-tls v0.2.14 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/native-tls-275459ecba2b913b/run-build-script-build-script-build`
+   5.241024669s  INFO prepare_target{force=false package_id=native-tls v0.2.14 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for native-tls v0.2.14/RunCustomBuild/TargetInner { ..: custom_build_target("build-script-build", "/home/vscode/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/native-tls-0.2.14/build.rs", Edition2015) }
+   5.241051419s  INFO prepare_target{force=false package_id=native-tls v0.2.14 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/native-tls-275459ecba2b913b/run-build-script-build-script-build`
 
 Caused by:
     No such file or directory (os error 2)
@@ -477,8 +477,8 @@ Stack backtrace:
   36: __libc_start_call_main
   37: __libc_start_main@@GLIBC_2.34
   38: <unknown>
-   2.605482085s  INFO prepare_target{force=false package_id=openssl-sys v0.9.111 target="build-script-main"}: cargo::core::compiler::fingerprint: fingerprint error for openssl-sys v0.9.111/RunCustomBuild/TargetInner { ..: custom_build_target("build-script-main", "/home/vscode/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openssl-sys-0.9.111/build/main.rs", Edition2021) }
-   2.605504627s  INFO prepare_target{force=false package_id=openssl-sys v0.9.111 target="build-script-main"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/openssl-sys-ca6044670dac4884/run-build-script-build-script-main`
+   5.243622003s  INFO prepare_target{force=false package_id=openssl-sys v0.9.111 target="build-script-main"}: cargo::core::compiler::fingerprint: fingerprint error for openssl-sys v0.9.111/RunCustomBuild/TargetInner { ..: custom_build_target("build-script-main", "/home/vscode/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openssl-sys-0.9.111/build/main.rs", Edition2021) }
+   5.243688961s  INFO prepare_target{force=false package_id=openssl-sys v0.9.111 target="build-script-main"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/openssl-sys-ca6044670dac4884/run-build-script-build-script-main`
 
 Caused by:
     No such file or directory (os error 2)
@@ -536,8 +536,8 @@ Stack backtrace:
   37: __libc_start_call_main
   38: __libc_start_main@@GLIBC_2.34
   39: <unknown>
-   2.609909502s  INFO prepare_target{force=false package_id=openssl v0.10.75 target="openssl"}: cargo::core::compiler::fingerprint: fingerprint error for openssl v0.10.75/Build/TargetInner { ..: lib_target("openssl", ["lib"], "/home/vscode/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openssl-0.10.75/src/lib.rs", Edition2021) }
-   2.609934502s  INFO prepare_target{force=false package_id=openssl v0.10.75 target="openssl"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/openssl-3c7b21fc6b5275b9/lib-openssl`
+   5.248080419s  INFO prepare_target{force=false package_id=openssl v0.10.75 target="openssl"}: cargo::core::compiler::fingerprint: fingerprint error for openssl v0.10.75/Build/TargetInner { ..: lib_target("openssl", ["lib"], "/home/vscode/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openssl-0.10.75/src/lib.rs", Edition2021) }
+   5.248117128s  INFO prepare_target{force=false package_id=openssl v0.10.75 target="openssl"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/openssl-3c7b21fc6b5275b9/lib-openssl`
 
 Caused by:
     No such file or directory (os error 2)
@@ -593,8 +593,8 @@ Stack backtrace:
   35: __libc_start_call_main
   36: __libc_start_main@@GLIBC_2.34
   37: <unknown>
-   2.612926460s  INFO prepare_target{force=false package_id=openssl v0.10.75 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for openssl v0.10.75/RunCustomBuild/TargetInner { ..: custom_build_target("build-script-build", "/home/vscode/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openssl-0.10.75/build.rs", Edition2021) }
-   2.612944002s  INFO prepare_target{force=false package_id=openssl v0.10.75 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/openssl-f33f075b22e4e262/run-build-script-build-script-build`
+   5.252190336s  INFO prepare_target{force=false package_id=openssl v0.10.75 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for openssl v0.10.75/RunCustomBuild/TargetInner { ..: custom_build_target("build-script-build", "/home/vscode/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openssl-0.10.75/build.rs", Edition2021) }
+   5.252236044s  INFO prepare_target{force=false package_id=openssl v0.10.75 target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/openssl-f33f075b22e4e262/run-build-script-build-script-build`
 
 Caused by:
     No such file or directory (os error 2)
@@ -652,8 +652,8 @@ Stack backtrace:
   37: __libc_start_call_main
   38: __libc_start_main@@GLIBC_2.34
   39: <unknown>
-   2.616724585s  INFO prepare_target{force=false package_id=openssl-sys v0.9.111 target="openssl_sys"}: cargo::core::compiler::fingerprint: fingerprint error for openssl-sys v0.9.111/Build/TargetInner { ..: lib_target("openssl_sys", ["lib"], "/home/vscode/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openssl-sys-0.9.111/src/lib.rs", Edition2021) }
-   2.616750543s  INFO prepare_target{force=false package_id=openssl-sys v0.9.111 target="openssl_sys"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/openssl-sys-a5788d50ffafd80a/lib-openssl_sys`
+   5.255982753s  INFO prepare_target{force=false package_id=openssl-sys v0.9.111 target="openssl_sys"}: cargo::core::compiler::fingerprint: fingerprint error for openssl-sys v0.9.111/Build/TargetInner { ..: lib_target("openssl_sys", ["lib"], "/home/vscode/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/openssl-sys-0.9.111/src/lib.rs", Edition2021) }
+   5.256010253s  INFO prepare_target{force=false package_id=openssl-sys v0.9.111 target="openssl_sys"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/openssl-sys-a5788d50ffafd80a/lib-openssl_sys`
 
 Caused by:
     No such file or directory (os error 2)
@@ -710,8 +710,8 @@ Stack backtrace:
   36: __libc_start_call_main
   37: __libc_start_main@@GLIBC_2.34
   38: <unknown>
-   2.618666585s  INFO prepare_target{force=false package_id=tokio-native-tls v0.3.1 target="tokio_native_tls"}: cargo::core::compiler::fingerprint: fingerprint error for tokio-native-tls v0.3.1/Build/TargetInner { name_inferred: true, ..: lib_target("tokio_native_tls", ["lib"], "/home/vscode/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-native-tls-0.3.1/src/lib.rs", Edition2018) }
-   2.618698627s  INFO prepare_target{force=false package_id=tokio-native-tls v0.3.1 target="tokio_native_tls"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/tokio-native-tls-5de929ffd8d6d45f/lib-tokio_native_tls`
+   5.258510211s  INFO prepare_target{force=false package_id=tokio-native-tls v0.3.1 target="tokio_native_tls"}: cargo::core::compiler::fingerprint: fingerprint error for tokio-native-tls v0.3.1/Build/TargetInner { name_inferred: true, ..: lib_target("tokio_native_tls", ["lib"], "/home/vscode/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-native-tls-0.3.1/src/lib.rs", Edition2018) }
+   5.258571836s  INFO prepare_target{force=false package_id=tokio-native-tls v0.3.1 target="tokio_native_tls"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/tokio-native-tls-5de929ffd8d6d45f/lib-tokio_native_tls`
 
 Caused by:
     No such file or directory (os error 2)
@@ -766,8 +766,8 @@ Stack backtrace:
   34: __libc_start_call_main
   35: __libc_start_main@@GLIBC_2.34
   36: <unknown>
-   2.903501210s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="godstack_api"}: cargo::core::compiler::fingerprint: fingerprint error for godstack-api v0.1.0 (/workspace/backend)/Check { test: true }/TargetInner { name_inferred: true, ..: lib_target("godstack_api", ["lib"], "/workspace/backend/src/lib.rs", Edition2021) }
-   2.903539169s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="godstack_api"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/godstack-api-e6fe32c5f2c18fe1/test-lib-godstack_api`
+   5.518598294s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="godstack_api"}: cargo::core::compiler::fingerprint: fingerprint error for godstack-api v0.1.0 (/workspace/backend)/Check { test: true }/TargetInner { name_inferred: true, ..: lib_target("godstack_api", ["lib"], "/workspace/backend/src/lib.rs", Edition2021) }
+   5.518643586s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="godstack_api"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/godstack-api-e6fe32c5f2c18fe1/test-lib-godstack_api`
 
 Caused by:
     No such file or directory (os error 2)
@@ -815,8 +815,8 @@ Stack backtrace:
   27: __libc_start_call_main
   28: __libc_start_main@@GLIBC_2.34
   29: <unknown>
-   2.922443377s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="godstack-api"}: cargo::core::compiler::fingerprint: fingerprint error for godstack-api v0.1.0 (/workspace/backend)/Check { test: false }/TargetInner { name: "godstack-api", doc: true, ..: with_path("/workspace/backend/src/main.rs", Edition2021) }
-   2.922480544s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="godstack-api"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/godstack-api-d0afd60de0d48f36/bin-godstack-api`
+   5.536680044s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="godstack-api"}: cargo::core::compiler::fingerprint: fingerprint error for godstack-api v0.1.0 (/workspace/backend)/Check { test: false }/TargetInner { name: "godstack-api", doc: true, ..: with_path("/workspace/backend/src/main.rs", Edition2021) }
+   5.536755211s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="godstack-api"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/godstack-api-d0afd60de0d48f36/bin-godstack-api`
 
 Caused by:
     No such file or directory (os error 2)
@@ -864,8 +864,8 @@ Stack backtrace:
   27: __libc_start_call_main
   28: __libc_start_main@@GLIBC_2.34
   29: <unknown>
-   2.925719002s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="godstack-api"}: cargo::core::compiler::fingerprint: fingerprint error for godstack-api v0.1.0 (/workspace/backend)/Check { test: true }/TargetInner { name: "godstack-api", doc: true, ..: with_path("/workspace/backend/src/main.rs", Edition2021) }
-   2.925748919s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="godstack-api"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/godstack-api-c94d2d5f55c3c1d8/test-bin-godstack-api`
+   5.540025378s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="godstack-api"}: cargo::core::compiler::fingerprint: fingerprint error for godstack-api v0.1.0 (/workspace/backend)/Check { test: true }/TargetInner { name: "godstack-api", doc: true, ..: with_path("/workspace/backend/src/main.rs", Edition2021) }
+   5.540054544s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="godstack-api"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/godstack-api-c94d2d5f55c3c1d8/test-bin-godstack-api`
 
 Caused by:
     No such file or directory (os error 2)
@@ -913,8 +913,8 @@ Stack backtrace:
   27: __libc_start_call_main
   28: __libc_start_main@@GLIBC_2.34
   29: <unknown>
-   2.929609960s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="api"}: cargo::core::compiler::fingerprint: fingerprint error for godstack-api v0.1.0 (/workspace/backend)/Check { test: true }/TargetInner { kind: "test", name: "api", benched: false, ..: with_path("/workspace/backend/tests/api.rs", Edition2021) }
-   2.929740335s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="api"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/godstack-api-b7eaf2d1cab98ca6/test-integration-test-api`
+   5.542725586s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="api"}: cargo::core::compiler::fingerprint: fingerprint error for godstack-api v0.1.0 (/workspace/backend)/Check { test: true }/TargetInner { kind: "test", name: "api", benched: false, ..: with_path("/workspace/backend/tests/api.rs", Edition2021) }
+   5.542768336s  INFO prepare_target{force=false package_id=godstack-api v0.1.0 (/workspace/backend) target="api"}: cargo::core::compiler::fingerprint:     err: failed to read `/workspace/backend/target/debug/.fingerprint/godstack-api-b7eaf2d1cab98ca6/test-integration-test-api`
 
 Caused by:
     No such file or directory (os error 2)

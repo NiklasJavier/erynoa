@@ -16,7 +16,7 @@ name: godstack-services
 
 services:
   # ─────────────────────────────────────────────────────────────────────────
-  # Frontend - Solid.js + Vite mit Hot-Reloading
+  # Frontend - SvelteKit + Vite mit Hot-Reloading
   # ─────────────────────────────────────────────────────────────────────────
   frontend:
     build:
@@ -25,7 +25,14 @@ services:
     ports:
       - "5173:5173"
     volumes:
-      - ../frontend:/workspace/frontend
+      # SvelteKit source code
+      - ../frontend/src:/workspace/frontend/src:cached
+      - ../frontend/static:/workspace/frontend/static:cached
+      # SvelteKit config files
+      - ../frontend/svelte.config.js:/workspace/frontend/svelte.config.js:cached
+      - ../frontend/vite.config.ts:/workspace/frontend/vite.config.ts:cached
+      - ../frontend/tsconfig.json:/workspace/frontend/tsconfig.json:cached
+      # Exclude node_modules (use container's version)
       - /workspace/frontend/node_modules
       # Proto für Code-Generierung
       - ../proto:/workspace/proto:cached

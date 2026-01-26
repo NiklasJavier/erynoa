@@ -1,4 +1,4 @@
-# Frontend Dockerfile mit Vite Hot-Reloading
+# Frontend Dockerfile mit Vite Hot-Reloading (SvelteKit)
 FROM node:20-alpine
 
 WORKDIR /workspace
@@ -17,13 +17,8 @@ WORKDIR /workspace/frontend
 COPY frontend/package*.json ./
 RUN npm ci
 
-# Installiere chokidar-cli für Proto-Watching (optional, für manuelles Watching)
-RUN npm install --save-dev chokidar-cli || true
-
 # Kopiere Frontend Code
 COPY frontend .
-
-# Generiere Proto-Code beim Start wird im Entrypoint gemacht
 
 # Exponiere Port für Vite Dev Server
 EXPOSE 5173
@@ -64,11 +59,11 @@ RUN cat > /entrypoint.sh << 'EOF'
 set -e
 
 echo "========================================="
-echo "Frontend Container Starting..."
+echo "Frontend Container Starting (SvelteKit)..."
 echo "========================================="
 
 # Generiere Proto-Code beim Start
-echo "[1/2] Generating Proto code..."
+echo "[1/3] Generating Proto code..."
 cd /workspace
 if [ -f "buf.gen.yaml" ]; then
   buf generate 2>&1 && echo "✅ Proto code generated" || echo "⚠️  Proto generation failed (will retry on file changes)"
@@ -81,13 +76,17 @@ echo "[2/3] Starting Proto file watcher..."
 node /workspace/proto-watch.js &
 WATCHER_PID=$!
 
+# SvelteKit Sync (generiert .svelte-kit Verzeichnis)
+echo "[3/3] Running SvelteKit sync..."
+cd /workspace/frontend
+npx svelte-kit sync 2>/dev/null || true
+
 # Starte Vite Dev Server
-echo "[3/3] Starting Vite Dev Server..."
 echo "========================================="
+echo "Starting Vite Dev Server (SvelteKit)..."
 echo "Proto changes will trigger regeneration"
 echo "========================================="
 
-cd /workspace/frontend
 exec npm run dev -- --host 0.0.0.0 --port 5173
 EOF
 
