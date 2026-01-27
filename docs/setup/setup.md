@@ -2,51 +2,27 @@
 
 **Vollständige Anleitung zur Einrichtung der Entwicklungsumgebung**
 
-**Letzte Aktualisierung**: 2026-01-27 (23:40)
+**Letzte Aktualisierung**: 2026-01-28
 
 ---
 
-## 🚀 Quick Start (Empfohlen)
+## 📋 Voraussetzungen
+
+Für die Entwicklung benötigst du:
+
+| Tool               | Beschreibung                                       | Installation                                           |
+| ------------------ | -------------------------------------------------- | ------------------------------------------------------ |
+| **Nix**            | Package Manager (stellt alle anderen Tools bereit) | [→ Nix installieren](#-nix-installieren)               |
+| **Docker Desktop** | Container Runtime für Services                     | [→ Docker installieren](#-docker-desktop-installieren) |
+| **Git + SSH**      | Repository-Zugriff (optional)                      | [→ Git/SSH Setup](#-git--ssh-setup-optional)           |
 
 **Zeitaufwand**: ~5-10 Minuten
-
-**Voraussetzungen:** (siehe unten für Installationsanleitung)
-- Nix installiert
-- Docker Desktop installiert und gestartet
-
-```bash
-# 1. Repository klonen
-git clone git@github.com:NiklasJavier/erynoa.git
-cd erynoa
-
-# 2. Nix Dev-Shell betreten (lädt alle Tools automatisch)
-nix develop
-
-# 3. Projekt starten (startet alles inkl. automatischer ZITADEL-Konfiguration)
-just dev
-```
-
-**4. Warte 2 Minuten** ⏳
-
-Die Services starten und ZITADEL wird automatisch konfiguriert. Nach ca. 2 Minuten kannst du im Browser öffnen:
-
-```
-http://localhost:3001
-```
-
-**Fertig!** 🎉
-
-**Was passiert automatisch:**
-- Services starten (PostgreSQL, DragonflyDB, MinIO, ZITADEL)
-- ZITADEL wird automatisch konfiguriert (Projekt, Apps, Test-User)
-- Frontends werden über Caddy Proxy auf Port 3001 bereitgestellt
-- Backend läuft auf Port 3000 (und über Proxy auf Port 3001/api)
 
 ---
 
 ## 📦 Nix installieren
 
-Nix ist der einzige Package Manager, den du installieren musst. Alle anderen Tools werden automatisch von Nix bereitgestellt.
+Nix ist der einzige Package Manager, den du installieren musst. Alle anderen Tools (Rust, Node.js, pnpm, buf, just, etc.) werden automatisch von Nix bereitgestellt.
 
 ### macOS
 
@@ -55,6 +31,7 @@ curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix 
 ```
 
 Terminal neu starten, dann verifizieren:
+
 ```bash
 nix --version
 ```
@@ -66,6 +43,7 @@ curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix 
 ```
 
 Terminal neu starten, dann verifizieren:
+
 ```bash
 nix --version
 ```
@@ -81,6 +59,7 @@ nix --version
 Download von: https://www.docker.com/products/docker-desktop/
 
 Oder via Homebrew:
+
 ```bash
 brew install --cask docker
 ```
@@ -100,7 +79,9 @@ Nach der Installation Docker Desktop starten und warten bis es läuft.
 
 ---
 
-## 🔑 Git & SSH Setup (Optional, für Repository-Zugriff)
+## 🔑 Git & SSH Setup (Optional)
+
+> **Hinweis:** Nur nötig, wenn du das Repository über SSH klonen oder Commits signieren möchtest.
 
 ### SSH-Key erstellen
 
@@ -115,6 +96,7 @@ ssh-keygen -t ed25519 -C "git-signing" -f ~/.ssh/id_ed25519_signing -N ""
 ### SSH-Agent konfigurieren
 
 **macOS:**
+
 ```bash
 eval "$(ssh-agent -s)"
 cat >> ~/.ssh/config << 'EOF'
@@ -127,6 +109,7 @@ ssh-add --apple-use-keychain ~/.ssh/id_ed25519
 ```
 
 **Ubuntu/Debian:**
+
 ```bash
 eval "$(ssh-agent -s)"
 cat >> ~/.ssh/config << 'EOF'
@@ -165,6 +148,8 @@ git config --global commit.gpgsign true
 
 ## 🚀 Projekt starten
 
+Sobald Nix und Docker installiert sind, kannst du das Projekt starten:
+
 ### 1. Repository klonen
 
 ```bash
@@ -179,12 +164,13 @@ nix develop
 ```
 
 Dies lädt automatisch alle Tools:
-- Rust Toolchain (inkl. rust-analyzer, clippy)
-- Node.js & pnpm
-- buf (Protobuf)
-- just (Task Runner)
-- sqlx CLI
-- Alle Build-Tools
+
+- ✅ Rust Toolchain (inkl. rust-analyzer, clippy)
+- ✅ Node.js & pnpm
+- ✅ buf (Protobuf)
+- ✅ just (Task Runner)
+- ✅ sqlx CLI
+- ✅ Alle Build-Tools
 
 ### 3. Projekt starten
 
@@ -192,20 +178,41 @@ Dies lädt automatisch alle Tools:
 just dev
 ```
 
-Das startet:
-- Hintergrund-Services (PostgreSQL, DragonflyDB, MinIO, ZITADEL)
-- ZITADEL automatische Konfiguration (Projekt, Apps mit dynamischen Client-IDs, Test-User)
-- Frontends (Console, Platform, Docs) über Caddy Proxy auf Port 3001
-- Backend auf Port 3000 (und über Proxy auf Port 3001/api)
+### 4. Warte 2 Minuten ⏳
 
-**URLs:**
-- Console: http://localhost:3001/console
-- Platform: http://localhost:3001/platform
-- Docs: http://localhost:3001/docs
-- Backend API: http://localhost:3001/api
-- Backend direkt: http://localhost:3000
-- ZITADEL: http://localhost:8080
-- MinIO Console: http://localhost:9001
+Die Services starten und ZITADEL wird automatisch konfiguriert.
+
+**Was passiert automatisch:**
+
+- Services starten (PostgreSQL, DragonflyDB, MinIO, ZITADEL)
+- ZITADEL wird konfiguriert (Projekt, Apps, Test-User)
+- Frontends werden über Caddy Proxy bereitgestellt
+- Backend läuft auf Port 3000
+
+### 5. Im Browser öffnen
+
+```
+http://localhost:3001
+```
+
+**Fertig!** 🎉
+
+**Alle URLs:**
+| Service | URL |
+|---------|-----|
+| **Proxy (Hauptzugang)** | http://localhost:3001 |
+| Console | http://localhost:3001/console |
+| Platform | http://localhost:3001/platform |
+| Docs | http://localhost:3001/docs |
+| Backend API | http://localhost:3001/api |
+| Backend direkt | http://localhost:3000 |
+| ZITADEL | http://localhost:8080 |
+| MinIO Console | http://localhost:9001 |
+
+**Test Login:**
+
+- User: `testuser` / `Test123!`
+- Admin: `zitadel-admin` / `Password1!`
 
 ---
 
@@ -213,34 +220,34 @@ Das startet:
 
 ### Entwicklung
 
-| Befehl | Beschreibung |
-|--------|--------------|
-| `just dev` | **Startet alles** - Console + Platform + Docs + Backend + Services |
-| `just dev [frontend]` | Startet spezifisches Frontend (console, platform, docs) |
-| `just status` | Zeigt Status aller Services |
-| `just logs [service]` | Logs anzeigen (alle oder spezifischer Service) |
-| `just stop` | Stoppt alle Container |
-| `just restart` | Schneller Neustart aller Dev-Services |
+| Befehl                | Beschreibung                                                       |
+| --------------------- | ------------------------------------------------------------------ |
+| `just dev`            | **Startet alles** - Console + Platform + Docs + Backend + Services |
+| `just dev [frontend]` | Startet spezifisches Frontend (console, platform, docs)            |
+| `just status`         | Zeigt Status aller Services                                        |
+| `just logs [service]` | Logs anzeigen (alle oder spezifischer Service)                     |
+| `just stop`           | Stoppt alle Container                                              |
+| `just restart`        | Schneller Neustart aller Dev-Services                              |
 
 ### Setup & Reset
 
-| Befehl | Beschreibung |
-|--------|--------------|
-| `just init` | Initialisierung ohne Dev-Server |
-| `just init-env` | Erstellt `.env` aus `.env.example` |
-| `just zitadel-setup` | ZITADEL neu konfigurieren |
-| `just minio-setup` | MinIO Buckets erstellen |
-| `just reset` | **Alles löschen** und neu starten |
+| Befehl               | Beschreibung                       |
+| -------------------- | ---------------------------------- |
+| `just init`          | Initialisierung ohne Dev-Server    |
+| `just init-env`      | Erstellt `.env` aus `.env.example` |
+| `just zitadel-setup` | ZITADEL neu konfigurieren          |
+| `just minio-setup`   | MinIO Buckets erstellen            |
+| `just reset`         | **Alles löschen** und neu starten  |
 
 ### Backend
 
-| Befehl | Beschreibung |
-|--------|--------------|
-| `just check` | Cargo check |
-| `just lint` | Clippy Linter |
-| `just fmt` | Code formatieren |
-| `just test` | Tests ausführen |
-| `just ci` | fmt + lint + test |
+| Befehl            | Beschreibung         |
+| ----------------- | -------------------- |
+| `just check`      | Cargo check          |
+| `just lint`       | Clippy Linter        |
+| `just fmt`        | Code formatieren     |
+| `just test`       | Tests ausführen      |
+| `just ci`         | fmt + lint + test    |
 | `just db-migrate` | Migrations ausführen |
 
 Alle Befehle: `just --list`
@@ -250,36 +257,44 @@ Alle Befehle: `just --list`
 ## 🐛 Troubleshooting
 
 ### Services starten nicht
+
 ```bash
 just reset
 just dev
 ```
 
 ### Port bereits belegt
+
 ```bash
 just stop
 lsof -i :3000  # oder :3001, :8080
 ```
 
 ### Nix: "experimental-features" Fehler
+
 ```bash
 mkdir -p ~/.config/nix
 echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
 ```
 
 ### Docker: Permission Denied
+
 Docker Desktop muss gestartet sein. Überprüfen mit:
+
 ```bash
 docker ps
 ```
 
 ### direnv: ".envrc is blocked"
+
 Beim ersten Öffnen des Projekts erscheint diese Fehlermeldung:
+
 ```
 direnv: error .envrc is blocked. Run `direnv allow` to approve its content
 ```
 
 **Lösung:**
+
 ```bash
 # Im Projektverzeichnis ausführen:
 cd /path/to/erynoa
@@ -287,6 +302,7 @@ direnv allow
 ```
 
 Danach die Shell neu laden:
+
 ```bash
 exec zsh  # oder exec bash
 ```
