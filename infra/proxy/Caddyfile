@@ -42,6 +42,8 @@
         reverse_proxy console:5173 {
             header_up Host localhost:5173
         }
+        # Kompression für bessere Performance
+        encode gzip zstd
     }
 
     # Platform Frontend
@@ -49,6 +51,8 @@
         reverse_proxy platform:5174 {
             header_up Host localhost:5174
         }
+        # Kompression für bessere Performance
+        encode gzip zstd
     }
 
     # Docs Frontend
@@ -56,6 +60,8 @@
         reverse_proxy docs:5175 {
             header_up Host localhost:5175
         }
+        # Kompression für bessere Performance
+        encode gzip zstd
     }
 
     # Backend API - Muss vor dem Root-Handle sein
