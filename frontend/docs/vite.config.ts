@@ -9,6 +9,8 @@ export default defineConfig({
 		port: 5175,
 		strictPort: true,
 		host: true,
+		// Erlaube alle Hosts (für Proxy-Zugriff)
+		allowedHosts: ['all'],
 	},
 	preview: {
 		port: 5175,

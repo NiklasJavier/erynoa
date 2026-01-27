@@ -20,12 +20,11 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml ./
 # Kopiere alle Frontend-Verzeichnisse (pnpm Workspace benötigt alle Packages)
 COPY frontend/ ./frontend/
 
-WORKDIR /workspace/console
-
 # Installiere pnpm Abhängigkeiten (im Workspace-Root)
 WORKDIR /workspace
 RUN pnpm install --frozen-lockfile
 
+# Wechsle zum Console-Verzeichnis (node_modules sind jetzt installiert)
 WORKDIR /workspace/console
 
 # Exponiere Port für Vite Dev Server
@@ -106,7 +105,13 @@ WATCHER_PID=$!
 # SvelteKit Sync (generiert .svelte-kit Verzeichnis)
 echo "[3/3] Running SvelteKit sync..."
 cd /workspace/console
-pnpm exec svelte-kit sync 2>/dev/null || true
+if [ -f "package.json" ]; then
+  pnpm exec svelte-kit sync 2>/dev/null || true
+else
+  echo "⚠️  package.json not found in /workspace/console, skipping sync"
+  echo "   Current directory: $(pwd)"
+  echo "   Contents: $(ls -la)"
+fi
 
 # Starte Vite Dev Server
 echo "========================================="
@@ -114,7 +119,51 @@ echo "Starting Vite Dev Server (SvelteKit)..."
 echo "Proto changes will trigger regeneration"
 echo "========================================="
 
-exec pnpm run dev -- --host 0.0.0.0 --port 5173
+# Prüfe ob package.json vorhanden ist
+if [ ! -f "/workspace/console/package.json" ]; then
+  echo "❌ ERROR: package.json not found in /workspace/console"
+  echo "   Current directory: $(pwd)"
+  echo "   Contents: $(ls -la)"
+  echo "   Waiting 5 seconds for volume mount..."
+  sleep 5
+  if [ ! -f "/workspace/console/package.json" ]; then
+    echo "❌ ERROR: package.json still not found after wait"
+    exit 1
+  fi
+fi
+
+# Installiere node_modules falls nicht vorhanden (z.B. bei neuem Volume)
+# pnpm Workspaces installieren node_modules im Workspace-Root
+echo "Checking for node_modules..."
+if [ ! -d "/workspace/node_modules" ] || [ -z "$(ls -A /workspace/node_modules 2>/dev/null)" ]; then
+  echo "⚠️  node_modules not found or empty, installing..."
+  cd /workspace
+  echo "   Current directory: $(pwd)"
+  echo "   pnpm-lock.yaml exists: $([ -f pnpm-lock.yaml ] && echo 'yes' || echo 'no')"
+  echo "   pnpm-workspace.yaml exists: $([ -f pnpm-workspace.yaml ] && echo 'yes' || echo 'no')"
+  pnpm install --frozen-lockfile || {
+    echo "❌ ERROR: pnpm install failed"
+    exit 1
+  }
+  echo "✅ node_modules installed in /workspace/node_modules"
+  ls -la /workspace/node_modules | head -5
+else
+  echo "✅ node_modules already exist in /workspace/node_modules"
+fi
+
+# Wechsle zum Console-Verzeichnis
+cd /workspace/console
+
+# Prüfe ob node_modules im Workspace-Root vorhanden sind
+if [ ! -d "/workspace/node_modules" ]; then
+  echo "❌ ERROR: node_modules not found in /workspace/node_modules"
+  exit 1
+fi
+
+# Verwende pnpm mit --filter um das console Package zu finden
+# Oder verwende pnpm run dev direkt (pnpm sollte Workspace automatisch erkennen)
+# Füge --host hinzu, damit Vite von außen erreichbar ist
+exec pnpm --filter console run dev -- --host 0.0.0.0
 EOF
 
 RUN chmod +x /entrypoint.sh

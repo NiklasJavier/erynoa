@@ -27,21 +27,26 @@ services:
     volumes:
       # SvelteKit source code
       # Pfade relativ zum docker-compose.yml Verzeichnis (infra/docker/)
+      # Mounte nur src/, static/ und config files, nicht das gesamte Verzeichnis
+      # (damit node_modules im Container bleiben)
       - ../../frontend/console/src:/workspace/console/src:cached
       - ../../frontend/console/static:/workspace/console/static:cached
-      # SvelteKit config files
       - ../../frontend/console/svelte.config.js:/workspace/console/svelte.config.js:cached
       - ../../frontend/console/vite.config.ts:/workspace/console/vite.config.ts:cached
       - ../../frontend/console/tsconfig.json:/workspace/console/tsconfig.json:cached
-      # Exclude node_modules (use container's version)
-      - /workspace/console/node_modules
+      - ../../frontend/console/package.json:/workspace/console/package.json:cached
+      # node_modules bleiben im Container (nicht gemountet)
+      # pnpm Workspaces installieren node_modules im Workspace-Root
+      # Verwende named volume für node_modules im Workspace-Root (wird nicht überschrieben)
+      - console-node_modules:/workspace/node_modules
       # Proto für Code-Generierung
       - ../../backend/proto:/workspace/backend/proto:cached
       # Buf-Konfiguration (im Workspace-Root)
       - ../../buf.gen.yaml:/workspace/buf.gen.yaml:cached
       - ../../buf.yaml:/workspace/buf.yaml:cached
-      # Gen-Verzeichnis für Hot-Reload
-      - ../../frontend/console/src/gen:/workspace/console/src/gen:cached
+      # pnpm Workspace-Dateien (für Monorepo)
+      - ../../pnpm-lock.yaml:/workspace/pnpm-lock.yaml:cached
+      - ../../pnpm-workspace.yaml:/workspace/pnpm-workspace.yaml:cached
     environment:
       - NODE_ENV=development
       - VITE_API_URL=http://localhost:3001/api
@@ -65,21 +70,26 @@ services:
     volumes:
       # SvelteKit source code
       # Pfade relativ zum docker-compose.yml Verzeichnis (infra/docker/)
+      # Mounte nur src/, static/ und config files, nicht das gesamte Verzeichnis
+      # (damit node_modules im Container bleiben)
       - ../../frontend/platform/src:/workspace/platform/src:cached
       - ../../frontend/platform/static:/workspace/platform/static:cached
-      # SvelteKit config files
       - ../../frontend/platform/svelte.config.js:/workspace/platform/svelte.config.js:cached
       - ../../frontend/platform/vite.config.ts:/workspace/platform/vite.config.ts:cached
       - ../../frontend/platform/tsconfig.json:/workspace/platform/tsconfig.json:cached
-      # Exclude node_modules (use container's version)
-      - /workspace/platform/node_modules
+      - ../../frontend/platform/package.json:/workspace/platform/package.json:cached
+      # node_modules bleiben im Container (nicht gemountet)
+      # pnpm Workspaces installieren node_modules im Workspace-Root
+      # Verwende named volume für node_modules im Workspace-Root (wird nicht überschrieben)
+      - platform-node_modules:/workspace/node_modules
       # Proto für Code-Generierung
       - ../../backend/proto:/workspace/backend/proto:cached
       # Buf-Konfiguration (im Workspace-Root)
       - ../../buf.gen.yaml:/workspace/buf.gen.yaml:cached
       - ../../buf.yaml:/workspace/buf.yaml:cached
-      # Gen-Verzeichnis für Hot-Reload
-      - ../../frontend/platform/src/gen:/workspace/platform/src/gen:cached
+      # pnpm Workspace-Dateien (für Monorepo)
+      - ../../pnpm-lock.yaml:/workspace/pnpm-lock.yaml:cached
+      - ../../pnpm-workspace.yaml:/workspace/pnpm-workspace.yaml:cached
     environment:
       - NODE_ENV=development
       - VITE_API_URL=http://localhost:3001/api
@@ -103,21 +113,26 @@ services:
     volumes:
       # SvelteKit source code
       # Pfade relativ zum docker-compose.yml Verzeichnis (infra/docker/)
+      # Mounte nur src/, static/ und config files, nicht das gesamte Verzeichnis
+      # (damit node_modules im Container bleiben)
       - ../../frontend/docs/src:/workspace/docs/src:cached
       - ../../frontend/docs/static:/workspace/docs/static:cached
-      # SvelteKit config files
       - ../../frontend/docs/svelte.config.js:/workspace/docs/svelte.config.js:cached
       - ../../frontend/docs/vite.config.ts:/workspace/docs/vite.config.ts:cached
       - ../../frontend/docs/tsconfig.json:/workspace/docs/tsconfig.json:cached
-      # Exclude node_modules (use container's version)
-      - /workspace/docs/node_modules
+      - ../../frontend/docs/package.json:/workspace/docs/package.json:cached
+      # node_modules bleiben im Container (nicht gemountet)
+      # pnpm Workspaces installieren node_modules im Workspace-Root
+      # Verwende named volume für node_modules im Workspace-Root (wird nicht überschrieben)
+      - docs-node_modules:/workspace/node_modules
       # Proto für Code-Generierung
       - ../../backend/proto:/workspace/backend/proto:cached
       # Buf-Konfiguration (im Workspace-Root)
       - ../../buf.gen.yaml:/workspace/buf.gen.yaml:cached
       - ../../buf.yaml:/workspace/buf.yaml:cached
-      # Gen-Verzeichnis für Hot-Reload
-      - ../../frontend/docs/src/gen:/workspace/docs/src/gen:cached
+      # pnpm Workspace-Dateien (für Monorepo)
+      - ../../pnpm-lock.yaml:/workspace/pnpm-lock.yaml:cached
+      - ../../pnpm-workspace.yaml:/workspace/pnpm-workspace.yaml:cached
     environment:
       - NODE_ENV=development
       - VITE_API_URL=http://localhost:3001/api
@@ -356,6 +371,47 @@ services:
       - devnet
 
   # ─────────────────────────────────────────────────────────────────────────
+  # ZITADEL Setup Init - Führt ZITADEL Setup automatisch aus (idempotent)
+  # ─────────────────────────────────────────────────────────────────────────
+  # Dieser Container führt das ZITADEL Setup automatisch aus, wenn ZITADEL bereit ist.
+  # Das Setup ist idempotent: Es kann mehrfach ausgeführt werden ohne Probleme.
+  # Es erstellt/aktualisiert automatisch die Apps für console, platform und docs.
+  zitadel-setup-init:
+    image: alpine:latest
+    profiles: [auth]
+    depends_on:
+      zitadel:
+        condition: service_healthy
+    environment:
+      - ZITADEL_URL=http://zitadel:8080
+      - PROXY_URL=http://localhost:3001
+      - CONSOLE_URL=http://localhost:3001/console
+      - PLATFORM_URL=http://localhost:3001/platform
+      - DOCS_URL=http://localhost:3001/docs
+      - API_URL=http://localhost:3001/api
+    volumes:
+      # Workspace für Setup-Script
+      - ../../:/workspace:ro
+      # Backend Config für Client IDs (schreibbar)
+      - ../../backend/config:/workspace/backend/config:rw
+      # Data Directory für Setup-Status (schreibbar)
+      - ../../.data:/workspace/.data:rw
+      # Docker Socket für PAT-Zugriff (optional, für Docker-in-Docker)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # ZITADEL Machine Key für PAT-Zugriff (direkt)
+      - zitadel-machinekey:/machinekey:ro
+    networks:
+      - devnet
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo '🔐 ZITADEL Auto-Setup beim Container-Start...' &&
+        apk add --no-cache bash curl jq docker-cli >/dev/null 2>&1 &&
+        chmod +x /workspace/scripts/infra/setup-zitadel.sh &&
+        /workspace/scripts/infra/setup-zitadel.sh || echo '⚠️  ZITADEL Setup fehlgeschlagen, kann später manuell ausgeführt werden: just zitadel-setup'
+    restart: on-failure
+
+  # ─────────────────────────────────────────────────────────────────────────
   # ZITADEL - Identity Provider
   # ─────────────────────────────────────────────────────────────────────────
   zitadel:
@@ -438,6 +494,10 @@ volumes:
   # ⚡ Caddy Volumes für TLS Zertifikate und HTTP/3 State
   caddy-data:
   caddy-config:
+  # Frontend node_modules (werden beim Build installiert, bleiben im Container)
+  console-node_modules:
+  platform-node_modules:
+  docs-node_modules:
 
 networks:
   devnet:

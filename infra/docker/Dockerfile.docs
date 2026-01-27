@@ -106,7 +106,11 @@ WATCHER_PID=$!
 # SvelteKit Sync (generiert .svelte-kit Verzeichnis)
 echo "[3/3] Running SvelteKit sync..."
 cd /workspace/docs
-pnpm exec svelte-kit sync 2>/dev/null || true
+if [ -f "package.json" ]; then
+  pnpm exec svelte-kit sync 2>/dev/null || true
+else
+  echo "⚠️  package.json not found in /workspace/docs, skipping sync"
+fi
 
 # Starte Vite Dev Server
 echo "========================================="
@@ -114,7 +118,40 @@ echo "Starting Vite Dev Server (SvelteKit)..."
 echo "Proto changes will trigger regeneration"
 echo "========================================="
 
-exec pnpm run dev -- --host 0.0.0.0 --port 5175
+# Prüfe ob package.json vorhanden ist
+if [ ! -f "/workspace/docs/package.json" ]; then
+  echo "❌ ERROR: package.json not found in /workspace/docs"
+  echo "   Waiting 5 seconds for volume mount..."
+  sleep 5
+  if [ ! -f "/workspace/docs/package.json" ]; then
+    echo "❌ ERROR: package.json still not found after wait"
+    exit 1
+  fi
+fi
+
+# Installiere node_modules falls nicht vorhanden (z.B. bei neuem Volume)
+# pnpm Workspaces installieren node_modules im Workspace-Root
+if [ ! -d "/workspace/node_modules" ] || [ -z "$(ls -A /workspace/node_modules 2>/dev/null)" ]; then
+  echo "⚠️  node_modules not found or empty, installing..."
+  cd /workspace
+  pnpm install --frozen-lockfile || {
+    echo "❌ ERROR: pnpm install failed"
+    exit 1
+  }
+  echo "✅ node_modules installed"
+fi
+
+# Wechsle zum Docs-Verzeichnis
+cd /workspace/docs
+
+# Prüfe ob node_modules im Workspace-Root vorhanden sind
+if [ ! -d "/workspace/node_modules" ]; then
+  echo "❌ ERROR: node_modules not found in /workspace/node_modules"
+  exit 1
+fi
+
+# Verwende pnpm mit --filter um das docs Package zu finden
+exec pnpm --filter docs run dev -- --host 0.0.0.0
 EOF
 
 RUN chmod +x /entrypoint.sh

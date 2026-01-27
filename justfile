@@ -177,28 +177,27 @@ dev frontend="":
         echo "  ✓ MinIO bereits eingerichtet"
     fi
     
-    # ZITADEL Setup
-    if [ ! -f ".data/zitadel-setup-complete" ]; then
-        echo "  → ZITADEL Setup..."
-        if [ "$ZITADEL_READY" != "true" ]; then
-            echo "    Warte auf ZITADEL..."
-            for i in {1..30}; do
-                curl -sf ${ZITADEL_URL}/.well-known/openid-configuration >/dev/null 2>&1 && break
-                sleep 2
-            done
-        fi
-        sleep 10  # PAT-Generierung
-        SETUP_SCRIPT="scripts/infra/setup-zitadel.sh"
-        [ -f "$SETUP_SCRIPT" ] || SETUP_SCRIPT="infra/scripts/setup-zitadel.sh"
-        if [ -f "$SETUP_SCRIPT" ]; then
-            chmod +x "$SETUP_SCRIPT"
-            "$SETUP_SCRIPT" || echo "  ⚠ ZITADEL Setup übersprungen (später: just zitadel-setup)"
+    # ZITADEL Setup - Immer ausführen (idempotent, aktualisiert Redirect-URIs)
+    echo "  → ZITADEL Setup..."
+    if [ "$ZITADEL_READY" != "true" ]; then
+        echo "    Warte auf ZITADEL..."
+        for i in {1..30}; do
+            curl -sf ${ZITADEL_URL}/.well-known/openid-configuration >/dev/null 2>&1 && break
+            sleep 2
+        done
+    fi
+    sleep 10  # PAT-Generierung
+    SETUP_SCRIPT="scripts/infra/setup-zitadel.sh"
+    [ -f "$SETUP_SCRIPT" ] || SETUP_SCRIPT="infra/scripts/setup-zitadel.sh"
+    if [ -f "$SETUP_SCRIPT" ]; then
+        chmod +x "$SETUP_SCRIPT"
+        if "$SETUP_SCRIPT"; then
+            echo "  ✓ ZITADEL Setup abgeschlossen"
         else
-            echo "  ⚠ ZITADEL Setup-Script nicht gefunden"
+            echo "  ⚠ ZITADEL Setup fehlgeschlagen (später: just zitadel-setup)"
         fi
     else
-        echo "  ✓ ZITADEL bereits eingerichtet"
-        [ -f ".data/zitadel-client-id" ] && echo "    Client-ID: $(cat .data/zitadel-client-id)"
+        echo "  ⚠ ZITADEL Setup-Script nicht gefunden"
     fi
     
     # 4. Starte Frontend(s) + Backend + Proxy

@@ -11,6 +11,7 @@
 #   ./scripts/infra/setup-zitadel.sh
 #
 # ============================================================================
+# Idempotentes Setup: Kann mehrfach ausgeführt werden ohne Probleme
 set -e
 
 # Service URLs - Harmonized with frontend/console/src/lib/service-urls.ts and backend/src/config/constants.rs
@@ -29,7 +30,12 @@ API_URL="${API_URL:-http://localhost:3001/api}"
 # Im DevContainer: /workspace
 # Auf dem Host: Aktuelles Verzeichnis (Projekt-Root)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORKSPACE_DIR="${WORKSPACE_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+# Prüfe ob wir in einem Container sind (z.B. zitadel-setup-init)
+if [ -d "/workspace" ] && [ -f "/workspace/justfile" ]; then
+    WORKSPACE_DIR="/workspace"
+else
+    WORKSPACE_DIR="${WORKSPACE_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+fi
 DATA_DIR="${WORKSPACE_DIR}/.data"
 CLIENT_ID_FILE="${DATA_DIR}/zitadel-client-id"
 SETUP_COMPLETE="${DATA_DIR}/zitadel-setup-complete"
@@ -90,13 +96,29 @@ MAX_PAT_RETRIES=30
 PAT_RETRY_COUNT=0
 
 while [ $PAT_RETRY_COUNT -lt $MAX_PAT_RETRIES ]; do
-    for volume in "erynoa-services_zitadel-machinekey" "erynoa_zitadel-machinekey" "godstack-services_zitadel-machinekey" "godstack_zitadel-machinekey"; do
-        ACCESS_TOKEN=$(docker run --rm -v ${volume}:/machinekey busybox cat /machinekey/pat.txt 2>/dev/null | tr -d '\n\r ' || echo "")
+    # Versuche zuerst direkt aus gemountetem Volume zu lesen (schneller)
+    if [ -f "/machinekey/pat.txt" ]; then
+        ACCESS_TOKEN=$(cat /machinekey/pat.txt 2>/dev/null | tr -d '\n\r ' || echo "")
         if [ -n "$ACCESS_TOKEN" ] && [ "$ACCESS_TOKEN" != "" ] && [ ${#ACCESS_TOKEN} -gt 20 ]; then
-            log_info "PAT gefunden in Volume: $volume"
-            break 2
+            log_info "PAT gefunden in gemountetem Volume: /machinekey/pat.txt"
+            break
         fi
-    done
+    fi
+    
+    # Fallback: Versuche über Docker (wenn verfügbar)
+    if command -v docker >/dev/null 2>&1 && [ -S /var/run/docker.sock ]; then
+        for volume in "erynoa-services_zitadel-machinekey" "erynoa_zitadel-machinekey" "godstack-services_zitadel-machinekey" "godstack_zitadel-machinekey"; do
+            ACCESS_TOKEN=$(docker run --rm -v ${volume}:/machinekey busybox cat /machinekey/pat.txt 2>/dev/null | tr -d '\n\r ' || echo "")
+            if [ -n "$ACCESS_TOKEN" ] && [ "$ACCESS_TOKEN" != "" ] && [ ${#ACCESS_TOKEN} -gt 20 ]; then
+                log_info "PAT gefunden in Docker Volume: $volume"
+                break 2
+            fi
+        done
+    fi
+    
+    if [ -n "$ACCESS_TOKEN" ] && [ "$ACCESS_TOKEN" != "" ] && [ ${#ACCESS_TOKEN} -gt 20 ]; then
+        break
+    fi
     
     if [ -z "$ACCESS_TOKEN" ] || [ "$ACCESS_TOKEN" == "" ]; then
         PAT_RETRY_COUNT=$((PAT_RETRY_COUNT + 1))
@@ -127,13 +149,25 @@ if [ -z "$ACCESS_TOKEN" ] || [ "$ACCESS_TOKEN" == "" ]; then
     for i in {1..60}; do
         if curl -sf "${ZITADEL_URL}/debug/ready" > /dev/null 2>&1; then
             # Versuche nochmal PAT zu holen
-            for volume in "erynoa-services_zitadel-machinekey" "erynoa_zitadel-machinekey" "godstack-services_zitadel-machinekey" "godstack_zitadel-machinekey"; do
-                ACCESS_TOKEN=$(docker run --rm -v ${volume}:/machinekey busybox cat /machinekey/pat.txt 2>/dev/null | tr -d '\n\r ' || echo "")
+            # Zuerst direkt aus gemountetem Volume
+            if [ -f "/machinekey/pat.txt" ]; then
+                ACCESS_TOKEN=$(cat /machinekey/pat.txt 2>/dev/null | tr -d '\n\r ' || echo "")
                 if [ -n "$ACCESS_TOKEN" ] && [ "$ACCESS_TOKEN" != "" ] && [ ${#ACCESS_TOKEN} -gt 20 ]; then
-                    log_ok "PAT gefunden nach Wartezeit"
-                    break 2
+                    log_ok "PAT gefunden nach Wartezeit (gemountetes Volume)"
+                    break
                 fi
-            done
+            fi
+            
+            # Fallback: Über Docker
+            if command -v docker >/dev/null 2>&1 && [ -S /var/run/docker.sock ]; then
+                for volume in "erynoa-services_zitadel-machinekey" "erynoa_zitadel-machinekey" "godstack-services_zitadel-machinekey" "godstack_zitadel-machinekey"; do
+                    ACCESS_TOKEN=$(docker run --rm -v ${volume}:/machinekey busybox cat /machinekey/pat.txt 2>/dev/null | tr -d '\n\r ' || echo "")
+                    if [ -n "$ACCESS_TOKEN" ] && [ "$ACCESS_TOKEN" != "" ] && [ ${#ACCESS_TOKEN} -gt 20 ]; then
+                        log_ok "PAT gefunden nach Wartezeit (Docker Volume)"
+                        break 2
+                    fi
+                done
+            fi
         fi
         if [ $i -lt 60 ]; then
             printf "."
@@ -208,9 +242,27 @@ else
     rm -f /tmp/zitadel_project.json
     
     if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "201" ]; then
-        log_warn "Fehler beim Erstellen des Projekts. HTTP Code: $HTTP_CODE"
-        log_warn "Response: $RESPONSE"
-        exit 1
+        # Prüfe ob Projekt bereits existiert (idempotent)
+        if echo "$RESPONSE" | grep -qi "already exists\|duplicate\|conflict"; then
+            log_info "Projekt existiert möglicherweise bereits, versuche zu finden..."
+            # Versuche Projekt zu finden
+            RESPONSE=$(curl -sf -X POST "${ZITADEL_URL}/management/v1/projects/_search" \
+                -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+                -H "Content-Type: application/json" \
+                -d '{"queries":[{"nameQuery":{"name":"erynoa","method":"TEXT_QUERY_METHOD_EQUALS"}}]}' 2>/dev/null || echo '{}')
+            PROJECT_ID=$(echo "$RESPONSE" | jq -r '.result[0].id // empty' 2>/dev/null)
+            if [ -n "$PROJECT_ID" ] && [ "$PROJECT_ID" != "null" ]; then
+                log_ok "Projekt gefunden (ID: ${PROJECT_ID})"
+            else
+                log_warn "Fehler beim Erstellen des Projekts. HTTP Code: $HTTP_CODE"
+                log_warn "Response: $RESPONSE"
+                exit 1
+            fi
+        else
+            log_warn "Fehler beim Erstellen des Projekts. HTTP Code: $HTTP_CODE"
+            log_warn "Response: $RESPONSE"
+            exit 1
+        fi
     fi
     
     PROJECT_ID=$(echo "$RESPONSE" | jq -r '.id // empty' 2>/dev/null)
@@ -551,7 +603,8 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 # Speichere Konfiguration
 # ─────────────────────────────────────────────────────────────────────────────
-echo "$CLIENT_ID" > "$CLIENT_ID_FILE"
+# Speichere alle Client IDs (für Kompatibilität)
+echo "$CONSOLE_CLIENT_ID" > "$CLIENT_ID_FILE"
 date > "$SETUP_COMPLETE"
 
 # Update Backend Config - immer aktualisieren

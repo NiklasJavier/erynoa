@@ -10,6 +10,10 @@
     servers {
         protocols h1 h2 h3
     }
+    # Deaktiviere Logging komplett (keine Meldungen)
+    log {
+        output discard
+    }
 }
 
 :3001 {
@@ -36,24 +40,27 @@
     # Vite dev server is configured with base: '/console/' so it expects the full path
     handle /console* {
         reverse_proxy console:5173 {
-            header_up Host {host}
-            header_up X-Forwarded-Proto {scheme}
+            # Setze Host auf localhost, damit Vite den Request akzeptiert
+            header_up Host localhost:5173
+            # X-Forwarded-* Header werden automatisch von Caddy gesetzt
         }
     }
     
     # Platform Frontend
     handle /platform* {
         reverse_proxy platform:5174 {
-            header_up Host {host}
-            header_up X-Forwarded-Proto {scheme}
+            # Setze Host auf localhost, damit Vite den Request akzeptiert
+            header_up Host localhost:5174
+            # X-Forwarded-* Header werden automatisch von Caddy gesetzt
         }
     }
     
     # Docs Frontend
     handle /docs* {
         reverse_proxy docs:5175 {
-            header_up Host {host}
-            header_up X-Forwarded-Proto {scheme}
+            # Setze Host auf localhost, damit Vite den Request akzeptiert
+            header_up Host localhost:5175
+            # X-Forwarded-* Header werden automatisch von Caddy gesetzt
         }
     }
     
@@ -61,8 +68,7 @@
     handle /api* {
         reverse_proxy backend:3000 {
             header_up Host {host}
-            header_up X-Forwarded-Proto {scheme}
-            header_up X-Forwarded-For {remote}
+            # X-Forwarded-* Header werden automatisch von Caddy gesetzt
         }
     }
     
