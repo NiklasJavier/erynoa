@@ -45,8 +45,9 @@ Das startet alles:
 ├── backend/           # Rust API Server (Axum + Connect-RPC)
 │   ├── src/           # Source Code
 │   ├── config/        # Konfiguration (TOML)
-│   └── migrations/    # SQL Migrations
-├── frontend/          # Frontend Applications
+│   ├── migrations/    # SQL Migrations
+│   └── proto/         # Protobuf Definitionen
+├── frontend/          # Frontend Monorepo (pnpm Workspace)
 │   ├── console/       # Console (SvelteKit)
 │   ├── platform/      # Platform (SvelteKit)
 │   └── docs/          # Docs (SvelteKit)
@@ -61,6 +62,8 @@ Das startet alles:
 │   └── static/        # Static Files
 │       └── landing.html
 ├── docs/              # Dokumentation
+├── buf.gen.yaml       # Protobuf Code-Generierung (TypeScript)
+├── buf.yaml           # Protobuf Module-Konfiguration
 └── justfile           # Task Runner
 ```
 
@@ -158,12 +161,16 @@ GitHub Actions Workflows (optimiert für Performance):
 - VS Code Extensions optimiert (22 Extensions)
 - Health Checks und automatische Service-Initialisierung
 - GitHub Workflows optimiert (Turborepo, cargo-nextest, pnpm, new-console-svelte Branch)
-- Justfile optimiert (neue Befehle: stop, logs, shell, restart, init-env)
+- Justfile optimiert (neue Befehle: stop, logs, shell, restart, init-env, test-ci, devcontainer-remove, docker-cleanup)
 - Infra-Verzeichnis optimiert (nach Typ organisiert: docker/, proxy/, auth/, static/)
 - Environment-Setup (.env.example → .env automatisch)
 - Dokumentation konsolidiert und organisiert
 - Protobuf nach backend/proto/ verschoben (2026-01-27)
 - Folder Structure optimiert (Priorität 1 Inkonsistenzen behoben)
+- ZITADEL automatisches Setup mit dynamischer App-ID-Generierung
+- Caddy Reverse Proxy für alle Frontends (Port 3001)
+- Host-basierte Services (Services laufen auf dem Host, nicht im DevContainer)
+- Protobuf Code-Generierung für alle Frontends (buf.gen.yaml im Root)
 
 ### 🔄 In Arbeit
 - Frontend Tests implementieren

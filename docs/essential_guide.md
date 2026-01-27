@@ -1,6 +1,6 @@
 # 📚 Essential Guide - Alles was du brauchst
 
-**Letzte Aktualisierung**: 2026-01-27 (20:57)
+**Letzte Aktualisierung**: 2026-01-27 (23:40)
 
 Diese Datei konsolidiert alle wichtigen Informationen aus den verschiedenen Dokumenten.
 
@@ -88,7 +88,9 @@ Das startet alles:
 │   ├── proxy/           # Reverse Proxy (Caddyfile)
 │   ├── auth/            # Authentication (ZITADEL)
 │   └── static/          # Static Files (landing.html)
-└── docs/                 # Dokumentation
+├── docs/                 # Dokumentation
+├── buf.gen.yaml         # Protobuf Code-Generierung (TypeScript)
+└── buf.yaml             # Protobuf Module-Konfiguration
 ```
 
 ### Tech Stack
@@ -275,13 +277,25 @@ cd backend && cargo test
 
 ## 🔐 ZITADEL Setup
 
-### Quick Setup
+### Automatisches Setup (Empfohlen)
 
-1. ZITADEL Console öffnen: http://localhost:8080/ui/console
-2. Erstanmeldung: `zitadel-admin@zitadel.localhost` / `Password1!`
-3. Projekt erstellen: `erynoa`
-4. API Application erstellen: `erynoa-api`
-5. Test-User erstellen: `testuser` / `Test123!`
+ZITADEL wird automatisch beim ersten Start konfiguriert:
+
+```bash
+just dev
+```
+
+Das Setup-Skript (`scripts/infra/setup-zitadel.sh`) erstellt automatisch:
+- Projekt `erynoa`
+- OIDC Applications für alle Frontends (console, platform, docs) mit dynamischen Client-IDs
+- Test-User `testuser` / `Test123!`
+- Aktualisiert `backend/config/local.toml` mit den generierten Client-IDs
+
+**Manuelles Setup:**
+Falls nötig, kann das Setup manuell ausgeführt werden:
+```bash
+just zitadel-setup
+```
 
 **Vollständiger Guide**: [docs/guides/zitadel.md](guides/zitadel.md)
 
@@ -404,9 +418,12 @@ just logs docs         # Nur Docs
 - ✅ Svelte 5 Migration (Runes: $state, $derived, $effect)
 - ✅ Health Checks verbessert
 - ✅ GitHub Workflows optimiert (Turborepo, cargo-nextest, pnpm)
-- ✅ Justfile optimiert (neue Befehle, bessere Performance)
+- ✅ Justfile optimiert (neue Befehle: test-ci, devcontainer-remove, docker-cleanup)
 - ✅ VS Code Extensions optimiert (22 Extensions)
-- ✅ DevContainer optimiert (ein Terminal, bessere Konfiguration)
+- ✅ DevContainer optimiert (Host-Services, keine Docker-in-Docker)
+- ✅ ZITADEL automatisches Setup mit dynamischer App-ID-Generierung
+- ✅ Caddy Reverse Proxy für alle Frontends (Port 3001)
+- ✅ Protobuf Code-Generierung für alle Frontends (buf.gen.yaml im Root)
 
 ### 🔄 In Arbeit
 
@@ -459,4 +476,4 @@ just logs docs         # Nur Docs
 
 ---
 
-**Letzte Aktualisierung**: 2026-01-27
+**Letzte Aktualisierung**: 2026-01-27 (23:40)

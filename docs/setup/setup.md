@@ -2,6 +2,8 @@
 
 **Vollständige Anleitung zur Einrichtung der Entwicklungsumgebung**
 
+**Letzte Aktualisierung**: 2026-01-27 (23:40)
+
 ---
 
 ## 🚀 Quick Start (Empfohlen)
@@ -20,11 +22,17 @@ cd erynoa
 # 2. Nix Dev-Shell betreten (lädt alle Tools automatisch)
 nix develop
 
-# 3. Projekt starten
+# 3. Projekt starten (startet alles inkl. automatischer ZITADEL-Konfiguration)
 just dev
 ```
 
 **Fertig!** 🎉
+
+**Was passiert automatisch:**
+- Services starten (PostgreSQL, DragonflyDB, MinIO, ZITADEL)
+- ZITADEL wird automatisch konfiguriert (Projekt, Apps, Test-User)
+- Frontends werden über Caddy Proxy auf Port 3001 bereitgestellt
+- Backend läuft auf Port 3000 (und über Proxy auf Port 3001/api)
 
 ---
 
@@ -178,8 +186,18 @@ just dev
 
 Das startet:
 - Hintergrund-Services (PostgreSQL, DragonflyDB, MinIO, ZITADEL)
-- Frontends (Console, Platform, Docs) über Proxy auf Port 3001
+- ZITADEL automatische Konfiguration (Projekt, Apps mit dynamischen Client-IDs, Test-User)
+- Frontends (Console, Platform, Docs) über Caddy Proxy auf Port 3001
 - Backend auf Port 3000 (und über Proxy auf Port 3001/api)
+
+**URLs:**
+- Console: http://localhost:3001/console
+- Platform: http://localhost:3001/platform
+- Docs: http://localhost:3001/docs
+- Backend API: http://localhost:3001/api
+- Backend direkt: http://localhost:3000
+- ZITADEL: http://localhost:8080
+- MinIO Console: http://localhost:9001
 
 ---
 

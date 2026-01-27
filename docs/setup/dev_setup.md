@@ -1,25 +1,35 @@
 # 🚀 Development Setup - Container-in-Container Entwicklung
 
+**Letzte Aktualisierung**: 2026-01-27 (23:40)
+
 ## Architektur
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                     Dev Container (VS Code)                          │
+│                     Dev Container (VS Code)                        │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                       │
 │  ┌─────────────────────────────────────────────────────────────┐    │
-│  │              Docker Compose Services                          │    │
+│  │              Docker Compose Services (im Container)          │    │
 │  ├─────────────────────────────────────────────────────────────┤    │
 │  │                                                               │    │
-│  │  Console (Container)     Backend (Container)                 │    │
+│  │  Console (Container)     Backend (Container)                │    │
 │  │  ─────────────────────    ────────────────────                │    │
 │  │  Port: 5173               Port: 3000                          │    │
 │  │  Vite HMR ✓               cargo watch ✓                       │    │
 │  │  Hot-reload on save       Hot-reload on save                  │    │
 │  │                                                               │    │
-│  │  ─────────────────────────────────────────────────────────   │    │
-│  │                    Hintergrund-Services                       │    │
-│  │  ─────────────────────────────────────────────────────────   │    │
+│  │  Proxy (Container)                                            │    │
+│  │  ─────────────────────                                        │    │
+│  │  Port: 3001 (Caddy)                                          │    │
+│  │  Reverse Proxy für alle Frontends                            │    │
+│  │                                                               │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                       │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │              Host-Services (laufen auf dem Host)              │    │
+│  ├─────────────────────────────────────────────────────────────┤    │
+│  │                                                               │    │
 │  │  PostgreSQL (db)      :5432   │  MinIO (minio)    :9000/9001 │    │
 │  │  DragonflyDB (cache)  :6379   │  ZITADEL (zitadel):8080      │    │
 │  │                                                               │    │
@@ -27,6 +37,8 @@
 │                                                                       │
 └─────────────────────────────────────────────────────────────────────┘
 ```
+
+**Wichtig:** Services (PostgreSQL, DragonflyDB, MinIO, ZITADEL) laufen auf dem **Host**, nicht im DevContainer. Der DevContainer verbindet sich über `host.docker.internal` mit diesen Services.
 
 ## 🚀 Quick Start
 
@@ -62,9 +74,10 @@ Das ist alles! Dieser Befehl:
 │   ├── src/                 # Source Code
 │   ├── config/              # Konfigurationsdateien
 │   │   ├── base.toml        # Standard-Konfig
-│   │   ├── local.toml       # Local Overrides (auto-generated)
+│   │   ├── local.toml       # Local Overrides (auto-generated, gitignored)
 │   │   └── production.toml  # Production Overrides
 │   ├── migrations/          # SQL Migrations
+│   ├── proto/               # Protobuf Definitionen
 │   └── tests/               # Integration Tests
 │
 ├── frontend/               # Frontend Monorepo (pnpm Workspace)
@@ -75,7 +88,8 @@ Das ist alles! Dieser Befehl:
 │   │   ├── api/             # API Client (Connect-RPC)
 │   │   ├── components/      # UI Komponenten
 │   │   ├── lib/             # Auth, Config, Utils
-│   │   └── pages/           # Seiten
+│   │   ├── pages/           # Seiten
+│   │   └── gen/             # Generierte Protobuf Types (auto-generated)
 │   └── dist/                # Production Build
 │
 ├── infra/                   # Infrastructure & Deployment
@@ -93,10 +107,10 @@ Das ist alles! Dieser Befehl:
 │   └── static/              # Static Files
 │       └── landing.html
 │
-├── backend/
-│   └── proto/               # Protobuf Definitionen
 ├── docs/                    # Dokumentation
 ├── .data/                   # Lokale Daten (gitignored)
+├── buf.gen.yaml             # Protobuf Code-Generierung (TypeScript)
+├── buf.yaml                 # Protobuf Module-Konfiguration
 └── justfile                 # Task Runner
 ```
 
@@ -131,9 +145,11 @@ Das ist alles! Dieser Befehl:
 |--------|--------------|
 | `just init` | Initialisierung ohne Dev-Server (erstellt auch `.env` aus `.env.example`) |
 | `just init-env` | Erstellt `.env` aus `.env.example` (für Neuaufstellung) |
-| `just zitadel-setup` | ZITADEL neu konfigurieren |
+| `just zitadel-setup` | ZITADEL neu konfigurieren (automatisches Setup mit dynamischen App-IDs) |
 | `just minio-setup` | MinIO Buckets erstellen |
 | `just reset` | **Alles löschen** und neu starten |
+| `just devcontainer-remove` | DevContainer komplett entfernen |
+| `just docker-cleanup` | Alle Docker-Ressourcen löschen |
 
 ### Logs & Debug
 
@@ -155,16 +171,18 @@ Das ist alles! Dieser Befehl:
 Die wichtigsten Overrides in `docker-compose.yml`:
 ```yaml
 environment:
-  # Database → Docker Service Name
-  - APP_DATABASE__HOST=db
-  # Cache → Docker Service Name  
-  - APP_CACHE__URL=redis://cache:6379
+  # Database → Host Service (via host.docker.internal)
+  - APP_DATABASE__HOST=host.docker.internal
+  # Cache → Host Service (via host.docker.internal)
+  - APP_CACHE__URL=redis://host.docker.internal:6379
   # Auth → Externe + Interne URL
   - APP_AUTH__ISSUER=http://localhost:8080
-  - APP_AUTH__INTERNAL_ISSUER=http://zitadel:8080
-  # Storage → Docker Service Name
-  - APP_STORAGE__ENDPOINT=http://minio:9000
+  - APP_AUTH__INTERNAL_ISSUER=http://host.docker.internal:8080
+  # Storage → Host Service (via host.docker.internal)
+  - APP_STORAGE__ENDPOINT=http://host.docker.internal:9000
 ```
+
+**Hinweis:** Im DevContainer verwenden Services `host.docker.internal`, um auf Host-Services zuzugreifen. Die Services (PostgreSQL, DragonflyDB, MinIO, ZITADEL) laufen auf dem Host, nicht im Container.
 
 ## 🔄 Hot-Reloading
 

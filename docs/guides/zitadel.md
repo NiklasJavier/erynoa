@@ -1,19 +1,28 @@
 # ZITADEL Setup Guide
 
-**Letzte Aktualisierung**: 2026-01-27
+**Letzte Aktualisierung**: 2026-01-27 (23:40)
 
 ## Schnellstart
 
-**Automatisches Setup:**
+**Automatisches Setup (Empfohlen):**
+
+ZITADEL wird automatisch beim ersten Start konfiguriert:
+```bash
+just dev
+```
+
+Oder manuell ausführen:
 ```bash
 just zitadel-setup
 ```
 
 Dieses Skript konfiguriert automatisch:
 - Projekt `erynoa`
-- API Application `erynoa-api`
+- OIDC Applications für alle Frontends (console, platform, docs) mit **dynamischen Client-IDs**
 - Test-User `testuser` / `Test123!`
-- OIDC Application `erynoa-console`
+- Aktualisiert `backend/config/local.toml` mit den generierten Client-IDs
+
+**Wichtig:** Die Client-IDs werden dynamisch von ZITADEL generiert (z.B. `357454249719824388`) und automatisch in die Backend-Konfiguration geschrieben. Die Frontends holen sich die Client-IDs über den `/api/v1/info` Endpoint.
 
 **Manuelles Setup:**
 

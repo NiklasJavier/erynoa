@@ -2,13 +2,15 @@
 
 **Schnellstart-Anleitung - In 3 Schritten zum laufenden Projekt**
 
+**Letzte Aktualisierung**: 2026-01-27 (23:40)
+
 ---
 
 ## ⚡ Schnellstart (Keine Installation nötig)
 
 **Voraussetzungen:**
-- Docker Desktop installiert und gestartet
 - Nix installiert (siehe unten)
+- Docker Desktop installiert und gestartet
 
 **3 Schritte:**
 
@@ -31,10 +33,11 @@ Das startet alles:
   - **Console** auf http://localhost:3001/console
   - **Platform** auf http://localhost:3001/platform
   - **Docs** auf http://localhost:3001/docs
-- **Backend** auf http://localhost:3000 (Rust API)
-- **Backend über Proxy** auf http://localhost:3001/api
-- **ZITADEL** auf http://localhost:8080 (Auth)
+  - **Backend API** auf http://localhost:3001/api
+- **Backend** direkt auf http://localhost:3000 (für Tests)
+- **ZITADEL** auf http://localhost:8080 (Auth) - automatisch konfiguriert
 - **MinIO** auf http://localhost:9001 (S3 Storage Console)
+- **PostgreSQL** (OrioleDB) und **DragonflyDB** (Redis) im Hintergrund
 
 **Test Login:**
 - User: `testuser` / `Test123!`
@@ -82,6 +85,8 @@ Wenn du `nix develop` ausführst, werden folgende Tools automatisch bereitgestel
 - ✅ **just** (Task Runner - alle `just` Befehle)
 - ✅ **sqlx CLI** (Datenbank-Migrationen)
 - ✅ **Alle Build-Tools** (mold linker, etc.)
+
+**Hinweis:** Die Protobuf-Konfigurationsdateien (`buf.gen.yaml` und `buf.yaml`) befinden sich im Projekt-Root und werden automatisch von `buf generate` verwendet.
 
 **Vorteile:**
 - ⚡ **Schnell**: Keine manuelle Tool-Installation nötig
