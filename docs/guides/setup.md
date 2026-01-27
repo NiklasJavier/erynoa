@@ -4,9 +4,11 @@
 
 ---
 
-## 🚀 Quick Start (Dev Container)
+## 🚀 Quick Start Optionen
 
-Die einfachste Methode ist der VS Code Dev Container:
+### Option 1: VS Code Dev Container (Empfohlen für neue Entwickler)
+
+Die einfachste Methode - keine lokalen Installationen nötig:
 
 1. **VS Code öffnen**: `code .`
 2. **Dev Container starten**: `Cmd+Shift+P` → "Dev Containers: Reopen in Container"
@@ -14,6 +16,45 @@ Die einfachste Methode ist der VS Code Dev Container:
 4. **Starten**: `just dev`
 
 **Fertig!** Alle Tools sind automatisch verfügbar.
+
+### Option 2: Schnelles Host-Setup mit Nix (Empfohlen für erfahrene Entwickler)
+
+**Zeitaufwand**: ~5-10 Minuten
+
+**Voraussetzungen:**
+- Nix installiert (siehe unten)
+- Docker Desktop installiert und gestartet
+
+```bash
+# 1. Repository klonen
+git clone git@github.com:NiklasJavier/GS-Backend.git
+cd GS-Backend
+
+# 2. Nix Dev-Shell betreten (lädt alle Tools automatisch)
+nix develop
+
+# 3. .env erstellen
+just init-env
+
+# 4. Services starten
+just services
+
+# 5. Dev-Server starten
+just dev
+```
+
+**Was Nix automatisch bereitstellt:**
+- ✅ Rust Toolchain (inkl. rust-analyzer, clippy)
+- ✅ Node.js & pnpm
+- ✅ buf (Protobuf)
+- ✅ just (Task Runner)
+- ✅ sqlx CLI
+- ✅ Alle Build-Tools
+
+**Vorteile:**
+- ⚡ **Schnell**: Keine manuelle Tool-Installation
+- 🔒 **Reproduzierbar**: Gleiche Tools für alle
+- 🧹 **Sauber**: Keine System-Installationen
 
 ---
 

@@ -1,6 +1,6 @@
 # 📚 Dokumentation
 
-**Letzte Aktualisierung**: 2026-01-27
+**Letzte Aktualisierung**: 2026-01-27 (20:57)
 
 **Status**: Aktuell und vollständig organisiert ✅
 
@@ -36,6 +36,8 @@ Schritt-für-Schritt Anleitungen für häufige Aufgaben:
 
 - **[Getting Started](guides/getting-started.md)** - Erste Schritte mit dem Projekt
 - **[Setup (macOS)](setup/setup.md)** - Entwicklungsumgebung einrichten (macOS)
+  - ⚡ **[Schnelles Setup mit Nix](setup/setup.md#-schnelles-setup-mit-nix-empfohlen-für-erfahrene-entwickler)** - ~5-10 Min (empfohlen für erfahrene Entwickler)
+  - 📋 **[Vollständiges Setup](setup/setup.md#-vollständige-setup-anleitung-für-neue-entwickler)** - Detaillierte Anleitung
 - **[Dev Setup](setup/dev_setup.md)** - Container-in-Container Entwicklung
 - **[Docker Setup](setup/docker.md)** - Docker Development Setup
 - **[ZITADEL Setup](guides/zitadel.md)** - Authentifizierung konfigurieren (automatisch via `just zitadel-setup`)

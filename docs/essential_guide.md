@@ -1,6 +1,6 @@
 # 📚 Essential Guide - Alles was du brauchst
 
-**Letzte Aktualisierung**: 2026-01-27
+**Letzte Aktualisierung**: 2026-01-27 (20:57)
 
 Diese Datei konsolidiert alle wichtigen Informationen aus den verschiedenen Dokumenten.
 
@@ -98,6 +98,39 @@ Startet alles:
 | `just status` | Zeigt Status aller Services |
 | `just check` | Health Check aller Services |
 | `just restart` | Schneller Neustart aller Dev-Services |
+
+### ⚡ Schnelles Host-Setup mit Nix
+
+**Für erfahrene Entwickler** - Schnellstart ohne vollständiges Setup (~5-10 Min):
+
+```bash
+# 1. Nix Dev-Shell betreten (lädt alle Tools automatisch)
+nix develop
+
+# 2. .env erstellen
+just init-env
+
+# 3. Services starten
+just services
+
+# 4. Dev-Server starten
+just dev
+```
+
+**Was Nix automatisch bereitstellt:**
+- ✅ Rust Toolchain (inkl. rust-analyzer, clippy)
+- ✅ Node.js & pnpm
+- ✅ buf (Protobuf)
+- ✅ just (Task Runner)
+- ✅ sqlx CLI
+- ✅ Alle Build-Tools
+
+**Vorteile:**
+- ⚡ **Schnell**: Keine manuelle Tool-Installation nötig
+- 🔒 **Reproduzierbar**: Gleiche Tools für alle Entwickler
+- 🧹 **Sauber**: Keine System-Installationen (außer Nix selbst)
+
+Siehe [Setup Guide](setup/setup.md#-schnelles-setup-mit-nix-empfohlen-für-erfahrene-entwickler) für Details.
 
 ### Container Management
 | Befehl | Beschreibung |

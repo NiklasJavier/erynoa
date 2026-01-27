@@ -43,11 +43,6 @@ Startet alles:
 │   │   └── zitadel/   # ZITADEL Init
 │   └── static/        # Static Files
 │       └── landing.html
-├── backend/           # Rust API Server (Axum + Connect-RPC)
-│   ├── src/           # Source Code
-│   ├── config/        # Konfiguration (TOML)
-│   ├── migrations/    # SQL Migrations
-│   └── proto/         # Protobuf Definitionen
 ├── docs/              # Dokumentation
 └── justfile           # Task Runner
 ```
@@ -95,7 +90,7 @@ Vollständige Dokumentation findest du im [`docs/`](docs/) Verzeichnis:
 
 ### 📚 Hauptdokumentation
 
-- **[docs/README.md](docs/README.md)** - **Dokumentations-Übersicht** mit Quick Start
+- **[docs/readme.md](docs/readme.md)** - **Dokumentations-Übersicht** mit Quick Start
 - **[docs/essential_guide.md](docs/essential_guide.md)** - Konsolidierter Guide mit allen wichtigen Informationen
 
 ### 🚀 Guides (Schritt-für-Schritt Anleitungen)
@@ -129,9 +124,10 @@ cd backend && cargo test
 
 ### CI/CD
 GitHub Actions Workflows (optimiert für Performance):
+- **Branches**: `main`, `develop`, `new-console-svelte`
 - Backend: Format, Clippy, Tests (cargo-nextest), Build
 - Frontend: TypeScript Check, Lint (Biome), Build (Turborepo)
-- Protobuf: Lint, Format
+- Protobuf: Lint, Format (backend/proto/)
 - Turborepo: Parallele Builds mit Caching
 - pnpm: Optimiertes Dependency-Management
 
@@ -144,11 +140,13 @@ GitHub Actions Workflows (optimiert für Performance):
 - DevContainer mit vollständiger Entwicklungsumgebung
 - VS Code Extensions optimiert (22 Extensions)
 - Health Checks und automatische Service-Initialisierung
-- GitHub Workflows optimiert (Turborepo, cargo-nextest, pnpm)
+- GitHub Workflows optimiert (Turborepo, cargo-nextest, pnpm, new-console-svelte Branch)
 - Justfile optimiert (neue Befehle: stop, logs, shell, restart, init-env)
 - Infra-Verzeichnis optimiert (nach Typ organisiert: docker/, proxy/, auth/, static/)
 - Environment-Setup (.env.example → .env automatisch)
 - Dokumentation konsolidiert und organisiert
+- Protobuf nach backend/proto/ verschoben (2026-01-27)
+- Folder Structure optimiert (Priorität 1 Inkonsistenzen behoben)
 
 ### 🔄 In Arbeit
 - Frontend Tests implementieren

@@ -4,7 +4,59 @@ Diese Anleitung beschreibt alle Schritte, um das **GS-Backend** Projekt auf eine
 
 ---
 
-## Voraussetzungen
+## 🚀 Schnelles Setup mit Nix (Empfohlen für erfahrene Entwickler)
+
+**Zeitaufwand**: ~5-10 Minuten (vs. 30+ Minuten für vollständiges Setup)
+
+Wenn du bereits Nix kennst oder schnell starten möchtest:
+
+### Voraussetzungen
+- Nix installiert (siehe Schritt 3 unten)
+- Docker Desktop installiert und gestartet
+- Git konfiguriert
+
+### Schnellstart
+
+```bash
+# 1. Repository klonen
+git clone git@github.com:NiklasJavier/GS-Backend.git
+cd GS-Backend
+
+# 2. Nix Dev-Shell betreten (lädt alle Tools automatisch: Rust, Node, buf, just, etc.)
+nix develop
+
+# 3. .env erstellen (falls nicht vorhanden)
+just init-env
+
+# 4. Services starten
+just services
+
+# 5. Dev-Server starten
+just dev
+```
+
+**Fertig!** 🎉
+
+**Was Nix automatisch bereitstellt:**
+- ✅ Rust Toolchain (inkl. rust-analyzer, clippy)
+- ✅ Node.js & pnpm
+- ✅ buf (Protobuf)
+- ✅ just (Task Runner)
+- ✅ sqlx CLI
+- ✅ Alle anderen Build-Tools
+
+**Vorteile:**
+- ⚡ **Schnell**: Keine manuelle Tool-Installation nötig
+- 🔒 **Reproduzierbar**: Gleiche Tools für alle Entwickler
+- 🧹 **Sauber**: Keine System-Installationen (außer Nix selbst)
+
+---
+
+## 📋 Vollständige Setup-Anleitung (Für neue Entwickler)
+
+Diese Anleitung führt dich durch alle Schritte für ein vollständiges Setup.
+
+### Voraussetzungen
 
 - macOS 12+ (Monterey oder neuer)
 - Admin-Rechte (für Homebrew & Nix)

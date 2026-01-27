@@ -43,7 +43,9 @@ Das startet alles:
 
 ## Nächste Schritte
 
-1. **Setup**: Siehe [Setup Guide (macOS)](../setup/setup.md) oder [Dev Setup](../setup/dev_setup.md) für vollständige Entwicklungsumgebung
+1. **Setup**: 
+   - **Schnell**: [Schnelles Setup mit Nix](../setup/setup.md#-schnelles-setup-mit-nix-empfohlen-für-erfahrene-entwickler) (~5-10 Min)
+   - **Vollständig**: [Setup Guide (macOS)](../setup/setup.md) oder [Dev Setup](../setup/dev_setup.md)
 2. **Architektur**: Lese [Architecture](../reference/architecture.md) für System-Überblick
 3. **ZITADEL**: Folge [ZITADEL Setup](zitadel.md) für Authentifizierung
 

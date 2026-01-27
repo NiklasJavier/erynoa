@@ -1,6 +1,6 @@
 # 📚 Dokumentations-Status
 
-**Letzte Aktualisierung**: 2026-01-27
+**Letzte Aktualisierung**: 2026-01-27 (20:57)
 
 ## ✅ Dokumentations-Organisation abgeschlossen
 
@@ -76,6 +76,10 @@ Alle Markdown-Dateien wurden überprüft, aktualisiert und organisiert.
   
 - **structure_improvements.md** - Strukturverbesserungen
   - ✅ Archiviert (2026-01-27) → `docs/archive/structure_improvements.md`
+  
+- **folder_structure_analysis.md** - Folder Structure Analysis & Optimization
+  - ✅ Erstellt (2026-01-27)
+  - ✅ Priorität 1 Inkonsistenzen behoben
 
 ### DevContainer (`docs/setup/devcontainer/`)
 - **database_connection.md** - DB & Cache Verbindungen
@@ -105,15 +109,19 @@ Alle Markdown-Dateien wurden überprüft, aktualisiert und organisiert.
 - ✅ Turborepo Integration dokumentiert
 - ✅ pnpm Workspace dokumentiert
 - ✅ Svelte 5 (Runes) dokumentiert
-- ✅ GitHub Workflows optimiert dokumentiert
+- ✅ GitHub Workflows optimiert dokumentiert (new-console-svelte Branch hinzugefügt)
 - ✅ VS Code Extensions dokumentiert
 - ✅ Infra-Verzeichnis optimiert (nach Typ organisiert: docker/, proxy/, auth/, static/)
 - ✅ Environment-Setup (.env.example → .env automatisch)
+- ✅ Protobuf nach backend/proto/ verschoben (2026-01-27)
+- ✅ Folder Structure Analysis erstellt (2026-01-27)
 
 ### Projekt-Status aktualisiert
 - ✅ Abgeschlossene Features dokumentiert
 - ✅ Aktuelle Tech Stack dokumentiert
-- ✅ CI/CD Workflows dokumentiert
+- ✅ CI/CD Workflows dokumentiert (new-console-svelte Branch aktiviert)
+- ✅ Struktur-Optimierungen dokumentiert (proto/ → backend/proto/)
+- ✅ Naming-Konsistenz behoben (docs/README.md → docs/readme.md)
 
 ---
 

@@ -1,6 +1,6 @@
 # 🧭 Dokumentations-Navigation
 
-**Letzte Aktualisierung**: 2026-01-27
+**Letzte Aktualisierung**: 2026-01-27 (20:57)
 
 **Status**: Aktuell und vollständig ✅
 
@@ -36,7 +36,8 @@ docs/
 │   ├── style-guide.md           # Code-Stil & Best Practices
 │   ├── testing.md               # Test-Strategien & Tools (cargo-nextest)
 │   ├── todos.md                 # Offene Aufgaben & Prioritäten
-│   └── rest_deprecation_plan.md # Plan zur REST-API Entfernung
+│   ├── rest_deprecation_plan.md # Plan zur REST-API Entfernung
+│   └── folder_structure_analysis.md # Folder Structure Analysis & Optimization
 │
 └── archive/                     # Historische Dokumentation
     └── structure_improvements.md # Strukturverbesserungen (2026-01-25, archiviert)
@@ -111,6 +112,8 @@ docs/
 - **[Testing](development/testing.md)** - Test-Strategien, Tools, Best Practices
 - **[todos](development/todos.md)** - Offene Aufgaben, Prioritäten, bekannte Issues
 - **[REST Deprecation Plan](development/rest_deprecation_plan.md)** - Plan zur REST-API Entfernung
+- **[Folder Structure Analysis](development/folder_structure_analysis.md)** - Struktur-Analyse & Optimierungsvorschläge
+- **[Folder Structure Analysis](development/folder_structure_analysis.md)** - Struktur-Analyse & Optimierungsvorschläge
 
 ### 📦 Archive (Historische Dokumentation)
 
