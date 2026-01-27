@@ -4,7 +4,8 @@
 set dotenv-load
 
 # Workspace-Root ermitteln (funktioniert sowohl im DevContainer als auch auf dem Host)
-WORKSPACE_ROOT := if env_var("WORKSPACE_ROOT") == "" { "." } else { env_var("WORKSPACE_ROOT") }
+# Nutze env_var_or_default() um Fehler bei fehlender Variable zu vermeiden
+WORKSPACE_ROOT := env_var_or_default("WORKSPACE_ROOT", ".")
 
 default:
     @just --list
@@ -1131,6 +1132,94 @@ devcontainer-remove mode="":
 
 # Alias für devcontainer-remove
 devcontainer-clean: devcontainer-remove
+
+# Löscht ALLE Container, Volumes und Images (kompletter Cleanup)
+# Usage: just docker-cleanup [mode]
+#   just docker-cleanup        → Alle Container und Volumes (Standard)
+#   just docker-cleanup images → Zusätzlich alle Images löschen
+#   just docker-cleanup all    → Alles löschen (inkl. Images)
+docker-cleanup mode="":
+    #!/usr/bin/env bash
+    set -e
+    echo "🗑️  Lösche alle Docker-Ressourcen..."
+    echo ""
+    
+    # 1. Services aus infra/docker stoppen und entfernen
+    echo "━━━ [1/4] Services (infra/docker) ━━━"
+    cd {{WORKSPACE_ROOT}}/infra/docker
+    if docker compose ps -q 2>/dev/null | grep -q .; then
+        echo "  ⏳ Stoppe alle Services..."
+        docker compose --profile auth down -v 2>/dev/null || true
+        echo "  ✅ Services gestoppt und Volumes entfernt"
+    else
+        echo "  ℹ️  Keine Services laufen"
+    fi
+    
+    # 2. DevContainer stoppen und entfernen
+    echo ""
+    echo "━━━ [2/4] DevContainer ━━━"
+    cd {{WORKSPACE_ROOT}}/.devcontainer
+    if docker compose ps -q dev >/dev/null 2>&1; then
+        echo "  ⏳ Stoppe DevContainer..."
+        docker compose down -v 2>/dev/null || true
+        echo "  ✅ DevContainer gestoppt und Volumes entfernt"
+    else
+        echo "  ℹ️  DevContainer läuft nicht"
+    fi
+    
+    # 3. Zusätzliche Volumes (falls vorhanden)
+    echo ""
+    echo "━━━ [3/4] Zusätzliche Volumes ━━━"
+    VOLUMES=$(docker volume ls -q 2>/dev/null | grep -E "^(erynoa|erynoa-dev|godstack)-" || true)
+    if [ -n "$VOLUMES" ]; then
+        echo "  🗑️  Entferne zusätzliche Volumes..."
+        echo "$VOLUMES" | xargs -r docker volume rm 2>/dev/null || true
+        echo "  ✅ Zusätzliche Volumes entfernt"
+    else
+        echo "  ℹ️  Keine zusätzlichen Volumes gefunden"
+    fi
+    
+    # 4. Optionale Images löschen
+    MODE=$(echo "{{mode}}" | tr '[:upper:]' '[:lower:]')
+    if [ "$MODE" = "images" ] || [ "$MODE" = "all" ]; then
+        echo ""
+        echo "━━━ [4/4] Images ━━━"
+        
+        # Images aus docker-compose.yml finden und löschen
+        cd {{WORKSPACE_ROOT}}/infra/docker
+        IMAGES=$(docker compose config --images 2>/dev/null || true)
+        if [ -n "$IMAGES" ]; then
+            echo "  🗑️  Entferne Service-Images..."
+            echo "$IMAGES" | xargs -r docker rmi -f 2>/dev/null || true
+        fi
+        
+        cd {{WORKSPACE_ROOT}}/.devcontainer
+        DEV_IMAGES=$(docker compose config --images 2>/dev/null || true)
+        if [ -n "$DEV_IMAGES" ]; then
+            echo "  🗑️  Entferne DevContainer-Images..."
+            echo "$DEV_IMAGES" | xargs -r docker rmi -f 2>/dev/null || true
+        fi
+        
+        # Alle Container stoppen (falls noch welche laufen)
+        echo "  🗑️  Stoppe alle laufenden Container..."
+        docker stop $(docker ps -q) 2>/dev/null || true
+        
+        echo "  ✅ Images entfernt"
+    else
+        echo ""
+        echo "━━━ [4/4] Images ━━━"
+        echo "  ℹ️  Images werden nicht gelöscht (nutze 'just docker-cleanup images')"
+    fi
+    
+    echo ""
+    echo "✅ Docker-Cleanup abgeschlossen!"
+    echo ""
+    echo "📊 Verbleibende Ressourcen:"
+    echo "   Container: $(docker ps -a -q 2>/dev/null | wc -l | tr -d ' ')"
+    echo "   Volumes:   $(docker volume ls -q 2>/dev/null | wc -l | tr -d ' ')"
+    echo "   Images:    $(docker images -q 2>/dev/null | wc -l | tr -d ' ')"
+    echo ""
+    echo "💡 Zum kompletten Reset (inkl. Build-Artifakte): just reset"
 
 # Testet den DevContainer Build und Services
 # Usage: just test-devcontainer
