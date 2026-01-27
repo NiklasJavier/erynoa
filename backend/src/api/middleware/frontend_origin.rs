@@ -106,12 +106,21 @@ fn determine_client_id_from_headers(headers: &HeaderMap, uri: &Uri, state: &AppS
         }
     }
     
-    // Last resort: Log all headers for debugging
-    tracing::warn!(
-        "No frontend identifier found, defaulting to console client ID. URI: {}, Headers: {:?}",
-        uri,
-        headers.keys().map(|k| k.as_str()).collect::<Vec<_>>()
-    );
+    // HealthService und andere System-Endpoints brauchen keinen Frontend-Identifier
+    // Log nur als DEBUG, nicht als WARN
+    if uri.path().contains("HealthService") {
+        tracing::debug!(
+            "No frontend identifier found for system endpoint, defaulting to console client ID. URI: {}",
+            uri
+        );
+    } else {
+        // Für andere Endpoints ist es eine Warnung
+        tracing::warn!(
+            "No frontend identifier found, defaulting to console client ID. URI: {}, Headers: {:?}",
+            uri,
+            headers.keys().map(|k| k.as_str()).collect::<Vec<_>>()
+        );
+    }
     
     // Default to console
     state.config.auth.console_client_id.clone()

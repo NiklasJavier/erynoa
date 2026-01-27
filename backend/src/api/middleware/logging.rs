@@ -51,13 +51,24 @@ pub async fn logging_middleware(request: Request, next: Next) -> Response {
             );
         }
     } else {
-        info!(
-            method = %method,
-            path = %path,
-            status = %status.as_u16(),
-            duration_ms = duration.as_millis(),
-            "Request completed"
-        );
+        // Health checks und häufige Endpoints auf DEBUG-Level loggen
+        if path.contains("HealthService") || path.contains("InfoService") {
+            tracing::debug!(
+                method = %method,
+                path = %path,
+                status = %status.as_u16(),
+                duration_ms = duration.as_millis(),
+                "Request completed"
+            );
+        } else {
+            info!(
+                method = %method,
+                path = %path,
+                status = %status.as_u16(),
+                duration_ms = duration.as_millis(),
+                "Request completed"
+            );
+        }
     }
 
     response
