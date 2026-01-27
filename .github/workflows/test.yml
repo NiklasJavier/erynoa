@@ -107,10 +107,24 @@ jobs:
       
       - name: Run unit tests (nextest)
         working-directory: backend
-        run: cargo nextest run --lib --verbose
+        run: |
+          # Unit tests können fehlen - das ist OK
+          cargo nextest run --lib --verbose || {
+            EXIT_CODE=$?
+            if [ $EXIT_CODE -eq 4 ]; then
+              echo "No unit tests found - this is OK"
+              exit 0
+            else
+              exit $EXIT_CODE
+            fi
+          }
         env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/test
-          CACHE_URL: redis://localhost:6379
+          APP_DATABASE__HOST: localhost
+          APP_DATABASE__PORT: 5432
+          APP_DATABASE__USERNAME: test
+          APP_DATABASE__PASSWORD: test
+          APP_DATABASE__DATABASE: test
+          APP_CACHE__URL: redis://localhost:6379
           RUST_LOG: info
           SQLX_OFFLINE: true
 
@@ -211,8 +225,12 @@ jobs:
         working-directory: backend
         run: cargo nextest run --test '*' --verbose
         env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/test
-          CACHE_URL: redis://localhost:6379
+          APP_DATABASE__HOST: localhost
+          APP_DATABASE__PORT: 5432
+          APP_DATABASE__USERNAME: test
+          APP_DATABASE__PASSWORD: test
+          APP_DATABASE__DATABASE: test
+          APP_CACHE__URL: redis://localhost:6379
           RUST_LOG: debug
           SQLX_OFFLINE: true
 
@@ -323,8 +341,12 @@ jobs:
             cargo nextest run --features "${{ matrix.features }}" --verbose
           fi
         env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/test
-          CACHE_URL: redis://localhost:6379
+          APP_DATABASE__HOST: localhost
+          APP_DATABASE__PORT: 5432
+          APP_DATABASE__USERNAME: test
+          APP_DATABASE__PASSWORD: test
+          APP_DATABASE__DATABASE: test
+          APP_CACHE__URL: redis://localhost:6379
           RUST_LOG: info
           SQLX_OFFLINE: true
 
