@@ -22,8 +22,16 @@ nix develop
 just dev
 ```
 
-**Voraussetzungen:**
-- Nix installiert (siehe [Setup Guide](setup/setup.md))
+**4. Warte 2 Minuten** ⏳
+
+Die Services starten und ZITADEL wird automatisch konfiguriert. Nach ca. 2 Minuten kannst du im Browser öffnen:
+
+```
+http://localhost:3001
+```
+
+**Voraussetzungen:** (siehe [Setup Guide](setup/setup.md))
+- Nix installiert
 - Docker Desktop installiert und gestartet
 
 **Fertig!** 🎉

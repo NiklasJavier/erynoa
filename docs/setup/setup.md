@@ -10,8 +10,8 @@
 
 **Zeitaufwand**: ~5-10 Minuten
 
-**Voraussetzungen:**
-- Nix installiert (siehe unten)
+**Voraussetzungen:** (siehe unten für Installationsanleitung)
+- Nix installiert
 - Docker Desktop installiert und gestartet
 
 ```bash
@@ -24,6 +24,14 @@ nix develop
 
 # 3. Projekt starten (startet alles inkl. automatischer ZITADEL-Konfiguration)
 just dev
+```
+
+**4. Warte 2 Minuten** ⏳
+
+Die Services starten und ZITADEL wird automatisch konfiguriert. Nach ca. 2 Minuten kannst du im Browser öffnen:
+
+```
+http://localhost:3001
 ```
 
 **Fertig!** 🎉

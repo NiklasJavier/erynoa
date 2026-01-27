@@ -8,8 +8,8 @@
 
 ## ⚡ Schnellstart (Keine Installation nötig)
 
-**Voraussetzungen:**
-- Nix installiert (siehe unten)
+**Voraussetzungen:** (siehe [Setup Guide](setup/setup.md))
+- Nix installiert
 - Docker Desktop installiert und gestartet
 
 **3 Schritte:**
@@ -24,6 +24,14 @@ nix develop
 
 # 3. Projekt starten
 just dev
+```
+
+**4. Warte 2 Minuten** ⏳
+
+Die Services starten und ZITADEL wird automatisch konfiguriert. Nach ca. 2 Minuten kannst du im Browser öffnen:
+
+```
+http://localhost:3001
 ```
 
 **Fertig!** 🎉
