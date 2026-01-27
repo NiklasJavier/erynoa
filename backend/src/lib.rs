@@ -19,7 +19,13 @@ pub mod telemetry;
 
 // Generated Connect-RPC code (available after build with --features connect)
 #[cfg(feature = "connect")]
-pub mod gen;
+pub mod gen {
+    pub mod erynoa {
+        pub mod v1 {
+            include!(concat!(env!("OUT_DIR"), "/erynoa.v1.rs"));
+        }
+    }
+}
 
 pub use error::{ApiError, Result};
 pub use server::AppState;

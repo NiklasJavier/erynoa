@@ -6,7 +6,7 @@ use std::time::Instant;
 use crate::server::AppState;
 use crate::gen::erynoa::v1::{
     CheckRequest, CheckResponse, ReadyRequest, ReadyResponse,
-    ServiceStatus,
+    ServiceStatus, check_response,
 };
 
 /// Health Check Handler
@@ -18,7 +18,7 @@ pub async fn health_check_handler(
     _request: CheckRequest,
 ) -> CheckResponse {
     CheckResponse {
-        status: CheckResponse::ServingStatus::Serving as i32,
+        status: check_response::ServingStatus::Serving as i32,
     }
 }
 

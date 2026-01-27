@@ -169,7 +169,7 @@ where
             .cloned()
             .ok_or_else(|| {
                 // Use ApiErrorToRpc trait for consistent error conversion
-                ApiError::Unauthorized("Missing authentication".into())
+                crate::ApiError::Unauthorized("Missing authentication".into())
                     .to_rpc_error()
             })
     }
