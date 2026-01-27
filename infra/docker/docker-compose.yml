@@ -26,21 +26,21 @@ services:
       - "5173:5173"
     volumes:
       # SvelteKit source code
-      - ../frontend/console/src:/workspace/console/src:cached
-      - ../frontend/console/static:/workspace/console/static:cached
+      - frontend/console/src:/workspace/console/src:cached
+      - frontend/console/static:/workspace/console/static:cached
       # SvelteKit config files
-      - ../frontend/console/svelte.config.js:/workspace/console/svelte.config.js:cached
-      - ../frontend/console/vite.config.ts:/workspace/console/vite.config.ts:cached
-      - ../frontend/console/tsconfig.json:/workspace/console/tsconfig.json:cached
+      - frontend/console/svelte.config.js:/workspace/console/svelte.config.js:cached
+      - frontend/console/vite.config.ts:/workspace/console/vite.config.ts:cached
+      - frontend/console/tsconfig.json:/workspace/console/tsconfig.json:cached
       # Exclude node_modules (use container's version)
       - /workspace/console/node_modules
       # Proto für Code-Generierung
-      - ../backend/proto:/workspace/backend/proto:cached
+      - backend/proto:/workspace/backend/proto:cached
       # Buf-Konfiguration (im Workspace-Root)
-      - ../buf.gen.yaml:/workspace/buf.gen.yaml:cached
-      - ../buf.yaml:/workspace/buf.yaml:cached
+      - buf.gen.yaml:/workspace/buf.gen.yaml:cached
+      - buf.yaml:/workspace/buf.yaml:cached
       # Gen-Verzeichnis für Hot-Reload
-      - ../frontend/console/src/gen:/workspace/console/src/gen:cached
+      - frontend/console/src/gen:/workspace/console/src/gen:cached
     environment:
       - NODE_ENV=development
       - VITE_API_URL=http://localhost:3000
@@ -63,21 +63,21 @@ services:
       - "5174:5174"
     volumes:
       # SvelteKit source code
-      - ../frontend/platform/src:/workspace/platform/src:cached
-      - ../frontend/platform/static:/workspace/platform/static:cached
+      - frontend/platform/src:/workspace/platform/src:cached
+      - frontend/platform/static:/workspace/platform/static:cached
       # SvelteKit config files
-      - ../frontend/platform/svelte.config.js:/workspace/platform/svelte.config.js:cached
-      - ../frontend/platform/vite.config.ts:/workspace/platform/vite.config.ts:cached
-      - ../frontend/platform/tsconfig.json:/workspace/platform/tsconfig.json:cached
+      - frontend/platform/svelte.config.js:/workspace/platform/svelte.config.js:cached
+      - frontend/platform/vite.config.ts:/workspace/platform/vite.config.ts:cached
+      - frontend/platform/tsconfig.json:/workspace/platform/tsconfig.json:cached
       # Exclude node_modules (use container's version)
       - /workspace/platform/node_modules
       # Proto für Code-Generierung
-      - ../backend/proto:/workspace/backend/proto:cached
+      - backend/proto:/workspace/backend/proto:cached
       # Buf-Konfiguration (im Workspace-Root)
-      - ../buf.gen.yaml:/workspace/buf.gen.yaml:cached
-      - ../buf.yaml:/workspace/buf.yaml:cached
+      - buf.gen.yaml:/workspace/buf.gen.yaml:cached
+      - buf.yaml:/workspace/buf.yaml:cached
       # Gen-Verzeichnis für Hot-Reload
-      - ../frontend/platform/src/gen:/workspace/platform/src/gen:cached
+      - frontend/platform/src/gen:/workspace/platform/src/gen:cached
     environment:
       - NODE_ENV=development
       - VITE_API_URL=http://localhost:3000
@@ -100,21 +100,21 @@ services:
       - "5175:5175"
     volumes:
       # SvelteKit source code
-      - ../frontend/docs/src:/workspace/docs/src:cached
-      - ../frontend/docs/static:/workspace/docs/static:cached
+      - frontend/docs/src:/workspace/docs/src:cached
+      - frontend/docs/static:/workspace/docs/static:cached
       # SvelteKit config files
-      - ../frontend/docs/svelte.config.js:/workspace/docs/svelte.config.js:cached
-      - ../frontend/docs/vite.config.ts:/workspace/docs/vite.config.ts:cached
-      - ../frontend/docs/tsconfig.json:/workspace/docs/tsconfig.json:cached
+      - frontend/docs/svelte.config.js:/workspace/docs/svelte.config.js:cached
+      - frontend/docs/vite.config.ts:/workspace/docs/vite.config.ts:cached
+      - frontend/docs/tsconfig.json:/workspace/docs/tsconfig.json:cached
       # Exclude node_modules (use container's version)
       - /workspace/docs/node_modules
       # Proto für Code-Generierung
-      - ../backend/proto:/workspace/backend/proto:cached
+      - backend/proto:/workspace/backend/proto:cached
       # Buf-Konfiguration (im Workspace-Root)
-      - ../buf.gen.yaml:/workspace/buf.gen.yaml:cached
-      - ../buf.yaml:/workspace/buf.yaml:cached
+      - buf.gen.yaml:/workspace/buf.gen.yaml:cached
+      - buf.yaml:/workspace/buf.yaml:cached
       # Gen-Verzeichnis für Hot-Reload
-      - ../frontend/docs/src/gen:/workspace/docs/src/gen:cached
+      - frontend/docs/src/gen:/workspace/docs/src/gen:cached
     environment:
       - NODE_ENV=development
       - VITE_API_URL=http://localhost:3000
@@ -138,24 +138,24 @@ services:
       - "3000:3000"
     volumes:
       # Source Code - Mounte das ganze Backend-Verzeichnis
-      - ../backend/src:/workspace/backend/src:cached
-      - ../backend/Cargo.toml:/workspace/backend/Cargo.toml:cached
-      - ../backend/Cargo.lock:/workspace/backend/Cargo.lock:cached
-      - ../backend/config:/workspace/backend/config:cached
-      - ../backend/migrations:/workspace/backend/migrations:cached
-      - ../backend/build.rs:/workspace/backend/build.rs:cached
+      - backend/src:/workspace/backend/src:cached
+      - backend/Cargo.toml:/workspace/backend/Cargo.toml:cached
+      - backend/Cargo.lock:/workspace/backend/Cargo.lock:cached
+      - backend/config:/workspace/backend/config:cached
+      - backend/migrations:/workspace/backend/migrations:cached
+      - backend/build.rs:/workspace/backend/build.rs:cached
       # Separate Volume für target/ - verhindert Konflikte zwischen Host und Container
       - backend-target:/workspace/backend/target
       # Cargo Registry Cache - beschleunigt Dependency Downloads
       - cargo-registry:/usr/local/cargo/registry
       - cargo-git:/usr/local/cargo/git
       # Proto für Code-Generierung (Backend + Console)
-      - ../proto:/workspace/proto:cached
+      - backend/proto:/workspace/backend/proto:cached
       # Buf-Konfiguration (für Console-Generierung)
-      - ../buf.gen.yaml:/workspace/buf.gen.yaml:cached
-      - ../buf.yaml:/workspace/buf.yaml:cached
+      - buf.gen.yaml:/workspace/buf.gen.yaml:cached
+      - buf.yaml:/workspace/buf.yaml:cached
       # Backend gen/ für Hot-Reload (wird von build.rs erstellt)
-      - ../backend/src/gen:/workspace/backend/src/gen:cached
+      - backend/src/gen:/workspace/backend/src/gen:cached
     working_dir: /workspace/backend
     environment:
       - RUST_LOG=erynoa_api=debug,info
@@ -380,7 +380,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ../auth/zitadel/init-steps.yaml:/zitadel-init-steps.yaml:ro
+      - infra/auth/zitadel/init-steps.yaml:/zitadel-init-steps.yaml:ro
       - zitadel-machinekey:/machinekey
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/debug/ready"]
@@ -403,8 +403,8 @@ services:
       - "443:443/tcp"      # HTTPS (TCP)
       - "443:443/udp"      # ⚡ HTTP/3 (QUIC) - wichtig für Mobile Performance
     volumes:
-      - ../proxy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - ../static/landing.html:/etc/caddy/landing.html:ro
+      - infra/proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - infra/static/landing.html:/etc/caddy/landing.html:ro
       - caddy-data:/data   # TLS Zertifikate & HTTP/3 State
       - caddy-config:/config
     networks:
