@@ -1,4 +1,175 @@
-error: no such command: `clippy`
+   1.433255167s  INFO prepare_target{force=false package_id=erynoa-api v0.1.0 (/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend) target="erynoa_api"}: cargo::core::compiler::fingerprint: stale: missing "/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend/target/debug/.fingerprint/fred-79b8bdf739ac9bb5/dep-lib-fred"
+   1.478417708s  INFO prepare_target{force=false package_id=erynoa-api v0.1.0 (/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend) target="erynoa_api"}: cargo::core::compiler::fingerprint: fingerprint error for erynoa-api v0.1.0 (/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend)/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("erynoa_api", ["lib"], "/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend/src/lib.rs", Edition2021) }
+   1.478445750s  INFO prepare_target{force=false package_id=erynoa-api v0.1.0 (/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend) target="erynoa_api"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend/target/debug/.fingerprint/erynoa-api-a069cf199e4c1076/lib-erynoa_api`
 
-help: view all installed commands with `cargo --list`
-help: find a package to install `clippy` with `cargo search cargo-clippy`
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: cargo_util::paths::read_bytes
+   2: cargo_util::paths::read
+   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   4: cargo::core::compiler::fingerprint::prepare_target
+   5: cargo::core::compiler::compile
+   6: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   7: cargo::ops::cargo_compile::compile_ws
+   8: cargo::ops::cargo_compile::compile_with_exec
+   9: cargo::ops::cargo_compile::compile
+  10: cargo::commands::check::exec
+  11: <cargo::cli::Exec>::exec
+  12: cargo::main
+  13: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  14: std::rt::lang_start::<()>::{closure#0}
+  15: std::rt::lang_start_internal
+  16: _main
+   1.587015875s  INFO prepare_target{force=false package_id=aws-sdk-s3 v1.119.0 target="aws_sdk_s3"}: cargo::core::compiler::fingerprint: fingerprint error for aws-sdk-s3 v1.119.0/Check { test: false }/TargetInner { ..: lib_target("aws_sdk_s3", ["lib"], "/Users/niklas/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-sdk-s3-1.119.0/src/lib.rs", Edition2021) }
+   1.587031917s  INFO prepare_target{force=false package_id=aws-sdk-s3 v1.119.0 target="aws_sdk_s3"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend/target/debug/.fingerprint/aws-sdk-s3-6fb30a1c6b752df3/lib-aws_sdk_s3`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: cargo_util::paths::read_bytes
+   2: cargo_util::paths::read
+   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   4: cargo::core::compiler::fingerprint::prepare_target
+   5: cargo::core::compiler::compile
+   6: cargo::core::compiler::compile
+   7: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   8: cargo::ops::cargo_compile::compile_ws
+   9: cargo::ops::cargo_compile::compile_with_exec
+  10: cargo::ops::cargo_compile::compile
+  11: cargo::commands::check::exec
+  12: <cargo::cli::Exec>::exec
+  13: cargo::main
+  14: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  15: std::rt::lang_start::<()>::{closure#0}
+  16: std::rt::lang_start_internal
+  17: _main
+   1.706606042s  INFO prepare_target{force=false package_id=fred v9.4.0 target="fred"}: cargo::core::compiler::fingerprint: fingerprint error for fred v9.4.0/Check { test: false }/TargetInner { ..: lib_target("fred", ["lib"], "/Users/niklas/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fred-9.4.0/src/lib.rs", Edition2021) }
+   1.706620458s  INFO prepare_target{force=false package_id=fred v9.4.0 target="fred"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend/target/debug/.fingerprint/fred-79b8bdf739ac9bb5/lib-fred`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: cargo_util::paths::read_bytes
+   2: cargo_util::paths::read
+   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   4: cargo::core::compiler::fingerprint::prepare_target
+   5: cargo::core::compiler::compile
+   6: cargo::core::compiler::compile
+   7: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   8: cargo::ops::cargo_compile::compile_ws
+   9: cargo::ops::cargo_compile::compile_with_exec
+  10: cargo::ops::cargo_compile::compile
+  11: cargo::commands::check::exec
+  12: <cargo::cli::Exec>::exec
+  13: cargo::main
+  14: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  15: std::rt::lang_start::<()>::{closure#0}
+  16: std::rt::lang_start_internal
+  17: _main
+   1.768134125s  INFO prepare_target{force=false package_id=erynoa-api v0.1.0 (/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend) target="erynoa_api"}: cargo::core::compiler::fingerprint: fingerprint error for erynoa-api v0.1.0 (/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend)/Check { test: true }/TargetInner { name_inferred: true, ..: lib_target("erynoa_api", ["lib"], "/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend/src/lib.rs", Edition2021) }
+   1.768153333s  INFO prepare_target{force=false package_id=erynoa-api v0.1.0 (/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend) target="erynoa_api"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend/target/debug/.fingerprint/erynoa-api-719f12aa5bc03eb6/test-lib-erynoa_api`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: cargo_util::paths::read_bytes
+   2: cargo_util::paths::read
+   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   4: cargo::core::compiler::fingerprint::prepare_target
+   5: cargo::core::compiler::compile
+   6: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   7: cargo::ops::cargo_compile::compile_ws
+   8: cargo::ops::cargo_compile::compile_with_exec
+   9: cargo::ops::cargo_compile::compile
+  10: cargo::commands::check::exec
+  11: <cargo::cli::Exec>::exec
+  12: cargo::main
+  13: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  14: std::rt::lang_start::<()>::{closure#0}
+  15: std::rt::lang_start_internal
+  16: _main
+   1.775894583s  INFO prepare_target{force=false package_id=erynoa-api v0.1.0 (/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend) target="erynoa-api"}: cargo::core::compiler::fingerprint: fingerprint error for erynoa-api v0.1.0 (/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend)/Check { test: false }/TargetInner { name: "erynoa-api", doc: true, ..: with_path("/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend/src/main.rs", Edition2021) }
+   1.775905708s  INFO prepare_target{force=false package_id=erynoa-api v0.1.0 (/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend) target="erynoa-api"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend/target/debug/.fingerprint/erynoa-api-006832bdcddcecd8/bin-erynoa-api`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: cargo_util::paths::read_bytes
+   2: cargo_util::paths::read
+   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   4: cargo::core::compiler::fingerprint::prepare_target
+   5: cargo::core::compiler::compile
+   6: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   7: cargo::ops::cargo_compile::compile_ws
+   8: cargo::ops::cargo_compile::compile_with_exec
+   9: cargo::ops::cargo_compile::compile
+  10: cargo::commands::check::exec
+  11: <cargo::cli::Exec>::exec
+  12: cargo::main
+  13: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  14: std::rt::lang_start::<()>::{closure#0}
+  15: std::rt::lang_start_internal
+  16: _main
+   1.777707000s  INFO prepare_target{force=false package_id=erynoa-api v0.1.0 (/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend) target="erynoa-api"}: cargo::core::compiler::fingerprint: fingerprint error for erynoa-api v0.1.0 (/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend)/Check { test: true }/TargetInner { name: "erynoa-api", doc: true, ..: with_path("/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend/src/main.rs", Edition2021) }
+   1.777718583s  INFO prepare_target{force=false package_id=erynoa-api v0.1.0 (/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend) target="erynoa-api"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend/target/debug/.fingerprint/erynoa-api-11446b98add77941/test-bin-erynoa-api`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: cargo_util::paths::read_bytes
+   2: cargo_util::paths::read
+   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   4: cargo::core::compiler::fingerprint::prepare_target
+   5: cargo::core::compiler::compile
+   6: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   7: cargo::ops::cargo_compile::compile_ws
+   8: cargo::ops::cargo_compile::compile_with_exec
+   9: cargo::ops::cargo_compile::compile
+  10: cargo::commands::check::exec
+  11: <cargo::cli::Exec>::exec
+  12: cargo::main
+  13: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  14: std::rt::lang_start::<()>::{closure#0}
+  15: std::rt::lang_start_internal
+  16: _main
+   1.779284750s  INFO prepare_target{force=false package_id=erynoa-api v0.1.0 (/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend) target="api"}: cargo::core::compiler::fingerprint: fingerprint error for erynoa-api v0.1.0 (/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend)/Check { test: true }/TargetInner { kind: "test", name: "api", benched: false, ..: with_path("/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend/tests/api.rs", Edition2021) }
+   1.779290958s  INFO prepare_target{force=false package_id=erynoa-api v0.1.0 (/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend) target="api"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend/target/debug/.fingerprint/erynoa-api-90a43faba5e7cabb/test-integration-test-api`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: cargo_util::paths::read_bytes
+   2: cargo_util::paths::read
+   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   4: cargo::core::compiler::fingerprint::prepare_target
+   5: cargo::core::compiler::compile
+   6: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   7: cargo::ops::cargo_compile::compile_ws
+   8: cargo::ops::cargo_compile::compile_with_exec
+   9: cargo::ops::cargo_compile::compile
+  10: cargo::commands::check::exec
+  11: <cargo::cli::Exec>::exec
+  12: cargo::main
+  13: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  14: std::rt::lang_start::<()>::{closure#0}
+  15: std::rt::lang_start_internal
+  16: _main
+    Checking aws-sdk-s3 v1.119.0
+    Checking fred v9.4.0
+    Checking erynoa-api v0.1.0 (/Users/niklas/Development/30_Development_Code/31_git_ownbusiness/erynoa/erynoa-main/backend)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 15.01s
