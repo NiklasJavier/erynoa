@@ -1081,6 +1081,55 @@ test-ci:
 # 🧪 TESTING
 # ═══════════════════════════════════════════════════════
 
+# Entfernt den DevContainer komplett (Container, Volumes, Images)
+# Usage: just devcontainer-remove [mode]
+#   just devcontainer-remove        → Container stoppen und entfernen
+#   just devcontainer-remove volumes → Zusätzlich Volumes löschen
+#   just devcontainer-remove images → Zusätzlich Images löschen
+#   just devcontainer-remove all    → Alles löschen (Volumes + Images)
+devcontainer-remove mode="":
+    #!/usr/bin/env bash
+    set -e
+    echo "🗑️  Entferne DevContainer..."
+    
+    cd {{WORKSPACE_ROOT}}/.devcontainer
+    
+    # Prüfe, ob Container laufen
+    if docker compose ps -q dev >/dev/null 2>&1; then
+        echo "  ⏳ Stoppe DevContainer..."
+        docker compose down || true
+        echo "  ✅ DevContainer gestoppt"
+    else
+        echo "  ℹ️  DevContainer läuft nicht"
+    fi
+    
+    # Entferne Container
+    echo "  🗑️  Entferne Container..."
+    docker compose rm -f dev 2>/dev/null || true
+    
+    MODE=$(echo "{{mode}}" | tr '[:upper:]' '[:lower:]')
+    
+    # Optionale Volumes löschen
+    if [ "$MODE" = "volumes" ] || [ "$MODE" = "all" ]; then
+        echo "  🗑️  Entferne Volumes..."
+        docker compose down -v 2>/dev/null || true
+        echo "  ✅ Volumes entfernt"
+    fi
+    
+    # Optionale Images löschen
+    if [ "$MODE" = "images" ] || [ "$MODE" = "all" ]; then
+        echo "  🗑️  Entferne Images..."
+        docker compose down --rmi local 2>/dev/null || true
+        echo "  ✅ Images entfernt"
+    fi
+    
+    echo ""
+    echo "✅ DevContainer entfernt!"
+    echo "   Neu erstellen: DevContainer in VS Code/Cursor öffnen"
+
+# Alias für devcontainer-remove
+devcontainer-clean: devcontainer-remove
+
 # Testet den DevContainer Build und Services
 # Usage: just test-devcontainer
 test-devcontainer:
