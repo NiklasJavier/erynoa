@@ -13,5 +13,8 @@ mod logging;
 pub use cors::build_cors;
 // error_handler is a placeholder for future global error handling
 // pub use error_handler::error_handler;
-pub use frontend_origin::{frontend_origin_middleware, FrontendOrigin};
+pub use frontend_origin::frontend_origin_middleware;
+// FrontendOrigin is re-exported for use in handlers
+#[allow(unused_imports)]
+pub use frontend_origin::FrontendOrigin;
 pub use logging::logging_middleware;

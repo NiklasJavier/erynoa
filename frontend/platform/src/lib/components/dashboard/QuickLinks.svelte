@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { getDashboardQuickLinksGrouped, type QuickLinkGroup } from '$lib/config/quicklinks';
-	import { Badge } from '$lib/components/ui/badge';
-	import ChevronRight from 'lucide-svelte/icons/chevron-right';
+import { Badge } from '$lib/components/ui/badge'
+import { type QuickLinkGroup, getDashboardQuickLinksGrouped } from '$lib/config/quicklinks'
+import ChevronRight from 'lucide-svelte/icons/chevron-right'
 
-	interface Props {
-		class?: string;
-	}
+interface Props {
+	class?: string
+}
 
-	let { class: className }: Props = $props();
+const { class: className }: Props = $props()
 
-	const quickLinkGroups: QuickLinkGroup[] = getDashboardQuickLinksGrouped();
+const quickLinkGroups: QuickLinkGroup[] = getDashboardQuickLinksGrouped()
 </script>
 
 <div class={className}>

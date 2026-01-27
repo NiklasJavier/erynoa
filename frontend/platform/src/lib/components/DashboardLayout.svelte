@@ -1,18 +1,18 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
-	import * as Sidebar from '$lib/components/ui/sidebar';
-	import AppSidebar from '$lib/components/dashboard/AppSidebar.svelte';
-	import SiteHeader from '$lib/components/dashboard/SiteHeader.svelte';
-	import { getSidebarWidth } from '$lib/config';
+import AppSidebar from '$lib/components/dashboard/AppSidebar.svelte'
+import SiteHeader from '$lib/components/dashboard/SiteHeader.svelte'
+import * as Sidebar from '$lib/components/ui/sidebar'
+import { getSidebarWidth } from '$lib/config'
+import type { Snippet } from 'svelte'
 
-	interface Props {
-		children: Snippet;
-	}
+interface Props {
+	children: Snippet
+}
 
-	let { children }: Props = $props();
-	
-	// Dynamische Sidebar-Breite basierend auf Navigation-Tiefe
-	const sidebarWidth = getSidebarWidth();
+const { children }: Props = $props()
+
+// Dynamische Sidebar-Breite basierend auf Navigation-Tiefe
+const sidebarWidth = getSidebarWidth()
 </script>
 
 <Sidebar.Provider style="--sidebar-width: {sidebarWidth}; --header-height: calc(var(--spacing) * 12);">

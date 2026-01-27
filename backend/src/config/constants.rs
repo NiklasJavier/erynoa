@@ -1,7 +1,7 @@
 //! Configuration Constants
 //!
 //! Zentrale Konstanten für Service-URLs und Ports
-//! Harmonized with frontend/console/src/lib/service-urls.ts and README/development/SERVICE_CONFIG.md
+//! Harmonized with frontend/console/src/lib/service-urls.ts and docs/development/service_config.md
 
 /// Service URLs for local development
 /// These values should match backend/config/base.toml

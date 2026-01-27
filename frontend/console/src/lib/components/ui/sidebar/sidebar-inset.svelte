@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { cn } from '$lib/utils';
-	import type { HTMLAttributes } from 'svelte/elements';
+import { cn } from '$lib/utils'
+import type { HTMLAttributes } from 'svelte/elements'
 
-	interface Props extends HTMLAttributes<HTMLElement> {
-		class?: string;
-		children?: import('svelte').Snippet;
-	}
+interface Props extends HTMLAttributes<HTMLElement> {
+	class?: string
+	children?: import('svelte').Snippet
+}
 
-	let { class: className, children, ...restProps }: Props = $props();
+const { class: className, children, ...restProps }: Props = $props()
 </script>
 
 <main

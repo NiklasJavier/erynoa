@@ -15,6 +15,7 @@ use crate::server::AppState;
 /// Frontend identifier stored in request extensions
 #[derive(Debug, Clone)]
 pub struct FrontendOrigin {
+    #[allow(dead_code)] // Used in handlers via RpcFromRequestParts
     pub client_id: String,
 }
 

@@ -1,8 +1,8 @@
 <script lang="ts">
-	import TrendingDown from 'lucide-svelte/icons/trending-down';
-	import TrendingUp from 'lucide-svelte/icons/trending-up';
-	import { Badge } from '$lib/components/ui/badge';
-	import * as Card from '$lib/components/ui/card';
+import { Badge } from '$lib/components/ui/badge'
+import * as Card from '$lib/components/ui/card'
+import TrendingDown from 'lucide-svelte/icons/trending-down'
+import TrendingUp from 'lucide-svelte/icons/trending-up'
 </script>
 
 <div

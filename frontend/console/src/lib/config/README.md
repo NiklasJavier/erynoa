@@ -138,7 +138,7 @@ lib/config/
 ├── app.ts            # App-Config (URLs, Version, etc.)
 ├── navigation.ts     # Sidebar-Navigation
 ├── pages.ts          # Page-Metadaten (Titel, Beschreibung)
-└── README.md         # Diese Dokumentation
+└── readme.md         # Diese Dokumentation
 
 lib/components/
 ├── PageContent.svelte       # Auto-Header aus pageConfig

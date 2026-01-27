@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Select as SelectPrimitive } from "bits-ui";
+import { Select as SelectPrimitive } from 'bits-ui'
 
-	let { ...restProps }: SelectPrimitive.GroupProps = $props();
+const { ...restProps }: SelectPrimitive.GroupProps = $props()
 </script>
 
 <SelectPrimitive.Group {...restProps} />

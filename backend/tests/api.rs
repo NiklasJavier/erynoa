@@ -2,8 +2,8 @@
 //!
 //! Tests für die neue feature-basierte API-Struktur
 
-use godstack_api::config::Settings;
-use godstack_api::server::Server;
+use erynoa_api::config::Settings;
+use erynoa_api::server::Server;
 use serde_json::Value;
 
 pub struct TestApp {
@@ -228,7 +228,7 @@ mod tests {
         
         // CORS-Header sollten vorhanden sein (auch wenn nicht alle gesetzt sind)
         // In Development sollte CORS sehr permissiv sein
-        let headers = res.headers();
+        let _headers = res.headers();
         // Prüfe ob Response erfolgreich ist (CORS funktioniert)
         assert!(res.status().is_success());
     }

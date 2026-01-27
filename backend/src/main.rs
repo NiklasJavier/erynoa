@@ -1,10 +1,8 @@
-//! Erynoa Backend
+//! Erynoa Backend - Binary Entrypoint
 
 #[cfg(all(not(target_env = "msvc"), feature = "jemalloc"))]
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
-
-// Note: tikv-jemallocator is optional and only compiled when jemalloc feature is enabled
 
 use erynoa_api::{
     config::{Settings, version::VERSION},
@@ -14,7 +12,7 @@ use erynoa_api::{
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let subscriber = get_subscriber("erynoa".into(), "info".into(), std::io::stdout);
+    let subscriber = get_subscriber("erynoa-backend".into(), "info".into(), std::io::stdout);
     init_subscriber(subscriber);
 
     let settings = Settings::load().expect("Failed to load configuration");

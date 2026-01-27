@@ -1,23 +1,28 @@
 <script lang="ts">
-  import { Button } from '$lib/components/ui/button';
-  import * as Avatar from '$lib/components/ui/avatar';
-  import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-  import { authStore, user, isAuthenticated } from '$lib/auth';
-  import { LogOut, User, Settings } from 'lucide-svelte';
-  
-  async function handleLogin() {
-    await authStore.login();
-  }
-  
-  async function handleLogout() {
-    await authStore.logout();
-  }
-  
-  // Get initials from user name
-  function getInitials(name: string | undefined): string {
-    if (!name) return '?';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  }
+import { authStore, isAuthenticated, user } from '$lib/auth'
+import * as Avatar from '$lib/components/ui/avatar'
+import { Button } from '$lib/components/ui/button'
+import * as DropdownMenu from '$lib/components/ui/dropdown-menu'
+import { LogOut, Settings, User } from 'lucide-svelte'
+
+async function handleLogin() {
+	await authStore.login()
+}
+
+async function handleLogout() {
+	await authStore.logout()
+}
+
+// Get initials from user name
+function getInitials(name: string | undefined): string {
+	if (!name) return '?'
+	return name
+		.split(' ')
+		.map((n) => n[0])
+		.join('')
+		.toUpperCase()
+		.slice(0, 2)
+}
 </script>
 
 {#if $isAuthenticated && $user}

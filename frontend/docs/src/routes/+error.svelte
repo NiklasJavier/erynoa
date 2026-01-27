@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import * as Card from '$lib/components/ui/card';
-	import { Home, ArrowLeft } from 'lucide-svelte';
+import { Button } from '$lib/components/ui/button'
+import * as Card from '$lib/components/ui/card'
+import { ArrowLeft, Home } from 'lucide-svelte'
 </script>
 
 <div class="flex items-center justify-center min-h-[60vh]">

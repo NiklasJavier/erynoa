@@ -1,198 +1,200 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import PageContent from '$lib/components/PageContent.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import * as Card from '$lib/components/ui/card';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import { Input } from '$lib/components/ui/input';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Separator } from '$lib/components/ui/separator';
-	import { authStore, isAuthenticated, isLoading as authLoading } from '$lib/auth';
-	import { goto } from '$app/navigation';
-	import {
-		Loader2,
-		Upload,
-		Download,
-		Trash2,
-		FolderPlus,
-		File as FileIcon,
-		Folder,
-		RefreshCw,
-	} from 'lucide-svelte';
-	import { toast } from 'svelte-sonner';
+import { goto } from '$app/navigation'
+import { authStore, isAuthenticated, isLoading } from '$lib/auth'
+import PageContent from '$lib/components/PageContent.svelte'
+import { Badge } from '$lib/components/ui/badge'
+import { Button } from '$lib/components/ui/button'
+import * as Card from '$lib/components/ui/card'
+import * as Dialog from '$lib/components/ui/dialog'
+import { Input } from '$lib/components/ui/input'
+import { Separator } from '$lib/components/ui/separator'
+import {
+	Download,
+	File as FileIcon,
+	Folder,
+	FolderPlus,
+	Loader2,
+	RefreshCw,
+	Trash2,
+	Upload,
+} from 'lucide-svelte'
+import { onMount } from 'svelte'
+import { toast } from 'svelte-sonner'
 
-	// Types
-	interface StorageObject {
-		key: string;
-		size: number;
-		lastModified?: Date;
-		etag?: string;
+// Types
+interface StorageObject {
+	key: string
+	size: number
+	lastModified?: Date
+	etag?: string
+}
+
+// State
+let objects = $state<StorageObject[]>([])
+let buckets = $state<string[]>([])
+let currentBucket = $state<string>('uploads')
+let isLoadingObjects = $state(false)
+let isLoadingBuckets = $state(false)
+let uploadDialogOpen = $state(false)
+let createBucketDialogOpen = $state(false)
+let newBucketName = $state('')
+let selectedFile = $state<globalThis.File | null>(null)
+
+// Redirect if not authenticated
+$effect(() => {
+	if (!$isLoading && !$isAuthenticated) {
+		goto('/')
 	}
+})
 
-	// State
-	let objects = $state<StorageObject[]>([]);
-	let buckets = $state<string[]>([]);
-	let currentBucket = $state<string>('uploads');
-	let isLoadingObjects = $state(false);
-	let isLoadingBuckets = $state(false);
-	let uploadDialogOpen = $state(false);
-	let createBucketDialogOpen = $state(false);
-	let newBucketName = $state('');
-	let selectedFile = $state<globalThis.File | null>(null);
-
-	// Redirect if not authenticated
-	$effect(() => {
-		if (!$authLoading && !$isAuthenticated) {
-			goto('/');
-		}
-	});
-
-	onMount(() => {
-		if ($isAuthenticated) {
-			loadBuckets();
-			loadObjects();
-		}
-	});
-
-	async function loadBuckets() {
-		isLoadingBuckets = true;
-		try {
-			const { createAuthenticatedClients } = await import('$lib/api/clients');
-			const clients = createAuthenticatedClients(() => authStore.getAccessToken());
-			const response = await clients.storage.listBuckets({});
-			buckets = response.buckets || [];
-		} catch (err) {
-			console.error('Failed to load buckets:', err);
-			toast.error('Failed to load buckets');
-		} finally {
-			isLoadingBuckets = false;
-		}
+onMount(() => {
+	if ($isAuthenticated) {
+		loadBuckets()
+		loadObjects()
 	}
+})
 
-	async function loadObjects() {
-		isLoadingObjects = true;
-		try {
-			const { createAuthenticatedClients } = await import('$lib/api/clients');
-			const clients = createAuthenticatedClients(() => authStore.getAccessToken());
-			const response = await clients.storage.list({ bucket: currentBucket });
-			objects = (response.objects || []).map((obj: { key: string; size: bigint; lastModified?: { toDate(): Date }; etag?: string }) => ({
+async function loadBuckets() {
+	isLoadingBuckets = true
+	try {
+		const { createAuthenticatedClients } = await import('$lib/api/clients')
+		const clients = createAuthenticatedClients(() => authStore.getAccessToken())
+		const response = await clients.storage.listBuckets({})
+		buckets = response.buckets || []
+	} catch (err) {
+		console.error('Failed to load buckets:', err)
+		toast.error('Failed to load buckets')
+	} finally {
+		isLoadingBuckets = false
+	}
+}
+
+async function loadObjects() {
+	isLoadingObjects = true
+	try {
+		const { createAuthenticatedClients } = await import('$lib/api/clients')
+		const clients = createAuthenticatedClients(() => authStore.getAccessToken())
+		const response = await clients.storage.list({ bucket: currentBucket })
+		objects = (response.objects || []).map(
+			(obj: { key: string; size: bigint; lastModified?: { toDate(): Date }; etag?: string }) => ({
 				key: obj.key,
 				size: Number(obj.size),
 				lastModified: obj.lastModified?.toDate(),
 				etag: obj.etag,
-			}));
-		} catch (err) {
-			console.error('Failed to load objects:', err);
-			toast.error('Failed to load objects');
-		} finally {
-			isLoadingObjects = false;
-		}
+			})
+		)
+	} catch (err) {
+		console.error('Failed to load objects:', err)
+		toast.error('Failed to load objects')
+	} finally {
+		isLoadingObjects = false
 	}
+}
 
-	async function uploadFile() {
-		if (!selectedFile) return;
+async function uploadFile() {
+	if (!selectedFile) return
 
-		try {
-			const { createAuthenticatedClients } = await import('$lib/api/clients');
-			const clients = createAuthenticatedClients(() => authStore.getAccessToken());
-			
-			// Get presigned upload URL
-			const response = await clients.storage.getPresignedUploadUrl({
-				bucket: currentBucket,
-				key: selectedFile.name,
-				contentType: selectedFile.type || 'application/octet-stream',
-			});
+	try {
+		const { createAuthenticatedClients } = await import('$lib/api/clients')
+		const clients = createAuthenticatedClients(() => authStore.getAccessToken())
 
-			// Upload to presigned URL
-			await fetch(response.url, {
-				method: 'PUT',
-				body: selectedFile,
-				headers: {
-					'Content-Type': selectedFile.type || 'application/octet-stream',
-				},
-			});
+		// Get presigned upload URL
+		const response = await clients.storage.getPresignedUploadUrl({
+			bucket: currentBucket,
+			key: selectedFile.name,
+			contentType: selectedFile.type || 'application/octet-stream',
+		})
 
-			toast.success('File uploaded successfully');
-			uploadDialogOpen = false;
-			selectedFile = null;
-			loadObjects();
-		} catch (err) {
-			console.error('Upload failed:', err);
-			toast.error('Upload failed');
-		}
+		// Upload to presigned URL
+		await fetch(response.url, {
+			method: 'PUT',
+			body: selectedFile,
+			headers: {
+				'Content-Type': selectedFile.type || 'application/octet-stream',
+			},
+		})
+
+		toast.success('File uploaded successfully')
+		uploadDialogOpen = false
+		selectedFile = null
+		loadObjects()
+	} catch (err) {
+		console.error('Upload failed:', err)
+		toast.error('Upload failed')
 	}
+}
 
-	async function downloadFile(key: string) {
-		try {
-			const { createAuthenticatedClients } = await import('$lib/api/clients');
-			const clients = createAuthenticatedClients(() => authStore.getAccessToken());
-			
-			const response = await clients.storage.getPresignedDownloadUrl({
-				bucket: currentBucket,
-				key,
-			});
+async function downloadFile(key: string) {
+	try {
+		const { createAuthenticatedClients } = await import('$lib/api/clients')
+		const clients = createAuthenticatedClients(() => authStore.getAccessToken())
 
-			window.open(response.url, '_blank');
-		} catch (err) {
-			console.error('Download failed:', err);
-			toast.error('Download failed');
-		}
+		const response = await clients.storage.getPresignedDownloadUrl({
+			bucket: currentBucket,
+			key,
+		})
+
+		window.open(response.url, '_blank')
+	} catch (err) {
+		console.error('Download failed:', err)
+		toast.error('Download failed')
 	}
+}
 
-	async function deleteFile(key: string) {
-		if (!confirm(`Delete ${key}?`)) return;
+async function deleteFile(key: string) {
+	if (!confirm(`Delete ${key}?`)) return
 
-		try {
-			const { createAuthenticatedClients } = await import('$lib/api/clients');
-			const clients = createAuthenticatedClients(() => authStore.getAccessToken());
-			
-			await clients.storage.delete({
-				bucket: currentBucket,
-				key,
-			});
+	try {
+		const { createAuthenticatedClients } = await import('$lib/api/clients')
+		const clients = createAuthenticatedClients(() => authStore.getAccessToken())
 
-			toast.success('File deleted');
-			loadObjects();
-		} catch (err) {
-			console.error('Delete failed:', err);
-			toast.error('Delete failed');
-		}
+		await clients.storage.delete({
+			bucket: currentBucket,
+			key,
+		})
+
+		toast.success('File deleted')
+		loadObjects()
+	} catch (err) {
+		console.error('Delete failed:', err)
+		toast.error('Delete failed')
 	}
+}
 
-	async function createBucket() {
-		if (!newBucketName.trim()) return;
+async function createBucket() {
+	if (!newBucketName.trim()) return
 
-		try {
-			const { createAuthenticatedClients } = await import('$lib/api/clients');
-			const clients = createAuthenticatedClients(() => authStore.getAccessToken());
-			
-			await clients.storage.createBucket({ name: newBucketName.trim() });
+	try {
+		const { createAuthenticatedClients } = await import('$lib/api/clients')
+		const clients = createAuthenticatedClients(() => authStore.getAccessToken())
 
-			toast.success('Bucket created');
-			createBucketDialogOpen = false;
-			newBucketName = '';
-			loadBuckets();
-		} catch (err) {
-			console.error('Create bucket failed:', err);
-			toast.error('Failed to create bucket');
-		}
+		await clients.storage.createBucket({ name: newBucketName.trim() })
+
+		toast.success('Bucket created')
+		createBucketDialogOpen = false
+		newBucketName = ''
+		loadBuckets()
+	} catch (err) {
+		console.error('Create bucket failed:', err)
+		toast.error('Failed to create bucket')
 	}
+}
 
-	function formatFileSize(bytes: number): string {
-		if (bytes === 0) return '0 B';
-		const k = 1024;
-		const sizes = ['B', 'KB', 'MB', 'GB'];
-		const i = Math.floor(Math.log(bytes) / Math.log(k));
-		return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
-	}
+function formatFileSize(bytes: number): string {
+	if (bytes === 0) return '0 B'
+	const k = 1024
+	const sizes = ['B', 'KB', 'MB', 'GB']
+	const i = Math.floor(Math.log(bytes) / Math.log(k))
+	return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`
+}
 
-	function handleFileSelect(event: Event) {
-		const input = event.target as HTMLInputElement;
-		selectedFile = input.files?.[0] || null;
-	}
+function handleFileSelect(event: Event) {
+	const input = event.target as HTMLInputElement
+	selectedFile = input.files?.[0] || null
+}
 </script>
 
-{#if $authLoading}
+{#if $isLoading}
 	<div class="flex items-center justify-center min-h-[60vh]">
 		<Loader2 class="h-8 w-8 animate-spin" />
 	</div>

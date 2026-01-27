@@ -4,8 +4,8 @@
  * Lädt Konfiguration vom Backend und bietet Fallback-Werte
  */
 
-import { z } from 'zod';
-import { browser } from '$app/environment';
+import { browser } from '$app/environment'
+import { z } from 'zod'
 
 // Schema
 export const ConfigSchema = z.object({
@@ -25,9 +25,9 @@ export const ConfigSchema = z.object({
 			socialLogin: z.boolean(),
 		})
 		.optional(),
-});
+})
 
-export type Config = z.infer<typeof ConfigSchema>;
+export type Config = z.infer<typeof ConfigSchema>
 
 // Default Konfiguration (Fallback)
 export const DEFAULT_CONFIG: Config = {
@@ -35,6 +35,7 @@ export const DEFAULT_CONFIG: Config = {
 	version: '0.1.0',
 	auth: {
 		issuer: 'http://localhost:8080',
+		// Symbolischer Default – echte Client-ID kommt dynamisch vom Backend (InfoService)
 		clientId: 'erynoa-docs',
 	},
 	urls: {
@@ -45,27 +46,27 @@ export const DEFAULT_CONFIG: Config = {
 		registration: true,
 		socialLogin: false,
 	},
-};
+}
 
 // Config Cache
-let cachedConfig: Config | null = null;
+let cachedConfig: Config | null = null
 
 /**
  * Lade Konfiguration vom Backend
  */
 export async function fetchConfig(forceReload = false): Promise<Config> {
-	if (cachedConfig && !forceReload) return cachedConfig;
-	if (!browser) return DEFAULT_CONFIG;
+	if (cachedConfig && !forceReload) return cachedConfig
+	if (!browser) return DEFAULT_CONFIG
 
 	try {
 		// Clear cache if forcing reload
 		if (forceReload) {
-			cachedConfig = null;
+			cachedConfig = null
 		}
-		
-		const { infoClient } = await import('$lib/api/clients');
-		const client = infoClient();
-		const response = await client.getInfo({});
+
+		const { infoClient } = await import('$lib/api/clients')
+		const client = infoClient()
+		const response = await client.getInfo({})
 
 		const config: Config = {
 			environment: (response.environment as Config['environment']) || 'local',
@@ -82,23 +83,23 @@ export async function fetchConfig(forceReload = false): Promise<Config> {
 				registration: response.features?.registration ?? true,
 				socialLogin: response.features?.socialLogin ?? false,
 			},
-		};
+		}
 
 		// Validiere und cache
-		cachedConfig = ConfigSchema.parse(config);
+		cachedConfig = ConfigSchema.parse(config)
 		console.log('[Config] Loaded from backend:', {
 			environment: cachedConfig.environment,
 			clientId: cachedConfig.auth.clientId,
-			issuer: cachedConfig.auth.issuer
-		});
-		return cachedConfig;
+			issuer: cachedConfig.auth.issuer,
+		})
+		return cachedConfig
 	} catch (error) {
-		console.error('[Config] Failed to load from backend, using defaults', error);
+		console.error('[Config] Failed to load from backend, using defaults', error)
 		// Log detailed error for debugging
 		if (error instanceof Error) {
-			console.error('[Config] Error details:', error.message, error.stack);
+			console.error('[Config] Error details:', error.message, error.stack)
 		}
-		return DEFAULT_CONFIG;
+		return DEFAULT_CONFIG
 	}
 }
 
@@ -106,19 +107,19 @@ export async function fetchConfig(forceReload = false): Promise<Config> {
  * Hole gecachte Config synchron (oder default)
  */
 export function getAppConfig(): Config {
-	return cachedConfig || DEFAULT_CONFIG;
+	return cachedConfig || DEFAULT_CONFIG
 }
 
 /**
  * Setze Config (für Tests)
  */
 export function setConfig(config: Config): void {
-	cachedConfig = config;
+	cachedConfig = config
 }
 
 /**
  * Leere Config-Cache (z.B. nach Client-ID-Änderungen)
  */
 export function clearConfigCache(): void {
-	cachedConfig = null;
+	cachedConfig = null
 }

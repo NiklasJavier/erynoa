@@ -1,74 +1,77 @@
 <script lang="ts">
-	import * as Sidebar from '$lib/components/ui/sidebar';
-	import * as Avatar from '$lib/components/ui/avatar';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-	import * as Collapsible from '$lib/components/ui/collapsible';
-	import { Badge } from '$lib/components/ui/badge';
-	import { user, authStore } from '$lib/auth';
-	import { page } from '$app/stores';
-	import { 
-		navigationConfig, 
-		hasChildren, 
-		getFilteredNavigation,
-		getEntryUrl,
-		type NavEntry,
-		type UserRole 
-	} from '$lib/config';
-	import { getSidebarContext } from '$lib/components/ui/sidebar';
-	import ChevronsUpDown from 'lucide-svelte/icons/chevrons-up-down';
-	import ChevronRight from 'lucide-svelte/icons/chevron-right';
-	import LogOut from 'lucide-svelte/icons/log-out';
-	import Sparkles from 'lucide-svelte/icons/sparkles';
+import { page } from '$app/stores'
+import { authStore, user } from '$lib/auth'
+import * as Avatar from '$lib/components/ui/avatar'
+import { Badge } from '$lib/components/ui/badge'
+import * as Collapsible from '$lib/components/ui/collapsible'
+import * as DropdownMenu from '$lib/components/ui/dropdown-menu'
+import * as Sidebar from '$lib/components/ui/sidebar'
+import { getSidebarContext } from '$lib/components/ui/sidebar'
+import {
+	type NavEntry,
+	type UserRole,
+	getEntryUrl,
+	getFilteredNavigation,
+	hasChildren,
+	navigationConfig,
+} from '$lib/config'
+import ChevronRight from 'lucide-svelte/icons/chevron-right'
+import ChevronsUpDown from 'lucide-svelte/icons/chevrons-up-down'
+import LogOut from 'lucide-svelte/icons/log-out'
+import Sparkles from 'lucide-svelte/icons/sparkles'
 
-	interface Props {
-		variant?: 'sidebar' | 'floating' | 'inset';
+interface Props {
+	variant?: 'sidebar' | 'floating' | 'inset'
+}
+
+const { variant = 'inset' }: Props = $props()
+
+// Sidebar Context für collapsed State
+const { state: sidebarState } = getSidebarContext()
+const isCollapsed = $derived($sidebarState === 'collapsed')
+
+// Benutzerrollen aus OIDC-Claims extrahieren
+const userRoles = $derived(() => {
+	if (!$user?.profile) return ['user'] as UserRole[]
+
+	const roles: UserRole[] = ['user']
+	const profile = $user.profile as Record<string, unknown>
+
+	// ZITADEL: Rollen aus project roles claim
+	if (profile['urn:zitadel:iam:org:project:roles']) {
+		const zitadelRoles = profile['urn:zitadel:iam:org:project:roles'] as Record<string, unknown>
+		if ('admin' in zitadelRoles) roles.push('admin')
+		if ('editor' in zitadelRoles) roles.push('editor')
 	}
 
-	let { variant = 'inset' }: Props = $props();
+	return roles
+})
 
-	// Sidebar Context für collapsed State
-	const { state: sidebarState } = getSidebarContext();
-	const isCollapsed = $derived($sidebarState === 'collapsed');
+// Gefilterte Navigation basierend auf Benutzerrollen
+const filteredConfig = $derived(() => {
+	const roles = userRoles()
+	return getFilteredNavigation(roles)
+})
 
-	// Benutzerrollen aus OIDC-Claims extrahieren
-	const userRoles = $derived<UserRole[]>(() => {
-		if (!$user?.profile) return ['user'];
-		
-		const roles: UserRole[] = ['user'];
-		const profile = $user.profile as Record<string, unknown>;
-		
-		// ZITADEL: Rollen aus project roles claim
-		if (profile['urn:zitadel:iam:org:project:roles']) {
-			const zitadelRoles = profile['urn:zitadel:iam:org:project:roles'] as Record<string, unknown>;
-			if ('admin' in zitadelRoles) roles.push('admin');
-			if ('editor' in zitadelRoles) roles.push('editor');
-		}
-		
-		return roles;
-	});
+// Navigation aus gefilterter Config
+const { brand } = navigationConfig // Brand immer sichtbar
+const topItems = $derived.by(() => filteredConfig().topItems)
+const groups = $derived.by(() => filteredConfig().groups)
+const footer = $derived.by(() => filteredConfig().footer)
 
-	// Gefilterte Navigation basierend auf Benutzerrollen
-	const filteredConfig = $derived(getFilteredNavigation(userRoles()));
+// Exakter Match - für Leaf-Items (ohne Kinder)
+function isExactActive(url: string | undefined): boolean {
+	if (!url) return false
+	return $page.url.pathname === url
+}
 
-	// Navigation aus gefilterter Config
-	const { brand } = navigationConfig; // Brand immer sichtbar
-	const topItems = $derived(filteredConfig.topItems);
-	const groups = $derived(filteredConfig.groups);
-	const footer = $derived(filteredConfig.footer);
-
-	// Exakter Match - für Leaf-Items (ohne Kinder)
-	function isExactActive(url: string | undefined): boolean {
-		if (!url) return false;
-		return $page.url.pathname === url;
+// Prüft ob ein Item mit Children (oder deren Children) aktiv ist
+function isChildActiveRecursive(entry: NavEntry): boolean {
+	if (!hasChildren(entry)) {
+		return isExactActive(entry.url)
 	}
-	
-	// Prüft ob ein Item mit Children (oder deren Children) aktiv ist
-	function isChildActiveRecursive(entry: NavEntry): boolean {
-		if (!hasChildren(entry)) {
-			return isExactActive(entry.url);
-		}
-		return entry.children.some(child => isChildActiveRecursive(child));
-	}
+	return entry.children.some((child) => isChildActiveRecursive(child))
+}
 </script>
 
 {#snippet renderDropdownItems(children: NavEntry[])}
@@ -85,15 +88,17 @@
 				</DropdownMenu.SubContent>
 			</DropdownMenu.Sub>
 		{:else}
-			<DropdownMenu.Item href={child.url}>
+			<DropdownMenu.Item>
 				{@const Icon = child.icon}
-				<Icon class="mr-2 size-4" />
-				<span>{child.title}</span>
-				{#if child.badge}
-					<Badge variant="secondary" class="ml-auto text-xs">
-						{child.badge}
-					</Badge>
-				{/if}
+				<a href={child.url} class="flex items-center w-full">
+					<Icon class="mr-2 size-4" />
+					<span>{child.title}</span>
+					{#if child.badge}
+						<Badge variant="secondary" class="ml-auto text-xs">
+							{child.badge}
+						</Badge>
+					{/if}
+				</a>
 			</DropdownMenu.Item>
 		{/if}
 	{/each}
@@ -105,7 +110,7 @@
 			<!-- Collapsed Mode: DropdownMenu für Items mit Children -->
 			<Sidebar.MenuItem>
 				<DropdownMenu.Root>
-					<DropdownMenu.Trigger asChild>
+					<DropdownMenu.Trigger>
 						<Sidebar.MenuButton isActive={isChildActiveRecursive(entry)}>
 							{@const Icon = entry.icon}
 							<Icon class="size-4" />

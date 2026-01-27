@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { page } from '$app/stores';
-	import { getBreadcrumbs, type BreadcrumbItem } from '$lib/config';
-	import ChevronRight from 'lucide-svelte/icons/chevron-right';
+import { page } from '$app/stores'
+import { type BreadcrumbItem, getBreadcrumbs } from '$lib/config'
+import ChevronRight from 'lucide-svelte/icons/chevron-right'
 
-	interface Props {
-		/** Custom Breadcrumbs (überschreibt auto-generated) */
-		items?: BreadcrumbItem[];
-	}
+interface Props {
+	/** Custom Breadcrumbs (überschreibt auto-generated) */
+	items?: BreadcrumbItem[]
+}
 
-	let { items }: Props = $props();
+const { items }: Props = $props()
 
-	const breadcrumbs = $derived(items ?? getBreadcrumbs($page.url.pathname));
+const breadcrumbs = $derived(items ?? getBreadcrumbs($page.url.pathname))
 </script>
 
 {#if breadcrumbs.length > 0}

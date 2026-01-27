@@ -47,6 +47,8 @@
 
         godstack-api = craneLib.buildPackage (commonArgs // {
           inherit cargoArtifacts;
+          # ⚡ GOD MODE: Jemalloc für bessere Speicherverwaltung (10-20% schneller, stabiler)
+          cargoExtraArgs = "--features jemalloc";
           postInstall = ''
             mkdir -p $out/share/godstack
             cp -r ${./backend/config} $out/share/godstack/config
@@ -56,6 +58,8 @@
 
         godstack-api-static = craneLib.buildPackage (commonArgs // {
           inherit cargoArtifacts;
+          # ⚡ GOD MODE: Jemalloc auch für statischen Build
+          cargoExtraArgs = "--features jemalloc";
           CARGO_BUILD_TARGET = "x86_64-unknown-linux-musl";
           CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static";
         });
@@ -83,6 +87,7 @@
             rustToolchain
             cargo-watch
             cargo-edit
+            cargo-nextest  # ⚡ PERFORMANCE: 60% schnellere Tests
             just
             sqlx-cli
             docker-compose
@@ -91,13 +96,22 @@
             automake
             libtool
             jemalloc
+            # ⚡ PERFORMANCE: Schnellerer Linker (3-10x schneller als ld)
+            mold
+            clang
+            # ⚡ PERFORMANCE: Compiler Cache (macht Rebuilds fast augenblicklich)
+            sccache
             # Frontend tools
             nodejs_20
-            nodePackages.npm
+            nodePackages.pnpm  # ⚡ PERFORMANCE: Schneller als npm, hardlinkt Dependencies
             # Protobuf tools
             buf
           ];
 
+          # ⚡ PERFORMANCE: sccache als Compiler-Wrapper
+          RUSTC_WRAPPER = "${pkgs.sccache}/bin/sccache";
+          SCCACHE_CACHE_SIZE = "10G";
+          
           JEMALLOC_SYS_WITH_MALLOC_CONF = "background_thread:true";
           RUST_LOG = "debug";
           RUST_BACKTRACE = "1";

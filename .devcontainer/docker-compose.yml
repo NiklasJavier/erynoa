@@ -1,22 +1,227 @@
 name: erynoa-dev
 
 services:
+  # ─────────────────────────────────────────────────────────────────────────
+  # DevContainer - Hauptentwicklungsumgebung
+  # ─────────────────────────────────────────────────────────────────────────
   dev:
     build:
       context: .
       dockerfile: Dockerfile
     volumes:
+      # Workspace-Code (ohne schwere Build-Outputs)
       - ..:/workspace:cached
+      # Rust target-Verzeichnis NICHT auf den Host spiegelt – eigenes Volume
+      - rust_target:/workspace/backend/target
+      # Node.js: node_modules im Container halten, nicht auf den Host spiegeln
+      - console_node_modules:/workspace/frontend/console/node_modules
+      - platform_node_modules:/workspace/frontend/platform/node_modules
+      - docs_node_modules:/workspace/frontend/docs/node_modules
+      # Nix & apt Caches
       - nix-store:/nix
       - apt-cache:/var/cache/apt
       - apt-lib:/var/lib/apt
+      # ⚡ CACHING: Cargo Registry persistent (muss mit devcontainer.json mounts übereinstimmen)
+      - cargo-cache:/usr/local/cargo
+      # ⚡ CACHING: pnpm Store persistent
+      - pnpm-store:/home/vscode/.local/share/pnpm
       # SSH-Agent vom Host durchleiten (für git push)
       - ${SSH_AUTH_SOCK:-/dev/null}:/ssh-agent:ro
     environment:
       - SSH_AUTH_SOCK=/ssh-agent
+      # App-Datenbank Verbindung (via Sibling Container)
+      - APP_DATABASE__HOST=db
+      - APP_DATABASE__PORT=5432
+      - APP_DATABASE__USERNAME=erynoa
+      - APP_DATABASE__PASSWORD=erynoa
+      - APP_DATABASE__DATABASE=erynoa
+      # Cache Verbindung (via Sibling Container)
+      - APP_CACHE__URL=redis://cache:6379
+      # Storage Verbindung (via Sibling Container)
+      - APP_STORAGE__ENDPOINT=http://minio:9000
+      - APP_STORAGE__ACCESS_KEY_ID=erynoa
+      - APP_STORAGE__SECRET_ACCESS_KEY=erynoa123
+      # ZITADEL Auth (falls auth profile aktiv)
+      - APP_AUTH__ISSUER=http://localhost:8080
+      - APP_AUTH__INTERNAL_ISSUER=http://zitadel:8080
+    networks:
+      - devnet
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
     command: sleep infinity
 
+  # ─────────────────────────────────────────────────────────────────────────
+  # PostgreSQL (App-Datenbank) - OrioleDB für bessere Performance
+  # ─────────────────────────────────────────────────────────────────────────
+  db:
+    image: orioledb/orioledb:latest-pg16
+    environment:
+      POSTGRES_USER: erynoa
+      POSTGRES_PASSWORD: erynoa
+      POSTGRES_DB: erynoa
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U erynoa -h localhost -p 5432"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=orioledb
+      - -c
+      - default_table_access_method=orioledb
+      - -c
+      - listen_addresses=*
+    networks:
+      - devnet
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Dragonfly Cache (Redis-kompatibel, schneller)
+  # ─────────────────────────────────────────────────────────────────────────
+  cache:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - dragonfly:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - devnet
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # MinIO S3 Object Storage
+  # ─────────────────────────────────────────────────────────────────────────
+  minio:
+    image: quay.io/minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: erynoa
+      MINIO_ROOT_PASSWORD: erynoa123
+    volumes:
+      - minio-data:/data
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web Console
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - devnet
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # ZITADEL PostgreSQL (separate DB für Auth) - nur mit auth Profile
+  # ─────────────────────────────────────────────────────────────────────────
+  zitadel-db:
+    image: postgres:16-alpine
+    profiles: [auth]
+    environment:
+      POSTGRES_USER: zitadel
+      POSTGRES_PASSWORD: zitadel
+      POSTGRES_DB: zitadel
+    volumes:
+      - zitadel-pgdata:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zitadel -h localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks:
+      - devnet
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # ZITADEL Init - Bereitet Volume-Berechtigungen vor
+  # ─────────────────────────────────────────────────────────────────────────
+  zitadel-init:
+    image: busybox
+    profiles: [auth]
+    command: sh -c "mkdir -p /machinekey && chmod 777 /machinekey"
+    volumes:
+      - zitadel-machinekey:/machinekey
+    networks:
+      - devnet
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # ZITADEL - Identity Provider - nur mit auth Profile
+  # ─────────────────────────────────────────────────────────────────────────
+  zitadel:
+    image: ghcr.io/zitadel/zitadel:v2.64.1
+    profiles: [auth]
+    command: 'start-from-init --masterkeyFromEnv --tlsMode disabled --steps /zitadel-init-steps.yaml'
+    environment:
+      ZITADEL_MASTERKEY: "MasterkeyNeedsToHave32Characters"
+      ZITADEL_DATABASE_POSTGRES_HOST: zitadel-db
+      ZITADEL_DATABASE_POSTGRES_PORT: "5432"
+      ZITADEL_DATABASE_POSTGRES_DATABASE: zitadel
+      ZITADEL_DATABASE_POSTGRES_USER_USERNAME: zitadel
+      ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: zitadel
+      ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE: disable
+      ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: zitadel
+      ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: zitadel
+      ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE: disable
+      ZITADEL_DATABASE_POSTGRES_ADMIN_EXISTINGDATABASE: zitadel
+      ZITADEL_EXTERNALSECURE: "false"
+      ZITADEL_EXTERNALPORT: "8080"
+      ZITADEL_EXTERNALDOMAIN: "localhost"
+      ZITADEL_SYSTEMDEFAULTS_DOMAINVERIFICATIONREQUIRED: "false"
+    depends_on:
+      zitadel-db:
+        condition: service_healthy
+      zitadel-init:
+        condition: service_completed_successfully
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../infra/auth/zitadel/init-steps.yaml:/zitadel-init-steps.yaml:ro
+      - zitadel-machinekey:/machinekey
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/debug/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    networks:
+      - devnet
+
 volumes:
+  # DevContainer Caches
   nix-store:
   apt-cache:
   apt-lib:
+  rust_target:
+  console_node_modules:
+  platform_node_modules:
+  docs_node_modules:
+  # ⚡ Persistente Caches (verhindert Re-Downloads bei Rebuild)
+  cargo-cache:
+  pnpm-store:
+  # Infrastruktur Daten
+  pgdata:
+  dragonfly:
+  minio-data:
+  # ZITADEL (auth profile)
+  zitadel-pgdata:
+  zitadel-machinekey:
+
+networks:
+  devnet:
+    driver: bridge

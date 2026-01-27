@@ -1,33 +1,33 @@
 <script lang="ts" module>
-	import { writable, type Writable } from 'svelte/store';
-	import { getContext, setContext } from 'svelte';
+import { getContext, setContext } from 'svelte'
+import { type Writable, writable } from 'svelte/store'
 
-	const SIDEBAR_COOKIE_NAME = 'sidebar:state';
-	const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-	const SIDEBAR_WIDTH = '16rem';
-	const SIDEBAR_WIDTH_MOBILE = '18rem';
-	const SIDEBAR_WIDTH_ICON = '3rem';
-	const SIDEBAR_KEYBOARD_SHORTCUT = 'b';
+const _SIDEBAR_COOKIE_NAME = 'sidebar:state'
+const _SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
+const _SIDEBAR_WIDTH = '16rem'
+const _SIDEBAR_WIDTH_MOBILE = '18rem'
+const _SIDEBAR_WIDTH_ICON = '3rem'
+const _SIDEBAR_KEYBOARD_SHORTCUT = 'b'
 
-	export interface SidebarContext {
-		state: Writable<'expanded' | 'collapsed'>;
-		open: Writable<boolean>;
-		setOpen: (value: boolean) => void;
-		openMobile: Writable<boolean>;
-		setOpenMobile: (value: boolean) => void;
-		isMobile: Writable<boolean>;
-		toggleSidebar: () => void;
-	}
+export interface SidebarContext {
+	state: Writable<'expanded' | 'collapsed'>
+	open: Writable<boolean>
+	setOpen: (value: boolean) => void
+	openMobile: Writable<boolean>
+	setOpenMobile: (value: boolean) => void
+	isMobile: Writable<boolean>
+	toggleSidebar: () => void
+}
 
-	const SIDEBAR_CONTEXT_KEY = 'sidebar-context';
+const SIDEBAR_CONTEXT_KEY = 'sidebar-context'
 
-	export function setSidebarContext(context: SidebarContext) {
-		setContext(SIDEBAR_CONTEXT_KEY, context);
-	}
+export function setSidebarContext(context: SidebarContext) {
+	setContext(SIDEBAR_CONTEXT_KEY, context)
+}
 
-	export function getSidebarContext(): SidebarContext {
-		return getContext(SIDEBAR_CONTEXT_KEY);
-	}
+export function getSidebarContext(): SidebarContext {
+	return getContext(SIDEBAR_CONTEXT_KEY)
+}
 </script>
 
 <script lang="ts">
@@ -100,7 +100,7 @@ toggleSidebar,
 
 		// Keyboard shortcut
 		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.key === SIDEBAR_KEYBOARD_SHORTCUT && (e.metaKey || e.ctrlKey)) {
+			if (e.key === _SIDEBAR_KEYBOARD_SHORTCUT && (e.metaKey || e.ctrlKey)) {
 				e.preventDefault();
 				toggleSidebar();
 			}
@@ -114,8 +114,8 @@ toggleSidebar,
 	});
 
 	// Merge styles properly - custom style takes precedence (comes AFTER default)
-	const defaultStyle = `--sidebar-width: ${SIDEBAR_WIDTH}; --sidebar-width-icon: ${SIDEBAR_WIDTH_ICON}; --sidebar-width-mobile: ${SIDEBAR_WIDTH_MOBILE};`;
-	const combinedStyle = style ? `${defaultStyle} ${style}` : defaultStyle;
+	const defaultStyle = `--sidebar-width: ${_SIDEBAR_WIDTH}; --sidebar-width-icon: ${_SIDEBAR_WIDTH_ICON}; --sidebar-width-mobile: ${_SIDEBAR_WIDTH_MOBILE};`;
+	const combinedStyle = $derived(style ? `${defaultStyle} ${style}` : defaultStyle);
 </script>
 
 <div

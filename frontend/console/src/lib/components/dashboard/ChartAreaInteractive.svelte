@@ -1,27 +1,27 @@
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card';
-	import * as Select from '$lib/components/ui/select';
-	import { Button } from '$lib/components/ui/button';
+import { Button } from '$lib/components/ui/button'
+import * as Card from '$lib/components/ui/card'
+import * as Select from '$lib/components/ui/select'
 
-	let timeRange = $state('90d');
+let timeRange = $state('90d')
 
-	// Simulated chart data
-	const chartData = [
-		{ date: '2024-01-01', desktop: 186, mobile: 80 },
-		{ date: '2024-01-15', desktop: 305, mobile: 200 },
-		{ date: '2024-02-01', desktop: 237, mobile: 120 },
-		{ date: '2024-02-15', desktop: 203, mobile: 190 },
-		{ date: '2024-03-01', desktop: 209, mobile: 130 },
-		{ date: '2024-03-15', desktop: 264, mobile: 140 },
-		{ date: '2024-04-01', desktop: 224, mobile: 180 }
-	];
+// Simulated chart data
+const chartData = [
+	{ date: '2024-01-01', desktop: 186, mobile: 80 },
+	{ date: '2024-01-15', desktop: 305, mobile: 200 },
+	{ date: '2024-02-01', desktop: 237, mobile: 120 },
+	{ date: '2024-02-15', desktop: 203, mobile: 190 },
+	{ date: '2024-03-01', desktop: 209, mobile: 130 },
+	{ date: '2024-03-15', desktop: 264, mobile: 140 },
+	{ date: '2024-04-01', desktop: 224, mobile: 180 },
+]
 
-	const filteredData = $derived(() => {
-		const now = new Date('2024-04-01');
-		const days = timeRange === '90d' ? 90 : timeRange === '30d' ? 30 : 7;
-		const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-		return chartData.filter((d) => new Date(d.date) >= cutoff);
-	});
+const _filteredData = $derived(() => {
+	const now = new Date('2024-04-01')
+	const days = timeRange === '90d' ? 90 : timeRange === '30d' ? 30 : 7
+	const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
+	return chartData.filter((d) => new Date(d.date) >= cutoff)
+})
 </script>
 
 <Card.Root class="@container/card">

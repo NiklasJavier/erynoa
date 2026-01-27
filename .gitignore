@@ -1,6 +1,8 @@
 # ============================================================================
-# God-Stack Backend - Git Ignore
+# Erynoa Monorepo - Git Ignore
 # ============================================================================
+# Konsolidierte .gitignore für gesamtes Monorepo
+# (Backend, Frontend, Scripts, etc.)
 
 # Rust
 /target/
@@ -25,6 +27,8 @@ debug/
 
 # Data / Temporary Files
 .data/
+test-build
+test-dist
 
 # Docker
 docker-compose.override.yml
@@ -60,4 +64,50 @@ backend/src/gen/
 coverage/
 *.profraw
 *.profdata
+
+# npm lock files (wir verwenden pnpm)
+package-lock.json
+**/package-lock.json
+
+# ============================================================================
+# Frontend / Node.js / pnpm
+# ============================================================================
+
+# Node modules
+node_modules/
+.pnpm-store/
+
+# Turborepo Cache
+.turbo/
+
+# SvelteKit Build-Artefakte
+.svelte-kit/
+**/build/
+**/dist/
+.output/
+# Aber nicht scripts/build/ (enthält Build-Skripte, keine Artefakte)
+!scripts/build/
+
+# Frontend generierte Protobuf-Dateien (werden von buf generiert)
+frontend/**/src/gen/
+frontend/**/gen/
+
+# Environment-Dateien (außer .env.example und .env.test)
+.env
+.env.local
+.env.*.local
+!.env.example
+!.env.test
+
+# TypeScript Build Info
+*.tsbuildinfo
+
+# Deployment
+.vercel/
+.netlify/
+.wrangler/
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
 

@@ -3,13 +3,13 @@
 // ============================================================================
 
 // App-wide config (environment, version, urls etc.)
-export * from './app';
+export * from './app'
 
 // Navigation structure
-export * from './navigation';
+export * from './navigation'
 
 // Page metadata
-export * from './pages';
+export * from './pages'
 
 // Dashboard quicklinks
-export * from './quicklinks';
+export * from './quicklinks'

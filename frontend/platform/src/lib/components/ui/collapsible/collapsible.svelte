@@ -1,9 +1,9 @@
 <script lang="ts" module>
-	import { Collapsible as CollapsiblePrimitive } from 'bits-ui';
+import { Collapsible as CollapsiblePrimitive } from 'bits-ui'
 
-	export type RootProps = CollapsiblePrimitive.RootProps;
-	export type ContentProps = CollapsiblePrimitive.ContentProps;
-	export type TriggerProps = CollapsiblePrimitive.TriggerProps;
+export type RootProps = CollapsiblePrimitive.RootProps
+export type ContentProps = CollapsiblePrimitive.ContentProps
+export type TriggerProps = CollapsiblePrimitive.TriggerProps
 </script>
 
 <script lang="ts">

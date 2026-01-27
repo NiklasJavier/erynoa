@@ -1,36 +1,39 @@
 <script lang="ts">
-	import PageContent from '$lib/components/PageContent.svelte';
-	import { onMount } from 'svelte';
-	
-	let status = $state('Initial');
-	let apiResult = $state<string | null>(null);
-	let error = $state<string | null>(null);
-	
-	onMount(async () => {
-		status = 'Mounted';
-		
-		try {
-			status = 'Testing fetch...';
-			const response = await fetch('http://localhost:3000/api/v1/connect/erynoa.v1.InfoService/GetInfo', {
+import PageContent from '$lib/components/PageContent.svelte'
+import { onMount } from 'svelte'
+
+let status = $state('Initial')
+let apiResult = $state<string | null>(null)
+let error = $state<string | null>(null)
+
+onMount(async () => {
+	status = 'Mounted'
+
+	try {
+		status = 'Testing fetch...'
+		const response = await fetch(
+			'http://localhost:3000/api/v1/connect/erynoa.v1.InfoService/GetInfo',
+			{
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
 				},
 				body: '{}',
-			});
-			
-			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}`);
 			}
-			
-			const data = await response.json();
-			apiResult = JSON.stringify(data, null, 2);
-			status = 'API call successful!';
-		} catch (err) {
-			error = err instanceof Error ? err.message : String(err);
-			status = 'Failed';
+		)
+
+		if (!response.ok) {
+			throw new Error(`HTTP ${response.status}`)
 		}
-	});
+
+		const data = await response.json()
+		apiResult = JSON.stringify(data, null, 2)
+		status = 'API call successful!'
+	} catch (err) {
+		error = err instanceof Error ? err.message : String(err)
+		status = 'Failed'
+	}
+})
 </script>
 
 <PageContent>

@@ -2,32 +2,32 @@
 // PAGE CONFIGURATION
 // ============================================================================
 
-import type { UserRole } from './navigation';
+import type { UserRole } from './navigation'
 
 /** Auth-Anforderungen für eine Seite */
 export interface PageAuth {
 	/** Erfordert eingeloggten User */
-	required?: boolean;
+	required?: boolean
 	/** Erforderliche Rollen (OR-Verknüpfung) */
-	roles?: UserRole[];
+	roles?: UserRole[]
 	/** Redirect-URL wenn nicht autorisiert */
-	redirectTo?: string;
+	redirectTo?: string
 }
 
 export interface PageMeta {
-	title: string;
-	description?: string;
-	showHeader?: boolean; // Default: true
+	title: string
+	description?: string
+	showHeader?: boolean // Default: true
 	/** Browser Tab Titel Suffix (default: "| Godstack") */
-	documentTitle?: string;
+	documentTitle?: string
 	/** Breadcrumbs anzeigen (default: true außer auf /) */
-	showBreadcrumbs?: boolean;
+	showBreadcrumbs?: boolean
 	/** #3: Auth-Anforderungen */
-	auth?: PageAuth;
+	auth?: PageAuth
 }
 
 /** App Name für Document Title */
-export const APP_NAME = 'Godstack';
+export const APP_NAME = 'Godstack'
 
 export const pageConfig: Record<string, PageMeta> = {
 	'/': {
@@ -79,7 +79,7 @@ export const pageConfig: Record<string, PageMeta> = {
 	// 	description: 'System administration',
 	// 	auth: { required: true, roles: ['admin'], redirectTo: '/' },
 	// },
-};
+}
 
 export function getPageMeta(path: string): PageMeta {
 	return (
@@ -87,13 +87,13 @@ export function getPageMeta(path: string): PageMeta {
 			title: 'Page',
 			description: '',
 		}
-	);
+	)
 }
 
 /** Generiert den vollständigen Document Title */
 export function getDocumentTitle(path: string): string {
-	const meta = getPageMeta(path);
-	if (meta.documentTitle) return meta.documentTitle;
-	if (path === '/') return APP_NAME;
-	return `${meta.title} | ${APP_NAME}`;
+	const meta = getPageMeta(path)
+	if (meta.documentTitle) return meta.documentTitle
+	if (path === '/') return APP_NAME
+	return `${meta.title} | ${APP_NAME}`
 }

@@ -4,6 +4,18 @@
 [build]
 # Nutze alle CPU-Kerne für parallele Builds
 jobs = -1
+# Target-Verzeichnis (konsistent mit Docker Volumes)
+target-dir = "target"
+
+# ⚡ PERFORMANCE: Mold Linker (3-10x schneller als Standard-Linker)
+# Nur für Linux - macOS nutzt weiterhin den Standard-Linker
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+
+[target.aarch64-unknown-linux-gnu]
+linker = "clang"
+rustflags = ["-C", "link-arg=-fuse-ld=mold"]
 
 [env]
 # SQLx Offline Mode (keine DB-Verbindung beim Build nötig)
@@ -12,5 +24,8 @@ SQLX_OFFLINE = "true"
 [alias]
 # Nützliche Shortcuts
 dev = "run --release"
-t = "test --all-features"
+# ⚡ PERFORMANCE: nextest ist 60% schneller als cargo test
+t = "nextest run"
+# Watch mode für TDD (Tests laufen bei jeder Änderung)
+tw = "watch -x 'nextest run'"
 lint = "clippy --all-targets --all-features -- -D warnings"

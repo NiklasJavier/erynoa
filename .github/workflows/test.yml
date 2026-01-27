@@ -13,21 +13,21 @@ env:
 
 jobs:
   # ============================================================================
-  # Backend: Unit & Integration Tests
+  # Backend: Unit Tests (mit cargo-nextest für 60% schnellere Ausführung)
   # ============================================================================
-  backend-tests:
-    name: Backend Tests
+  backend-tests-unit:
+    name: Backend Unit Tests
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        test-type: [unit, integration]
     steps:
       - uses: actions/checkout@v4
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
       
-      - name: Cache Cargo dependencies
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@cargo-nextest
+      
+      - name: Cache Cargo
         uses: actions/cache@v4
         with:
           path: |
@@ -40,26 +40,74 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
       
-      - name: Run unit tests
-        if: matrix.test-type == 'unit'
+      - name: Cache nextest
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/cargo-nextest
+            backend/target/nextest
+          key: ${{ runner.os }}-nextest-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-nextest-
+      
+      - name: Run unit tests (nextest)
         working-directory: backend
-        run: cargo test --lib --verbose
+        run: cargo nextest run --lib --verbose
         env:
           DATABASE_URL: postgresql://test:test@localhost/test
           CACHE_URL: redis://localhost:6379
           RUST_LOG: info
+          SQLX_OFFLINE: true
+
+  # ============================================================================
+  # Backend: Integration Tests (mit cargo-nextest)
+  # ============================================================================
+  backend-tests-integration:
+    name: Backend Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       
-      - name: Run integration tests
-        if: matrix.test-type == 'integration'
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@cargo-nextest
+      
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            backend/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      
+      - name: Cache nextest
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/cargo-nextest
+            backend/target/nextest
+          key: ${{ runner.os }}-nextest-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-nextest-
+      
+      - name: Run integration tests (nextest)
         working-directory: backend
-        run: cargo test --test '*' --verbose
+        run: cargo nextest run --test '*' --verbose
         env:
           DATABASE_URL: postgresql://test:test@localhost/test
           CACHE_URL: redis://localhost:6379
           RUST_LOG: debug
+          SQLX_OFFLINE: true
 
   # ============================================================================
-  # Backend: Test with Features
+  # Backend: Tests with Features (parallel via matrix)
   # ============================================================================
   backend-tests-features:
     name: Backend Tests (Features)
@@ -67,13 +115,17 @@ jobs:
     strategy:
       matrix:
         features: ['', 'connect', 'jemalloc']
+      fail-fast: false
     steps:
       - uses: actions/checkout@v4
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
       
-      - name: Cache Cargo dependencies
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@cargo-nextest
+      
+      - name: Cache Cargo
         uses: actions/cache@v4
         with:
           path: |
@@ -87,18 +139,29 @@ jobs:
             ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-
             ${{ runner.os }}-cargo-
       
-      - name: Run tests with features
+      - name: Cache nextest
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/cargo-nextest
+            backend/target/nextest
+          key: ${{ runner.os }}-nextest-${{ hashFiles('**/Cargo.lock') }}-${{ matrix.features }}
+          restore-keys: |
+            ${{ runner.os }}-nextest-
+      
+      - name: Run tests with features (nextest)
         working-directory: backend
         run: |
           if [ -z "${{ matrix.features }}" ]; then
-            cargo test --verbose
+            cargo nextest run --verbose
           else
-            cargo test --features "${{ matrix.features }}" --verbose
+            cargo nextest run --features "${{ matrix.features }}" --verbose
           fi
         env:
           DATABASE_URL: postgresql://test:test@localhost/test
           CACHE_URL: redis://localhost:6379
           RUST_LOG: info
+          SQLX_OFFLINE: true
 
   # ============================================================================
   # Test Summary
@@ -107,7 +170,8 @@ jobs:
     name: Test Summary
     runs-on: ubuntu-latest
     needs:
-      - backend-tests
+      - backend-tests-unit
+      - backend-tests-integration
       - backend-tests-features
     if: always()
     steps:
@@ -117,6 +181,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Backend Tests (Unit) | ${{ needs.backend-tests.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Backend Tests (Integration) | ${{ needs.backend-tests.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend Unit Tests | ${{ needs.backend-tests-unit.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend Integration Tests | ${{ needs.backend-tests-integration.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Backend Tests (Features) | ${{ needs.backend-tests-features.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Note**: Tests use cargo-nextest for ~60% faster execution" >> $GITHUB_STEP_SUMMARY

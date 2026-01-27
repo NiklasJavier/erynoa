@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { Select as SelectPrimitive } from "bits-ui";
-	import Check from "lucide-svelte/icons/check";
-	import { cn } from "$lib/utils.js";
+import { cn } from '$lib/utils.js'
+import { Select as SelectPrimitive } from 'bits-ui'
+import Check from 'lucide-svelte/icons/check'
 
-	let {
-		ref = $bindable(null),
-		class: className,
-		children,
-		...restProps
-	}: SelectPrimitive.ItemProps & { children?: import("svelte").Snippet } = $props();
+let {
+	ref = $bindable(null),
+	class: className,
+	children,
+	...restProps
+}: SelectPrimitive.ItemProps & { children?: import('svelte').Snippet } = $props()
 </script>
 
 <SelectPrimitive.Item

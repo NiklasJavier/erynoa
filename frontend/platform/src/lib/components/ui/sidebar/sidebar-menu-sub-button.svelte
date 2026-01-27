@@ -1,30 +1,31 @@
 <script lang="ts">
-	import { cn } from '$lib/utils';
-	import type { Snippet } from 'svelte';
-	import type { HTMLAnchorAttributes, HTMLButtonAttributes } from 'svelte/elements';
+import { cn } from '$lib/utils'
+import type { Snippet } from 'svelte'
+import type { HTMLAnchorAttributes, HTMLButtonAttributes } from 'svelte/elements'
 
-	type BaseProps = {
-		class?: string;
-		isActive?: boolean;
-		size?: 'sm' | 'md';
-		children?: Snippet;
-	};
+type BaseProps = {
+	class?: string
+	isActive?: boolean
+	size?: 'sm' | 'md'
+	children?: Snippet
+}
 
-	type AnchorProps = BaseProps & HTMLAnchorAttributes & { href: string };
-	type ButtonProps = BaseProps & HTMLButtonAttributes & { href?: never };
-	type Props = AnchorProps | ButtonProps;
+type AnchorProps = BaseProps & HTMLAnchorAttributes & { href: string }
+type ButtonProps = BaseProps & HTMLButtonAttributes & { href?: never }
+type Props = AnchorProps | ButtonProps
 
-	let { 
-		class: className, 
-		isActive = false, 
-		size = 'md', 
-		href,
-		children,
-		...restProps 
-	}: Props = $props();
+const {
+	class: className,
+	isActive = false,
+	size = 'md',
+	href,
+	children,
+	...restProps
+}: Props = $props()
 
-	// Computed baseClasses als $derived
-	const baseClasses = $derived(cn(
+// Computed baseClasses als $derived
+const baseClasses = $derived(
+	cn(
 		'flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-md px-2 text-sidebar-foreground outline-none ring-sidebar-ring',
 		'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
 		'focus-visible:ring-2',
@@ -36,7 +37,8 @@
 		size === 'sm' && 'text-xs',
 		size === 'md' && 'text-sm',
 		className
-	));
+	)
+)
 </script>
 
 {#if href}

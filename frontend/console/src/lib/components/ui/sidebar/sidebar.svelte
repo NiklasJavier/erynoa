@@ -1,25 +1,25 @@
 <script lang="ts">
-	import { cn } from '$lib/utils';
-	import { getSidebarContext } from './sidebar-provider.svelte';
-	import * as Sheet from '$lib/components/ui/sheet';
+import * as Sheet from '$lib/components/ui/sheet'
+import { cn } from '$lib/utils'
+import { getSidebarContext } from './sidebar-provider.svelte'
 
-	interface Props {
-		side?: 'left' | 'right';
-		variant?: 'sidebar' | 'floating' | 'inset';
-		collapsible?: 'offcanvas' | 'icon' | 'none';
-		class?: string;
-		children?: import('svelte').Snippet;
-	}
+interface Props {
+	side?: 'left' | 'right'
+	variant?: 'sidebar' | 'floating' | 'inset'
+	collapsible?: 'offcanvas' | 'icon' | 'none'
+	class?: string
+	children?: import('svelte').Snippet
+}
 
-	let {
-		side = 'left',
-		variant = 'sidebar',
-		collapsible = 'offcanvas',
-		class: className,
-		children,
-	}: Props = $props();
+const {
+	side = 'left',
+	variant = 'sidebar',
+	collapsible = 'offcanvas',
+	class: className,
+	children,
+}: Props = $props()
 
-	const { isMobile, state, openMobile, setOpenMobile } = getSidebarContext();
+const { isMobile, state, openMobile, setOpenMobile } = getSidebarContext()
 </script>
 
 {#if collapsible === 'none'}

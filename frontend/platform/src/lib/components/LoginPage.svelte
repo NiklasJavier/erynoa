@@ -1,29 +1,29 @@
 <script lang="ts">
-	import { cn } from '$lib/utils';
-	import { Button } from '$lib/components/ui/button';
-	import * as Card from '$lib/components/ui/card';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
-	import { Separator } from '$lib/components/ui/separator';
-	import { authStore } from '$lib/auth';
-	import { Loader2 } from 'lucide-svelte';
-	import GalleryVerticalEnd from 'lucide-svelte/icons/gallery-vertical-end';
+import { authStore } from '$lib/auth'
+import { Button } from '$lib/components/ui/button'
+import * as Card from '$lib/components/ui/card'
+import { Input } from '$lib/components/ui/input'
+import { Label } from '$lib/components/ui/label'
+import { Separator } from '$lib/components/ui/separator'
+import { cn } from '$lib/utils'
+import { Loader2 } from 'lucide-svelte'
+import GalleryVerticalEnd from 'lucide-svelte/icons/gallery-vertical-end'
 
-	interface Props {
-		class?: string;
+interface Props {
+	class?: string
+}
+
+const { class: className }: Props = $props()
+let isLoading = $state(false)
+
+async function handleLogin() {
+	isLoading = true
+	try {
+		await authStore.login()
+	} finally {
+		isLoading = false
 	}
-
-	let { class: className }: Props = $props();
-	let isLoading = $state(false);
-
-	async function handleLogin() {
-		isLoading = true;
-		try {
-			await authStore.login();
-		} finally {
-			isLoading = false;
-		}
-	}
+}
 </script>
 
 <!-- signup-03 / login-03 style: centered card with logo above -->

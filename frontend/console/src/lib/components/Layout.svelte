@@ -1,13 +1,13 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
-  import ThemeToggle from './ThemeToggle.svelte';
-  import UserMenu from './UserMenu.svelte';
-  
-  interface Props {
-    children: Snippet;
-  }
-  
-  let { children }: Props = $props();
+import type { Snippet } from 'svelte'
+import ThemeToggle from './ThemeToggle.svelte'
+import UserMenu from './UserMenu.svelte'
+
+interface Props {
+	children: Snippet
+}
+
+const { children }: Props = $props()
 </script>
 
 <div class="min-h-screen bg-background">

@@ -1,16 +1,16 @@
 <script lang="ts">
-	import '../layout.css';
-	import { onMount } from 'svelte';
-	import { authStore } from '$lib/auth';
-	import { ModeWatcher } from 'mode-watcher';
-	import { Toaster } from '$lib/components/ui/sonner';
+import '../layout.css'
+import { authStore } from '$lib/auth'
+import { Toaster } from '$lib/components/ui/sonner'
+import { ModeWatcher } from 'mode-watcher'
+import { onMount } from 'svelte'
 
-	let { children } = $props();
-	
-	onMount(() => {
-		// Initialize auth for callback processing
-		authStore.init();
-	});
+const { children } = $props()
+
+onMount(() => {
+	// Initialize auth for callback processing
+	authStore.init()
+})
 </script>
 
 <ModeWatcher defaultMode="light" />

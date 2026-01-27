@@ -1,13 +1,9 @@
 <script lang="ts">
-	import { Collapsible as CollapsiblePrimitive } from 'bits-ui';
-	import { cn } from '$lib/utils.js';
-	import type { ContentProps } from './collapsible.svelte';
+import { cn } from '$lib/utils.js'
+import { Collapsible as CollapsiblePrimitive } from 'bits-ui'
+import type { ContentProps } from './collapsible.svelte'
 
-	let {
-		ref = $bindable(null),
-		class: className,
-		...restProps
-	}: ContentProps = $props();
+let { ref = $bindable(null), class: className, ...restProps }: ContentProps = $props()
 </script>
 
 <CollapsiblePrimitive.Content

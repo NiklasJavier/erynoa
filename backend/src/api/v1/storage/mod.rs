@@ -2,6 +2,7 @@
 //!
 //! File upload, download, and object management endpoints (Connect-RPC only)
 
+#[cfg(feature = "connect")]
 mod handlers;
 
 #[cfg(feature = "connect")]

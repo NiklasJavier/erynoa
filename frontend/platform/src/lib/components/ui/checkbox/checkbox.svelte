@@ -1,26 +1,21 @@
 <script lang="ts">
-	import { cn } from "$lib/utils.js";
-	import { Check } from "lucide-svelte";
+import { cn } from '$lib/utils.js'
+import { Check } from 'lucide-svelte'
 
-	interface Props {
-		checked?: boolean;
-		disabled?: boolean;
-		class?: string;
-		onchange?: (checked: boolean) => void;
-	}
+interface Props {
+	checked?: boolean
+	disabled?: boolean
+	class?: string
+	onchange?: (checked: boolean) => void
+}
 
-	let { 
-		checked = $bindable(false), 
-		disabled = false, 
-		class: className,
-		onchange 
-	}: Props = $props();
+let { checked = $bindable(false), disabled = false, class: className, onchange }: Props = $props()
 
-	function toggle() {
-		if (disabled) return;
-		checked = !checked;
-		onchange?.(checked);
-	}
+function toggle() {
+	if (disabled) return
+	checked = !checked
+	onchange?.(checked)
+}
 </script>
 
 <button

@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { Select as SelectPrimitive } from "bits-ui";
-	import ChevronDown from "lucide-svelte/icons/chevron-down";
-	import { cn } from "$lib/utils.js";
+import { cn } from '$lib/utils.js'
+import { Select as SelectPrimitive } from 'bits-ui'
+import ChevronDown from 'lucide-svelte/icons/chevron-down'
 
-	let {
-		ref = $bindable(null),
-		class: className,
-		children,
-		...restProps
-	}: SelectPrimitive.TriggerProps & { children?: import("svelte").Snippet } = $props();
+let {
+	ref = $bindable(null),
+	class: className,
+	children,
+	...restProps
+}: SelectPrimitive.TriggerProps & { children?: import('svelte').Snippet } = $props()
 </script>
 
 <SelectPrimitive.Trigger

@@ -15,8 +15,8 @@ Startet alles:
   - **Docs** auf http://localhost:3001/docs
 - **Backend** direkt auf http://localhost:3000 (Rust API, nicht über Proxy)
 - **ZITADEL** auf http://localhost:8080 (Auth)
-- **MinIO** auf http://localhost:9001 (S3 Storage)
-- PostgreSQL, DragonflyDB im Hintergrund
+- **MinIO** auf http://localhost:9001 (S3 Storage Console)
+- PostgreSQL (OrioleDB), DragonflyDB (Redis-kompatibel) im Hintergrund
 
 **Test Login:**
 - User: `testuser` / `Test123!`
@@ -34,11 +34,15 @@ Startet alles:
 │   ├── platform/      # Platform (SvelteKit)
 │   └── docs/          # Docs (SvelteKit)
 ├── infra/             # Infrastructure & Deployment
-│   ├── docker-compose.yml
-│   ├── Dockerfile.*   # Container Builds
-│   ├── Caddyfile      # Reverse Proxy Config
-│   ├── scripts/       # Setup-Skripte
-│   └── zitadel/       # ZITADEL Init
+│   ├── docker/        # Docker Compose & Dockerfiles
+│   │   ├── docker-compose.yml
+│   │   └── Dockerfile.*
+│   ├── proxy/         # Reverse Proxy
+│   │   └── Caddyfile
+│   ├── auth/          # Authentication
+│   │   └── zitadel/   # ZITADEL Init
+│   └── static/        # Static Files
+│       └── landing.html
 ├── proto/             # Protobuf Definitionen
 ├── docs/              # Dokumentation
 └── justfile           # Task Runner
@@ -64,27 +68,38 @@ Startet alles:
 | Befehl | Beschreibung |
 |--------|--------------|
 | `just dev` | **Startet alles** (Console + Platform + Docs + Backend + Services) |
+| `just dev [frontend]` | Startet spezifisches Frontend (console, platform, docs, all) |
 | `just status` | Zeigt Status aller Services |
-| `just dev-check` | Health Check aller Services |
+| `just check` | Health Check aller Services |
+| `just stop` | Stoppt alle Container |
+| `just logs [service]` | Logs anzeigen (alle oder spezifischer Service) |
+| `just shell [service]` | Shell in Container (backend, console, platform, docs) |
+| `just restart` | Schneller Neustart aller Dev-Services |
 | `just reset` | Alles löschen und neu starten |
-| `just docker-stop` | Stoppt alle Container |
+| `just init` | Initialisierung ohne Dev-Server |
+| `just init-env` | Erstellt `.env` aus `.env.example` |
 | `just lint` | Backend Clippy |
 | `just fmt` | Backend Format |
-| `just test` | Backend Tests |
+| `just test` | Backend Tests (mit cargo-nextest) |
+| `just proto-gen` | Protobuf Types generieren |
 
 Alle Befehle: `just --list`
 
 ## 📖 Dokumentation
 
+Vollständige Dokumentation findest du im [`docs/`](docs/) Verzeichnis:
+
 ### 📚 Hauptdokumentation
 
 - **[docs/README.md](docs/README.md)** - **Dokumentations-Übersicht** mit Quick Start
-- **[ESSENTIAL_GUIDE.md](docs/ESSENTIAL_GUIDE.md)** - Konsolidierter Guide mit allen wichtigen Informationen
+- **[docs/essential_guide.md](docs/essential_guide.md)** - Konsolidierter Guide mit allen wichtigen Informationen
 
 ### 🚀 Guides (Schritt-für-Schritt Anleitungen)
 
 - [Getting Started](docs/guides/getting-started.md) - Erste Schritte mit dem Projekt
-- [Setup](docs/guides/setup.md) - Entwicklungsumgebung einrichten
+- [Setup](docs/setup/setup.md) - Entwicklungsumgebung einrichten (macOS)
+- [Dev Setup](docs/setup/dev_setup.md) - Container-in-Container Entwicklung
+- [Docker](docs/setup/docker.md) - Docker Development Setup
 - [ZITADEL Setup](docs/guides/zitadel.md) - Authentifizierung konfigurieren
 
 ### 📗 Reference (Technische Referenz)
@@ -98,8 +113,8 @@ Alle Befehle: `just --list`
 - [Style Guide](docs/development/style-guide.md) - Code-Stil und Best Practices
 - [Testing](docs/development/testing.md) - Test-Strategien und -Tools
 - [TODOs](docs/development/todos.md) - Offene Aufgaben und Prioritäten
-- [REST Deprecation Plan](docs/development/REST_DEPRECATION_PLAN.md) - Plan zur REST-API Entfernung
-- [Structure Improvements](docs/development/STRUCTURE_IMPROVEMENTS.md) - Strukturverbesserungen
+- [REST Deprecation Plan](docs/development/rest_deprecation_plan.md) - Plan zur REST-API Entfernung
+- [Structure Improvements](docs/archive/structure_improvements.md) - Strukturverbesserungen
 
 ## 🧪 Testing
 
@@ -109,35 +124,44 @@ cd backend && cargo test
 ```
 
 ### CI/CD
-GitHub Actions Workflows für:
-- Backend: Format, Clippy, Tests, Build
-- Console/Platform/Docs: TypeScript Check, Build
+GitHub Actions Workflows (optimiert für Performance):
+- Backend: Format, Clippy, Tests (cargo-nextest), Build
+- Frontend: TypeScript Check, Lint (Biome), Build (Turborepo)
 - Protobuf: Lint, Format
+- Turborepo: Parallele Builds mit Caching
+- pnpm: Optimiertes Dependency-Management
 
 ## 📊 Projekt-Status
 
 ### ✅ Abgeschlossen
 - Connect-RPC vollständig implementiert
-- Health Checks verbessert
-- GitHub Workflows erstellt
-- Dokumentation konsolidiert
+- Monorepo-Struktur mit pnpm Workspace & Turborepo
+- SvelteKit Frontends (Console, Platform, Docs) mit Svelte 5
+- DevContainer mit vollständiger Entwicklungsumgebung
+- VS Code Extensions optimiert (22 Extensions)
+- Health Checks und automatische Service-Initialisierung
+- GitHub Workflows optimiert (Turborepo, cargo-nextest, pnpm)
+- Justfile optimiert (neue Befehle: stop, logs, shell, restart, init-env)
+- Infra-Verzeichnis optimiert (nach Typ organisiert: docker/, proxy/, auth/, static/)
+- Environment-Setup (.env.example → .env automatisch)
+- Dokumentation konsolidiert und organisiert
 
 ### 🔄 In Arbeit
 - Frontend Tests implementieren
-- High-Priority TODOs (siehe [TODOS.md](docs/development/TODOS.md))
+- High-Priority TODOs (siehe [todos.md](docs/development/todos.md))
 
 ## 🤝 Beitragen
 
-1. Prüfe [TODOS.md](docs/development/TODOS.md) für bekannte Aufgaben
-2. Folge [Style Guide](docs/development/STYLE_GUIDE.md) für Code Standards
+1. Prüfe [todos.md](docs/development/todos.md) für bekannte Aufgaben
+2. Folge [Style Guide](docs/development/style-guide.md) für Code Standards
 3. Verwende [Testing Guide](docs/development/testing.md) für Tests
 4. Dokumentiere neue Features
 
 ## 📞 Support
 
 Bei Fragen oder Problemen:
-1. Prüfe [ESSENTIAL_GUIDE.md](docs/ESSENTIAL_GUIDE.md) - Troubleshooting Sektion
-2. Schaue [TODOS.md](docs/development/TODOS.md) für bekannte Issues
+1. Prüfe [essential_guide.md](docs/essential_guide.md) - Troubleshooting Sektion
+2. Schaue [todos.md](docs/development/todos.md) für bekannte Issues
 3. Prüfe [Connections Guide](docs/reference/connections.md) für Service-Probleme
 
 ## Lizenz

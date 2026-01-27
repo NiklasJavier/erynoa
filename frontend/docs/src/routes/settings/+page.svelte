@@ -1,28 +1,28 @@
 <script lang="ts">
-	import PageContent from '$lib/components/PageContent.svelte';
-	import * as Card from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import { user } from '$lib/auth';
-	import { getAppConfig } from '$lib/config';
-	import { onMount } from 'svelte';
-	import { 
-		Settings, 
-		User, 
-		Bell, 
-		Shield, 
-		Palette, 
-		Database,
-		Server,
-		CheckCircle,
-		ExternalLink
-	} from 'lucide-svelte';
+import { user } from '$lib/auth'
+import PageContent from '$lib/components/PageContent.svelte'
+import { Badge } from '$lib/components/ui/badge'
+import { Button } from '$lib/components/ui/button'
+import * as Card from '$lib/components/ui/card'
+import { getAppConfig } from '$lib/config'
+import {
+	Bell,
+	CheckCircle,
+	Database,
+	ExternalLink,
+	Palette,
+	Server,
+	Settings,
+	Shield,
+	User,
+} from 'lucide-svelte'
+import { onMount } from 'svelte'
 
-	let config = $state<ReturnType<typeof getAppConfig> | null>(null);
+let config = $state<ReturnType<typeof getAppConfig> | null>(null)
 
-	onMount(() => {
-		config = getAppConfig();
-	});
+onMount(() => {
+	config = getAppConfig()
+})
 </script>
 
 <PageContent>

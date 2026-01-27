@@ -2,14 +2,15 @@
 //!
 //! Strukturen für ZITADEL JWT Tokens
 
+use serde::{Deserialize, Serialize};
+#[cfg(feature = "connect")]
 use axum::{
     extract::FromRequestParts,
     http::request::Parts,
 };
-use serde::{Deserialize, Serialize};
+#[cfg(feature = "connect")]
 use axum_connect::parts::RpcFromRequestParts;
 
-use crate::error::ApiError;
 #[cfg(feature = "connect")]
 use crate::error::ApiErrorToRpc;
 
@@ -124,11 +125,12 @@ impl<T: PartialEq> OneOrMany<T> {
 
 // Extractor für Claims aus Request Extensions
 // Note: In axum 0.8, native async traits are supported, no async_trait needed
+#[cfg(feature = "connect")]
 impl<S> FromRequestParts<S> for Claims
 where
     S: Send + Sync,
 {
-    type Rejection = ApiError;
+    type Rejection = crate::error::ApiError;
 
     async fn from_request_parts(
         parts: &mut Parts,
@@ -138,15 +140,17 @@ where
             .extensions
             .get::<Claims>()
             .cloned()
-            .ok_or_else(|| ApiError::Unauthorized("Missing authentication".into()))
+            .ok_or_else(|| crate::error::ApiError::Unauthorized("Missing authentication".into()))
     }
 }
 
 // RpcFromRequestParts implementation for Connect-RPC
 // This allows Claims to be extracted in Connect-RPC handlers
 // Note: axum-connect uses async_trait for RpcFromRequestParts
+#[cfg(feature = "connect")]
 use async_trait::async_trait;
 
+#[cfg(feature = "connect")]
 #[async_trait]
 impl<M, S> RpcFromRequestParts<M, S> for Claims
 where

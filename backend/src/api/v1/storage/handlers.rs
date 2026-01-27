@@ -1,13 +1,19 @@
 //! Connect-RPC Storage Service Implementation
 
+#[cfg(feature = "connect")]
 use axum::extract::State;
+#[cfg(feature = "connect")]
 use std::time::Duration;
+#[cfg(feature = "connect")]
 use axum_connect::error::RpcError;
 
+#[cfg(feature = "connect")]
 use crate::server::AppState;
+#[cfg(feature = "connect")]
 use crate::error::ApiError;
 #[cfg(feature = "connect")]
 use crate::error::ApiErrorToRpc;
+#[cfg(feature = "connect")]
 use crate::gen::erynoa::v1::{
     UploadRequest, UploadResponse, ListObjectsRequest, ListObjectsResponse,
     DeleteObjectRequest, DeleteObjectResponse, HeadObjectRequest, HeadObjectResponse,
@@ -16,8 +22,10 @@ use crate::gen::erynoa::v1::{
     ListBucketsRequest, ListBucketsResponse, CreateBucketRequest, CreateBucketResponse,
     DeleteBucketRequest, DeleteBucketResponse, ObjectInfo,
 };
+#[cfg(feature = "connect")]
 use axum_connect::pbjson_types::Timestamp;
 
+#[cfg(feature = "connect")]
 // Helper function to sanitize filename
 fn sanitize_filename(name: &str) -> String {
     name.chars()

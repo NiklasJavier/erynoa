@@ -1,13 +1,16 @@
 <script lang="ts">
-	import type { HTMLLabelAttributes } from "svelte/elements";
-	import { cn } from "$lib/utils.js";
+import { cn } from '$lib/utils.js'
+import type { HTMLLabelAttributes } from 'svelte/elements'
 
-	let {
-		ref = $bindable(null),
-		class: className,
-		children,
-		...restProps
-	}: HTMLLabelAttributes & { ref?: HTMLLabelElement | null; children?: import("svelte").Snippet } = $props();
+let {
+	ref = $bindable(null),
+	class: className,
+	children,
+	...restProps
+}: HTMLLabelAttributes & {
+	ref?: HTMLLabelElement | null
+	children?: import('svelte').Snippet
+} = $props()
 </script>
 
 <label

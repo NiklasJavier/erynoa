@@ -1,8 +1,8 @@
 <script lang="ts">
-	import PageContent from '$lib/components/PageContent.svelte';
-	import * as Card from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Users, UserPlus, Shield, Mail } from 'lucide-svelte';
+import PageContent from '$lib/components/PageContent.svelte'
+import { Badge } from '$lib/components/ui/badge'
+import * as Card from '$lib/components/ui/card'
+import { Mail, Shield, UserPlus, Users } from 'lucide-svelte'
 </script>
 
 <PageContent>

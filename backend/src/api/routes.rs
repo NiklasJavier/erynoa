@@ -4,6 +4,8 @@
 
 use crate::server::AppState;
 use axum::{middleware::{from_fn, from_fn_with_state}, Router};
+// TODO: Rate Limiting mit tower_governor 0.4 korrekt implementieren
+// use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 
 use super::constants::API_VERSION;
 use super::middleware::{build_cors, frontend_origin_middleware, logging_middleware};
@@ -16,6 +18,13 @@ use super::v1::connect_routes;
 /// REST endpoints wurden entfernt. Alle APIs sind jetzt über Connect-RPC verfügbar.
 pub fn create_router(state: AppState) -> Router {
     let cors = build_cors(&state);
+    
+    // ⚡ PRODUCTION HARDENING: Rate Limiting
+    // TODO: Rate Limiting mit tower_governor 0.4 korrekt implementieren
+    // Verhindert DoS-Attacken und Traffic-Floods
+    // - 50 Requests pro Sekunde pro IP (normale Nutzung)
+    // - Burst von 100 für kurzzeitige Spitzen erlaubt
+    // Temporarily disabled until correct API usage is determined
 
     // Connect-RPC routes (gRPC-Web) - Primary API
     #[cfg(feature = "connect")]
@@ -33,6 +42,7 @@ pub fn create_router(state: AppState) -> Router {
     Router::new()
         .nest(API_VERSION, api)
         .layer(cors)
+        // .layer(rate_limit_layer)  // ⚡ Rate Limiting - TODO: Re-enable after fixing API usage
         .layer(from_fn_with_state(state.clone(), frontend_origin_middleware))
         .layer(from_fn(logging_middleware))
         .with_state(state)

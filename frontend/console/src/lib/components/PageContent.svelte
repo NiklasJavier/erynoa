@@ -1,48 +1,48 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
-	import { page } from '$app/stores';
-	import { getPageMeta, getDocumentTitle } from '$lib/config';
-	import { Loader2, AlertCircle, RefreshCw } from 'lucide-svelte';
-	import { Button } from '$lib/components/ui/button';
-	import * as Alert from '$lib/components/ui/alert';
+import { page } from '$app/stores'
+import * as Alert from '$lib/components/ui/alert'
+import { Button } from '$lib/components/ui/button'
+import { getDocumentTitle, getPageMeta } from '$lib/config'
+import { AlertCircle, Loader2, RefreshCw } from 'lucide-svelte'
+import type { Snippet } from 'svelte'
 
-	interface Props {
-		/** Überschreibt Titel aus Config */
-		title?: string;
-		/** Überschreibt Beschreibung aus Config */
-		description?: string;
-		/** Zeigt Header (Standard: aus Config oder true) */
-		showHeader?: boolean;
-		/** Loading State - zeigt Skeleton */
-		loading?: boolean;
-		/** Error Message - zeigt Error Alert */
-		error?: string | null;
-		/** Retry Callback für Error State */
-		onRetry?: () => void;
-		/** Custom Header Actions (Buttons etc.) */
-		headerActions?: Snippet;
-		/** Page Content */
-		children: Snippet;
-	}
+interface Props {
+	/** Überschreibt Titel aus Config */
+	title?: string
+	/** Überschreibt Beschreibung aus Config */
+	description?: string
+	/** Zeigt Header (Standard: aus Config oder true) */
+	showHeader?: boolean
+	/** Loading State - zeigt Skeleton */
+	loading?: boolean
+	/** Error Message - zeigt Error Alert */
+	error?: string | null
+	/** Retry Callback für Error State */
+	onRetry?: () => void
+	/** Custom Header Actions (Buttons etc.) */
+	headerActions?: Snippet
+	/** Page Content */
+	children: Snippet
+}
 
-	let { 
-		title,
-		description,
-		showHeader,
-		loading = false,
-		error = null,
-		onRetry,
-		headerActions,
-		children 
-	}: Props = $props();
+const {
+	title,
+	description,
+	showHeader,
+	loading = false,
+	error = null,
+	onRetry,
+	headerActions,
+	children,
+}: Props = $props()
 
-	// Auto-resolve aus Config basierend auf aktueller URL
-	const pageMeta = $derived(getPageMeta($page.url.pathname));
-	const documentTitle = $derived(getDocumentTitle($page.url.pathname));
-	
-	const resolvedTitle = $derived(title ?? pageMeta?.title ?? '');
-	const resolvedDescription = $derived(description ?? pageMeta?.description);
-	const resolvedShowHeader = $derived(showHeader ?? pageMeta?.showHeader ?? true);
+// Auto-resolve aus Config basierend auf aktueller URL
+const pageMeta = $derived(getPageMeta($page.url.pathname))
+const documentTitle = $derived(getDocumentTitle($page.url.pathname))
+
+const resolvedTitle = $derived(title ?? pageMeta?.title ?? '')
+const resolvedDescription = $derived(description ?? pageMeta?.description)
+const resolvedShowHeader = $derived(showHeader ?? pageMeta?.showHeader ?? true)
 </script>
 
 <!-- #2: Automatischer Document Title -->

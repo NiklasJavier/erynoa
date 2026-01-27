@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { page } from '$app/stores';
-	import { Button } from '$lib/components/ui/button';
-	import { Separator } from '$lib/components/ui/separator';
-	import * as Sidebar from '$lib/components/ui/sidebar';
-	import Breadcrumbs from '$lib/components/Breadcrumbs.svelte';
-	import CirclePlus from 'lucide-svelte/icons/circle-plus';
+import { page } from '$app/stores'
+import Breadcrumbs from '$lib/components/Breadcrumbs.svelte'
+import { Button } from '$lib/components/ui/button'
+import { Separator } from '$lib/components/ui/separator'
+import * as Sidebar from '$lib/components/ui/sidebar'
+import CirclePlus from 'lucide-svelte/icons/circle-plus'
 </script>
 
 <header

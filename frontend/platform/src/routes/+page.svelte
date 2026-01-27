@@ -1,9 +1,9 @@
 <script lang="ts">
-	import PageContent from '$lib/components/PageContent.svelte';
-	import SectionCards from '$lib/components/dashboard/SectionCards.svelte';
-	import ChartAreaInteractive from '$lib/components/dashboard/ChartAreaInteractive.svelte';
-	import DataTable from '$lib/components/dashboard/DataTable.svelte';
-	import QuickLinks from '$lib/components/dashboard/QuickLinks.svelte';
+import PageContent from '$lib/components/PageContent.svelte'
+import ChartAreaInteractive from '$lib/components/dashboard/ChartAreaInteractive.svelte'
+import DataTable from '$lib/components/dashboard/DataTable.svelte'
+import QuickLinks from '$lib/components/dashboard/QuickLinks.svelte'
+import SectionCards from '$lib/components/dashboard/SectionCards.svelte'
 </script>
 
 <PageContent>
