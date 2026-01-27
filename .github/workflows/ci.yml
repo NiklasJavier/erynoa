@@ -56,7 +56,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             backend/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('backend/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
       
@@ -87,7 +87,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             backend/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('backend/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
       
@@ -116,7 +116,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             backend/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('backend/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
       
@@ -157,28 +157,28 @@ jobs:
             ~/.local/share/pnpm/store
             node_modules
             frontend/*/node_modules
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-
       
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       
+      - name: Install buf
+        uses: bufbuild/buf-setup-action@v1
+        with:
+          version: latest
+      
       - name: Generate Protobuf types
-        run: |
-          if ! command -v buf &> /dev/null; then
-            curl -sSL "https://github.com/bufbuild/buf/releases/latest/download/buf-$(uname -s)-$(uname -m)" -o /tmp/buf
-            chmod +x /tmp/buf
-            sudo mv /tmp/buf /usr/local/bin/buf
-          fi
-          buf generate
+        run: buf generate
       
       - name: Cache Turbo
         uses: actions/cache@v4
         with:
           path: .turbo
-          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          key: ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
           restore-keys: |
+            ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml') }}-
             ${{ runner.os }}-turbo-
 
   # ============================================================================
@@ -210,27 +210,29 @@ jobs:
             ~/.local/share/pnpm/store
             node_modules
             frontend/*/node_modules
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
       
       - name: Restore Turbo cache
         uses: actions/cache@v4
         with:
           path: .turbo
-          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          key: ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
           restore-keys: |
+            ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml') }}-
             ${{ runner.os }}-turbo-
       
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       
+      - name: Install buf
+        uses: bufbuild/buf-setup-action@v1
+        with:
+          version: latest
+      
       - name: Generate Protobuf types
-        run: |
-          if ! command -v buf &> /dev/null; then
-            curl -sSL "https://github.com/bufbuild/buf/releases/latest/download/buf-$(uname -s)-$(uname -m)" -o /tmp/buf
-            chmod +x /tmp/buf
-            sudo mv /tmp/buf /usr/local/bin/buf
-          fi
-          buf generate
+        run: buf generate
       
       - name: TypeScript check (Turborepo)
         run: pnpm run check
@@ -264,7 +266,9 @@ jobs:
             ~/.local/share/pnpm/store
             node_modules
             frontend/*/node_modules
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
       
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -301,27 +305,29 @@ jobs:
             ~/.local/share/pnpm/store
             node_modules
             frontend/*/node_modules
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
       
       - name: Restore Turbo cache
         uses: actions/cache@v4
         with:
           path: .turbo
-          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          key: ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
           restore-keys: |
+            ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml') }}-
             ${{ runner.os }}-turbo-
       
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       
+      - name: Install buf
+        uses: bufbuild/buf-setup-action@v1
+        with:
+          version: latest
+      
       - name: Generate Protobuf types
-        run: |
-          if ! command -v buf &> /dev/null; then
-            curl -sSL "https://github.com/bufbuild/buf/releases/latest/download/buf-$(uname -s)-$(uname -m)" -o /tmp/buf
-            chmod +x /tmp/buf
-            sudo mv /tmp/buf /usr/local/bin/buf
-          fi
-          buf generate
+        run: buf generate
       
       - name: Build (Turborepo)
         run: pnpm run build
