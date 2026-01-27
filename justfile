@@ -24,6 +24,28 @@ dev frontend="":
     #!/usr/bin/env bash
     set -e
     
+    # WORKSPACE_ROOT absolut auflösen (falls relativ)
+    if [ -z "${WORKSPACE_ROOT}" ] || [ "${WORKSPACE_ROOT}" = "." ]; then
+        # Finde das Workspace-Root (Verzeichnis mit justfile)
+        # Starte vom aktuellen Verzeichnis und gehe nach oben
+        CURRENT_DIR="$(pwd)"
+        WORKSPACE_ROOT="$CURRENT_DIR"
+        while [ "$WORKSPACE_ROOT" != "/" ]; do
+            if [ -f "$WORKSPACE_ROOT/justfile" ]; then
+                break
+            fi
+            WORKSPACE_ROOT="$(dirname "$WORKSPACE_ROOT")"
+        done
+        # Wenn nicht gefunden, verwende aktuelles Verzeichnis
+        if [ ! -f "$WORKSPACE_ROOT/justfile" ]; then
+            WORKSPACE_ROOT="$CURRENT_DIR"
+        fi
+    else
+        # Wenn WORKSPACE_ROOT gesetzt ist, absolut machen
+        WORKSPACE_ROOT="$(cd "$WORKSPACE_ROOT" 2>/dev/null && pwd || echo "$WORKSPACE_ROOT")"
+    fi
+    export WORKSPACE_ROOT
+    
     # Normalisiere Frontend-Name
     FRONTEND_NAME=$(echo "{{frontend}}" | tr '[:upper:]' '[:lower:]')
     
@@ -70,10 +92,11 @@ dev frontend="":
     
     # 1. Starte Hintergrund-Services
     echo "━━━ [1/5] Starte Hintergrund-Services ━━━"
-    DOCKER_DIR="{{WORKSPACE_ROOT}}/infra/docker"
+    DOCKER_DIR="$WORKSPACE_ROOT/infra/docker"
     if [ ! -d "$DOCKER_DIR" ]; then
         echo "  ❌ Verzeichnis nicht gefunden: $DOCKER_DIR"
         echo "  Aktuelles Verzeichnis: $(pwd)"
+        echo "  WORKSPACE_ROOT: $WORKSPACE_ROOT"
         exit 1
     fi
     cd "$DOCKER_DIR" || exit 1
@@ -108,7 +131,7 @@ dev frontend="":
     }
     
     # Parallele Service-Checks (müssen im infra/docker Verzeichnis ausgeführt werden)
-    DOCKER_DIR="{{WORKSPACE_ROOT}}/infra/docker"
+    DOCKER_DIR="$WORKSPACE_ROOT/infra/docker"
     wait_for_service "PostgreSQL" "cd '$DOCKER_DIR' && docker compose exec -T db pg_isready -U erynoa" &
     wait_for_service "Dragonfly" "cd '$DOCKER_DIR' && docker compose exec -T cache redis-cli ping" &
     wait_for_service "MinIO" "curl -sf ${MINIO_URL:-http://localhost:9000}/minio/health/live" &
@@ -136,7 +159,7 @@ dev frontend="":
     # 3. Initialisierung (nur wenn nötig)
     echo ""
     echo "━━━ [3/5] Initialisierung ━━━"
-    cd {{WORKSPACE_ROOT}}
+    cd "$WORKSPACE_ROOT" || exit 1
     mkdir -p .data
     
     # MinIO Setup
@@ -188,10 +211,11 @@ dev frontend="":
     echo "  Stoppen:   just stop"
     echo ""
     
-    DOCKER_DIR="{{WORKSPACE_ROOT}}/infra/docker"
+    DOCKER_DIR="$WORKSPACE_ROOT/infra/docker"
     if [ ! -d "$DOCKER_DIR" ]; then
         echo "  ❌ Verzeichnis nicht gefunden: $DOCKER_DIR"
         echo "  Aktuelles Verzeichnis: $(pwd)"
+        echo "  WORKSPACE_ROOT: $WORKSPACE_ROOT"
         exit 1
     fi
     cd "$DOCKER_DIR" || exit 1
@@ -206,7 +230,7 @@ dev frontend="":
     echo ""
     echo "━━━ [5/5] Health Check ━━━"
     if command -v curl >/dev/null 2>&1; then
-        CHECK_SCRIPT="{{WORKSPACE_ROOT}}/scripts/dev/dev-check.sh"
+        CHECK_SCRIPT="$WORKSPACE_ROOT/scripts/dev/dev-check.sh"
         if [ -f "$CHECK_SCRIPT" ]; then
             bash "$CHECK_SCRIPT" || echo "  ⚠ Einige Services noch nicht bereit"
         else
