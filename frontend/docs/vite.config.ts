@@ -4,7 +4,8 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
-	base: '/docs/',
+	// base wird von SvelteKit aus svelte.config.js überschrieben
+	// base: '/docs/',
 	server: {
 		port: 5175,
 		strictPort: true,

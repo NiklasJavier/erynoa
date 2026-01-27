@@ -73,7 +73,7 @@ export async function fetchConfig(forceReload = false): Promise<Config> {
 			version: response.version || '0.1.0',
 			auth: {
 				issuer: response.auth?.issuer || DEFAULT_CONFIG.auth.issuer,
-				clientId: response.auth?.clientId || DEFAULT_CONFIG.auth.clientId,
+				clientId: response.auth?.clientId || response.auth?.client_id || DEFAULT_CONFIG.auth.clientId,
 			},
 			urls: {
 				docs: response.urls?.docs || DEFAULT_CONFIG.urls.docs,

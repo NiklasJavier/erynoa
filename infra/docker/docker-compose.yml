@@ -49,7 +49,7 @@ services:
       - ../../pnpm-workspace.yaml:/workspace/pnpm-workspace.yaml:cached
     environment:
       - NODE_ENV=development
-      - VITE_API_URL=http://localhost:3001/api
+      - VITE_API_URL=http://localhost:3001
     networks:
       - devnet
     depends_on:
@@ -92,7 +92,7 @@ services:
       - ../../pnpm-workspace.yaml:/workspace/pnpm-workspace.yaml:cached
     environment:
       - NODE_ENV=development
-      - VITE_API_URL=http://localhost:3001/api
+      - VITE_API_URL=http://localhost:3001
     networks:
       - devnet
     depends_on:
@@ -135,7 +135,7 @@ services:
       - ../../pnpm-workspace.yaml:/workspace/pnpm-workspace.yaml:cached
     environment:
       - NODE_ENV=development
-      - VITE_API_URL=http://localhost:3001/api
+      - VITE_API_URL=http://localhost:3001
     networks:
       - devnet
     depends_on:

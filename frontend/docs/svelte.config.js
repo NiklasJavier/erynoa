@@ -6,6 +6,7 @@ const config = {
 		// Base path for reverse proxy routing
 		paths: {
 			base: '/docs',
+			relative: false, // Absolute paths für @fs node_modules
 		},
 		// SPA mode with static adapter
 		adapter: adapter({

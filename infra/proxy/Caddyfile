@@ -40,27 +40,21 @@
     # Vite dev server is configured with base: '/console/' so it expects the full path
     handle /console* {
         reverse_proxy console:5173 {
-            # Setze Host auf localhost, damit Vite den Request akzeptiert
             header_up Host localhost:5173
-            # X-Forwarded-* Header werden automatisch von Caddy gesetzt
         }
     }
     
     # Platform Frontend
     handle /platform* {
         reverse_proxy platform:5174 {
-            # Setze Host auf localhost, damit Vite den Request akzeptiert
             header_up Host localhost:5174
-            # X-Forwarded-* Header werden automatisch von Caddy gesetzt
         }
     }
     
     # Docs Frontend
     handle /docs* {
         reverse_proxy docs:5175 {
-            # Setze Host auf localhost, damit Vite den Request akzeptiert
             header_up Host localhost:5175
-            # X-Forwarded-* Header werden automatisch von Caddy gesetzt
         }
     }
     
@@ -68,7 +62,6 @@
     handle /api* {
         reverse_proxy backend:3000 {
             header_up Host {host}
-            # X-Forwarded-* Header werden automatisch von Caddy gesetzt
         }
     }
     
@@ -79,13 +72,6 @@
             index landing.html
         }
     }
-    
-    # Access-Logging im Dev-Modus deaktiviert, damit die Konsole übersichtlicher bleibt.
-    # Bei Bedarf fürs Debugging wieder aktivieren.
-    #log {
-    #    output stdout
-    #    format json
-    #}
 }
 
 # Legacy Port 80 (für Backward Compatibility)
@@ -93,12 +79,6 @@
     handle {
         respond "God-Stack - Use port 3001 for frontends, port 3000 for API" 200
     }
-    
-    # Access-Logging im Dev-Modus deaktiviert, um die Dev-Konsole schlank zu halten.
-    #log {
-    #    output stdout
-    #    format json
-    #}
 }
 
 # Production: Uncomment and configure
