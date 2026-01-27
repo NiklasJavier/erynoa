@@ -372,6 +372,8 @@ restart-dev: restart
 # ═══════════════════════════════════════════════════════
 
 # Starte nur Hintergrund-Services
+# Services auf dem Host starten (für DevContainer)
+# Diese Services laufen auf dem Host und werden vom DevContainer über host.docker.internal erreicht
 services:
     cd {{WORKSPACE_ROOT}}/infra/docker && docker compose --profile auth up -d db cache minio zitadel-db zitadel-init zitadel
 
@@ -1142,7 +1144,8 @@ test-devcontainer:
     echo "✅ DevContainer built successfully"
     
     echo ""
-    echo "🚀 Starting services..."
+    echo "🚀 Starting services on host..."
+    cd {{WORKSPACE_ROOT}}/infra/docker
     docker compose up -d db cache minio || (echo "❌ Failed to start services" && exit 1)
     
     echo "⏳ Waiting for services to be ready..."
@@ -1153,6 +1156,7 @@ test-devcontainer:
     
     echo ""
     echo "🔍 Testing installed tools..."
+    cd {{WORKSPACE_ROOT}}/.devcontainer
     docker compose run --rm dev bash -c "
         set -e
         echo 'Testing Rust...'
@@ -1186,23 +1190,24 @@ test-devcontainer:
     " || (echo "❌ Tool test failed" && exit 1)
     
     echo ""
-    echo "🔍 Testing service connections..."
+    echo "🔍 Testing service connections from DevContainer..."
+    cd {{WORKSPACE_ROOT}}/.devcontainer
     docker compose run --rm dev bash -c "
         set -e
-        echo 'Testing PostgreSQL...'
-        PGPASSWORD=erynoa psql -h db -U erynoa -d erynoa -c 'SELECT version();' > /dev/null || (echo '❌ PostgreSQL connection failed' && exit 1)
+        echo 'Testing PostgreSQL (via host.docker.internal)...'
+        PGPASSWORD=erynoa psql -h host.docker.internal -U erynoa -d erynoa -c 'SELECT version();' > /dev/null || (echo '❌ PostgreSQL connection failed' && exit 1)
         echo '✅ PostgreSQL connection OK'
         
-        echo 'Testing Redis...'
-        redis-cli -h cache ping > /dev/null || (echo '❌ Redis connection failed' && exit 1)
+        echo 'Testing Redis (via host.docker.internal)...'
+        redis-cli -h host.docker.internal ping > /dev/null || (echo '❌ Redis connection failed' && exit 1)
         echo '✅ Redis connection OK'
         
-        echo 'Testing MinIO...'
-        curl -f http://minio:9000/minio/health/live > /dev/null || (echo '❌ MinIO connection failed' && exit 1)
+        echo 'Testing MinIO (via host.docker.internal)...'
+        curl -f http://host.docker.internal:9000/minio/health/live > /dev/null || (echo '❌ MinIO connection failed' && exit 1)
         echo '✅ MinIO connection OK'
         
         echo ''
-        echo '✅ All services accessible'
+        echo '✅ All services accessible from DevContainer'
     " || (echo "❌ Service connection test failed" && exit 1)
     
     echo ""
@@ -1235,4 +1240,4 @@ test-devcontainer:
     echo ""
     echo "✅ All DevContainer tests passed!"
     echo ""
-    echo "To clean up: cd .devcontainer && docker compose down -v"
+    echo "To clean up services: cd infra/docker && docker compose down -v"

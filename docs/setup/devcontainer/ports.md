@@ -55,26 +55,43 @@ docker compose -f /workspace/infra/docker/docker-compose.yml logs -f
 
 ## Verbindungsdetails
 
+### Wichtig: Services auf Docker-Host
+
+Die Services laufen auf dem **Docker-Host**, auf dem der DevContainer läuft:
+- **Lokaler DevContainer**: Services auf lokalem Rechner
+- **Remote DevContainer**: Services auf Remote-Server
+
+Port-Forwarding macht die Services über `localhost` erreichbar.
+
 ### Datenbank
-- **Host:** localhost:5432
+- **Host:** localhost:5432 (via Port-Forwarding)
 - **User:** erynoa
 - **Password:** erynoa
 - **Database:** erynoa
 - **Connection String:** `postgres://erynoa:erynoa@localhost:5432/erynoa`
 
 ### Cache (Redis-kompatibel)
-- **Host:** localhost:6379
+- **Host:** localhost:6379 (via Port-Forwarding)
 - **Connection String:** `redis://localhost:6379`
 
 ### MinIO S3
-- **API:** http://localhost:9000
-- **Console:** http://localhost:9001
+- **API:** http://localhost:9000 (via Port-Forwarding)
+- **Console:** http://localhost:9001 (via Port-Forwarding)
 - **Access Key:** erynoa
 - **Secret Key:** erynoa123
 
 ### ZITADEL (nur mit auth-profile)
-- **URL:** http://localhost:8080
+- **URL:** http://localhost:8080 (via Port-Forwarding)
 - **Issuer:** http://localhost:8080
+
+## Remote-Host Entwicklung
+
+Wenn du einen Remote-Server zum Entwickeln nutzt:
+1. Services müssen auf dem Remote-Server laufen
+2. Port-Forwarding funktioniert automatisch
+3. VS Code Extensions können auf `localhost` zugreifen
+
+**Details**: Siehe [remote-host.md](./remote-host.md) für vollständige Anleitung.
 
 ## VS Code Extensions für Datenbank & Cache
 

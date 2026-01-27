@@ -119,6 +119,7 @@ jobs:
             fi
           }
         env:
+          APP_ENVIRONMENT: local
           APP_DATABASE__HOST: localhost
           APP_DATABASE__PORT: 5432
           APP_DATABASE__USERNAME: test
@@ -341,6 +342,7 @@ jobs:
             cargo nextest run --features "${{ matrix.features }}" --verbose
           fi
         env:
+          APP_ENVIRONMENT: local
           APP_DATABASE__HOST: localhost
           APP_DATABASE__PORT: 5432
           APP_DATABASE__USERNAME: test

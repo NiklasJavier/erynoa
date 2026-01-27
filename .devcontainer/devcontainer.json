@@ -5,8 +5,8 @@
 	"workspaceFolder": "/workspace",
 
 	"features": {
-		// Docker-in-Docker für die Services (DB, Zitadel, etc.)
-		"ghcr.io/devcontainers/features/docker-in-docker:2": {},
+		// Docker-in-Docker entfernt - Services laufen auf dem Host
+		// Services müssen manuell auf dem Host gestartet werden (z.B. via docker compose)
 
 		// Die offizielle Nix-Integration (ersetzt deine manuellen Skripte)
 		"ghcr.io/devcontainers/features/nix:1": {
@@ -47,6 +47,19 @@
 		"WORKSPACE_ROOT": "/workspace"
 		// Git-Konfiguration wird automatisch von .gitconfig-host übernommen
 		// Optional: Setze GIT_USER_NAME und GIT_USER_EMAIL auf dem Host als Environment-Variablen
+		//
+		// Service-Host Konfiguration (optional):
+		// SERVICE_HOST muss auf dem HOST-SYSTEM gesetzt werden (nicht hier in remoteEnv)
+		// Docker Compose liest diese Variable vom Host-System beim Container-Start
+		//
+		// Setze SERVICE_HOST auf dem Host:
+		// - export SERVICE_HOST=192.168.1.100  (vor DevContainer-Start)
+		// - Oder in .env Datei im Workspace-Root
+		//
+		// Standard-Verhalten (SERVICE_HOST nicht gesetzt):
+		// - Services laufen auf dem Docker-Host (host.docker.internal)
+		//   → Lokal: Services auf lokalem Rechner
+		//   → Remote: Services auf Remote-Server
 	},
 
 	"customizations": {
