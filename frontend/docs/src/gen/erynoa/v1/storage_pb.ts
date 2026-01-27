@@ -129,11 +129,11 @@ export class UploadResponse extends Message<UploadResponse> {
 }
 
 /**
- * ListObjectsRequest contains list parameters
+ * StorageServiceListRequest contains list parameters
  *
- * @generated from message erynoa.v1.ListObjectsRequest
+ * @generated from message erynoa.v1.StorageServiceListRequest
  */
-export class ListObjectsRequest extends Message<ListObjectsRequest> {
+export class StorageServiceListRequest extends Message<StorageServiceListRequest> {
   /**
    * Optional prefix filter
    *
@@ -155,42 +155,42 @@ export class ListObjectsRequest extends Message<ListObjectsRequest> {
    */
   maxKeys = 0;
 
-  constructor(data?: PartialMessage<ListObjectsRequest>) {
+  constructor(data?: PartialMessage<StorageServiceListRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "erynoa.v1.ListObjectsRequest";
+  static readonly typeName = "erynoa.v1.StorageServiceListRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "prefix", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "bucket", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "max_keys", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListObjectsRequest {
-    return new ListObjectsRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StorageServiceListRequest {
+    return new StorageServiceListRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListObjectsRequest {
-    return new ListObjectsRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StorageServiceListRequest {
+    return new StorageServiceListRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListObjectsRequest {
-    return new ListObjectsRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StorageServiceListRequest {
+    return new StorageServiceListRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ListObjectsRequest | PlainMessage<ListObjectsRequest> | undefined, b: ListObjectsRequest | PlainMessage<ListObjectsRequest> | undefined): boolean {
-    return proto3.util.equals(ListObjectsRequest, a, b);
+  static equals(a: StorageServiceListRequest | PlainMessage<StorageServiceListRequest> | undefined, b: StorageServiceListRequest | PlainMessage<StorageServiceListRequest> | undefined): boolean {
+    return proto3.util.equals(StorageServiceListRequest, a, b);
   }
 }
 
 /**
- * ListObjectsResponse contains list of objects
+ * StorageServiceListResponse contains list of objects
  *
- * @generated from message erynoa.v1.ListObjectsResponse
+ * @generated from message erynoa.v1.StorageServiceListResponse
  */
-export class ListObjectsResponse extends Message<ListObjectsResponse> {
+export class StorageServiceListResponse extends Message<StorageServiceListResponse> {
   /**
    * @generated from field: repeated erynoa.v1.ObjectInfo objects = 1;
    */
@@ -201,32 +201,32 @@ export class ListObjectsResponse extends Message<ListObjectsResponse> {
    */
   count = 0;
 
-  constructor(data?: PartialMessage<ListObjectsResponse>) {
+  constructor(data?: PartialMessage<StorageServiceListResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "erynoa.v1.ListObjectsResponse";
+  static readonly typeName = "erynoa.v1.StorageServiceListResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "objects", kind: "message", T: ObjectInfo, repeated: true },
     { no: 2, name: "count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListObjectsResponse {
-    return new ListObjectsResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StorageServiceListResponse {
+    return new StorageServiceListResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListObjectsResponse {
-    return new ListObjectsResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StorageServiceListResponse {
+    return new StorageServiceListResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListObjectsResponse {
-    return new ListObjectsResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StorageServiceListResponse {
+    return new StorageServiceListResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ListObjectsResponse | PlainMessage<ListObjectsResponse> | undefined, b: ListObjectsResponse | PlainMessage<ListObjectsResponse> | undefined): boolean {
-    return proto3.util.equals(ListObjectsResponse, a, b);
+  static equals(a: StorageServiceListResponse | PlainMessage<StorageServiceListResponse> | undefined, b: StorageServiceListResponse | PlainMessage<StorageServiceListResponse> | undefined): boolean {
+    return proto3.util.equals(StorageServiceListResponse, a, b);
   }
 }
 
@@ -288,11 +288,11 @@ export class ObjectInfo extends Message<ObjectInfo> {
 }
 
 /**
- * DeleteObjectRequest contains object identifier
+ * StorageServiceDeleteRequest contains object identifier
  *
- * @generated from message erynoa.v1.DeleteObjectRequest
+ * @generated from message erynoa.v1.StorageServiceDeleteRequest
  */
-export class DeleteObjectRequest extends Message<DeleteObjectRequest> {
+export class StorageServiceDeleteRequest extends Message<StorageServiceDeleteRequest> {
   /**
    * @generated from field: string key = 1;
    */
@@ -303,74 +303,74 @@ export class DeleteObjectRequest extends Message<DeleteObjectRequest> {
    */
   bucket?: string;
 
-  constructor(data?: PartialMessage<DeleteObjectRequest>) {
+  constructor(data?: PartialMessage<StorageServiceDeleteRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "erynoa.v1.DeleteObjectRequest";
+  static readonly typeName = "erynoa.v1.StorageServiceDeleteRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "bucket", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteObjectRequest {
-    return new DeleteObjectRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StorageServiceDeleteRequest {
+    return new StorageServiceDeleteRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteObjectRequest {
-    return new DeleteObjectRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StorageServiceDeleteRequest {
+    return new StorageServiceDeleteRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteObjectRequest {
-    return new DeleteObjectRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StorageServiceDeleteRequest {
+    return new StorageServiceDeleteRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: DeleteObjectRequest | PlainMessage<DeleteObjectRequest> | undefined, b: DeleteObjectRequest | PlainMessage<DeleteObjectRequest> | undefined): boolean {
-    return proto3.util.equals(DeleteObjectRequest, a, b);
+  static equals(a: StorageServiceDeleteRequest | PlainMessage<StorageServiceDeleteRequest> | undefined, b: StorageServiceDeleteRequest | PlainMessage<StorageServiceDeleteRequest> | undefined): boolean {
+    return proto3.util.equals(StorageServiceDeleteRequest, a, b);
   }
 }
 
 /**
- * DeleteObjectResponse is empty
+ * StorageServiceDeleteResponse is empty
  *
- * @generated from message erynoa.v1.DeleteObjectResponse
+ * @generated from message erynoa.v1.StorageServiceDeleteResponse
  */
-export class DeleteObjectResponse extends Message<DeleteObjectResponse> {
-  constructor(data?: PartialMessage<DeleteObjectResponse>) {
+export class StorageServiceDeleteResponse extends Message<StorageServiceDeleteResponse> {
+  constructor(data?: PartialMessage<StorageServiceDeleteResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "erynoa.v1.DeleteObjectResponse";
+  static readonly typeName = "erynoa.v1.StorageServiceDeleteResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteObjectResponse {
-    return new DeleteObjectResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StorageServiceDeleteResponse {
+    return new StorageServiceDeleteResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteObjectResponse {
-    return new DeleteObjectResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StorageServiceDeleteResponse {
+    return new StorageServiceDeleteResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteObjectResponse {
-    return new DeleteObjectResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StorageServiceDeleteResponse {
+    return new StorageServiceDeleteResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: DeleteObjectResponse | PlainMessage<DeleteObjectResponse> | undefined, b: DeleteObjectResponse | PlainMessage<DeleteObjectResponse> | undefined): boolean {
-    return proto3.util.equals(DeleteObjectResponse, a, b);
+  static equals(a: StorageServiceDeleteResponse | PlainMessage<StorageServiceDeleteResponse> | undefined, b: StorageServiceDeleteResponse | PlainMessage<StorageServiceDeleteResponse> | undefined): boolean {
+    return proto3.util.equals(StorageServiceDeleteResponse, a, b);
   }
 }
 
 /**
- * HeadObjectRequest contains object identifier
+ * StorageServiceHeadRequest contains object identifier
  *
- * @generated from message erynoa.v1.HeadObjectRequest
+ * @generated from message erynoa.v1.StorageServiceHeadRequest
  */
-export class HeadObjectRequest extends Message<HeadObjectRequest> {
+export class StorageServiceHeadRequest extends Message<StorageServiceHeadRequest> {
   /**
    * @generated from field: string key = 1;
    */
@@ -381,71 +381,71 @@ export class HeadObjectRequest extends Message<HeadObjectRequest> {
    */
   bucket?: string;
 
-  constructor(data?: PartialMessage<HeadObjectRequest>) {
+  constructor(data?: PartialMessage<StorageServiceHeadRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "erynoa.v1.HeadObjectRequest";
+  static readonly typeName = "erynoa.v1.StorageServiceHeadRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "bucket", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): HeadObjectRequest {
-    return new HeadObjectRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StorageServiceHeadRequest {
+    return new StorageServiceHeadRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): HeadObjectRequest {
-    return new HeadObjectRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StorageServiceHeadRequest {
+    return new StorageServiceHeadRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): HeadObjectRequest {
-    return new HeadObjectRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StorageServiceHeadRequest {
+    return new StorageServiceHeadRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: HeadObjectRequest | PlainMessage<HeadObjectRequest> | undefined, b: HeadObjectRequest | PlainMessage<HeadObjectRequest> | undefined): boolean {
-    return proto3.util.equals(HeadObjectRequest, a, b);
+  static equals(a: StorageServiceHeadRequest | PlainMessage<StorageServiceHeadRequest> | undefined, b: StorageServiceHeadRequest | PlainMessage<StorageServiceHeadRequest> | undefined): boolean {
+    return proto3.util.equals(StorageServiceHeadRequest, a, b);
   }
 }
 
 /**
- * HeadObjectResponse indicates if object exists
+ * StorageServiceHeadResponse indicates if object exists
  *
- * @generated from message erynoa.v1.HeadObjectResponse
+ * @generated from message erynoa.v1.StorageServiceHeadResponse
  */
-export class HeadObjectResponse extends Message<HeadObjectResponse> {
+export class StorageServiceHeadResponse extends Message<StorageServiceHeadResponse> {
   /**
    * @generated from field: bool exists = 1;
    */
   exists = false;
 
-  constructor(data?: PartialMessage<HeadObjectResponse>) {
+  constructor(data?: PartialMessage<StorageServiceHeadResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "erynoa.v1.HeadObjectResponse";
+  static readonly typeName = "erynoa.v1.StorageServiceHeadResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "exists", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): HeadObjectResponse {
-    return new HeadObjectResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StorageServiceHeadResponse {
+    return new StorageServiceHeadResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): HeadObjectResponse {
-    return new HeadObjectResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StorageServiceHeadResponse {
+    return new StorageServiceHeadResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): HeadObjectResponse {
-    return new HeadObjectResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StorageServiceHeadResponse {
+    return new StorageServiceHeadResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: HeadObjectResponse | PlainMessage<HeadObjectResponse> | undefined, b: HeadObjectResponse | PlainMessage<HeadObjectResponse> | undefined): boolean {
-    return proto3.util.equals(HeadObjectResponse, a, b);
+  static equals(a: StorageServiceHeadResponse | PlainMessage<StorageServiceHeadResponse> | undefined, b: StorageServiceHeadResponse | PlainMessage<StorageServiceHeadResponse> | undefined): boolean {
+    return proto3.util.equals(StorageServiceHeadResponse, a, b);
   }
 }
 

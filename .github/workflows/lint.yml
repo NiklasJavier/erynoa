@@ -27,18 +27,28 @@ jobs:
           components: clippy
       
       - name: Install mold linker
+        id: install_mold
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget || true
+          sudo apt-get install -y wget tar || true
           if ! command -v mold &> /dev/null; then
             # Install from GitHub releases
             MOLD_VERSION="2.4.0"
-            wget -qO- https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz | tar -xz
-            sudo mv mold-${MOLD_VERSION}-x86_64-linux/bin/mold /usr/local/bin/mold
+            cd /tmp
+            wget -q https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz
+            tar -xzf mold-${MOLD_VERSION}-x86_64-linux.tar.gz
+            sudo cp mold-${MOLD_VERSION}-x86_64-linux/bin/mold /usr/local/bin/mold
             sudo chmod +x /usr/local/bin/mold
+            rm -rf mold-${MOLD_VERSION}-x86_64-linux*
           fi
-          # Verify installation
-          mold --version || echo "Warning: mold installation may have failed"
+          # Verify installation and disable mold config if not available
+          if mold --version &>/dev/null; then
+            echo "mold_available=true" >> $GITHUB_OUTPUT
+          else
+            echo "mold_available=false" >> $GITHUB_OUTPUT
+            echo "Disabling mold linker config"
+            mv backend/.cargo/config.toml backend/.cargo/config.toml.bak || true
+          fi
       
       - name: Cache Cargo
         uses: actions/cache@v4
@@ -80,18 +90,28 @@ jobs:
           components: rustfmt
       
       - name: Install mold linker
+        id: install_mold
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget || true
+          sudo apt-get install -y wget tar || true
           if ! command -v mold &> /dev/null; then
             # Install from GitHub releases
             MOLD_VERSION="2.4.0"
-            wget -qO- https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz | tar -xz
-            sudo mv mold-${MOLD_VERSION}-x86_64-linux/bin/mold /usr/local/bin/mold
+            cd /tmp
+            wget -q https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz
+            tar -xzf mold-${MOLD_VERSION}-x86_64-linux.tar.gz
+            sudo cp mold-${MOLD_VERSION}-x86_64-linux/bin/mold /usr/local/bin/mold
             sudo chmod +x /usr/local/bin/mold
+            rm -rf mold-${MOLD_VERSION}-x86_64-linux*
           fi
-          # Verify installation
-          mold --version || echo "Warning: mold installation may have failed"
+          # Verify installation and disable mold config if not available
+          if mold --version &>/dev/null; then
+            echo "mold_available=true" >> $GITHUB_OUTPUT
+          else
+            echo "mold_available=false" >> $GITHUB_OUTPUT
+            echo "Disabling mold linker config"
+            mv backend/.cargo/config.toml backend/.cargo/config.toml.bak || true
+          fi
       
       - name: Cache Cargo
         uses: actions/cache@v4

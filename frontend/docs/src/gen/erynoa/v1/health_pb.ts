@@ -7,77 +7,77 @@ import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialM
 import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
 
 /**
- * @generated from message erynoa.v1.HealthCheckRequest
+ * @generated from message erynoa.v1.CheckRequest
  */
-export class HealthCheckRequest extends Message<HealthCheckRequest> {
-  constructor(data?: PartialMessage<HealthCheckRequest>) {
+export class CheckRequest extends Message<CheckRequest> {
+  constructor(data?: PartialMessage<CheckRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "erynoa.v1.HealthCheckRequest";
+  static readonly typeName = "erynoa.v1.CheckRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): HealthCheckRequest {
-    return new HealthCheckRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckRequest {
+    return new CheckRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): HealthCheckRequest {
-    return new HealthCheckRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CheckRequest {
+    return new CheckRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): HealthCheckRequest {
-    return new HealthCheckRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CheckRequest {
+    return new CheckRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: HealthCheckRequest | PlainMessage<HealthCheckRequest> | undefined, b: HealthCheckRequest | PlainMessage<HealthCheckRequest> | undefined): boolean {
-    return proto3.util.equals(HealthCheckRequest, a, b);
+  static equals(a: CheckRequest | PlainMessage<CheckRequest> | undefined, b: CheckRequest | PlainMessage<CheckRequest> | undefined): boolean {
+    return proto3.util.equals(CheckRequest, a, b);
   }
 }
 
 /**
- * @generated from message erynoa.v1.HealthCheckResponse
+ * @generated from message erynoa.v1.CheckResponse
  */
-export class HealthCheckResponse extends Message<HealthCheckResponse> {
+export class CheckResponse extends Message<CheckResponse> {
   /**
-   * @generated from field: erynoa.v1.HealthCheckResponse.ServingStatus status = 1;
+   * @generated from field: erynoa.v1.CheckResponse.ServingStatus status = 1;
    */
-  status = HealthCheckResponse_ServingStatus.UNSPECIFIED;
+  status = CheckResponse_ServingStatus.UNSPECIFIED;
 
-  constructor(data?: PartialMessage<HealthCheckResponse>) {
+  constructor(data?: PartialMessage<CheckResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "erynoa.v1.HealthCheckResponse";
+  static readonly typeName = "erynoa.v1.CheckResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "status", kind: "enum", T: proto3.getEnumType(HealthCheckResponse_ServingStatus) },
+    { no: 1, name: "status", kind: "enum", T: proto3.getEnumType(CheckResponse_ServingStatus) },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): HealthCheckResponse {
-    return new HealthCheckResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckResponse {
+    return new CheckResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): HealthCheckResponse {
-    return new HealthCheckResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CheckResponse {
+    return new CheckResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): HealthCheckResponse {
-    return new HealthCheckResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CheckResponse {
+    return new CheckResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: HealthCheckResponse | PlainMessage<HealthCheckResponse> | undefined, b: HealthCheckResponse | PlainMessage<HealthCheckResponse> | undefined): boolean {
-    return proto3.util.equals(HealthCheckResponse, a, b);
+  static equals(a: CheckResponse | PlainMessage<CheckResponse> | undefined, b: CheckResponse | PlainMessage<CheckResponse> | undefined): boolean {
+    return proto3.util.equals(CheckResponse, a, b);
   }
 }
 
 /**
- * @generated from enum erynoa.v1.HealthCheckResponse.ServingStatus
+ * @generated from enum erynoa.v1.CheckResponse.ServingStatus
  */
-export enum HealthCheckResponse_ServingStatus {
+export enum CheckResponse_ServingStatus {
   /**
    * @generated from enum value: SERVING_STATUS_UNSPECIFIED = 0;
    */
@@ -93,8 +93,8 @@ export enum HealthCheckResponse_ServingStatus {
    */
   NOT_SERVING = 2,
 }
-// Retrieve enum metadata with: proto3.getEnumType(HealthCheckResponse_ServingStatus)
-proto3.util.setEnumType(HealthCheckResponse_ServingStatus, "erynoa.v1.HealthCheckResponse.ServingStatus", [
+// Retrieve enum metadata with: proto3.getEnumType(CheckResponse_ServingStatus)
+proto3.util.setEnumType(CheckResponse_ServingStatus, "erynoa.v1.CheckResponse.ServingStatus", [
   { no: 0, name: "SERVING_STATUS_UNSPECIFIED" },
   { no: 1, name: "SERVING_STATUS_SERVING" },
   { no: 2, name: "SERVING_STATUS_NOT_SERVING" },

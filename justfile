@@ -795,3 +795,395 @@ init-env:
 
 # Alias für dev
 start: dev
+
+# ═══════════════════════════════════════════════════════
+# 🧪 CI WORKFLOW SIMULATION
+# ═══════════════════════════════════════════════════════
+
+# Simuliert alle CI-Workflows lokal und listet Fehler auf
+# Usage: just test-ci
+test-ci:
+    #!/usr/bin/env bash
+    set +e  # Don't exit on error, we want to collect all errors
+    cd {{WORKSPACE_ROOT}}
+    
+    ERRORS=0
+    WARNINGS=0
+    ERROR_LIST=()
+    WARNING_LIST=()
+    TEMP_DIR=$(mktemp -d)
+    trap "rm -rf $TEMP_DIR" EXIT
+    
+    echo "🧪 Simulating CI Workflows..."
+    echo "═══════════════════════════════════════════════════════"
+    echo ""
+    
+    # ────────────────────────────────────────────────────────────
+    # Protobuf Checks
+    # ────────────────────────────────────────────────────────────
+    echo "📋 Testing Protobuf Lint..."
+    if command -v buf &> /dev/null; then
+        if buf lint > "$TEMP_DIR/proto-lint.log" 2>&1; then
+            echo "✅ Protobuf lint: PASSED"
+        else
+            echo "❌ Protobuf lint: FAILED"
+            ERROR_LIST+=("Protobuf lint - see $TEMP_DIR/proto-lint.log")
+            cat "$TEMP_DIR/proto-lint.log"
+            ERRORS=$((ERRORS + 1))
+        fi
+    else
+        echo "⚠️  buf not found, skipping protobuf lint"
+        WARNING_LIST+=("buf not found")
+        WARNINGS=$((WARNINGS + 1))
+    fi
+    
+    echo ""
+    echo "📋 Testing Protobuf Format..."
+    if command -v buf &> /dev/null; then
+        if buf format --diff --exit-code > "$TEMP_DIR/proto-fmt.log" 2>&1; then
+            echo "✅ Protobuf format: PASSED"
+        else
+            echo "❌ Protobuf format: FAILED"
+            ERROR_LIST+=("Protobuf format - see $TEMP_DIR/proto-fmt.log")
+            cat "$TEMP_DIR/proto-fmt.log"
+            ERRORS=$((ERRORS + 1))
+        fi
+    else
+        echo "⚠️  buf not found, skipping protobuf format"
+        WARNINGS=$((WARNINGS + 1))
+    fi
+    
+    echo ""
+    
+    # ────────────────────────────────────────────────────────────
+    # Backend Checks
+    # ────────────────────────────────────────────────────────────
+    echo "🦀 Testing Backend Format..."
+    cd backend
+    
+    # Generate protobuf code first (needed for fmt check)
+    if command -v buf &> /dev/null && [ -f "../buf.gen.yaml" ]; then
+        echo "   Generating protobuf code..."
+        cd ..
+        buf generate > "$TEMP_DIR/buf-gen.log" 2>&1 || true
+        cd backend
+    fi
+    
+    if command -v cargo &> /dev/null && cargo fmt --version &> /dev/null 2>&1; then
+        if SQLX_OFFLINE=true cargo fmt --all -- --check > "$TEMP_DIR/backend-fmt.log" 2>&1; then
+            echo "✅ Backend format: PASSED"
+        else
+            echo "❌ Backend format: FAILED"
+            ERROR_LIST+=("Backend format - see $TEMP_DIR/backend-fmt.log")
+            cat "$TEMP_DIR/backend-fmt.log"
+            ERRORS=$((ERRORS + 1))
+        fi
+    else
+        echo "⚠️  cargo/rustfmt not found, skipping backend format"
+        WARNING_LIST+=("cargo/rustfmt not found")
+        WARNINGS=$((WARNINGS + 1))
+    fi
+    
+    echo ""
+    echo "🦀 Testing Backend Clippy..."
+    if command -v cargo &> /dev/null; then
+        if cargo clippy --version &> /dev/null 2>&1; then
+            if SQLX_OFFLINE=true cargo clippy --all-targets --all-features -- -D warnings > "$TEMP_DIR/backend-clippy.log" 2>&1; then
+                echo "✅ Backend clippy: PASSED"
+            else
+                echo "❌ Backend clippy: FAILED"
+                ERROR_LIST+=("Backend clippy - see $TEMP_DIR/backend-clippy.log")
+                cat "$TEMP_DIR/backend-clippy.log"
+                ERRORS=$((ERRORS + 1))
+            fi
+        else
+            echo "⚠️  clippy not installed, skipping"
+            WARNING_LIST+=("clippy not installed")
+            WARNINGS=$((WARNINGS + 1))
+        fi
+    else
+        echo "⚠️  cargo not found, skipping backend clippy"
+        WARNING_LIST+=("cargo not found")
+        WARNINGS=$((WARNINGS + 1))
+    fi
+    
+    echo ""
+    echo "🦀 Testing Backend Build..."
+    if command -v cargo &> /dev/null; then
+        if SQLX_OFFLINE=true cargo check --all-features > "$TEMP_DIR/backend-build.log" 2>&1; then
+            echo "✅ Backend build: PASSED"
+        else
+            echo "❌ Backend build: FAILED"
+            ERROR_LIST+=("Backend build - see $TEMP_DIR/backend-build.log")
+            cat "$TEMP_DIR/backend-build.log"
+            ERRORS=$((ERRORS + 1))
+        fi
+    else
+        echo "⚠️  cargo not found, skipping backend build"
+        WARNING_LIST+=("cargo not found")
+        WARNINGS=$((WARNINGS + 1))
+    fi
+    
+    cd ..
+    echo ""
+    
+    # ────────────────────────────────────────────────────────────
+    # Frontend Checks
+    # ────────────────────────────────────────────────────────────
+    echo "🎨 Testing Frontend TypeScript Check..."
+    if command -v pnpm &> /dev/null; then
+        if pnpm run check > "$TEMP_DIR/frontend-check.log" 2>&1; then
+            echo "✅ Frontend TypeScript: PASSED"
+        else
+            echo "❌ Frontend TypeScript: FAILED"
+            ERROR_LIST+=("Frontend TypeScript - see $TEMP_DIR/frontend-check.log")
+            cat "$TEMP_DIR/frontend-check.log"
+            ERRORS=$((ERRORS + 1))
+        fi
+    else
+        echo "⚠️  pnpm not found, skipping frontend check"
+        WARNING_LIST+=("pnpm not found")
+        WARNINGS=$((WARNINGS + 1))
+    fi
+    
+    echo ""
+    echo "🎨 Testing Frontend Lint..."
+    if command -v pnpm &> /dev/null; then
+        if pnpm run lint > "$TEMP_DIR/frontend-lint.log" 2>&1; then
+            echo "✅ Frontend lint: PASSED"
+        else
+            echo "❌ Frontend lint: FAILED"
+            ERROR_LIST+=("Frontend lint - see $TEMP_DIR/frontend-lint.log")
+            cat "$TEMP_DIR/frontend-lint.log"
+            ERRORS=$((ERRORS + 1))
+        fi
+    else
+        echo "⚠️  pnpm not found, skipping frontend lint"
+        WARNINGS=$((WARNINGS + 1))
+    fi
+    
+    echo ""
+    echo "🎨 Testing Frontend Build..."
+    if command -v pnpm &> /dev/null; then
+        if pnpm run build > "$TEMP_DIR/frontend-build.log" 2>&1; then
+            echo "✅ Frontend build: PASSED"
+        else
+            echo "❌ Frontend build: FAILED"
+            ERROR_LIST+=("Frontend build - see $TEMP_DIR/frontend-build.log")
+            cat "$TEMP_DIR/frontend-build.log"
+            ERRORS=$((ERRORS + 1))
+        fi
+    else
+        echo "⚠️  pnpm not found, skipping frontend build"
+        WARNINGS=$((WARNINGS + 1))
+    fi
+    
+    echo ""
+    echo "═══════════════════════════════════════════════════════"
+    echo "📊 Summary:"
+    echo "   Errors:   $ERRORS"
+    echo "   Warnings: $WARNINGS"
+    echo "═══════════════════════════════════════════════════════"
+    
+    if [ ${#ERROR_LIST[@]} -gt 0 ]; then
+        echo ""
+        echo "❌ Errors found:"
+        for error in "${ERROR_LIST[@]}"; do
+            echo "   - $error"
+        done
+    fi
+    
+    if [ ${#WARNING_LIST[@]} -gt 0 ]; then
+        echo ""
+        echo "⚠️  Warnings:"
+        for warning in "${WARNING_LIST[@]}"; do
+            echo "   - $warning"
+        done
+    fi
+    
+    echo ""
+    
+    # ────────────────────────────────────────────────────────────
+    # Optional: Backend Tests (benötigt laufende Services)
+    # ────────────────────────────────────────────────────────────
+    echo "🧪 Testing Backend Tests (optional - requires services)..."
+    if command -v cargo &> /dev/null; then
+        # Check if services are running
+        if pg_isready -h localhost -p 5432 -U test > /dev/null 2>&1 && \
+           redis-cli -h localhost -p 6379 ping > /dev/null 2>&1; then
+            echo "   Services detected, running tests..."
+            cd backend
+            if SQLX_OFFLINE=true cargo test --lib --no-run > "$TEMP_DIR/backend-tests.log" 2>&1; then
+                echo "✅ Backend tests compile: PASSED"
+            else
+                echo "❌ Backend tests compile: FAILED"
+                ERROR_LIST+=("Backend tests compile - see $TEMP_DIR/backend-tests.log")
+                cat "$TEMP_DIR/backend-tests.log"
+                ERRORS=$((ERRORS + 1))
+            fi
+            cd ..
+        else
+            echo "⚠️  Services not running, skipping tests"
+            echo "   Start services with: just services"
+            WARNING_LIST+=("Tests skipped - services not running")
+            WARNINGS=$((WARNINGS + 1))
+        fi
+    else
+        echo "⚠️  cargo not found, skipping tests"
+        WARNINGS=$((WARNINGS + 1))
+    fi
+    
+    echo ""
+    echo "═══════════════════════════════════════════════════════"
+    echo "📊 Final Summary:"
+    echo "   Errors:   $ERRORS"
+    echo "   Warnings: $WARNINGS"
+    echo "═══════════════════════════════════════════════════════"
+    
+    if [ ${#ERROR_LIST[@]} -gt 0 ]; then
+        echo ""
+        echo "❌ Errors found:"
+        for error in "${ERROR_LIST[@]}"; do
+            echo "   - $error"
+        done
+    fi
+    
+    if [ ${#WARNING_LIST[@]} -gt 0 ]; then
+        echo ""
+        echo "⚠️  Warnings:"
+        for warning in "${WARNING_LIST[@]}"; do
+            echo "   - $warning"
+        done
+    fi
+    
+    echo ""
+    echo "📁 Error logs saved in: $TEMP_DIR"
+    echo "   (Logs will be cleaned up on exit)"
+    echo ""
+    echo "💡 Tip: To view logs before they're cleaned up:"
+    echo "   ls -la $TEMP_DIR"
+    
+    if [ $ERRORS -gt 0 ]; then
+        echo ""
+        echo "❌ CI simulation failed with $ERRORS error(s)"
+        exit 1
+    elif [ $WARNINGS -gt 0 ]; then
+        echo ""
+        echo "⚠️  CI simulation completed with $WARNINGS warning(s)"
+        exit 0
+    else
+        echo ""
+        echo "✅ All CI checks passed!"
+        exit 0
+    fi
+
+# ═══════════════════════════════════════════════════════
+# 🧪 TESTING
+# ═══════════════════════════════════════════════════════
+
+# Testet den DevContainer Build und Services
+# Usage: just test-devcontainer
+test-devcontainer:
+    #!/usr/bin/env bash
+    set -e
+    cd {{WORKSPACE_ROOT}}/.devcontainer
+    
+    echo "🔨 Building DevContainer..."
+    docker compose build dev || (echo "❌ DevContainer build failed" && exit 1)
+    echo "✅ DevContainer built successfully"
+    
+    echo ""
+    echo "🚀 Starting services..."
+    docker compose up -d db cache minio || (echo "❌ Failed to start services" && exit 1)
+    
+    echo "⏳ Waiting for services to be ready..."
+    timeout 60 bash -c 'until docker compose exec -T db pg_isready -U erynoa; do sleep 2; done' || (echo "❌ PostgreSQL not ready" && exit 1)
+    timeout 60 bash -c 'until docker compose exec -T cache redis-cli ping; do sleep 2; done' || (echo "❌ Redis not ready" && exit 1)
+    timeout 60 bash -c 'until curl -f http://localhost:9000/minio/health/live 2>/dev/null; do sleep 2; done' || (echo "❌ MinIO not ready" && exit 1)
+    echo "✅ All services ready"
+    
+    echo ""
+    echo "🔍 Testing installed tools..."
+    docker compose run --rm dev bash -c "
+        set -e
+        echo 'Testing Rust...'
+        rustc --version || (echo '❌ rustc not found' && exit 1)
+        cargo --version || (echo '❌ cargo not found' && exit 1)
+        echo '✅ Rust tools OK'
+        
+        echo 'Testing Node.js & pnpm...'
+        node --version || (echo '❌ node not found' && exit 1)
+        pnpm --version || (echo '❌ pnpm not found' && exit 1)
+        echo '✅ Node.js & pnpm OK'
+        
+        echo 'Testing buf...'
+        buf --version || (echo '❌ buf not found' && exit 1)
+        echo '✅ buf OK'
+        
+        echo 'Testing just...'
+        just --version || (echo '❌ just not found' && exit 1)
+        echo '✅ just OK'
+        
+        echo 'Testing direnv...'
+        direnv --version || (echo '❌ direnv not found' && exit 1)
+        echo '✅ direnv OK'
+        
+        echo 'Testing Docker...'
+        docker --version || (echo '❌ docker not found' && exit 1)
+        echo '✅ Docker OK'
+        
+        echo ''
+        echo '✅ All tools installed correctly'
+    " || (echo "❌ Tool test failed" && exit 1)
+    
+    echo ""
+    echo "🔍 Testing service connections..."
+    docker compose run --rm dev bash -c "
+        set -e
+        echo 'Testing PostgreSQL...'
+        PGPASSWORD=erynoa psql -h db -U erynoa -d erynoa -c 'SELECT version();' > /dev/null || (echo '❌ PostgreSQL connection failed' && exit 1)
+        echo '✅ PostgreSQL connection OK'
+        
+        echo 'Testing Redis...'
+        redis-cli -h cache ping > /dev/null || (echo '❌ Redis connection failed' && exit 1)
+        echo '✅ Redis connection OK'
+        
+        echo 'Testing MinIO...'
+        curl -f http://minio:9000/minio/health/live > /dev/null || (echo '❌ MinIO connection failed' && exit 1)
+        echo '✅ MinIO connection OK'
+        
+        echo ''
+        echo '✅ All services accessible'
+    " || (echo "❌ Service connection test failed" && exit 1)
+    
+    echo ""
+    echo "🔍 Testing backend build..."
+    docker compose run --rm dev bash -c "
+        set -e
+        cd /workspace/backend
+        cargo check --all-features || (echo '❌ Backend build failed' && exit 1)
+        echo '✅ Backend builds successfully'
+    " || (echo "❌ Backend build test failed" && exit 1)
+    
+    echo ""
+    echo "🔍 Testing frontend setup..."
+    docker compose run --rm dev bash -c "
+        set -e
+        cd /workspace
+        pnpm install --frozen-lockfile || (echo '❌ Frontend install failed' && exit 1)
+        echo '✅ Frontend dependencies installed'
+    " || (echo "❌ Frontend setup test failed" && exit 1)
+    
+    echo ""
+    echo "🔍 Testing protobuf generation..."
+    docker compose run --rm dev bash -c "
+        set -e
+        cd /workspace
+        buf generate || (echo '❌ Protobuf generation failed' && exit 1)
+        echo '✅ Protobuf generation OK'
+    " || (echo "❌ Protobuf generation test failed" && exit 1)
+    
+    echo ""
+    echo "✅ All DevContainer tests passed!"
+    echo ""
+    echo "To clean up: cd .devcontainer && docker compose down -v"

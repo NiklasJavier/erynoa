@@ -74,9 +74,9 @@ export class User extends Message<User> {
 }
 
 /**
- * @generated from message erynoa.v1.ListUsersRequest
+ * @generated from message erynoa.v1.ListRequest
  */
-export class ListUsersRequest extends Message<ListUsersRequest> {
+export class ListRequest extends Message<ListRequest> {
   /**
    * @generated from field: int32 page_size = 1;
    */
@@ -87,39 +87,39 @@ export class ListUsersRequest extends Message<ListUsersRequest> {
    */
   pageToken = "";
 
-  constructor(data?: PartialMessage<ListUsersRequest>) {
+  constructor(data?: PartialMessage<ListRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "erynoa.v1.ListUsersRequest";
+  static readonly typeName = "erynoa.v1.ListRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 2, name: "page_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListUsersRequest {
-    return new ListUsersRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListRequest {
+    return new ListRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListUsersRequest {
-    return new ListUsersRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListRequest {
+    return new ListRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListUsersRequest {
-    return new ListUsersRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListRequest {
+    return new ListRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ListUsersRequest | PlainMessage<ListUsersRequest> | undefined, b: ListUsersRequest | PlainMessage<ListUsersRequest> | undefined): boolean {
-    return proto3.util.equals(ListUsersRequest, a, b);
+  static equals(a: ListRequest | PlainMessage<ListRequest> | undefined, b: ListRequest | PlainMessage<ListRequest> | undefined): boolean {
+    return proto3.util.equals(ListRequest, a, b);
   }
 }
 
 /**
- * @generated from message erynoa.v1.ListUsersResponse
+ * @generated from message erynoa.v1.ListResponse
  */
-export class ListUsersResponse extends Message<ListUsersResponse> {
+export class ListResponse extends Message<ListResponse> {
   /**
    * @generated from field: repeated erynoa.v1.User users = 1;
    */
@@ -135,145 +135,182 @@ export class ListUsersResponse extends Message<ListUsersResponse> {
    */
   totalCount = 0;
 
-  constructor(data?: PartialMessage<ListUsersResponse>) {
+  constructor(data?: PartialMessage<ListResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "erynoa.v1.ListUsersResponse";
+  static readonly typeName = "erynoa.v1.ListResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "users", kind: "message", T: User, repeated: true },
     { no: 2, name: "next_page_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "total_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListUsersResponse {
-    return new ListUsersResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListResponse {
+    return new ListResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListUsersResponse {
-    return new ListUsersResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListResponse {
+    return new ListResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListUsersResponse {
-    return new ListUsersResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListResponse {
+    return new ListResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ListUsersResponse | PlainMessage<ListUsersResponse> | undefined, b: ListUsersResponse | PlainMessage<ListUsersResponse> | undefined): boolean {
-    return proto3.util.equals(ListUsersResponse, a, b);
+  static equals(a: ListResponse | PlainMessage<ListResponse> | undefined, b: ListResponse | PlainMessage<ListResponse> | undefined): boolean {
+    return proto3.util.equals(ListResponse, a, b);
   }
 }
 
 /**
- * @generated from message erynoa.v1.GetUserRequest
+ * @generated from message erynoa.v1.GetRequest
  */
-export class GetUserRequest extends Message<GetUserRequest> {
+export class GetRequest extends Message<GetRequest> {
   /**
    * @generated from field: string id = 1;
    */
   id = "";
 
-  constructor(data?: PartialMessage<GetUserRequest>) {
+  constructor(data?: PartialMessage<GetRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "erynoa.v1.GetUserRequest";
+  static readonly typeName = "erynoa.v1.GetRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetUserRequest {
-    return new GetUserRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetRequest {
+    return new GetRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetUserRequest {
-    return new GetUserRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetRequest {
+    return new GetRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetUserRequest {
-    return new GetUserRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetRequest {
+    return new GetRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetUserRequest | PlainMessage<GetUserRequest> | undefined, b: GetUserRequest | PlainMessage<GetUserRequest> | undefined): boolean {
-    return proto3.util.equals(GetUserRequest, a, b);
+  static equals(a: GetRequest | PlainMessage<GetRequest> | undefined, b: GetRequest | PlainMessage<GetRequest> | undefined): boolean {
+    return proto3.util.equals(GetRequest, a, b);
   }
 }
 
 /**
- * @generated from message erynoa.v1.GetCurrentUserRequest
+ * @generated from message erynoa.v1.GetCurrentRequest
  */
-export class GetCurrentUserRequest extends Message<GetCurrentUserRequest> {
-  constructor(data?: PartialMessage<GetCurrentUserRequest>) {
+export class GetCurrentRequest extends Message<GetCurrentRequest> {
+  constructor(data?: PartialMessage<GetCurrentRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "erynoa.v1.GetCurrentUserRequest";
+  static readonly typeName = "erynoa.v1.GetCurrentRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCurrentUserRequest {
-    return new GetCurrentUserRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCurrentRequest {
+    return new GetCurrentRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCurrentUserRequest {
-    return new GetCurrentUserRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCurrentRequest {
+    return new GetCurrentRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCurrentUserRequest {
-    return new GetCurrentUserRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCurrentRequest {
+    return new GetCurrentRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetCurrentUserRequest | PlainMessage<GetCurrentUserRequest> | undefined, b: GetCurrentUserRequest | PlainMessage<GetCurrentUserRequest> | undefined): boolean {
-    return proto3.util.equals(GetCurrentUserRequest, a, b);
+  static equals(a: GetCurrentRequest | PlainMessage<GetCurrentRequest> | undefined, b: GetCurrentRequest | PlainMessage<GetCurrentRequest> | undefined): boolean {
+    return proto3.util.equals(GetCurrentRequest, a, b);
   }
 }
 
 /**
- * @generated from message erynoa.v1.GetUserResponse
+ * @generated from message erynoa.v1.GetResponse
  */
-export class GetUserResponse extends Message<GetUserResponse> {
+export class GetResponse extends Message<GetResponse> {
   /**
    * @generated from field: erynoa.v1.User user = 1;
    */
   user?: User;
 
-  constructor(data?: PartialMessage<GetUserResponse>) {
+  constructor(data?: PartialMessage<GetResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "erynoa.v1.GetUserResponse";
+  static readonly typeName = "erynoa.v1.GetResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "user", kind: "message", T: User },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetUserResponse {
-    return new GetUserResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetResponse {
+    return new GetResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetUserResponse {
-    return new GetUserResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetResponse {
+    return new GetResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetUserResponse {
-    return new GetUserResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetResponse {
+    return new GetResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetUserResponse | PlainMessage<GetUserResponse> | undefined, b: GetUserResponse | PlainMessage<GetUserResponse> | undefined): boolean {
-    return proto3.util.equals(GetUserResponse, a, b);
+  static equals(a: GetResponse | PlainMessage<GetResponse> | undefined, b: GetResponse | PlainMessage<GetResponse> | undefined): boolean {
+    return proto3.util.equals(GetResponse, a, b);
   }
 }
 
 /**
- * @generated from message erynoa.v1.CreateUserRequest
+ * @generated from message erynoa.v1.GetCurrentResponse
  */
-export class CreateUserRequest extends Message<CreateUserRequest> {
+export class GetCurrentResponse extends Message<GetCurrentResponse> {
+  /**
+   * @generated from field: erynoa.v1.User user = 1;
+   */
+  user?: User;
+
+  constructor(data?: PartialMessage<GetCurrentResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "erynoa.v1.GetCurrentResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "user", kind: "message", T: User },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCurrentResponse {
+    return new GetCurrentResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCurrentResponse {
+    return new GetCurrentResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCurrentResponse {
+    return new GetCurrentResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCurrentResponse | PlainMessage<GetCurrentResponse> | undefined, b: GetCurrentResponse | PlainMessage<GetCurrentResponse> | undefined): boolean {
+    return proto3.util.equals(GetCurrentResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message erynoa.v1.CreateRequest
+ */
+export class CreateRequest extends Message<CreateRequest> {
   /**
    * @generated from field: string email = 1;
    */
@@ -289,77 +326,77 @@ export class CreateUserRequest extends Message<CreateUserRequest> {
    */
   role = "";
 
-  constructor(data?: PartialMessage<CreateUserRequest>) {
+  constructor(data?: PartialMessage<CreateRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "erynoa.v1.CreateUserRequest";
+  static readonly typeName = "erynoa.v1.CreateRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "email", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "role", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateUserRequest {
-    return new CreateUserRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateRequest {
+    return new CreateRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateUserRequest {
-    return new CreateUserRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateRequest {
+    return new CreateRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateUserRequest {
-    return new CreateUserRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateRequest {
+    return new CreateRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: CreateUserRequest | PlainMessage<CreateUserRequest> | undefined, b: CreateUserRequest | PlainMessage<CreateUserRequest> | undefined): boolean {
-    return proto3.util.equals(CreateUserRequest, a, b);
+  static equals(a: CreateRequest | PlainMessage<CreateRequest> | undefined, b: CreateRequest | PlainMessage<CreateRequest> | undefined): boolean {
+    return proto3.util.equals(CreateRequest, a, b);
   }
 }
 
 /**
- * @generated from message erynoa.v1.CreateUserResponse
+ * @generated from message erynoa.v1.CreateResponse
  */
-export class CreateUserResponse extends Message<CreateUserResponse> {
+export class CreateResponse extends Message<CreateResponse> {
   /**
    * @generated from field: erynoa.v1.User user = 1;
    */
   user?: User;
 
-  constructor(data?: PartialMessage<CreateUserResponse>) {
+  constructor(data?: PartialMessage<CreateResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "erynoa.v1.CreateUserResponse";
+  static readonly typeName = "erynoa.v1.CreateResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "user", kind: "message", T: User },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateUserResponse {
-    return new CreateUserResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateResponse {
+    return new CreateResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateUserResponse {
-    return new CreateUserResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateResponse {
+    return new CreateResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateUserResponse {
-    return new CreateUserResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateResponse {
+    return new CreateResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: CreateUserResponse | PlainMessage<CreateUserResponse> | undefined, b: CreateUserResponse | PlainMessage<CreateUserResponse> | undefined): boolean {
-    return proto3.util.equals(CreateUserResponse, a, b);
+  static equals(a: CreateResponse | PlainMessage<CreateResponse> | undefined, b: CreateResponse | PlainMessage<CreateResponse> | undefined): boolean {
+    return proto3.util.equals(CreateResponse, a, b);
   }
 }
 
 /**
- * @generated from message erynoa.v1.UpdateUserRequest
+ * @generated from message erynoa.v1.UpdateRequest
  */
-export class UpdateUserRequest extends Message<UpdateUserRequest> {
+export class UpdateRequest extends Message<UpdateRequest> {
   /**
    * @generated from field: string id = 1;
    */
@@ -380,13 +417,13 @@ export class UpdateUserRequest extends Message<UpdateUserRequest> {
    */
   role?: string;
 
-  constructor(data?: PartialMessage<UpdateUserRequest>) {
+  constructor(data?: PartialMessage<UpdateRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "erynoa.v1.UpdateUserRequest";
+  static readonly typeName = "erynoa.v1.UpdateRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "email", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
@@ -394,125 +431,125 @@ export class UpdateUserRequest extends Message<UpdateUserRequest> {
     { no: 4, name: "role", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateUserRequest {
-    return new UpdateUserRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateRequest {
+    return new UpdateRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateUserRequest {
-    return new UpdateUserRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateRequest {
+    return new UpdateRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateUserRequest {
-    return new UpdateUserRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateRequest {
+    return new UpdateRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: UpdateUserRequest | PlainMessage<UpdateUserRequest> | undefined, b: UpdateUserRequest | PlainMessage<UpdateUserRequest> | undefined): boolean {
-    return proto3.util.equals(UpdateUserRequest, a, b);
+  static equals(a: UpdateRequest | PlainMessage<UpdateRequest> | undefined, b: UpdateRequest | PlainMessage<UpdateRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateRequest, a, b);
   }
 }
 
 /**
- * @generated from message erynoa.v1.UpdateUserResponse
+ * @generated from message erynoa.v1.UpdateResponse
  */
-export class UpdateUserResponse extends Message<UpdateUserResponse> {
+export class UpdateResponse extends Message<UpdateResponse> {
   /**
    * @generated from field: erynoa.v1.User user = 1;
    */
   user?: User;
 
-  constructor(data?: PartialMessage<UpdateUserResponse>) {
+  constructor(data?: PartialMessage<UpdateResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "erynoa.v1.UpdateUserResponse";
+  static readonly typeName = "erynoa.v1.UpdateResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "user", kind: "message", T: User },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateUserResponse {
-    return new UpdateUserResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateResponse {
+    return new UpdateResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateUserResponse {
-    return new UpdateUserResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateResponse {
+    return new UpdateResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateUserResponse {
-    return new UpdateUserResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateResponse {
+    return new UpdateResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: UpdateUserResponse | PlainMessage<UpdateUserResponse> | undefined, b: UpdateUserResponse | PlainMessage<UpdateUserResponse> | undefined): boolean {
-    return proto3.util.equals(UpdateUserResponse, a, b);
+  static equals(a: UpdateResponse | PlainMessage<UpdateResponse> | undefined, b: UpdateResponse | PlainMessage<UpdateResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateResponse, a, b);
   }
 }
 
 /**
- * @generated from message erynoa.v1.DeleteUserRequest
+ * @generated from message erynoa.v1.DeleteRequest
  */
-export class DeleteUserRequest extends Message<DeleteUserRequest> {
+export class DeleteRequest extends Message<DeleteRequest> {
   /**
    * @generated from field: string id = 1;
    */
   id = "";
 
-  constructor(data?: PartialMessage<DeleteUserRequest>) {
+  constructor(data?: PartialMessage<DeleteRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "erynoa.v1.DeleteUserRequest";
+  static readonly typeName = "erynoa.v1.DeleteRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteUserRequest {
-    return new DeleteUserRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteRequest {
+    return new DeleteRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteUserRequest {
-    return new DeleteUserRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteRequest {
+    return new DeleteRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteUserRequest {
-    return new DeleteUserRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteRequest {
+    return new DeleteRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: DeleteUserRequest | PlainMessage<DeleteUserRequest> | undefined, b: DeleteUserRequest | PlainMessage<DeleteUserRequest> | undefined): boolean {
-    return proto3.util.equals(DeleteUserRequest, a, b);
+  static equals(a: DeleteRequest | PlainMessage<DeleteRequest> | undefined, b: DeleteRequest | PlainMessage<DeleteRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteRequest, a, b);
   }
 }
 
 /**
- * @generated from message erynoa.v1.DeleteUserResponse
+ * @generated from message erynoa.v1.DeleteResponse
  */
-export class DeleteUserResponse extends Message<DeleteUserResponse> {
-  constructor(data?: PartialMessage<DeleteUserResponse>) {
+export class DeleteResponse extends Message<DeleteResponse> {
+  constructor(data?: PartialMessage<DeleteResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "erynoa.v1.DeleteUserResponse";
+  static readonly typeName = "erynoa.v1.DeleteResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteUserResponse {
-    return new DeleteUserResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteResponse {
+    return new DeleteResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteUserResponse {
-    return new DeleteUserResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteResponse {
+    return new DeleteResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteUserResponse {
-    return new DeleteUserResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteResponse {
+    return new DeleteResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: DeleteUserResponse | PlainMessage<DeleteUserResponse> | undefined, b: DeleteUserResponse | PlainMessage<DeleteUserResponse> | undefined): boolean {
-    return proto3.util.equals(DeleteUserResponse, a, b);
+  static equals(a: DeleteResponse | PlainMessage<DeleteResponse> | undefined, b: DeleteResponse | PlainMessage<DeleteResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteResponse, a, b);
   }
 }
 

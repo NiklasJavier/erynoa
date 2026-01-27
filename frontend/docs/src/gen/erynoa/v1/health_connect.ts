@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { HealthCheckRequest, HealthCheckResponse, ReadyRequest, ReadyResponse } from "./health_pb.js";
+import { CheckRequest, CheckResponse, ReadyRequest, ReadyResponse } from "./health_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -21,8 +21,8 @@ export const HealthService = {
      */
     check: {
       name: "Check",
-      I: HealthCheckRequest,
-      O: HealthCheckResponse,
+      I: CheckRequest,
+      O: CheckResponse,
       kind: MethodKind.Unary,
     },
     /**

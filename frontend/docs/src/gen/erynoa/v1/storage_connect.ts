@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateBucketRequest, CreateBucketResponse, DeleteBucketRequest, DeleteBucketResponse, DeleteObjectRequest, DeleteObjectResponse, GetPresignedDownloadUrlRequest, GetPresignedDownloadUrlResponse, GetPresignedUploadUrlRequest, GetPresignedUploadUrlResponse, HeadObjectRequest, HeadObjectResponse, ListBucketsRequest, ListBucketsResponse, ListObjectsRequest, ListObjectsResponse, UploadRequest, UploadResponse } from "./storage_pb.js";
+import { CreateBucketRequest, CreateBucketResponse, DeleteBucketRequest, DeleteBucketResponse, GetPresignedDownloadUrlRequest, GetPresignedDownloadUrlResponse, GetPresignedUploadUrlRequest, GetPresignedUploadUrlResponse, ListBucketsRequest, ListBucketsResponse, StorageServiceDeleteRequest, StorageServiceDeleteResponse, StorageServiceHeadRequest, StorageServiceHeadResponse, StorageServiceListRequest, StorageServiceListResponse, UploadRequest, UploadResponse } from "./storage_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -32,8 +32,8 @@ export const StorageService = {
      */
     list: {
       name: "List",
-      I: ListObjectsRequest,
-      O: ListObjectsResponse,
+      I: StorageServiceListRequest,
+      O: StorageServiceListResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -43,8 +43,8 @@ export const StorageService = {
      */
     delete: {
       name: "Delete",
-      I: DeleteObjectRequest,
-      O: DeleteObjectResponse,
+      I: StorageServiceDeleteRequest,
+      O: StorageServiceDeleteResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -54,8 +54,8 @@ export const StorageService = {
      */
     head: {
       name: "Head",
-      I: HeadObjectRequest,
-      O: HeadObjectResponse,
+      I: StorageServiceHeadRequest,
+      O: StorageServiceHeadResponse,
       kind: MethodKind.Unary,
     },
     /**

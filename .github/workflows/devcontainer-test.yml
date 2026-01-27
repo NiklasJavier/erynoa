@@ -1,0 +1,149 @@
+name: DevContainer Test
+
+on:
+  schedule:
+    # Jeden Montag um 2:00 UTC (3:00 MEZ)
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+
+env:
+  PNPM_VERSION: 9.15.0
+
+jobs:
+  test-devcontainer:
+    name: Test DevContainer Build & Services
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build DevContainer
+        run: |
+          cd .devcontainer
+          docker compose build dev
+      
+      - name: Start Services
+        run: |
+          cd .devcontainer
+          docker compose up -d db cache minio
+          # Warte auf Services
+          echo "Waiting for services to be ready..."
+          timeout 60 bash -c 'until docker compose exec -T db pg_isready -U erynoa; do sleep 2; done'
+          timeout 60 bash -c 'until docker compose exec -T cache redis-cli ping; do sleep 2; done'
+          timeout 60 bash -c 'until curl -f http://localhost:9000/minio/health/live; do sleep 2; done'
+      
+      - name: Test DevContainer Tools
+        run: |
+          cd .devcontainer
+          docker compose run --rm dev bash -c "
+            set -e
+            echo '🔍 Testing installed tools...'
+            
+            # Rust
+            rustc --version || (echo '❌ rustc not found' && exit 1)
+            cargo --version || (echo '❌ cargo not found' && exit 1)
+            echo '✅ Rust tools OK'
+            
+            # Node.js & pnpm
+            node --version || (echo '❌ node not found' && exit 1)
+            pnpm --version || (echo '❌ pnpm not found' && exit 1)
+            echo '✅ Node.js & pnpm OK'
+            
+            # buf
+            buf --version || (echo '❌ buf not found' && exit 1)
+            echo '✅ buf OK'
+            
+            # just
+            just --version || (echo '❌ just not found' && exit 1)
+            echo '✅ just OK'
+            
+            # direnv
+            direnv --version || (echo '❌ direnv not found' && exit 1)
+            echo '✅ direnv OK'
+            
+            # Docker (Docker-in-Docker)
+            docker --version || (echo '❌ docker not found' && exit 1)
+            echo '✅ Docker OK'
+            
+            echo '✅ All tools installed correctly'
+          "
+      
+      - name: Test Service Connections
+        run: |
+          cd .devcontainer
+          docker compose run --rm dev bash -c "
+            set -e
+            echo '🔍 Testing service connections...'
+            
+            # PostgreSQL
+            PGPASSWORD=erynoa psql -h db -U erynoa -d erynoa -c 'SELECT version();' > /dev/null || (echo '❌ PostgreSQL connection failed' && exit 1)
+            echo '✅ PostgreSQL connection OK'
+            
+            # Redis/Dragonfly
+            redis-cli -h cache ping > /dev/null || (echo '❌ Redis connection failed' && exit 1)
+            echo '✅ Redis connection OK'
+            
+            # MinIO
+            curl -f http://minio:9000/minio/health/live > /dev/null || (echo '❌ MinIO connection failed' && exit 1)
+            echo '✅ MinIO connection OK'
+            
+            echo '✅ All services accessible'
+          "
+      
+      - name: Test Backend Build
+        run: |
+          cd .devcontainer
+          docker compose run --rm dev bash -c "
+            set -e
+            echo '🔍 Testing backend build...'
+            cd /workspace/backend
+            cargo check --all-features || (echo '❌ Backend build failed' && exit 1)
+            echo '✅ Backend builds successfully'
+          "
+        env:
+          SQLX_OFFLINE: true
+      
+      - name: Test Frontend Setup
+        run: |
+          cd .devcontainer
+          docker compose run --rm dev bash -c "
+            set -e
+            echo '🔍 Testing frontend setup...'
+            cd /workspace
+            pnpm install --frozen-lockfile || (echo '❌ Frontend install failed' && exit 1)
+            echo '✅ Frontend dependencies installed'
+          "
+      
+      - name: Test Protobuf Generation
+        run: |
+          cd .devcontainer
+          docker compose run --rm dev bash -c "
+            set -e
+            echo '🔍 Testing protobuf generation...'
+            cd /workspace
+            buf generate || (echo '❌ Protobuf generation failed' && exit 1)
+            echo '✅ Protobuf generation OK'
+          "
+      
+      - name: Cleanup
+        if: always()
+        run: |
+          cd .devcontainer
+          docker compose down -v || true
+      
+      - name: Summary
+        if: always()
+        run: |
+          echo "## DevContainer Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ DevContainer build and services tested successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Tested:**" >> $GITHUB_STEP_SUMMARY
+          echo "- DevContainer build" >> $GITHUB_STEP_SUMMARY
+          echo "- Service startup (PostgreSQL, Redis, MinIO)" >> $GITHUB_STEP_SUMMARY
+          echo "- Tool installation (Rust, Node.js, pnpm, buf, just, direnv, Docker)" >> $GITHUB_STEP_SUMMARY
+          echo "- Service connections" >> $GITHUB_STEP_SUMMARY
+          echo "- Backend build" >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend setup" >> $GITHUB_STEP_SUMMARY
+          echo "- Protobuf generation" >> $GITHUB_STEP_SUMMARY

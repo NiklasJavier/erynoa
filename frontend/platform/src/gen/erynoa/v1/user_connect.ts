@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateUserRequest, CreateUserResponse, DeleteUserRequest, DeleteUserResponse, GetCurrentUserRequest, GetUserRequest, GetUserResponse, ListUsersRequest, ListUsersResponse, UpdateUserRequest, UpdateUserResponse } from "./user_pb.js";
+import { CreateRequest, CreateResponse, DeleteRequest, DeleteResponse, GetCurrentRequest, GetCurrentResponse, GetRequest, GetResponse, ListRequest, ListResponse, UpdateRequest, UpdateResponse } from "./user_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -21,8 +21,8 @@ export const UserService = {
      */
     list: {
       name: "List",
-      I: ListUsersRequest,
-      O: ListUsersResponse,
+      I: ListRequest,
+      O: ListResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -32,8 +32,8 @@ export const UserService = {
      */
     get: {
       name: "Get",
-      I: GetUserRequest,
-      O: GetUserResponse,
+      I: GetRequest,
+      O: GetResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -43,8 +43,8 @@ export const UserService = {
      */
     getCurrent: {
       name: "GetCurrent",
-      I: GetCurrentUserRequest,
-      O: GetUserResponse,
+      I: GetCurrentRequest,
+      O: GetCurrentResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -54,8 +54,8 @@ export const UserService = {
      */
     create: {
       name: "Create",
-      I: CreateUserRequest,
-      O: CreateUserResponse,
+      I: CreateRequest,
+      O: CreateResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -65,8 +65,8 @@ export const UserService = {
      */
     update: {
       name: "Update",
-      I: UpdateUserRequest,
-      O: UpdateUserResponse,
+      I: UpdateRequest,
+      O: UpdateResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -76,8 +76,8 @@ export const UserService = {
      */
     delete: {
       name: "Delete",
-      I: DeleteUserRequest,
-      O: DeleteUserResponse,
+      I: DeleteRequest,
+      O: DeleteResponse,
       kind: MethodKind.Unary,
     },
   }

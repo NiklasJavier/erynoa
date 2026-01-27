@@ -12,13 +12,13 @@ service StorageService {
   rpc Upload(UploadRequest) returns (UploadResponse);
   
   // List lists objects in a bucket
-  rpc List(ListRequest) returns (ListResponse);
+  rpc List(StorageServiceListRequest) returns (StorageServiceListResponse);
   
   // Delete deletes an object
-  rpc Delete(DeleteRequest) returns (DeleteResponse);
+  rpc Delete(StorageServiceDeleteRequest) returns (StorageServiceDeleteResponse);
   
   // Head checks if an object exists
-  rpc Head(HeadRequest) returns (HeadResponse);
+  rpc Head(StorageServiceHeadRequest) returns (StorageServiceHeadResponse);
   
   // GetPresignedUploadUrl generates a presigned URL for direct upload
   rpc GetPresignedUploadUrl(GetPresignedUploadUrlRequest) returns (GetPresignedUploadUrlResponse);
@@ -56,8 +56,8 @@ message UploadResponse {
   string etag = 4;
 }
 
-// ListRequest contains list parameters
-message ListRequest {
+// StorageServiceListRequest contains list parameters
+message StorageServiceListRequest {
   // Optional prefix filter
   optional string prefix = 1;
   // Optional bucket name
@@ -66,8 +66,8 @@ message ListRequest {
   int32 max_keys = 3;
 }
 
-// ListResponse contains list of objects
-message ListResponse {
+// StorageServiceListResponse contains list of objects
+message StorageServiceListResponse {
   repeated ObjectInfo objects = 1;
   int32 count = 2;
 }
@@ -80,23 +80,23 @@ message ObjectInfo {
   optional google.protobuf.Timestamp last_modified = 4;
 }
 
-// DeleteRequest contains object identifier
-message DeleteRequest {
+// StorageServiceDeleteRequest contains object identifier
+message StorageServiceDeleteRequest {
   string key = 1;
   optional string bucket = 2;
 }
 
-// DeleteResponse is empty
-message DeleteResponse {}
+// StorageServiceDeleteResponse is empty
+message StorageServiceDeleteResponse {}
 
-// HeadRequest contains object identifier
-message HeadRequest {
+// StorageServiceHeadRequest contains object identifier
+message StorageServiceHeadRequest {
   string key = 1;
   optional string bucket = 2;
 }
 
-// HeadResponse indicates if object exists
-message HeadResponse {
+// StorageServiceHeadResponse indicates if object exists
+message StorageServiceHeadResponse {
   bool exists = 1;
 }
 
