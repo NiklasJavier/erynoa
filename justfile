@@ -70,7 +70,13 @@ dev frontend="":
     
     # 1. Starte Hintergrund-Services
     echo "━━━ [1/5] Starte Hintergrund-Services ━━━"
-    cd {{WORKSPACE_ROOT}}/infra/docker
+    DOCKER_DIR="{{WORKSPACE_ROOT}}/infra/docker"
+    if [ ! -d "$DOCKER_DIR" ]; then
+        echo "  ❌ Verzeichnis nicht gefunden: $DOCKER_DIR"
+        echo "  Aktuelles Verzeichnis: $(pwd)"
+        exit 1
+    fi
+    cd "$DOCKER_DIR" || exit 1
     docker compose --profile auth up -d db cache minio zitadel-db zitadel-init zitadel 2>/dev/null || \
         docker compose --profile auth up -d db cache minio zitadel-db zitadel-init zitadel
     echo "  ✓ Services gestartet"
@@ -101,9 +107,10 @@ dev frontend="":
         return 1
     }
     
-    # Parallele Service-Checks
-    wait_for_service "PostgreSQL" "docker compose exec -T db pg_isready -U erynoa" &
-    wait_for_service "Dragonfly" "docker compose exec -T cache redis-cli ping" &
+    # Parallele Service-Checks (müssen im infra/docker Verzeichnis ausgeführt werden)
+    DOCKER_DIR="{{WORKSPACE_ROOT}}/infra/docker"
+    wait_for_service "PostgreSQL" "cd '$DOCKER_DIR' && docker compose exec -T db pg_isready -U erynoa" &
+    wait_for_service "Dragonfly" "cd '$DOCKER_DIR' && docker compose exec -T cache redis-cli ping" &
     wait_for_service "MinIO" "curl -sf ${MINIO_URL:-http://localhost:9000}/minio/health/live" &
     wait_pid=$!
     
@@ -181,7 +188,13 @@ dev frontend="":
     echo "  Stoppen:   just stop"
     echo ""
     
-    cd {{WORKSPACE_ROOT}}/infra/docker
+    DOCKER_DIR="{{WORKSPACE_ROOT}}/infra/docker"
+    if [ ! -d "$DOCKER_DIR" ]; then
+        echo "  ❌ Verzeichnis nicht gefunden: $DOCKER_DIR"
+        echo "  Aktuelles Verzeichnis: $(pwd)"
+        exit 1
+    fi
+    cd "$DOCKER_DIR" || exit 1
     trap 'echo ""; echo "━━━ Frontend(s) + Backend gestoppt ━━━"; echo "  Services laufen weiter. Neustart: just dev"; echo ""' INT
     
     docker compose up --build -d $FRONTENDS backend proxy
@@ -193,7 +206,12 @@ dev frontend="":
     echo ""
     echo "━━━ [5/5] Health Check ━━━"
     if command -v curl >/dev/null 2>&1; then
-        {{WORKSPACE_ROOT}}/scripts/dev/dev-check.sh || echo "  ⚠ Einige Services noch nicht bereit"
+        CHECK_SCRIPT="{{WORKSPACE_ROOT}}/scripts/dev/dev-check.sh"
+        if [ -f "$CHECK_SCRIPT" ]; then
+            bash "$CHECK_SCRIPT" || echo "  ⚠ Einige Services noch nicht bereit"
+        else
+            echo "  ⚠ Health Check Script nicht gefunden: $CHECK_SCRIPT"
+        fi
     else
         echo "  ⚠ curl nicht verfügbar - Health Check übersprungen"
     fi

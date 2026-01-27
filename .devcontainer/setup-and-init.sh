@@ -410,37 +410,49 @@ if [ -d "$HOME/.ssh" ]; then
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 5. Infrastructure Services (Docker-in-Docker)
+# 5. Infrastructure Services (auf Host laufend)
 # ─────────────────────────────────────────────────────────────────────────────
-echo "🐳 Starting infrastructure services..."
+echo "🐳 Checking infrastructure services (running on host)..."
 cd "$WORKSPACE_ROOT"
 
+# Services laufen auf dem Host, nicht im DevContainer
+# Prüfe ob Services erreichbar sind (via host.docker.internal)
 if command -v docker &> /dev/null && docker ps >/dev/null 2>&1; then
-  docker compose -f "$WORKSPACE_ROOT/infra/docker/docker-compose.yml" up -d || {
-    echo "   ⚠️  Docker services failed to start"
-  }
+  # Prüfe ob Services auf dem Host laufen
+  DOCKER_COMPOSE_FILE="$WORKSPACE_ROOT/infra/docker/docker-compose.yml"
+  if [ -f "$DOCKER_COMPOSE_FILE" ]; then
+    # Prüfe ob Services laufen (auf dem Host)
+    if docker compose -f "$DOCKER_COMPOSE_FILE" ps db cache minio 2>/dev/null | grep -q "Up"; then
+      echo "   ✅ Services laufen bereits auf dem Host"
+    else
+      echo "   ⚠️  Services laufen nicht auf dem Host"
+      echo "      Starte Services mit: cd infra/docker && docker compose up -d db cache minio"
+      echo "      Oder: just services"
+    fi
+  fi
 
-  echo "⏳ Waiting for database..."
-  for i in {1..30}; do
-    if docker compose -f "$WORKSPACE_ROOT/infra/docker/docker-compose.yml" exec -T db pg_isready -U erynoa >/dev/null 2>&1; then
-      echo "   ✅ Database ready!"
+  # Prüfe Verbindungen (via host.docker.internal)
+  echo "⏳ Checking database connection (host.docker.internal)..."
+  for i in {1..10}; do
+    if PGPASSWORD=erynoa psql -h host.docker.internal -U erynoa -d erynoa -c "SELECT 1;" >/dev/null 2>&1; then
+      echo "   ✅ Database erreichbar!"
       break
     fi
-    [ $i -eq 30 ] && echo "   ⚠️  Database not ready after 30s - continuing anyway"
+    [ $i -eq 10 ] && echo "   ⚠️  Database nicht erreichbar - Services müssen auf dem Host laufen"
     sleep 1
   done
 
-  echo "⏳ Waiting for cache..."
-  for i in {1..30}; do
-    if docker compose -f "$WORKSPACE_ROOT/infra/docker/docker-compose.yml" exec -T cache redis-cli ping >/dev/null 2>&1; then
-      echo "   ✅ Cache ready!"
+  echo "⏳ Checking cache connection (host.docker.internal)..."
+  for i in {1..10}; do
+    if redis-cli -h host.docker.internal ping >/dev/null 2>&1; then
+      echo "   ✅ Cache erreichbar!"
       break
     fi
-    [ $i -eq 30 ] && echo "   ⚠️  Cache not ready after 30s - continuing anyway"
+    [ $i -eq 10 ] && echo "   ⚠️  Cache nicht erreichbar - Services müssen auf dem Host laufen"
     sleep 1
   done
 else
-  echo "   ⚠️  Docker not available - skipping infrastructure startup"
+  echo "   ⚠️  Docker not available - services should run on host"
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -449,8 +461,17 @@ fi
 echo "📦 Running database migrations..."
 cd "$WORKSPACE_ROOT/backend"
 
+# DATABASE_URL für Migrations (Services laufen auf Host, nicht im Container)
 if [ -z "$DATABASE_URL" ]; then
-  export DATABASE_URL="postgres://erynoa:erynoa@localhost:5432/erynoa"
+  # Im DevContainer: Services auf Host via host.docker.internal
+  # Auf Host: Services auf localhost
+  if [ -d "/workspace" ]; then
+    # Im DevContainer
+    export DATABASE_URL="postgres://erynoa:erynoa@host.docker.internal:5432/erynoa"
+  else
+    # Auf Host
+    export DATABASE_URL="postgres://erynoa:erynoa@localhost:5432/erynoa"
+  fi
 fi
 
 cd "$WORKSPACE_ROOT" && nix develop --command bash -c "cd \"$WORKSPACE_ROOT/backend\" && sqlx database create 2>/dev/null || true; sqlx migrate run" 2>/dev/null || {
