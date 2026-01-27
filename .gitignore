@@ -15,7 +15,10 @@ debug/
 
 # IDE
 .idea/
-.vscode/
+# VS Code: Ignoriere alles außer Workspace-Settings
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 *.swp
 *.swo
 *~

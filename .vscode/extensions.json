@@ -1,0 +1,49 @@
+{
+  // ============================================================================
+  // VS Code Extensions Empfehlungen für Erynoa Monorepo
+  // ============================================================================
+  // Diese Extensions werden empfohlen, wenn das Workspace geöffnet wird
+  
+  "recommendations": [
+    // Rust Development
+    "rust-lang.rust-analyzer",
+    "tamasfe.even-better-toml",
+    "serayuzgur.crates",
+    "vadimcn.vscode-lldb",
+    
+    // Frontend Development
+    "svelte.svelte-vscode",
+    "bradlc.vscode-tailwindcss",
+    "dbaeumer.vscode-eslint",
+    "biomejs.biome",
+    
+    // Protobuf / Connect-RPC
+    "bufbuild.buf",
+    "zxh404.vscode-proto3",
+    
+    // Database & Cache
+    "ms-ossdata.vscode-postgresql",
+    "Redis.redis-for-vscode",
+    
+    // Docker & Infrastructure
+    "ms-azuretools.vscode-docker",
+    
+    // YAML (Docker Compose, GitHub Actions)
+    "redhat.vscode-yaml",
+    
+    // Shell Scripts
+    "timonwong.shellcheck",
+    "mads-hartmann.bash-ide-vscode",
+    
+    // Markdown (Dokumentation)
+    "yzhang.markdown-all-in-one",
+    "davidanson.vscode-markdownlint",
+    
+    // Development Tools
+    "fill-labs.dependi",
+    "usernamehw.errorlens",
+    "eamodio.gitlens",
+    "mkhl.direnv",
+    "jnoortheen.nix-ide"
+  ]
+}
