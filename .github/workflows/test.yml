@@ -50,25 +50,33 @@ jobs:
       - name: Install mold linker
         id: install_mold
         run: |
+          # Disable mold config first to prevent linker errors during installation
+          if [ -f backend/.cargo/config.toml ]; then
+            mv backend/.cargo/config.toml backend/.cargo/config.toml.bak || true
+          fi
           sudo apt-get update
           sudo apt-get install -y wget tar || true
           if ! command -v mold &> /dev/null; then
             # Install from GitHub releases
             MOLD_VERSION="2.4.0"
             cd /tmp
-            wget -q https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz
-            tar -xzf mold-${MOLD_VERSION}-x86_64-linux.tar.gz
-            sudo cp mold-${MOLD_VERSION}-x86_64-linux/bin/mold /usr/local/bin/mold
-            sudo chmod +x /usr/local/bin/mold
-            rm -rf mold-${MOLD_VERSION}-x86_64-linux*
+            wget -q https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz || true
+            if [ -f mold-${MOLD_VERSION}-x86_64-linux.tar.gz ]; then
+              tar -xzf mold-${MOLD_VERSION}-x86_64-linux.tar.gz
+              sudo cp mold-${MOLD_VERSION}-x86_64-linux/bin/mold /usr/local/bin/mold
+              sudo chmod +x /usr/local/bin/mold
+              rm -rf mold-${MOLD_VERSION}-x86_64-linux*
+            fi
           fi
-          # Verify installation and disable mold config if not available
+          # Verify installation and restore mold config if available
           if mold --version &>/dev/null; then
             echo "mold_available=true" >> $GITHUB_OUTPUT
+            if [ -f backend/.cargo/config.toml.bak ]; then
+              mv backend/.cargo/config.toml.bak backend/.cargo/config.toml
+            fi
           else
             echo "mold_available=false" >> $GITHUB_OUTPUT
-            echo "Disabling mold linker config"
-            mv backend/.cargo/config.toml backend/.cargo/config.toml.bak || true
+            echo "Mold not available, using default linker"
           fi
       
       - name: Install cargo-nextest
@@ -144,25 +152,33 @@ jobs:
       - name: Install mold linker
         id: install_mold
         run: |
+          # Disable mold config first to prevent linker errors during installation
+          if [ -f backend/.cargo/config.toml ]; then
+            mv backend/.cargo/config.toml backend/.cargo/config.toml.bak || true
+          fi
           sudo apt-get update
           sudo apt-get install -y wget tar || true
           if ! command -v mold &> /dev/null; then
             # Install from GitHub releases
             MOLD_VERSION="2.4.0"
             cd /tmp
-            wget -q https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz
-            tar -xzf mold-${MOLD_VERSION}-x86_64-linux.tar.gz
-            sudo cp mold-${MOLD_VERSION}-x86_64-linux/bin/mold /usr/local/bin/mold
-            sudo chmod +x /usr/local/bin/mold
-            rm -rf mold-${MOLD_VERSION}-x86_64-linux*
+            wget -q https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz || true
+            if [ -f mold-${MOLD_VERSION}-x86_64-linux.tar.gz ]; then
+              tar -xzf mold-${MOLD_VERSION}-x86_64-linux.tar.gz
+              sudo cp mold-${MOLD_VERSION}-x86_64-linux/bin/mold /usr/local/bin/mold
+              sudo chmod +x /usr/local/bin/mold
+              rm -rf mold-${MOLD_VERSION}-x86_64-linux*
+            fi
           fi
-          # Verify installation and disable mold config if not available
+          # Verify installation and restore mold config if available
           if mold --version &>/dev/null; then
             echo "mold_available=true" >> $GITHUB_OUTPUT
+            if [ -f backend/.cargo/config.toml.bak ]; then
+              mv backend/.cargo/config.toml.bak backend/.cargo/config.toml
+            fi
           else
             echo "mold_available=false" >> $GITHUB_OUTPUT
-            echo "Disabling mold linker config"
-            mv backend/.cargo/config.toml backend/.cargo/config.toml.bak || true
+            echo "Mold not available, using default linker"
           fi
       
       - name: Install cargo-nextest
@@ -242,25 +258,33 @@ jobs:
       - name: Install mold linker
         id: install_mold
         run: |
+          # Disable mold config first to prevent linker errors during installation
+          if [ -f backend/.cargo/config.toml ]; then
+            mv backend/.cargo/config.toml backend/.cargo/config.toml.bak || true
+          fi
           sudo apt-get update
           sudo apt-get install -y wget tar || true
           if ! command -v mold &> /dev/null; then
             # Install from GitHub releases
             MOLD_VERSION="2.4.0"
             cd /tmp
-            wget -q https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz
-            tar -xzf mold-${MOLD_VERSION}-x86_64-linux.tar.gz
-            sudo cp mold-${MOLD_VERSION}-x86_64-linux/bin/mold /usr/local/bin/mold
-            sudo chmod +x /usr/local/bin/mold
-            rm -rf mold-${MOLD_VERSION}-x86_64-linux*
+            wget -q https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz || true
+            if [ -f mold-${MOLD_VERSION}-x86_64-linux.tar.gz ]; then
+              tar -xzf mold-${MOLD_VERSION}-x86_64-linux.tar.gz
+              sudo cp mold-${MOLD_VERSION}-x86_64-linux/bin/mold /usr/local/bin/mold
+              sudo chmod +x /usr/local/bin/mold
+              rm -rf mold-${MOLD_VERSION}-x86_64-linux*
+            fi
           fi
-          # Verify installation and disable mold config if not available
+          # Verify installation and restore mold config if available
           if mold --version &>/dev/null; then
             echo "mold_available=true" >> $GITHUB_OUTPUT
+            if [ -f backend/.cargo/config.toml.bak ]; then
+              mv backend/.cargo/config.toml.bak backend/.cargo/config.toml
+            fi
           else
             echo "mold_available=false" >> $GITHUB_OUTPUT
-            echo "Disabling mold linker config"
-            mv backend/.cargo/config.toml backend/.cargo/config.toml.bak || true
+            echo "Mold not available, using default linker"
           fi
       
       - name: Install cargo-nextest
