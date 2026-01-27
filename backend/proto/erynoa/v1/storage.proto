@@ -12,13 +12,13 @@ service StorageService {
   rpc Upload(UploadRequest) returns (UploadResponse);
   
   // List lists objects in a bucket
-  rpc List(ListObjectsRequest) returns (ListObjectsResponse);
+  rpc List(ListRequest) returns (ListResponse);
   
   // Delete deletes an object
-  rpc Delete(DeleteObjectRequest) returns (DeleteObjectResponse);
+  rpc Delete(DeleteRequest) returns (DeleteResponse);
   
   // Head checks if an object exists
-  rpc Head(HeadObjectRequest) returns (HeadObjectResponse);
+  rpc Head(HeadRequest) returns (HeadResponse);
   
   // GetPresignedUploadUrl generates a presigned URL for direct upload
   rpc GetPresignedUploadUrl(GetPresignedUploadUrlRequest) returns (GetPresignedUploadUrlResponse);
@@ -56,8 +56,8 @@ message UploadResponse {
   string etag = 4;
 }
 
-// ListObjectsRequest contains list parameters
-message ListObjectsRequest {
+// ListRequest contains list parameters
+message ListRequest {
   // Optional prefix filter
   optional string prefix = 1;
   // Optional bucket name
@@ -66,8 +66,8 @@ message ListObjectsRequest {
   int32 max_keys = 3;
 }
 
-// ListObjectsResponse contains list of objects
-message ListObjectsResponse {
+// ListResponse contains list of objects
+message ListResponse {
   repeated ObjectInfo objects = 1;
   int32 count = 2;
 }
@@ -80,23 +80,23 @@ message ObjectInfo {
   optional google.protobuf.Timestamp last_modified = 4;
 }
 
-// DeleteObjectRequest contains object identifier
-message DeleteObjectRequest {
+// DeleteRequest contains object identifier
+message DeleteRequest {
   string key = 1;
   optional string bucket = 2;
 }
 
-// DeleteObjectResponse is empty
-message DeleteObjectResponse {}
+// DeleteResponse is empty
+message DeleteResponse {}
 
-// HeadObjectRequest contains object identifier
-message HeadObjectRequest {
+// HeadRequest contains object identifier
+message HeadRequest {
   string key = 1;
   optional string bucket = 2;
 }
 
-// HeadObjectResponse indicates if object exists
-message HeadObjectResponse {
+// HeadResponse indicates if object exists
+message HeadResponse {
   bool exists = 1;
 }
 

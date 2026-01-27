@@ -106,7 +106,6 @@ frontend/**/gen/
 *.tsbuildinfo
 
 # Deployment
-.vercel/
 .netlify/
 .wrangler/
 

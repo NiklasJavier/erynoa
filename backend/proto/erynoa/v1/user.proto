@@ -9,22 +9,22 @@ import "google/protobuf/timestamp.proto";
 // UserService provides user management operations
 service UserService {
   // List returns all users (requires authentication)
-  rpc List(ListUsersRequest) returns (ListUsersResponse);
+  rpc List(ListRequest) returns (ListResponse);
   
   // Get returns a single user by ID
-  rpc Get(GetUserRequest) returns (GetUserResponse);
+  rpc Get(GetRequest) returns (GetResponse);
   
   // GetCurrent returns the current authenticated user
-  rpc GetCurrent(GetCurrentUserRequest) returns (GetUserResponse);
+  rpc GetCurrent(GetCurrentRequest) returns (GetCurrentResponse);
   
   // Create creates a new user
-  rpc Create(CreateUserRequest) returns (CreateUserResponse);
+  rpc Create(CreateRequest) returns (CreateResponse);
   
   // Update updates an existing user
-  rpc Update(UpdateUserRequest) returns (UpdateUserResponse);
+  rpc Update(UpdateRequest) returns (UpdateResponse);
   
   // Delete removes a user
-  rpc Delete(DeleteUserRequest) returns (DeleteUserResponse);
+  rpc Delete(DeleteRequest) returns (DeleteResponse);
 }
 
 message User {
@@ -36,50 +36,54 @@ message User {
   google.protobuf.Timestamp updated_at = 6;
 }
 
-message ListUsersRequest {
+message ListRequest {
   int32 page_size = 1;
   string page_token = 2;
 }
 
-message ListUsersResponse {
+message ListResponse {
   repeated User users = 1;
   string next_page_token = 2;
   int32 total_count = 3;
 }
 
-message GetUserRequest {
+message GetRequest {
   string id = 1;
 }
 
-message GetCurrentUserRequest {}
+message GetCurrentRequest {}
 
-message GetUserResponse {
+message GetResponse {
   User user = 1;
 }
 
-message CreateUserRequest {
+message GetCurrentResponse {
+  User user = 1;
+}
+
+message CreateRequest {
   string email = 1;
   string name = 2;
   string role = 3;
 }
 
-message CreateUserResponse {
+message CreateResponse {
   User user = 1;
 }
 
-message UpdateUserRequest {
+message UpdateRequest {
   string id = 1;
   optional string email = 2;
   optional string name = 3;
   optional string role = 4;
 }
 
-message UpdateUserResponse {
+message UpdateResponse {
   User user = 1;
 }
 
-message DeleteUserRequest {
+message DeleteRequest {
   string id = 1;
 }
 
-message DeleteUserResponse {}
+message DeleteResponse {}

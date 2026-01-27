@@ -7,8 +7,8 @@ use axum_connect::pbjson_types::Timestamp;
 use crate::auth::Claims;
 use crate::server::AppState;
 use crate::gen::erynoa::v1::{
-    ListUsersRequest, ListUsersResponse, GetUserRequest, GetUserResponse,
-    GetCurrentUserRequest,
+    ListRequest, ListResponse, GetRequest, GetResponse,
+    GetCurrentRequest, GetCurrentResponse,
     User as ProtoUser,
 };
 
@@ -26,7 +26,7 @@ use crate::gen::erynoa::v1::{
 /// # Example Request (Connect-RPC)
 /// ```protobuf
 /// service UserService {
-///   rpc List(ListUsersRequest) returns (ListUsersResponse);
+///   rpc List(ListRequest) returns (ListResponse);
 /// }
 /// ```
 /// 
@@ -62,11 +62,11 @@ use crate::gen::erynoa::v1::{
 pub async fn list_users_handler(
     _claims: Claims,
     state: State<AppState>,
-    request: ListUsersRequest,
-) -> ListUsersResponse {
+    request: ListRequest,
+) -> ListResponse {
     // Check admin role (should be done in middleware, but double-check here)
     if !_claims.has_role("admin") {
-        return ListUsersResponse {
+        return ListResponse {
             users: vec![],
             next_page_token: String::new(),
             total_count: 0,
@@ -123,7 +123,7 @@ pub async fn list_users_handler(
         String::new()
     };
 
-    ListUsersResponse {
+    ListResponse {
         users,
         next_page_token,
         total_count,
@@ -168,19 +168,19 @@ pub async fn list_users_handler(
 pub async fn get_user_handler(
     claims: Claims,
     state: State<AppState>,
-    request: GetUserRequest,
-) -> GetUserResponse {
+    request: GetRequest,
+) -> GetResponse {
     // Validate user ID format
     let user_id = match Uuid::parse_str(&request.id) {
         Ok(id) => id,
-        Err(_) => return GetUserResponse { user: None },
+        Err(_) => return GetResponse { user: None },
     };
 
     let is_self = claims.sub == request.id;
     let is_admin = claims.has_role("admin");
 
     if !is_self && !is_admin {
-        return GetUserResponse { user: None };
+        return GetResponse { user: None };
     }
 
     // Load from database
@@ -198,7 +198,7 @@ pub async fn get_user_handler(
             // Clone email once to avoid move errors
             let email = user.email.clone().unwrap_or_default();
 
-            GetUserResponse {
+            GetResponse {
                 user: Some(ProtoUser {
                     id: user.id.to_string(),
                     email: email.clone(),
@@ -211,8 +211,8 @@ pub async fn get_user_handler(
                 }),
             }
         }
-        Ok(None) => GetUserResponse { user: None },
-        Err(_) => GetUserResponse { user: None },
+        Ok(None) => GetResponse { user: None },
+        Err(_) => GetResponse { user: None },
     }
 }
 
@@ -253,8 +253,8 @@ pub async fn get_user_handler(
 pub async fn get_current_user_handler(
     claims: Claims,
     state: State<AppState>,
-    _request: GetCurrentUserRequest,
-) -> GetUserResponse {
+    _request: GetCurrentRequest,
+) -> GetCurrentResponse {
     // Try to load user from database using claims.sub (ZITADEL user ID)
     // Note: ZITADEL user ID might be different from our database UUID
     // For now, we'll return user info from claims, but ideally we should
@@ -276,7 +276,7 @@ pub async fn get_current_user_handler(
 
                 let email = user.email.clone().unwrap_or_default();
 
-                GetUserResponse {
+                GetCurrentResponse {
                     user: Some(ProtoUser {
                         id: user.id.to_string(),
                         email: email.clone(),
@@ -289,7 +289,7 @@ pub async fn get_current_user_handler(
             }
             _ => {
                 // User not in database, return from claims
-                GetUserResponse {
+                GetCurrentResponse {
                     user: Some(ProtoUser {
                         id: claims.sub.clone(),
                         email: claims.email.clone().unwrap_or_default(),
@@ -303,7 +303,7 @@ pub async fn get_current_user_handler(
         }
     } else {
         // ZITADEL user ID (not our UUID), return from claims
-        GetUserResponse {
+        GetCurrentResponse {
             user: Some(ProtoUser {
                 id: claims.sub.clone(),
                 email: claims.email.clone().unwrap_or_default(),

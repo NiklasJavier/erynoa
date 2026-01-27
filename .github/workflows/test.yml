@@ -47,6 +47,20 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
       
+      - name: Install mold linker
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget || true
+          if ! command -v mold &> /dev/null; then
+            # Install from GitHub releases
+            MOLD_VERSION="2.4.0"
+            wget -qO- https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz | tar -xz
+            sudo mv mold-${MOLD_VERSION}-x86_64-linux/bin/mold /usr/local/bin/mold
+            sudo chmod +x /usr/local/bin/mold
+          fi
+          # Verify installation
+          mold --version || echo "Warning: mold installation may have failed"
+      
       - name: Install cargo-nextest
         uses: taiki-e/install-action@cargo-nextest
       
@@ -116,6 +130,20 @@ jobs:
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install mold linker
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget || true
+          if ! command -v mold &> /dev/null; then
+            # Install from GitHub releases
+            MOLD_VERSION="2.4.0"
+            wget -qO- https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz | tar -xz
+            sudo mv mold-${MOLD_VERSION}-x86_64-linux/bin/mold /usr/local/bin/mold
+            sudo chmod +x /usr/local/bin/mold
+          fi
+          # Verify installation
+          mold --version || echo "Warning: mold installation may have failed"
       
       - name: Install cargo-nextest
         uses: taiki-e/install-action@cargo-nextest
@@ -190,6 +218,20 @@ jobs:
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install mold linker
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget || true
+          if ! command -v mold &> /dev/null; then
+            # Install from GitHub releases
+            MOLD_VERSION="2.4.0"
+            wget -qO- https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz | tar -xz
+            sudo mv mold-${MOLD_VERSION}-x86_64-linux/bin/mold /usr/local/bin/mold
+            sudo chmod +x /usr/local/bin/mold
+          fi
+          # Verify installation
+          mold --version || echo "Warning: mold installation may have failed"
       
       - name: Install cargo-nextest
         uses: taiki-e/install-action@cargo-nextest

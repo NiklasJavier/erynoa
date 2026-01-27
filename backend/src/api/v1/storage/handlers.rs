@@ -15,8 +15,8 @@ use crate::error::ApiError;
 use crate::error::ApiErrorToRpc;
 #[cfg(feature = "connect")]
 use crate::gen::erynoa::v1::{
-    UploadRequest, UploadResponse, ListObjectsRequest, ListObjectsResponse,
-    DeleteObjectRequest, DeleteObjectResponse, HeadObjectRequest, HeadObjectResponse,
+    UploadRequest, UploadResponse, ListRequest, ListResponse,
+    DeleteRequest, DeleteResponse, HeadRequest, HeadResponse,
     GetPresignedUploadUrlRequest, GetPresignedUploadUrlResponse,
     GetPresignedDownloadUrlRequest, GetPresignedDownloadUrlResponse,
     ListBucketsRequest, ListBucketsResponse, CreateBucketRequest, CreateBucketResponse,
@@ -118,8 +118,8 @@ pub async fn upload_handler(
 /// List Objects Handler
 pub async fn list_objects_handler(
     state: State<AppState>,
-    request: ListObjectsRequest,
-) -> Result<ListObjectsResponse, RpcError> {
+    request: ListRequest,
+) -> Result<ListResponse, RpcError> {
     let storage = state.storage.as_ref().ok_or_else(|| {
         ApiError::ServiceUnavailable("Storage service not available".to_string())
             .to_rpc_error()
@@ -152,7 +152,7 @@ pub async fn list_objects_handler(
         })
         .collect();
 
-    Ok(ListObjectsResponse {
+    Ok(ListResponse {
         count: objects.len() as i32,
         objects,
     })
@@ -161,8 +161,8 @@ pub async fn list_objects_handler(
 /// Delete Object Handler
 pub async fn delete_object_handler(
     state: State<AppState>,
-    request: DeleteObjectRequest,
-) -> Result<DeleteObjectResponse, RpcError> {
+    request: DeleteRequest,
+) -> Result<DeleteResponse, RpcError> {
     let storage = state.storage.as_ref().ok_or_else(|| {
         ApiError::ServiceUnavailable("Storage service not available".to_string())
             .to_rpc_error()
@@ -177,14 +177,14 @@ pub async fn delete_object_handler(
                 .to_rpc_error()
         })?;
 
-    Ok(DeleteObjectResponse {})
+    Ok(DeleteResponse {})
 }
 
 /// Head Object Handler (check if exists)
 pub async fn head_object_handler(
     state: State<AppState>,
-    request: HeadObjectRequest,
-) -> Result<HeadObjectResponse, RpcError> {
+    request: HeadRequest,
+) -> Result<HeadResponse, RpcError> {
     let storage = state.storage.as_ref().ok_or_else(|| {
         ApiError::ServiceUnavailable("Storage service not available".to_string())
             .to_rpc_error()
@@ -199,7 +199,7 @@ pub async fn head_object_handler(
                 .to_rpc_error()
         })?;
 
-    Ok(HeadObjectResponse { exists })
+    Ok(HeadResponse { exists })
 }
 
 /// Get Presigned Upload URL Handler

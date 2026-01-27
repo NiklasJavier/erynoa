@@ -5,7 +5,7 @@
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 use erynoa_api::{
-    config::{Settings, version::VERSION},
+    config::{version::VERSION, Settings},
     server::Server,
     telemetry::{get_subscriber, init_subscriber},
 };
@@ -16,7 +16,7 @@ async fn main() -> anyhow::Result<()> {
     init_subscriber(subscriber);
 
     let settings = Settings::load().expect("Failed to load configuration");
-    
+
     tracing::info!(
         version = VERSION,
         env = %settings.application.environment.as_str(),

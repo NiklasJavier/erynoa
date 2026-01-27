@@ -10,7 +10,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         "proto"
     };
-    
+
     let settings = AxumConnectGenSettings::from_directory_recursive(proto_dir)
         .expect("failed to glob proto files");
     axum_connect_codegen(settings)?;
