@@ -8,6 +8,10 @@ Diese Datei konsolidiert alle wichtigen Informationen aus den verschiedenen Doku
 
 ## 🚀 Quick Start
 
+**Voraussetzungen:** (siehe [Setup Guide](setup/setup.md))
+- Nix installiert
+- Docker Desktop installiert und gestartet
+
 **3 Schritte zum laufenden Projekt:**
 
 ```bash
@@ -29,10 +33,6 @@ Die Services starten und ZITADEL wird automatisch konfiguriert. Nach ca. 2 Minut
 ```
 http://localhost:3001
 ```
-
-**Voraussetzungen:** (siehe [Setup Guide](setup/setup.md))
-- Nix installiert
-- Docker Desktop installiert und gestartet
 
 **Fertig!** 🎉
 
