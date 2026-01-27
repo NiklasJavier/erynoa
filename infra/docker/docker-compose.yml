@@ -20,7 +20,7 @@ services:
   # ─────────────────────────────────────────────────────────────────────────
   console:
     build:
-      context: ..
+      context: ../..
       dockerfile: infra/docker/Dockerfile.console
     ports:
       - "5173:5173"
@@ -57,7 +57,7 @@ services:
   # ─────────────────────────────────────────────────────────────────────────
   platform:
     build:
-      context: ..
+      context: ../..
       dockerfile: infra/docker/Dockerfile.platform
     ports:
       - "5174:5174"
@@ -94,7 +94,7 @@ services:
   # ─────────────────────────────────────────────────────────────────────────
   docs:
     build:
-      context: ..
+      context: ../..
       dockerfile: infra/docker/Dockerfile.docs
     ports:
       - "5175:5175"
@@ -132,7 +132,7 @@ services:
   # ─────────────────────────────────────────────────────────────────────────
   backend:
     build:
-      context: ..
+      context: ../..
       dockerfile: infra/docker/Dockerfile.backend
     # Port 3000 auch nach außen exponieren (für Testzwecke)
     # Backend läuft sowohl direkt auf Port 3000 als auch über Proxy auf Port 3001/api
