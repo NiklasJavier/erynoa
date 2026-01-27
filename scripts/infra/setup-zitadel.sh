@@ -24,7 +24,7 @@ PLATFORM_URL="${PLATFORM_URL:-${PROXY_URL}/platform}"
 PLATFORM_URL="${PLATFORM_URL%/}"  # Entferne trailing slash
 DOCS_URL="${DOCS_URL:-${PROXY_URL}/docs}"
 DOCS_URL="${DOCS_URL%/}"  # Entferne trailing slash
-API_URL="${API_URL:-http://localhost:3000}"
+API_URL="${API_URL:-http://localhost:3001/api}"
 # Workspace-Root ermitteln (funktioniert sowohl im DevContainer als auch auf dem Host)
 # Im DevContainer: /workspace
 # Auf dem Host: Aktuelles Verzeichnis (Projekt-Root)

@@ -385,7 +385,7 @@ status:
         fi
     }
     
-    check_service "Backend" "${API_URL}/api/v1/connect/erynoa.v1.HealthService/Check" "POST" && \
+    check_service "Backend" "${API_URL}/v1/connect/erynoa.v1.HealthService/Check" "POST" && \
         echo "  ✓ Backend:   ${API_URL}" || echo "  ✗ Backend:   nicht erreichbar"
     check_service "Console" "${CONSOLE_URL}/" && \
         echo "  ✓ Console:   ${CONSOLE_URL}" || echo "  ✗ Console:   nicht erreichbar"

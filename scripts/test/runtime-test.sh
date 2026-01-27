@@ -17,8 +17,10 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-BACKEND_PORT=${BACKEND_PORT:-3000}
-BACKEND_URL="http://localhost:${BACKEND_PORT}"
+# Backend läuft über Proxy auf Port 3001
+PROXY_URL=${PROXY_URL:-http://localhost:3001}
+API_URL="${API_URL:-${PROXY_URL}/api}"
+BACKEND_URL="${API_URL}"
 MAX_WAIT=30
 WAIT_INTERVAL=1
 
@@ -76,10 +78,10 @@ check_backend() {
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
     
-    echo -n "  Checking ${BACKEND_URL}/api/v1/health... "
+    echo -n "  Checking ${BACKEND_URL}/v1/health... "
     
     for i in $(seq 1 $MAX_WAIT); do
-        if curl -sf "${BACKEND_URL}/api/v1/health" > /dev/null 2>&1; then
+        if curl -sf "${BACKEND_URL}/v1/health" > /dev/null 2>&1; then
             echo -e "${GREEN}✅ Backend is running!${NC}"
             echo ""
             return 0
@@ -110,14 +112,14 @@ run_tests() {
     echo -e "${YELLOW}Public Endpoints:${NC}"
     echo ""
     
-    test_endpoint "GET" "/api/v1/health" "200" "Health Check"
-    test_endpoint "GET" "/api/v1/info" "200" "Info Endpoint"
-    test_endpoint "GET" "/api/v1/status" "200" "Status Endpoint"
+    test_endpoint "GET" "/v1/health" "200" "Health Check"
+    test_endpoint "GET" "/v1/info" "200" "Info Endpoint"
+    test_endpoint "GET" "/v1/status" "200" "Status Endpoint"
     
     # Readiness might fail if services aren't running
     echo ""
     echo -n "  Testing Readiness Check... "
-    response=$(curl -s -w "\n%{http_code}" "${BACKEND_URL}/api/v1/ready" 2>/dev/null || echo -e "\n000")
+    response=$(curl -s -w "\n%{http_code}" "${BACKEND_URL}/v1/ready" 2>/dev/null || echo -e "\n000")
     http_code=$(echo "$response" | tail -n1)
     if [ "$http_code" = "200" ] || [ "$http_code" = "503" ]; then
         print_result 0 "Readiness Check (HTTP $http_code)"
@@ -130,16 +132,16 @@ run_tests() {
     echo ""
     
     # Protected endpoints should return 401/403
-    test_endpoint "GET" "/api/v1/users" "401" "Users List (requires auth)"
-    test_endpoint "GET" "/api/v1/me" "401" "Current User (requires auth)"
-    test_endpoint "GET" "/api/v1/storage/list" "401" "Storage List (requires auth)"
+    test_endpoint "GET" "/v1/users" "401" "Users List (requires auth)"
+    test_endpoint "GET" "/v1/me" "401" "Current User (requires auth)"
+    test_endpoint "GET" "/v1/storage/list" "401" "Storage List (requires auth)"
     
     echo ""
     echo -e "${YELLOW}Route Structure Tests:${NC}"
     echo ""
     
     # Non-existent route should return 404
-    test_endpoint "GET" "/api/v1/nonexistent" "404" "Non-existent Route"
+    test_endpoint "GET" "/v1/nonexistent" "404" "Non-existent Route"
     
     echo ""
 }

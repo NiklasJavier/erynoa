@@ -57,6 +57,15 @@
         }
     }
     
+    # Backend API - Muss vor dem Root-Handle sein
+    handle /api* {
+        reverse_proxy backend:3000 {
+            header_up Host {host}
+            header_up X-Forwarded-Proto {scheme}
+            header_up X-Forwarded-For {remote}
+        }
+    }
+    
     # Root - Landing Page (must be last to catch everything else)
     handle {
         file_server {

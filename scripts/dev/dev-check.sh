@@ -25,8 +25,8 @@ PROXY_URL="${PROXY_URL:-http://localhost:3001}"
 CONSOLE_URL="${CONSOLE_URL:-${PROXY_URL}/console}"
 PLATFORM_URL="${PLATFORM_URL:-${PROXY_URL}/platform}"
 DOCS_URL="${DOCS_URL:-${PROXY_URL}/docs}"
-# Backend läuft direkt (nicht über Proxy)
-API_URL="${API_URL:-http://localhost:3000}"
+# Backend läuft über Proxy
+API_URL="${API_URL:-http://localhost:3001/api}"
 ZITADEL_URL="${ZITADEL_URL:-http://localhost:8080}"
 MINIO_URL="${MINIO_URL:-http://localhost:9000}"
 
