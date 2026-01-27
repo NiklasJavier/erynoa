@@ -8,16 +8,33 @@ Diese Datei konsolidiert alle wichtigen Informationen aus den verschiedenen Doku
 
 ## 🚀 Quick Start
 
+**3 Schritte zum laufenden Projekt:**
+
 ```bash
+# 1. Repository klonen
+git clone git@github.com:NiklasJavier/erynoa.git
+cd erynoa
+
+# 2. Nix Dev-Shell betreten (lädt alle Tools automatisch)
+nix develop
+
+# 3. Projekt starten
 just dev
 ```
 
-Startet alles:
+**Voraussetzungen:**
+- Nix installiert (siehe [Setup Guide](setup/setup.md))
+- Docker Desktop installiert und gestartet
+
+**Fertig!** 🎉
+
+Das startet alles:
 - **Proxy** auf http://localhost:3001 (Caddy Reverse Proxy)
   - **Console** auf http://localhost:3001/console
   - **Platform** auf http://localhost:3001/platform
   - **Docs** auf http://localhost:3001/docs
-- **Backend** direkt auf http://localhost:3000 (Rust API)
+  - **Backend API** auf http://localhost:3001/api
+- **Backend** direkt auf http://localhost:3000 (für Tests)
 - **ZITADEL** auf http://localhost:8080 (Auth)
 - **MinIO** auf http://localhost:9001 (S3 Storage Console)
 
@@ -99,22 +116,21 @@ Startet alles:
 | `just check` | Health Check aller Services |
 | `just restart` | Schneller Neustart aller Dev-Services |
 
-### ⚡ Schnelles Host-Setup mit Nix
+### 📦 Nix Installation
 
-**Für erfahrene Entwickler** - Schnellstart ohne vollständiges Setup (~5-10 Min):
-
+**macOS:**
 ```bash
-# 1. Nix Dev-Shell betreten (lädt alle Tools automatisch)
-nix develop
+curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+```
 
-# 2. .env erstellen
-just init-env
+**Ubuntu/Debian:**
+```bash
+curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+```
 
-# 3. Services starten
-just services
-
-# 4. Dev-Server starten
-just dev
+Terminal neu starten, dann verifizieren:
+```bash
+nix --version
 ```
 
 **Was Nix automatisch bereitstellt:**

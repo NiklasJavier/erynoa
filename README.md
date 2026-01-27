@@ -4,16 +4,33 @@ Full-Stack Application mit Rust Backend und SvelteKit Frontends.
 
 ## 🚀 Quick Start
 
+**3 Schritte zum laufenden Projekt:**
+
 ```bash
+# 1. Repository klonen
+git clone git@github.com:NiklasJavier/erynoa.git
+cd erynoa
+
+# 2. Nix Dev-Shell betreten (lädt alle Tools automatisch)
+nix develop
+
+# 3. Projekt starten
 just dev
 ```
 
-Startet alles:
-- **Proxy** auf http://localhost:3001 (Caddy Reverse Proxy für Frontends)
+**Voraussetzungen:**
+- Nix installiert (siehe [Setup Guide](docs/setup/setup.md))
+- Docker Desktop installiert und gestartet
+
+**Fertig!** 🎉
+
+Das startet alles:
+- **Proxy** auf http://localhost:3001 (Caddy Reverse Proxy)
   - **Console** auf http://localhost:3001/console
   - **Platform** auf http://localhost:3001/platform
   - **Docs** auf http://localhost:3001/docs
-- **Backend** direkt auf http://localhost:3000 (Rust API, nicht über Proxy)
+  - **Backend API** auf http://localhost:3001/api
+- **Backend** direkt auf http://localhost:3000 (für Tests)
 - **ZITADEL** auf http://localhost:8080 (Auth)
 - **MinIO** auf http://localhost:9001 (S3 Storage Console)
 - PostgreSQL (OrioleDB), DragonflyDB (Redis-kompatibel) im Hintergrund

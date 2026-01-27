@@ -1,28 +1,38 @@
 # 🚀 Getting Started
 
-**Schnellstart-Anleitung für neue Entwickler**
+**Schnellstart-Anleitung - In 3 Schritten zum laufenden Projekt**
 
 ---
 
-## Voraussetzungen
+## ⚡ Schnellstart (Keine Installation nötig)
 
+**Voraussetzungen:**
 - Docker Desktop installiert und gestartet
-- VS Code mit Dev Containers Extension (optional, aber empfohlen)
+- Nix installiert (siehe unten)
 
----
-
-## Quick Start
+**3 Schritte:**
 
 ```bash
+# 1. Repository klonen
+git clone git@github.com:NiklasJavier/erynoa.git
+cd erynoa
+
+# 2. Nix Dev-Shell betreten (lädt alle Tools automatisch)
+nix develop
+
+# 3. Projekt starten
 just dev
 ```
+
+**Fertig!** 🎉
 
 Das startet alles:
 - **Proxy** auf http://localhost:3001 (Caddy Reverse Proxy)
   - **Console** auf http://localhost:3001/console
   - **Platform** auf http://localhost:3001/platform
   - **Docs** auf http://localhost:3001/docs
-- **Backend** direkt auf http://localhost:3000 (Rust API)
+- **Backend** auf http://localhost:3000 (Rust API)
+- **Backend über Proxy** auf http://localhost:3001/api
 - **ZITADEL** auf http://localhost:8080 (Auth)
 - **MinIO** auf http://localhost:9001 (S3 Storage Console)
 
@@ -32,40 +42,81 @@ Das startet alles:
 
 ---
 
-## Was passiert beim Start?
+## 📦 Nix installieren
 
-1. **Hintergrund-Services starten** (DB, Cache, MinIO, ZITADEL)
-2. **Health-Checks warten** (bis alle Services bereit sind)
-3. **Init-Skripte ausführen** (nur beim ersten Mal)
-4. **Console + Backend starten** mit Hot-Reload
+Nix ist der einzige Package Manager, den du installieren musst. Alle anderen Tools (Rust, Node.js, pnpm, buf, just, etc.) werden automatisch von Nix bereitgestellt.
+
+### macOS
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+```
+
+Terminal neu starten, dann verifizieren:
+```bash
+nix --version
+```
+
+### Ubuntu/Debian
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+```
+
+Terminal neu starten, dann verifizieren:
+```bash
+nix --version
+```
+
+**Hinweis:** Für Ubuntu/Debian wird `systemd` benötigt. Falls nicht vorhanden, siehe [Nix Installation Guide](https://nixos.org/download).
 
 ---
 
-## Nächste Schritte
+## 🛠️ Was wird automatisch installiert?
 
-1. **Setup**: 
-   - **Schnell**: [Schnelles Setup mit Nix](../setup/setup.md#-schnelles-setup-mit-nix-empfohlen-für-erfahrene-entwickler) (~5-10 Min)
-   - **Vollständig**: [Setup Guide (macOS)](../setup/setup.md) oder [Dev Setup](../setup/dev_setup.md)
-2. **Architektur**: Lese [Architecture](../reference/architecture.md) für System-Überblick
-3. **ZITADEL**: Folge [ZITADEL Setup](zitadel.md) für Authentifizierung
+Wenn du `nix develop` ausführst, werden folgende Tools automatisch bereitgestellt:
+
+- ✅ **Rust Toolchain** (inkl. rust-analyzer, clippy, cargo-nextest)
+- ✅ **Node.js & pnpm** (für Frontend-Entwicklung)
+- ✅ **buf** (Protobuf Code-Generierung)
+- ✅ **just** (Task Runner - alle `just` Befehle)
+- ✅ **sqlx CLI** (Datenbank-Migrationen)
+- ✅ **Alle Build-Tools** (mold linker, etc.)
+
+**Vorteile:**
+- ⚡ **Schnell**: Keine manuelle Tool-Installation nötig
+- 🔒 **Reproduzierbar**: Gleiche Tools für alle Entwickler
+- 🧹 **Sauber**: Keine System-Installationen (außer Nix selbst)
 
 ---
 
-## Wichtige Befehle
+## 📋 Vollständige Setup-Anleitung
+
+Falls du mehr Details benötigst oder Probleme hast, siehe:
+
+- **[Setup Guide (macOS)](../setup/setup.md)** - Detaillierte Anleitung für macOS
+- **[Setup Guide (Ubuntu)](../setup/setup.md#ubuntu)** - Detaillierte Anleitung für Ubuntu
+- **[Dev Setup](../setup/dev_setup.md)** - Container-in-Container Entwicklung
+
+---
+
+## 🔧 Wichtige Befehle
 
 | Befehl | Beschreibung |
 |--------|--------------|
-| `just dev` | Startet alles (Console + Platform + Docs + Backend) |
+| `just dev` | **Startet alles** (Console + Platform + Docs + Backend) |
 | `just dev [frontend]` | Startet spezifisches Frontend (console, platform, docs) |
 | `just status` | Zeigt Status aller Services |
-| `just check` | Health Check aller Services |
-| `just restart` | Schneller Neustart aller Dev-Services |
-| `just stop` | Stoppt alle Container |
 | `just logs [service]` | Logs anzeigen (alle oder spezifischer Service) |
+| `just stop` | Stoppt alle Container |
+| `just restart` | Schneller Neustart aller Dev-Services |
+| `just reset` | Alles löschen und neu starten |
+
+Alle Befehle: `just --list`
 
 ---
 
-## Troubleshooting
+## 🐛 Troubleshooting
 
 ### Services starten nicht
 ```bash
@@ -79,11 +130,16 @@ just stop
 lsof -i :3000  # oder :3001, :8080
 ```
 
+### Nix: "experimental-features" Fehler
+```bash
+mkdir -p ~/.config/nix
+echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
+```
+
 ### Weitere Hilfe
-- [Setup Guide (macOS)](../setup/setup.md) - Detaillierte Setup-Anleitung
-- [Dev Setup](../setup/dev_setup.md) - Container-in-Container Entwicklung
+- [Setup Guide](../setup/setup.md) - Detaillierte Setup-Anleitung
 - [Configuration](../reference/config.md) - Service-Konfiguration
-- [todos](../development/todos.md) - Bekannte Issues
+- [Architecture](../reference/architecture.md) - System-Architektur
 
 ---
 

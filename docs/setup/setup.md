@@ -1,94 +1,38 @@
-# Setup Guide (macOS)
+# ⚙️ Setup Guide
 
-Diese Anleitung beschreibt alle Schritte, um das **GS-Backend** Projekt auf einem frischen macOS-System einzurichten.
+**Vollständige Anleitung zur Einrichtung der Entwicklungsumgebung**
 
 ---
 
-## 🚀 Schnelles Setup mit Nix (Empfohlen für erfahrene Entwickler)
+## 🚀 Quick Start (Empfohlen)
 
-**Zeitaufwand**: ~5-10 Minuten (vs. 30+ Minuten für vollständiges Setup)
+**Zeitaufwand**: ~5-10 Minuten
 
-Wenn du bereits Nix kennst oder schnell starten möchtest:
-
-### Voraussetzungen
-- Nix installiert (siehe Schritt 3 unten)
+**Voraussetzungen:**
+- Nix installiert (siehe unten)
 - Docker Desktop installiert und gestartet
-- Git konfiguriert
-
-### Schnellstart
 
 ```bash
 # 1. Repository klonen
-git clone git@github.com:NiklasJavier/GS-Backend.git
-cd GS-Backend
+git clone git@github.com:NiklasJavier/erynoa.git
+cd erynoa
 
-# 2. Nix Dev-Shell betreten (lädt alle Tools automatisch: Rust, Node, buf, just, etc.)
+# 2. Nix Dev-Shell betreten (lädt alle Tools automatisch)
 nix develop
 
-# 3. .env erstellen (falls nicht vorhanden)
-just init-env
-
-# 4. Services starten
-just services
-
-# 5. Dev-Server starten
+# 3. Projekt starten
 just dev
 ```
 
 **Fertig!** 🎉
 
-**Was Nix automatisch bereitstellt:**
-- ✅ Rust Toolchain (inkl. rust-analyzer, clippy)
-- ✅ Node.js & pnpm
-- ✅ buf (Protobuf)
-- ✅ just (Task Runner)
-- ✅ sqlx CLI
-- ✅ Alle anderen Build-Tools
-
-**Vorteile:**
-- ⚡ **Schnell**: Keine manuelle Tool-Installation nötig
-- 🔒 **Reproduzierbar**: Gleiche Tools für alle Entwickler
-- 🧹 **Sauber**: Keine System-Installationen (außer Nix selbst)
-
 ---
 
-## 📋 Vollständige Setup-Anleitung (Für neue Entwickler)
+## 📦 Nix installieren
 
-Diese Anleitung führt dich durch alle Schritte für ein vollständiges Setup.
+Nix ist der einzige Package Manager, den du installieren musst. Alle anderen Tools werden automatisch von Nix bereitgestellt.
 
-### Voraussetzungen
-
-- macOS 12+ (Monterey oder neuer)
-- Admin-Rechte (für Homebrew & Nix)
-- GitHub Account mit Zugriff auf das Repository
-
----
-
-## 1. Xcode Command Line Tools
-
-```bash
-xcode-select --install
-```
-
----
-
-## 2. Homebrew installieren
-
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
-
-Nach der Installation (Apple Silicon):
-```bash
-echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
-eval "$(/opt/homebrew/bin/brew shellenv)"
-```
-
----
-
-## 3. Nix installieren (Package Manager)
-
-Wir nutzen Nix für reproduzierbare Builds. Installiere den Determinate Nix Installer:
+### macOS
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
@@ -99,9 +43,24 @@ Terminal neu starten, dann verifizieren:
 nix --version
 ```
 
+### Ubuntu/Debian
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+```
+
+Terminal neu starten, dann verifizieren:
+```bash
+nix --version
+```
+
+**Hinweis:** Für Ubuntu/Debian wird `systemd` benötigt. Falls nicht vorhanden, siehe [Nix Installation Guide](https://nixos.org/download).
+
 ---
 
-## 4. Docker Desktop installieren
+## 🐳 Docker Desktop installieren
+
+### macOS
 
 Download von: https://www.docker.com/products/docker-desktop/
 
@@ -110,13 +69,24 @@ Oder via Homebrew:
 brew install --cask docker
 ```
 
+### Ubuntu/Debian
+
+```bash
+# Docker installieren
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Docker Desktop installieren (optional, für GUI)
+# Download von: https://www.docker.com/products/docker-desktop/
+```
+
 Nach der Installation Docker Desktop starten und warten bis es läuft.
 
 ---
 
-## 5. SSH-Key für GitHub einrichten
+## 🔑 Git & SSH Setup (Optional, für Repository-Zugriff)
 
-### 5.1 SSH-Key erstellen (falls noch nicht vorhanden)
+### SSH-Key erstellen
 
 ```bash
 # Key für Authentication (Repository klonen/pushen)
@@ -126,25 +96,32 @@ ssh-keygen -t ed25519 -C "deine-email@example.com" -f ~/.ssh/id_ed25519
 ssh-keygen -t ed25519 -C "git-signing" -f ~/.ssh/id_ed25519_signing -N ""
 ```
 
-### 5.2 SSH-Agent konfigurieren
+### SSH-Agent konfigurieren
 
+**macOS:**
 ```bash
-# SSH-Agent starten
 eval "$(ssh-agent -s)"
-
-# SSH-Config erstellen/erweitern
 cat >> ~/.ssh/config << 'EOF'
 Host github.com
     AddKeysToAgent yes
     UseKeychain yes
     IdentityFile ~/.ssh/id_ed25519
 EOF
-
-# Key zum Agent hinzufügen
 ssh-add --apple-use-keychain ~/.ssh/id_ed25519
 ```
 
-### 5.3 Public Keys zu GitHub hinzufügen
+**Ubuntu/Debian:**
+```bash
+eval "$(ssh-agent -s)"
+cat >> ~/.ssh/config << 'EOF'
+Host github.com
+    AddKeysToAgent yes
+    IdentityFile ~/.ssh/id_ed25519
+EOF
+ssh-add ~/.ssh/id_ed25519
+```
+
+### Public Keys zu GitHub hinzufügen
 
 ```bash
 # Authentication Key anzeigen
@@ -158,145 +135,105 @@ cat ~/.ssh/id_ed25519_signing.pub
 2. **New SSH key** → Key Type: **Authentication Key** → Füge `id_ed25519.pub` ein
 3. **New SSH key** → Key Type: **Signing Key** → Füge `id_ed25519_signing.pub` ein
 
-### 5.4 Verbindung testen
-
-```bash
-ssh -T git@github.com
-# Erwartete Ausgabe: "Hi USERNAME! You've successfully authenticated..."
-```
-
----
-
-## 6. Git konfigurieren
-
-### 6.1 Basis-Konfiguration
+### Git konfigurieren
 
 ```bash
 git config --global user.name "Dein Name"
 git config --global user.email "deine-email@example.com"
-```
-
-### 6.2 SSH-Signierung aktivieren (statt GPG)
-
-```bash
 git config --global gpg.format ssh
 git config --global user.signingkey ~/.ssh/id_ed25519_signing.pub
 git config --global commit.gpgsign true
-git config --global tag.gpgsign true
-
-# Lokale Signatur-Verifizierung (optional)
-echo "deine-email@example.com $(cat ~/.ssh/id_ed25519_signing.pub)" > ~/.ssh/allowed_signers
-git config --global gpg.ssh.allowedSignersFile ~/.ssh/allowed_signers
 ```
 
 ---
 
-## 7. Repository klonen
+## 🚀 Projekt starten
+
+### 1. Repository klonen
 
 ```bash
-# Projektverzeichnis erstellen (optional)
-mkdir -p ~/Development/erynoa
-cd ~/Development/erynoa
-
-# Repository klonen
-git clone git@github.com:NiklasJavier/GS-Backend.git
-cd GS-Backend
+git clone git@github.com:NiklasJavier/erynoa.git
+cd erynoa
 ```
 
----
-
-## 8. Entwicklungsumgebung starten
-
-### Option A: Mit Nix (empfohlen)
+### 2. Nix Dev-Shell betreten
 
 ```bash
-# Nix Dev-Shell betreten (lädt alle Tools automatisch)
 nix develop
+```
 
-# Infrastruktur starten (PostgreSQL + DragonflyDB)
-docker compose -f docker/docker-compose.yml up -d
+Dies lädt automatisch alle Tools:
+- Rust Toolchain (inkl. rust-analyzer, clippy)
+- Node.js & pnpm
+- buf (Protobuf)
+- just (Task Runner)
+- sqlx CLI
+- Alle Build-Tools
 
-# Dev-Server starten
+### 3. Projekt starten
+
+```bash
 just dev
 ```
 
-### Option B: Mit VS Code DevContainer
-
-1. VS Code öffnen: `code .`
-2. `Cmd+Shift+P` → "Dev Containers: Reopen in Container"
-3. Warten bis der Container bereit ist (Nix-Umgebung wird automatisch geladen)
-4. Terminal öffnen → alle Tools sind sofort verfügbar:
-   - `just dev` - Dev-Server starten
-   - `just db-migrate` - Migrationen ausführen
-   - `cargo check` - Projekt prüfen
-
-**Features des DevContainers:**
-- ✅ **Automatische Nix-Umgebung** via `direnv` - alle Tools (cargo, just, sqlx, etc.) sind direkt verfügbar
-- ✅ **Automatische `.env`** - wird aus `.env.example` erstellt falls nicht vorhanden
-- ✅ **Docker-in-Docker** - Services (DB, Cache, ZITADEL) laufen automatisch
-- ✅ **Migrationen** - werden beim Start automatisch ausgeführt
-- ✅ **SSH/GPG-Keys** - vom Host übernommen für Git-Signing
+Das startet:
+- Hintergrund-Services (PostgreSQL, DragonflyDB, MinIO, ZITADEL)
+- Frontends (Console, Platform, Docs) über Proxy auf Port 3001
+- Backend auf Port 3000 (und über Proxy auf Port 3001/api)
 
 ---
 
-## 9. Verfügbare Befehle
+## 🔧 Wichtige Befehle
 
-Alle Befehle über `just`:
+### Entwicklung
 
 | Befehl | Beschreibung |
 |--------|--------------|
-| `just dev` | Dev-Server mit Hot Reload |
-| `just run` | Server einmal starten |
+| `just dev` | **Startet alles** - Console + Platform + Docs + Backend + Services |
+| `just dev [frontend]` | Startet spezifisches Frontend (console, platform, docs) |
+| `just status` | Zeigt Status aller Services |
+| `just logs [service]` | Logs anzeigen (alle oder spezifischer Service) |
+| `just stop` | Stoppt alle Container |
+| `just restart` | Schneller Neustart aller Dev-Services |
+
+### Setup & Reset
+
+| Befehl | Beschreibung |
+|--------|--------------|
+| `just init` | Initialisierung ohne Dev-Server |
+| `just init-env` | Erstellt `.env` aus `.env.example` |
+| `just zitadel-setup` | ZITADEL neu konfigurieren |
+| `just minio-setup` | MinIO Buckets erstellen |
+| `just reset` | **Alles löschen** und neu starten |
+
+### Backend
+
+| Befehl | Beschreibung |
+|--------|--------------|
 | `just check` | Cargo check |
-| `just test` | Tests ausführen |
 | `just lint` | Clippy Linter |
 | `just fmt` | Code formatieren |
+| `just test` | Tests ausführen |
 | `just ci` | fmt + lint + test |
-| `just build` | Nix Build |
-| `just build-static` | Statisches musl Binary |
-| `just docker-load` | Docker Image bauen & laden |
 | `just db-migrate` | Migrations ausführen |
-| `just db-reset` | Datenbank zurücksetzen |
+
+Alle Befehle: `just --list`
 
 ---
 
-## 10. Infrastruktur verwalten
+## 🐛 Troubleshooting
 
-### Services starten
+### Services starten nicht
 ```bash
-docker compose -f docker/docker-compose.yml up -d
+just reset
+just dev
 ```
 
-### Services stoppen
+### Port bereits belegt
 ```bash
-docker compose -f docker/docker-compose.yml down
+just stop
+lsof -i :3000  # oder :3001, :8080
 ```
-
-### Mit ZITADEL (Auth-Service)
-```bash
-docker compose -f docker/docker-compose.yml --profile auth up -d
-```
-
-### Logs anzeigen
-```bash
-docker compose -f docker/docker-compose.yml logs -f
-```
-
----
-
-## 11. Endpoints
-
-Nach dem Start läuft der Server auf:
-
-| Service | URL |
-|---------|-----|
-| API | http://localhost:3000 |
-| Health Check | http://localhost:3000/health |
-| ZITADEL (optional) | http://localhost:8080 |
-
----
-
-## Troubleshooting
 
 ### Nix: "experimental-features" Fehler
 ```bash
@@ -310,16 +247,6 @@ Docker Desktop muss gestartet sein. Überprüfen mit:
 docker ps
 ```
 
-### Git Push: GPG/SSH Signing Fehler
-Stelle sicher, dass der Signing Key zu GitHub hinzugefügt wurde:
-```bash
-# Prüfen welcher Key konfiguriert ist
-git config --global user.signingkey
-
-# Key nochmal anzeigen
-cat ~/.ssh/id_ed25519_signing.pub
-```
-
 ### direnv: ".envrc is blocked"
 Beim ersten Öffnen des Projekts erscheint diese Fehlermeldung:
 ```
@@ -329,69 +256,24 @@ direnv: error .envrc is blocked. Run `direnv allow` to approve its content
 **Lösung:**
 ```bash
 # Im Projektverzeichnis ausführen:
-cd /path/to/GS-Backend-2
+cd /path/to/erynoa
 direnv allow
 ```
 
 Danach die Shell neu laden:
 ```bash
-exec zsh
-# oder einfach ein neues Terminal öffnen
-```
-
-**Hinweis:** Dies ist ein Sicherheitsfeature von `direnv`. Die `.envrc` muss einmalig erlaubt werden, danach ist sie persistent. Die Fehlermeldung erscheint nur beim ersten Mal oder wenn die `.envrc` geändert wurde.
-
-### SQLx: "DATABASE_URL must be set"
-```bash
-# Automatisch aus .env.example erstellen:
-just init-env
-
-# Oder manuell:
-cp .env.example .env
-
-# Oder manuell setzen:
-export DATABASE_URL="postgres://erynoa:erynoa@localhost:5432/erynoa"
-```
-
-### Port bereits belegt
-```bash
-# Prozess auf Port finden
-lsof -i :5432
-lsof -i :3000
-
-# Docker-Container stoppen
-docker compose -f docker/docker-compose.yml down
+exec zsh  # oder exec bash
 ```
 
 ---
 
-## Nützliche Tools (optional)
+## 📚 Weitere Dokumentation
 
-```bash
-# Besseres Terminal
-brew install --cask iterm2
-
-# VS Code
-brew install --cask visual-studio-code
-
-# Datenbank-Client
-brew install --cask tableplus
-
-# API-Testing
-brew install --cask bruno
-```
+- [Getting Started](../guides/getting-started.md) - Schnellstart
+- [ZITADEL Setup](../guides/zitadel.md) - Authentifizierung konfigurieren
+- [Configuration](../reference/config.md) - Service-Konfiguration
+- [Architecture](../reference/architecture.md) - System-Architektur
 
 ---
 
-## Zusammenfassung der Installationsreihenfolge
-
-1. ✅ Xcode Command Line Tools
-2. ✅ Homebrew
-3. ✅ Nix
-4. ✅ Docker Desktop
-5. ✅ SSH-Keys erstellen & zu GitHub hinzufügen
-6. ✅ Git konfigurieren (mit SSH-Signierung)
-7. ✅ Repository klonen
-8. ✅ `nix develop` → `docker compose up -d` → `just dev`
-
-**Fertig!** 🚀
+**Fertig!** Die Entwicklungsumgebung ist eingerichtet. 🎉
