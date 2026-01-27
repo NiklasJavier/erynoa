@@ -43,28 +43,28 @@
             header_up Host localhost:5173
         }
     }
-    
+
     # Platform Frontend
     handle /platform* {
         reverse_proxy platform:5174 {
             header_up Host localhost:5174
         }
     }
-    
+
     # Docs Frontend
     handle /docs* {
         reverse_proxy docs:5175 {
             header_up Host localhost:5175
         }
     }
-    
+
     # Backend API - Muss vor dem Root-Handle sein
     handle /api* {
         reverse_proxy backend:3000 {
             header_up Host {host}
         }
     }
-    
+
     # Root - Landing Page (must be last to catch everything else)
     handle {
         file_server {
