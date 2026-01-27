@@ -11,14 +11,22 @@ RUN apk add --no-cache curl unzip && \
     chmod +x /usr/local/bin/buf && \
     apk del curl unzip
 
+# Installiere pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Kopiere pnpm Lockfile und Workspace-Config (für Monorepo)
+COPY pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Kopiere alle Frontend-Verzeichnisse (pnpm Workspace benötigt alle Packages)
+COPY frontend/ ./frontend/
+
 WORKDIR /workspace/docs
 
-# Installiere npm Abhängigkeiten
-COPY frontend/docs/package*.json ./
-RUN npm ci
+# Installiere pnpm Abhängigkeiten (im Workspace-Root)
+WORKDIR /workspace
+RUN pnpm install --frozen-lockfile
 
-# Kopiere Docs Code
-COPY frontend/docs .
+WORKDIR /workspace/docs
 
 # Exponiere Port für Vite Dev Server
 EXPOSE 5175
@@ -98,7 +106,7 @@ WATCHER_PID=$!
 # SvelteKit Sync (generiert .svelte-kit Verzeichnis)
 echo "[3/3] Running SvelteKit sync..."
 cd /workspace/docs
-npx svelte-kit sync 2>/dev/null || true
+pnpm exec svelte-kit sync 2>/dev/null || true
 
 # Starte Vite Dev Server
 echo "========================================="
@@ -106,7 +114,7 @@ echo "Starting Vite Dev Server (SvelteKit)..."
 echo "Proto changes will trigger regeneration"
 echo "========================================="
 
-exec npm run dev -- --host 0.0.0.0 --port 5175
+exec pnpm run dev -- --host 0.0.0.0 --port 5175
 EOF
 
 RUN chmod +x /entrypoint.sh
