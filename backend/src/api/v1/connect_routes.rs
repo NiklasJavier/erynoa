@@ -53,7 +53,6 @@ pub fn create_connect_routes(_state: AppState) -> Router<AppState> {
     let router = StorageService::get_presigned_download_url(get_presigned_download_url_handler)(router);
     let router = StorageService::list_buckets(list_buckets_handler)(router);
     let router = StorageService::create_bucket(create_bucket_handler)(router);
-    let router = StorageService::delete_bucket(delete_bucket_handler)(router);
     
-    router
+    StorageService::delete_bucket(delete_bucket_handler)(router)
 }

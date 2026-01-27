@@ -260,8 +260,9 @@
 	// Beide Commands nutzen das gleiche Script, um nur ein Terminal zu öffnen
 	// postCreateCommand: Setup + Init (beim ersten Erstellen)
 	// postStartCommand: Nur Init (bei jedem Start, prüft ob Setup bereits gelaufen ist)
-	"postCreateCommand": ".devcontainer/setup-and-init.sh",
-	"postStartCommand": ".devcontainer/setup-and-init.sh",
+	// Nutzt ${containerWorkspaceFolder} für Container, funktioniert auch auf Host mit relativem Pfad
+	"postCreateCommand": "bash .devcontainer/setup-and-init.sh || echo '⚠️  Setup script not found or failed, continuing...'",
+	"postStartCommand": "bash .devcontainer/setup-and-init.sh || echo '⚠️  Setup script not found or failed, continuing...'",
 	// Wir verlassen uns auf direnv, keine manuellen nix develop commands im attach nötig
 	// direnv hook wird durch das common-utils Feature gesetzt
 

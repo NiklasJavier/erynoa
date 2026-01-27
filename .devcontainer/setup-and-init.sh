@@ -2,7 +2,21 @@
 # Kombiniertes Setup- und Init-Script für DevContainer
 # Läuft einmal beim Erstellen (postCreateCommand) und bei jedem Start (postStartCommand)
 # WICHTIG: Beide Commands nutzen dieses Script, um nur ein Terminal zu öffnen
+# Funktioniert sowohl im DevContainer als auch direkt auf dem Host
 set +e  # Fehler nicht blockierend
+
+# Erkenne, ob wir im Container oder auf dem Host sind
+if [ -d "/workspace" ] && [ -f "/workspace/.devcontainer/setup-and-init.sh" ]; then
+    # Im DevContainer: Workspace ist /workspace
+    WORKSPACE_ROOT="/workspace"
+elif [ -f "$(dirname "$0")/setup-and-init.sh" ]; then
+    # Auf dem Host: Script-Pfad verwenden
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+    WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+else
+    # Fallback: Aktuelles Verzeichnis
+    WORKSPACE_ROOT="${PWD}"
+fi
 
 MARKER_FILE="$HOME/.devcontainer/.setup-complete"
 LOCK_FILE="$HOME/.devcontainer/.setup-and-init.lock"
@@ -119,13 +133,13 @@ NIXCONF
   # ─────────────────────────────────────────────────────────────────────────────
   echo "📝 Ensuring .env file exists..."
   
-  if [ ! -f /workspace/.env ]; then
-    if [ -f /workspace/.env.example ]; then
-      cp /workspace/.env.example /workspace/.env
+  if [ ! -f "$WORKSPACE_ROOT/.env" ]; then
+    if [ -f "$WORKSPACE_ROOT/.env.example" ]; then
+      cp "$WORKSPACE_ROOT/.env.example" "$WORKSPACE_ROOT/.env"
       echo "   ✅ Created .env from .env.example"
     else
       echo "   ⚠️  .env.example not found, creating default .env"
-      cat > /workspace/.env << 'ENVEOF'
+      cat > "$WORKSPACE_ROOT/.env" << 'ENVEOF'
 # Environment Variables
 
 APP_ENVIRONMENT=local
@@ -163,7 +177,7 @@ ENVEOF
   echo "   ℹ️  Fortschritt wird unten angezeigt. Bei 'copying path' lädt Nix Binaries."
   echo ""
   
-  cd /workspace
+  cd "$WORKSPACE_ROOT"
   
   # Build the devShell mit verbose Output (zeigt Download-Fortschritt)
   if nix develop --verbose --print-build-logs --command echo "✅ Nix environment ready!"; then
@@ -183,17 +197,18 @@ ENVEOF
   # ─────────────────────────────────────────────────────────────────────────────
   echo "🔗 Adding helpful shell aliases..."
   
-  ALIASES='
+  # Aliases mit Workspace-Root (wird zur Laufzeit aufgelöst)
+  ALIASES="
 # Erynoa DevContainer aliases
-alias dev="cd /workspace && just dev"
-alias build="cd /workspace && just build"
-alias test="cd /workspace && just test"
-alias migrate="cd /workspace && just db-migrate"
-alias logs="docker compose -f /workspace/infra/docker/docker-compose.yml logs -f"
+alias dev=\"cd $WORKSPACE_ROOT && just dev\"
+alias build=\"cd $WORKSPACE_ROOT && just build\"
+alias test=\"cd $WORKSPACE_ROOT && just test\"
+alias migrate=\"cd $WORKSPACE_ROOT && just db-migrate\"
+alias logs=\"docker compose -f $WORKSPACE_ROOT/infra/docker/docker-compose.yml logs -f\"
 
 # Nix path alias (daemon handles permissions)
-alias nix="/nix/var/nix/profiles/default/bin/nix"
-'
+alias nix=\"/nix/var/nix/profiles/default/bin/nix\"
+"
   
   for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
     if [ -f "$rc" ]; then
@@ -240,7 +255,7 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 echo "📦 Checking Nix development environment..."
 
-cd /workspace/backend
+cd "$WORKSPACE_ROOT/backend"
 
 if [ -f "../flake.nix" ]; then
   /nix/var/nix/profiles/default/bin/nix develop --command true 2>/dev/null && echo "   ✅ Nix environment ready" || echo "   ⚠️  Nix environment build failed or will happen on first use"
@@ -398,16 +413,16 @@ fi
 # 5. Infrastructure Services (Docker-in-Docker)
 # ─────────────────────────────────────────────────────────────────────────────
 echo "🐳 Starting infrastructure services..."
-cd /workspace
+cd "$WORKSPACE_ROOT"
 
 if command -v docker &> /dev/null && docker ps >/dev/null 2>&1; then
-  docker compose -f infra/docker/docker-compose.yml up -d || {
+  docker compose -f "$WORKSPACE_ROOT/infra/docker/docker-compose.yml" up -d || {
     echo "   ⚠️  Docker services failed to start"
   }
 
   echo "⏳ Waiting for database..."
   for i in {1..30}; do
-    if docker compose -f infra/docker/docker-compose.yml exec -T db pg_isready -U erynoa >/dev/null 2>&1; then
+    if docker compose -f "$WORKSPACE_ROOT/infra/docker/docker-compose.yml" exec -T db pg_isready -U erynoa >/dev/null 2>&1; then
       echo "   ✅ Database ready!"
       break
     fi
@@ -417,7 +432,7 @@ if command -v docker &> /dev/null && docker ps >/dev/null 2>&1; then
 
   echo "⏳ Waiting for cache..."
   for i in {1..30}; do
-    if docker compose -f infra/docker/docker-compose.yml exec -T cache redis-cli ping >/dev/null 2>&1; then
+    if docker compose -f "$WORKSPACE_ROOT/infra/docker/docker-compose.yml" exec -T cache redis-cli ping >/dev/null 2>&1; then
       echo "   ✅ Cache ready!"
       break
     fi
@@ -432,13 +447,13 @@ fi
 # 6. Migrations
 # ─────────────────────────────────────────────────────────────────────────────
 echo "📦 Running database migrations..."
-cd /workspace/backend
+cd "$WORKSPACE_ROOT/backend"
 
 if [ -z "$DATABASE_URL" ]; then
   export DATABASE_URL="postgres://erynoa:erynoa@localhost:5432/erynoa"
 fi
 
-cd /workspace && nix develop --command bash -c "cd /workspace/backend && sqlx database create 2>/dev/null || true; sqlx migrate run" 2>/dev/null || {
+cd "$WORKSPACE_ROOT" && nix develop --command bash -c "cd \"$WORKSPACE_ROOT/backend\" && sqlx database create 2>/dev/null || true; sqlx migrate run" 2>/dev/null || {
   echo "   ⚠️  Migrations skipped (check logs or run 'just db-migrate')"
 }
 

@@ -230,7 +230,7 @@ pub async fn get_presigned_upload_url_handler(
 
     Ok(GetPresignedUploadUrlResponse {
         url,
-        expires_in_secs: expires_in_secs as i64,
+        expires_in_secs,
         method: "PUT".to_string(),
     })
 }
@@ -258,7 +258,7 @@ pub async fn get_presigned_download_url_handler(
 
     Ok(GetPresignedDownloadUrlResponse {
         url,
-        expires_in_secs: expires_in_secs as i64,
+        expires_in_secs,
         method: "GET".to_string(),
     })
 }

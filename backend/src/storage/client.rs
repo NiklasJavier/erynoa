@@ -312,9 +312,9 @@ impl StorageClient {
                 key: obj.key().unwrap_or_default().to_string(),
                 size: obj.size().unwrap_or(0),
                 content_type: None, // Nicht in list_objects verfügbar
-                last_modified: obj.last_modified().and_then(|dt| {
-                    chrono::DateTime::from_timestamp(dt.secs(), dt.subsec_nanos())
-                }),
+                last_modified: obj
+                    .last_modified()
+                    .and_then(|dt| chrono::DateTime::from_timestamp(dt.secs(), dt.subsec_nanos())),
                 etag: obj.e_tag().map(|s| s.to_string()),
             })
             .collect();
