@@ -28,9 +28,9 @@ RUN cat > /workspace/proto-watch.js << 'EOF'
 const { watch } = require('fs');
 const { spawn } = require('child_process');
 
-console.log('🔄 Watching proto/ directory for changes...');
+console.log('🔄 Watching backend/proto/ directory for changes...');
 
-watch('/workspace/proto', { recursive: true }, (eventType, filename) => {
+watch('/workspace/backend/proto', { recursive: true }, (eventType, filename) => {
   if (filename && filename.endsWith('.proto')) {
     console.log(`🔄 Proto file changed: ${filename}, regenerating...`);
     const buf = spawn('buf', ['generate'], {

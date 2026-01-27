@@ -70,8 +70,8 @@ Siehe [dev_setup.md](dev_setup.md) für ausführliche Dokumentation.
 
 ### Backend
 - **Tool**: cargo-watch
-- **Command**: `cargo watch -w src -w Cargo.toml -w config -w ../proto -x run`
-- **Mount**: `/workspace/backend → /app`, `/workspace/proto → /proto`
+- **Command**: `cargo watch -w src -w Cargo.toml -w config -w ../backend/proto -x run`
+- **Mount**: `/workspace/backend → /app`, `/workspace/backend/proto → /workspace/backend/proto`
 - **Speed**: 5-15 Sekunden
 
 ## Troubleshooting

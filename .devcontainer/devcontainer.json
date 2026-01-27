@@ -184,7 +184,7 @@
 
 				// Protobuf
 				"protoc": {
-					"options": ["--proto_path=${workspaceFolder}/proto"]
+					"options": ["--proto_path=${workspaceFolder}/backend/proto"]
 				},
 
 				// PostgreSQL Connections

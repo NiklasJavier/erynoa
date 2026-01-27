@@ -57,7 +57,8 @@ Startet alles:
 │   │   ├── info/         # Info & Status
 │   │   ├── users/        # User Management
 │   │   └── storage/      # Storage Operations
-│   └── config/           # Konfiguration (TOML)
+│   ├── config/           # Konfiguration (TOML)
+│   └── proto/            # Protobuf Definitionen
 ├── frontend/            # Frontend Monorepo (pnpm Workspace)
 │   ├── console/         # SvelteKit Console
 │   ├── platform/        # SvelteKit Platform
@@ -65,7 +66,6 @@ Startet alles:
 │   ├── src/api/          # API Clients (Connect-RPC)
 │   ├── src/components/   # UI Komponenten
 │   └── src/lib/          # Auth, Config, Utils
-├── proto/                # Protobuf Definitionen
 ├── infra/                # Infrastructure & Deployment
 │   ├── docker/          # Docker Compose & Dockerfiles
 │   ├── proxy/           # Reverse Proxy (Caddyfile)

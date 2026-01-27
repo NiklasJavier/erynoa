@@ -93,7 +93,8 @@ Das ist alles! Dieser Befehl:
 │   └── static/              # Static Files
 │       └── landing.html
 │
-├── proto/                   # Protobuf Definitionen
+├── backend/
+│   └── proto/               # Protobuf Definitionen
 ├── docs/                    # Dokumentation
 ├── .data/                   # Lokale Daten (gitignored)
 └── justfile                 # Task Runner
@@ -169,7 +170,7 @@ environment:
 
 ### Backend (Rust)
 - **Tool**: `cargo-watch`
-- **Watched**: `src/`, `Cargo.toml`, `config/`, `proto/`
+- **Watched**: `src/`, `Cargo.toml`, `config/`, `backend/proto/`
 - **Rebuild-Zeit**: ~5-15 Sekunden
 
 ### Console (Vite)

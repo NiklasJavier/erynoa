@@ -108,7 +108,7 @@ echo "========================================="
 
 # --poll für bessere Kompatibilität in Container-Umgebungen
 # --why zeigt an welche Datei den Rebuild ausgelöst hat
-# Überwache auch proto/ für Connect-RPC Code-Generierung
+# Überwache auch backend/proto/ für Connect-RPC Code-Generierung
 # ⚡ MOLD Linker für schnelle Rebuilds
 export RUSTFLAGS="-C link-arg=-fuse-ld=mold"
 exec cargo watch --poll --why \
@@ -116,7 +116,7 @@ exec cargo watch --poll --why \
   -w src \
   -w Cargo.toml \
   -w config \
-  -w ../proto \
+  -w ../backend/proto \
   -s "cd /workspace && buf generate 2>/dev/null || echo '⚠️  buf generate skipped (not critical)'"
 EOF
 

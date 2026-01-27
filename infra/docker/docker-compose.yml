@@ -35,7 +35,7 @@ services:
       # Exclude node_modules (use container's version)
       - /workspace/console/node_modules
       # Proto für Code-Generierung
-      - ../proto:/workspace/proto:cached
+      - ../backend/proto:/workspace/backend/proto:cached
       # Buf-Konfiguration (im Workspace-Root)
       - ../buf.gen.yaml:/workspace/buf.gen.yaml:cached
       - ../buf.yaml:/workspace/buf.yaml:cached
@@ -72,7 +72,7 @@ services:
       # Exclude node_modules (use container's version)
       - /workspace/platform/node_modules
       # Proto für Code-Generierung
-      - ../proto:/workspace/proto:cached
+      - ../backend/proto:/workspace/backend/proto:cached
       # Buf-Konfiguration (im Workspace-Root)
       - ../buf.gen.yaml:/workspace/buf.gen.yaml:cached
       - ../buf.yaml:/workspace/buf.yaml:cached
@@ -109,7 +109,7 @@ services:
       # Exclude node_modules (use container's version)
       - /workspace/docs/node_modules
       # Proto für Code-Generierung
-      - ../proto:/workspace/proto:cached
+      - ../backend/proto:/workspace/backend/proto:cached
       # Buf-Konfiguration (im Workspace-Root)
       - ../buf.gen.yaml:/workspace/buf.gen.yaml:cached
       - ../buf.yaml:/workspace/buf.yaml:cached

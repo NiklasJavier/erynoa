@@ -43,7 +43,11 @@ Startet alles:
 │   │   └── zitadel/   # ZITADEL Init
 │   └── static/        # Static Files
 │       └── landing.html
-├── proto/             # Protobuf Definitionen
+├── backend/           # Rust API Server (Axum + Connect-RPC)
+│   ├── src/           # Source Code
+│   ├── config/        # Konfiguration (TOML)
+│   ├── migrations/    # SQL Migrations
+│   └── proto/         # Protobuf Definitionen
 ├── docs/              # Dokumentation
 └── justfile           # Task Runner
 ```
