@@ -2,36 +2,36 @@ syntax = "proto3";
 
 package erynoa.v1;
 
-option go_package = "erynoa/v1;erynoav1";
-
 import "google/protobuf/timestamp.proto";
+
+option go_package = "erynoa/v1;erynoav1";
 
 // StorageService provides S3-compatible storage operations
 service StorageService {
   // Upload uploads a file to storage
   rpc Upload(UploadRequest) returns (UploadResponse);
-  
+
   // List lists objects in a bucket
   rpc List(StorageServiceListRequest) returns (StorageServiceListResponse);
-  
+
   // Delete deletes an object
   rpc Delete(StorageServiceDeleteRequest) returns (StorageServiceDeleteResponse);
-  
+
   // Head checks if an object exists
   rpc Head(StorageServiceHeadRequest) returns (StorageServiceHeadResponse);
-  
+
   // GetPresignedUploadUrl generates a presigned URL for direct upload
   rpc GetPresignedUploadUrl(GetPresignedUploadUrlRequest) returns (GetPresignedUploadUrlResponse);
-  
+
   // GetPresignedDownloadUrl generates a presigned URL for download
   rpc GetPresignedDownloadUrl(GetPresignedDownloadUrlRequest) returns (GetPresignedDownloadUrlResponse);
-  
+
   // ListBuckets lists all buckets
   rpc ListBuckets(ListBucketsRequest) returns (ListBucketsResponse);
-  
+
   // CreateBucket creates a new bucket
   rpc CreateBucket(CreateBucketRequest) returns (CreateBucketResponse);
-  
+
   // DeleteBucket deletes a bucket
   rpc DeleteBucket(DeleteBucketRequest) returns (DeleteBucketResponse);
 }

@@ -157,7 +157,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'pnpm'
-          cache-dependency-path: '**/pnpm-lock.yaml'
+          cache-dependency-path: 'pnpm-lock.yaml'
       
       - name: Cache pnpm store
         uses: actions/cache@v4

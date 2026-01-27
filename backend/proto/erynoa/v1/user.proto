@@ -2,27 +2,27 @@ syntax = "proto3";
 
 package erynoa.v1;
 
-option go_package = "erynoa/v1;erynoav1";
-
 import "google/protobuf/timestamp.proto";
+
+option go_package = "erynoa/v1;erynoav1";
 
 // UserService provides user management operations
 service UserService {
   // List returns all users (requires authentication)
   rpc List(ListRequest) returns (ListResponse);
-  
+
   // Get returns a single user by ID
   rpc Get(GetRequest) returns (GetResponse);
-  
+
   // GetCurrent returns the current authenticated user
   rpc GetCurrent(GetCurrentRequest) returns (GetCurrentResponse);
-  
+
   // Create creates a new user
   rpc Create(CreateRequest) returns (CreateResponse);
-  
+
   // Update updates an existing user
   rpc Update(UpdateRequest) returns (UpdateResponse);
-  
+
   // Delete removes a user
   rpc Delete(DeleteRequest) returns (DeleteResponse);
 }

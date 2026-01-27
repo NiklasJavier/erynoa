@@ -8,7 +8,7 @@ option go_package = "erynoa/v1;erynoav1";
 service HealthService {
   // Check returns the health status of the service
   rpc Check(CheckRequest) returns (CheckResponse);
-  
+
   // Ready returns detailed readiness status including dependencies
   rpc Ready(ReadyRequest) returns (ReadyResponse);
 }
@@ -21,7 +21,7 @@ message CheckResponse {
     SERVING_STATUS_SERVING = 1;
     SERVING_STATUS_NOT_SERVING = 2;
   }
-  
+
   ServingStatus status = 1;
 }
 
