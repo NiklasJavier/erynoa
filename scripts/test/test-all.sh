@@ -179,7 +179,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 # Check test files
 echo ""
 run_test "Backend test file exists" test -f backend/tests/api.rs
-run_test "Test documentation exists" test -f README/BACKEND_TEST_SUITE.md
+run_test "Test documentation exists" test -f docs/backend_test_suite.md
 
 # Count tests in test file
 if [ -f backend/tests/api.rs ]; then
@@ -194,10 +194,10 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 
 # Check documentation
 echo ""
-run_test "API restructure docs exist" test -f README/API_RESTRUCTURE_COMPLETE.md
-run_test "Console API docs exist" test -f README/CONSOLE_API_RESTRUCTURE_COMPLETE.md
-run_test "Test results docs exist" test -f README/TEST_RESULTS.md
-run_test "Backend test suite docs exist" test -f README/BACKEND_TEST_SUITE.md
+run_test "API restructure docs exist" test -f docs/api_restructure_complete.md
+run_test "Console API docs exist" test -f docs/console_api_restructure_complete.md
+run_test "Test results docs exist" test -f docs/test_results.md
+run_test "Backend test suite docs exist" test -f docs/backend_test_suite.md
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

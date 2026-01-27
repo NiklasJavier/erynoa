@@ -1,0 +1,180 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="A Tower service and layer that provides a rate-limiting backend by governor. Based heavily on the work done for actix-governor. Works with Axum, Hyper, Tonic, and anything else based on Tower!"><title>tower_governor - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-e56847b5.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="tower_governor" data-themes="" data-resource-suffix="" data-rustdoc-version="1.91.1 (ed61e7d7e 2025-11-07) (built from a source tarball)" data-channel="1.91.1" data-search-js="search-e256b49e.js" data-stringdex-js="stringdex-c3e638e9.js" data-settings-js="settings-c38705f0.js" ><script src="../static.files/storage-e2aeef58.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-6dc2a7f3.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Crate tower_governor</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../tower_governor/index.html">tower_<wbr>governor</a><span class="version">0.4.3</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#features" title="Features:">Features:</a></li><li><a href="#how-does-it-work" title="How does it work?">How does it work?</a></li><li><a href="#example" title="Example">Example</a></li><li><a href="#configuration-presets" title="Configuration presets">Configuration presets</a></li><li><a href="#customize-rate-limiting-key" title="Customize rate limiting key">Customize rate limiting key</a></li><li><a href="#crate-feature-flags" title="Crate feature flags">Crate feature flags</a><ul><li><a href="#example-for-no-default-features" title="Example for no-default-features">Example for no-default-features</a></li></ul></li><li><a href="#add-x-ratelimit-headers" title="Add x-ratelimit headers">Add x-ratelimit headers</a></li><li><a href="#error-handling" title="Error Handling">Error Handling</a></li><li><a href="#common-pitfalls" title="Common pitfalls">Common pitfalls</a></li></ul><h3><a href="#reexports">Crate Items</a></h3><ul class="block"><li><a href="#reexports" title="Re-exports">Re-exports</a></li><li><a href="#modules" title="Modules">Modules</a></li><li><a href="#structs" title="Structs">Structs</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>tower_<wbr>governor</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/tower_governor/lib.rs.html#1-309">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>A Tower service and layer that provides a rate-limiting backend by <a href="https://github.com/antifuchs/governor">governor</a>. Based heavily on the work done for <a href="https://github.com/AaronErhardt/actix-governor">actix-governor</a>. Works with Axum, Hyper, Tonic, and anything else based on Tower!</p>
+<h2 id="features"><a class="doc-anchor" href="#features">§</a>Features:</h2>
+<ul>
+<li>Rate limit requests based on peer IP address, IP address headers, globally, or via custom keys</li>
+<li>Custom traffic limiting criteria per second, or to certain bursts</li>
+<li>Simple to use</li>
+<li>High customizability</li>
+<li>High performance</li>
+<li>Robust yet flexible API</li>
+</ul>
+<h2 id="how-does-it-work"><a class="doc-anchor" href="#how-does-it-work">§</a>How does it work?</h2>
+<p>Each governor middleware has a configuration that stores a quota.
+The quota specifies how many requests can be sent from an IP address
+before the middleware starts blocking further requests.</p>
+<p>For example if the quota allowed ten requests a client could send a burst of
+ten requests in short time before the middleware starts blocking.</p>
+<p>Once at least one element of the quota was used the elements of the quota
+will be replenished after a specified period.</p>
+<p>For example if this period was 2 seconds and the quota was empty
+it would take 2 seconds to replenish one element of the quota.
+This means you could send one request every two seconds on average.</p>
+<p>If there was a quota that allowed ten requests with the same period
+a client could again send a burst of ten requests and then had to wait
+two seconds before sending further requests or 20 seconds before the full
+quota would be replenished and he could send another burst.</p>
+<h2 id="example"><a class="doc-anchor" href="#example">§</a>Example</h2>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>axum::{error_handling::HandleErrorLayer, routing::get, BoxError, Router};
+<span class="kw">use </span>std::net::SocketAddr;
+<span class="kw">use </span>std::sync::Arc;
+<span class="kw">use </span>std::time::Duration;
+<span class="kw">use </span>tokio::net::TcpListener;
+<span class="kw">use </span>tower::ServiceBuilder;
+<span class="kw">use </span>tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
+
+<span class="kw">async fn </span>hello() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
+   <span class="string">"Hello world"
+</span>}
+
+<span class="attr">#[tokio::main]
+</span><span class="kw">async fn </span>main() {
+   <span class="comment">// Configure tracing if desired
+   // construct a subscriber that prints formatted traces to stdout
+   </span><span class="kw">let </span>subscriber = tracing_subscriber::FmtSubscriber::new();
+   <span class="comment">// use that subscriber to process traces emitted after this point
+   </span>tracing::subscriber::set_global_default(subscriber).unwrap();
+
+   <span class="comment">// Allow bursts with up to five requests per IP address
+   // and replenishes one element every two seconds
+   // We Box it because Axum 0.6 requires all Layers to be Clone
+   // and thus we need a static reference to it
+   </span><span class="kw">let </span>governor_conf = Arc::new(
+       GovernorConfigBuilder::default()
+           .per_second(<span class="number">2</span>)
+           .burst_size(<span class="number">5</span>)
+           .finish()
+           .unwrap(),
+   );
+
+   <span class="kw">let </span>governor_limiter = governor_conf.limiter().clone();
+   <span class="kw">let </span>interval = Duration::from_secs(<span class="number">60</span>);
+   <span class="comment">// a separate background task to clean up
+   </span>std::thread::spawn(<span class="kw">move </span>|| {
+       <span class="kw">loop </span>{
+           std::thread::sleep(interval);
+           <span class="macro">tracing::info!</span>(<span class="string">"rate limiting storage size: {}"</span>, governor_limiter.len());
+           governor_limiter.retain_recent();
+       }
+   });
+
+   <span class="comment">// build our application with a route
+   </span><span class="kw">let </span>app = Router::new()
+       <span class="comment">// `GET /` goes to `root`
+       </span>.route(<span class="string">"/"</span>, get(hello))
+       .layer(GovernorLayer {
+           config: governor_conf,
+       });
+
+   <span class="comment">// run our app with hyper
+   // `axum::Server` is a re-export of `hyper::Server`
+   </span><span class="kw">let </span>addr = SocketAddr::from(([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>], <span class="number">3000</span>));
+   <span class="macro">tracing::debug!</span>(<span class="string">"listening on {}"</span>, addr);
+   <span class="kw">let </span>listener = TcpListener::bind(addr).<span class="kw">await</span>.unwrap();
+   axum::serve(listener, app.into_make_service_with_connect_info::&lt;SocketAddr&gt;())
+       .<span class="kw">await
+       </span>.unwrap();
+}</code></pre></div><h2 id="configuration-presets"><a class="doc-anchor" href="#configuration-presets">§</a>Configuration presets</h2>
+<p>Instead of using the configuration builder you can use predefined presets.</p>
+<ul>
+<li>
+<p><a href="https://docs.rs/tower_governor/latest/tower_governor/governor/struct.GovernorConfig.html#method.default"><code>GovernorConfig::default()</code></a>: The default configuration which is suitable for most services. Allows bursts with up to eight requests and replenishes one element after 500ms, based on peer IP.</p>
+</li>
+<li>
+<p><a href="https://docs.rs/tower_governor/latest/tower_governor/governor/struct.GovernorConfig.html#method.secure"><code>GovernorConfig::secure()</code></a>: A default configuration for security related services.
+Allows bursts with up to two requests and replenishes one element after four seconds, based on peer IP.</p>
+</li>
+</ul>
+<p>For example the secure configuration can be used as a short version of this code:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>tower_governor::governor::GovernorConfigBuilder;
+
+<span class="kw">let </span>config = GovernorConfigBuilder::default()
+    .per_second(<span class="number">4</span>)
+    .burst_size(<span class="number">2</span>)
+    .finish()
+    .unwrap();</code></pre></div><h2 id="customize-rate-limiting-key"><a class="doc-anchor" href="#customize-rate-limiting-key">§</a>Customize rate limiting key</h2>
+<p>By default, rate limiting is done using the peer IP address (i.e. the IP address of the HTTP client that requested your app: either your user or a reverse proxy, depending on your deployment setup).
+You can configure a different behavior which:</p>
+<ol>
+<li>can be useful in itself</li>
+<li>allows you to setup multiple instances of this middleware based on different keys (for example, if you want to apply rate limiting with different rates on IP and API keys at the same time)</li>
+</ol>
+<p>This is achieved by defining a <a href="key_extractor/trait.KeyExtractor.html" title="trait tower_governor::key_extractor::KeyExtractor">KeyExtractor</a> and giving it to a <a href="governor/struct.Governor.html" title="struct tower_governor::governor::Governor">Governor</a> instance.
+Three ready-to-use key extractors are provided:</p>
+<ul>
+<li>[PeerIpKeyExtractor]: this is the default, it uses the peer IP address of the request.</li>
+<li>[SmartIpKeyExtractor]: Looks for common IP identification headers usually provided by reverse proxies in order(x-forwarded-for,x-real-ip, forwarded) and falls back to the peer IP address.</li>
+<li>[GlobalKeyExtractor]: uses the same key for all incoming requests</li>
+</ul>
+<p>Check out the <a href="https://github.com/benwis/tower-governor/blob/main/examples/src/custom_key_bearer.rs">custom_key_bearer</a> example for more information.</p>
+<h2 id="crate-feature-flags"><a class="doc-anchor" href="#crate-feature-flags">§</a>Crate feature flags</h2>
+<p>tower-governor uses <a href="https://doc.rust-lang.org/cargo/reference/manifest.html#the-features-section">feature flags</a> to reduce the amount of compiled code and it is possible to enable certain features over others. Below is a list of the available feature flags:</p>
+<ul>
+<li><code>axum</code>: Enables support for axum web framework</li>
+<li><code>tracing</code>: Enables tracing output for this middleware</li>
+</ul>
+<h4 id="example-for-no-default-features"><a class="doc-anchor" href="#example-for-no-default-features">§</a>Example for no-default-features</h4>
+<ul>
+<li>Disabling <a href="https://doc.rust-lang.org/cargo/reference/features.html#the-default-feature"><code>default</code> feature</a> will change behavior of [PeerIpKeyExtractor] and [SmartIpKeyExtractor]: These two key extractors will expect <a href="https://doc.rust-lang.org/1.91.1/core/net/socket_addr/enum.SocketAddr.html" title="enum core::net::socket_addr::SocketAddr">SocketAddr</a> type from <a href="http::Request">Request</a>’s <a href="http::Extensions">Extensions</a>.</li>
+<li>Fail to provide valid <code>SocketAddr</code> could result in <a href="errors/enum.GovernorError.html#variant.UnableToExtractKey" title="variant tower_governor::errors::GovernorError::UnableToExtractKey">GovernorError::UnableToExtractKey</a>.</li>
+</ul>
+<p>Cargo.toml</p>
+<div class="example-wrap"><pre class="language-toml"><code>[dependencies]
+tower-governor = { version = &quot;0.3&quot;, default-features = false }</code></pre></div>
+<p>main.rs</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>std::{convert::Infallible, net::SocketAddr};
+<span class="kw">use </span>std::sync::Arc;
+
+<span class="kw">use </span>http::{Request, Response};
+<span class="kw">use </span>tower::{service_fn, ServiceBuilder, ServiceExt};
+<span class="kw">use </span>tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
+
+<span class="comment">// service function expecting rate limiting by governor.
+</span><span class="kw">let </span>service = service_fn(|<span class="kw">_</span>: Request&lt;()&gt;| <span class="kw">async </span>{ 
+   <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, Infallible&gt;(Response::new(String::from(<span class="string">"mock response"</span>))) 
+});
+
+<span class="kw">let </span>config = Arc::new(GovernorConfigBuilder::default().finish().unwrap());
+
+<span class="comment">// build service with governor layer
+</span><span class="kw">let </span>service = ServiceBuilder::new()
+   <span class="comment">// the caller of service must provide SocketAddr to governor layer middleware
+   </span>.map_request(|(<span class="kw-2">mut </span>req, addr): (Request&lt;()&gt;, SocketAddr)| {
+       <span class="comment">// insert SocketAddr to request's extensions and governor is expecting it.
+       </span>req.extensions_mut().insert(addr);
+       req
+   })
+   .layer(GovernorLayer { config })
+   .service(service);
+
+<span class="comment">// mock client socket addr and http request.
+</span><span class="kw">let </span>addr = <span class="string">"127.0.0.1:12345"</span>.parse().unwrap();
+<span class="kw">let </span>req = Request::default();
+
+<span class="comment">// execute service
+</span>service.oneshot((req, addr)).<span class="kw">await</span><span class="question-mark">?</span>;</code></pre></div><h2 id="add-x-ratelimit-headers"><a class="doc-anchor" href="#add-x-ratelimit-headers">§</a>Add x-ratelimit headers</h2>
+<p>By default, <code>x-ratelimit-after</code> is enabled but if you want to enable <code>x-ratelimit-limit</code>, <code>x-ratelimit-whitelisted</code> and <code>x-ratelimit-remaining</code> use the <a href="https://docs.rs/tower_governor/latest/tower_governor/governor/struct.GovernorConfigBuilder.html#method.use_headers"><code>.use_headers()</code></a> method on your GovernorConfig.</p>
+<h2 id="error-handling"><a class="doc-anchor" href="#error-handling">§</a>Error Handling</h2>
+<p>This crate surfaces a GovernorError with suggested headers, and includes <a href="governor/struct.GovernorConfigBuilder.html#method.error_handler" title="method tower_governor::governor::GovernorConfigBuilder::error_handler"><code>GovernorConfigBuilder::error_handler</code></a> method that will turn those errors into a Response. Feel free to provide your own error handler that takes in <a href="errors/enum.GovernorError.html" title="enum tower_governor::errors::GovernorError"><code>GovernorError</code></a> and returns a <a href="https://docs.rs/http/latest/http/response/struct.Response.html"><code>Response</code></a>.</p>
+<h2 id="common-pitfalls"><a class="doc-anchor" href="#common-pitfalls">§</a>Common pitfalls</h2>
+<ol>
+<li>
+<p>Do not construct the same configuration multiple times, unless explicitly wanted!
+This will create an independent rate limiter for each configuration! Instead pass the same configuration reference into <a href="https://docs.rs/tower_governor/latest/tower_governor/governor/struct.Governor.html#method.new"><code>Governor::new()</code></a>, like it is described in the example.</p>
+</li>
+<li>
+<p>Be careful to create your server with <a href="https://docs.rs/axum/latest/axum/struct.Router.html#method.into_make_service_with_connect_info"><code>.into_make_service_with_connect_info::&lt;SocketAddr&gt;</code></a> instead of <code>.into_make_service()</code> if you are using the default PeerIpKeyExtractor. Otherwise there will be no peer ip address for Tower to find!</p>
+</li>
+</ol>
+</div></details><h2 id="reexports" class="section-header">Re-exports<a href="#reexports" class="anchor">§</a></h2><dl class="item-table reexports"><dt id="reexport.GovernorError"><code>pub use errors::<a class="enum" href="errors/enum.GovernorError.html" title="enum tower_governor::errors::GovernorError">GovernorError</a>;</code></dt></dl><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><dl class="item-table"><dt><a class="mod" href="errors/index.html" title="mod tower_governor::errors">errors</a></dt><dt><a class="mod" href="governor/index.html" title="mod tower_governor::governor">governor</a></dt><dt><a class="mod" href="key_extractor/index.html" title="mod tower_governor::key_extractor">key_<wbr>extractor</a></dt></dl><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.GovernorLayer.html" title="struct tower_governor::GovernorLayer">Governor<wbr>Layer</a></dt><dd>The Layer type that implements tower::Layer and is passed into <code>.layer()</code></dd><dt><a class="struct" href="struct.ResponseFuture.html" title="struct tower_governor::ResponseFuture">Response<wbr>Future</a></dt><dd>Response future for <a href="governor/struct.Governor.html" title="struct tower_governor::governor::Governor"><code>Governor</code></a>.</dd></dl><script type="text/json" id="notable-traits-data">{"<Arc<S> as Service<Request>>::Future":"<h3>Notable traits for <code><a class=\"struct\" href=\"https://doc.rust-lang.org/1.91.1/alloc/sync/struct.Arc.html\" title=\"struct alloc::sync::Arc\">Arc</a>&lt;<a class=\"struct\" href=\"https://doc.rust-lang.org/1.91.1/std/fs/struct.File.html\" title=\"struct std::fs::File\">File</a>&gt;</code></h3><pre><code><div class=\"where\">impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.91.1/std/io/trait.Read.html\" title=\"trait std::io::Read\">Read</a> for <a class=\"struct\" href=\"https://doc.rust-lang.org/1.91.1/alloc/sync/struct.Arc.html\" title=\"struct alloc::sync::Arc\">Arc</a>&lt;<a class=\"struct\" href=\"https://doc.rust-lang.org/1.91.1/std/fs/struct.File.html\" title=\"struct std::fs::File\">File</a>&gt;</div><div class=\"where\">impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.91.1/std/io/trait.Write.html\" title=\"trait std::io::Write\">Write</a> for <a class=\"struct\" href=\"https://doc.rust-lang.org/1.91.1/alloc/sync/struct.Arc.html\" title=\"struct alloc::sync::Arc\">Arc</a>&lt;<a class=\"struct\" href=\"https://doc.rust-lang.org/1.91.1/std/fs/struct.File.html\" title=\"struct std::fs::File\">File</a>&gt;</div>"}</script></section></div></main></body></html>

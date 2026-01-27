@@ -8,7 +8,7 @@
 # - Test User
 #
 # Verwendung:
-#   ./scripts/setup/setup-zitadel.sh
+#   ./scripts/infra/setup-zitadel.sh
 #
 # ============================================================================
 set -e
@@ -25,7 +25,11 @@ PLATFORM_URL="${PLATFORM_URL%/}"  # Entferne trailing slash
 DOCS_URL="${DOCS_URL:-${PROXY_URL}/docs}"
 DOCS_URL="${DOCS_URL%/}"  # Entferne trailing slash
 API_URL="${API_URL:-http://localhost:3000}"
-WORKSPACE_DIR="${WORKSPACE_DIR:-/workspace}"
+# Workspace-Root ermitteln (funktioniert sowohl im DevContainer als auch auf dem Host)
+# Im DevContainer: /workspace
+# Auf dem Host: Aktuelles Verzeichnis (Projekt-Root)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_DIR="${WORKSPACE_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 DATA_DIR="${WORKSPACE_DIR}/.data"
 CLIENT_ID_FILE="${DATA_DIR}/zitadel-client-id"
 SETUP_COMPLETE="${DATA_DIR}/zitadel-setup-complete"

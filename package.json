@@ -1,0 +1,28 @@
+{
+	"name": "erynoa-monorepo",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Erynoa Monorepo - Console, Platform & Docs",
+	"scripts": {
+		"build": "turbo run build",
+		"check": "turbo run check",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"format": "biome format --write .",
+		"dev": "turbo run dev --parallel",
+		"dev:console": "turbo run dev --filter=console",
+		"dev:platform": "turbo run dev --filter=platform",
+		"dev:docs": "turbo run dev --filter=docs",
+		"install:all": "pnpm install",
+		"clean": "turbo run clean && rm -rf node_modules"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^1.9.0",
+		"turbo": "^2.3.0"
+	},
+	"packageManager": "pnpm@9.15.0",
+	"engines": {
+		"node": ">=20.0.0",
+		"pnpm": ">=9.0.0"
+	}
+}

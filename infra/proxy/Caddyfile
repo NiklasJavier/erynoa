@@ -1,0 +1,98 @@
+# Caddy Reverse Proxy für Erynoa
+# Port 3001 - Einheitlicher Einstiegspunkt für alle Frontends
+# ⚡ HTTP/3 (QUIC) aktiviert für bessere Mobile Performance
+
+# Global Options für Development
+{
+    # Lokale selbst-signierte Zertifikate für HTTPS/HTTP/3 im Dev-Modus
+    local_certs
+    # HTTP/3 explizit aktivieren
+    servers {
+        protocols h1 h2 h3
+    }
+}
+
+:3001 {
+    # ⚡ PRODUCTION HARDENING: Security Headers
+    header {
+        # HTTPS erzwingen (1 Jahr)
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        # Verhindert MIME-Type Sniffing
+        X-Content-Type-Options "nosniff"
+        # Verhindert Clickjacking
+        X-Frame-Options "DENY"
+        # XSS-Schutz (für ältere Browser)
+        X-XSS-Protection "1; mode=block"
+        # Referrer Policy
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Permissions Policy (deaktiviert unnötige Browser-Features)
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+        # Entferne Server-Header (versteckt Caddy-Version)
+        -Server
+    }
+
+    # Console Frontend
+    # Use handle (not handle_path) to preserve the /console prefix
+    # Vite dev server is configured with base: '/console/' so it expects the full path
+    handle /console* {
+        reverse_proxy console:5173 {
+            header_up Host {host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    # Platform Frontend
+    handle /platform* {
+        reverse_proxy platform:5174 {
+            header_up Host {host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    # Docs Frontend
+    handle /docs* {
+        reverse_proxy docs:5175 {
+            header_up Host {host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    # Root - Landing Page (must be last to catch everything else)
+    handle {
+        file_server {
+            root /etc/caddy
+            index landing.html
+        }
+    }
+    
+    # Access-Logging im Dev-Modus deaktiviert, damit die Konsole übersichtlicher bleibt.
+    # Bei Bedarf fürs Debugging wieder aktivieren.
+    #log {
+    #    output stdout
+    #    format json
+    #}
+}
+
+# Legacy Port 80 (für Backward Compatibility)
+:80 {
+    handle {
+        respond "God-Stack - Use port 3001 for frontends, port 3000 for API" 200
+    }
+    
+    # Access-Logging im Dev-Modus deaktiviert, um die Dev-Konsole schlank zu halten.
+    #log {
+    #    output stdout
+    #    format json
+    #}
+}
+
+# Production: Uncomment and configure
+# api.example.com {
+#     reverse_proxy api:3000
+#     encode gzip zstd
+#     header {
+#         Strict-Transport-Security "max-age=31536000"
+#         X-Content-Type-Options nosniff
+#         X-Frame-Options DENY
+#     }
+# }

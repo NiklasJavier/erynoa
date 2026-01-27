@@ -1,0 +1,6 @@
+# pnpm Workspace Configuration
+# Ermöglicht Hardlinking von Dependencies zwischen Frontend-Projekten
+packages:
+  - 'frontend/console'
+  - 'frontend/platform'
+  - 'frontend/docs'
