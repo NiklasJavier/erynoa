@@ -1,133 +1,385 @@
-# 🔧 Service-Konfiguration
+# Erynoa – Service-Konfiguration
 
-**Letzte Aktualisierung**: 2026-01-27
-
-## Zentrale Service-Definitionen
-
-Dieses Dokument definiert die zentralen Service-Namen, Ports und URLs für das gesamte Projekt.
+> **Dokumenttyp:** Referenz
+> **Bereich:** Infrastruktur
+> **Status:** Aktiv
+> **Lesezeit:** ca. 8 Minuten
 
 ---
 
-## 📡 Services
+## Übersicht
 
-### Console (via Caddy Proxy)
-- **Service Name:** `console`
-- **Proxy Port:** `3001`
-- **URL:** `http://localhost:3001/console` (via Caddy Proxy)
-- **Direct Port:** `5173` (nur intern im Container)
-- **Container Name:** `erynoa-services-console-1`
+Zentrale Referenz für **Service-Namen**, **Ports**, **URLs** und **Connection Strings**.
 
-### Platform (via Caddy Proxy)
-- **Service Name:** `platform`
-- **Proxy Port:** `3001`
-- **URL:** `http://localhost:3001/platform` (via Caddy Proxy)
-- **Direct Port:** `5174` (nur intern im Container)
-- **Container Name:** `erynoa-services-platform-1`
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   🔧 KONFIGURATION                                                          │
+│                                                                             │
+│   ┌───────────────────────────────────────────────────────────────────┐    │
+│   │                                                                   │    │
+│   │   📡 Services        🔗 Connections       📁 Config Files         │    │
+│   │   ────────────       ─────────────        ─────────────           │    │
+│   │   Namen & Ports      Dev & Docker         TOML & ENV              │    │
+│   │                                                                   │    │
+│   └───────────────────────────────────────────────────────────────────┘    │
+│                                                                             │
+│   ⚠️ Änderungen hier → docker-compose.yml + backend/config/ anpassen       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-### Docs (via Caddy Proxy)
-- **Service Name:** `docs`
-- **Proxy Port:** `3001`
-- **URL:** `http://localhost:3001/docs` (via Caddy Proxy)
-- **Direct Port:** `5175` (nur intern im Container)
-- **Container Name:** `erynoa-services-docs-1`
+---
 
-### Caddy Reverse Proxy
-- **Service Name:** `caddy`
-- **Port:** `3001`
-- **URL:** `http://localhost:3001` (routet zu Console/Platform/Docs)
-- **Container Name:** `erynoa-services-caddy-1`
+## 📡 Service-Übersicht
 
-### Backend API
-- **Service Name:** `backend`
-- **Port:** `3000`
-- **URL:** `http://localhost:3000`
-- **Container Name:** `erynoa-services-backend-1`
+### Port-Matrix
 
-### Database (PostgreSQL/OrioleDB)
-- **Service Name:** `db`
-- **Port:** `5432`
-- **URL:** `postgresql://localhost:5432`
-- **Docker Internal:** `postgresql://db:5432`
-- **Container Name:** `erynoa-services-db-1`
+| Service             | Extern | Intern | URL (extern)                     |
+| :------------------ | :----: | :----: | :------------------------------- |
+| **Proxy (Caddy)**   |  3001  |  3001  | `http://localhost:3001`          |
+| **Backend**         |  3000  |  3000  | `http://localhost:3000`          |
+| **Console**         |   –    |  5173  | `http://localhost:3001/console`  |
+| **Platform**        |   –    |  5174  | `http://localhost:3001/platform` |
+| **Docs**            |   –    |  5175  | `http://localhost:3001/docs`     |
+| **PostgreSQL**      |  5432  |  5432  | `localhost:5432`                 |
+| **DragonflyDB**     |  6379  |  6379  | `localhost:6379`                 |
+| **MinIO (API)**     |  9000  |  9000  | `http://localhost:9000`          |
+| **MinIO (Console)** |  9001  |  9001  | `http://localhost:9001`          |
+| **ZITADEL**         |  8080  |  8080  | `http://localhost:8080`          |
+| **ZITADEL DB**      |  5433  |  5432  | `localhost:5433`                 |
 
-### Cache (DragonflyDB/Redis)
-- **Service Name:** `cache`
-- **Port:** `6379`
-- **URL:** `redis://localhost:6379`
-- **Docker Internal:** `redis://cache:6379`
-- **Container Name:** `erynoa-services-cache-1`
+> 💡 **Hinweis:** Frontend-Services (Console, Platform, Docs) sind nur via Caddy Proxy erreichbar.
 
-### Storage (MinIO S3)
-- **Service Name:** `minio`
-- **API Port:** `9000`
-- **Console Port:** `9001`
-- **API URL:** `http://localhost:9000`
-- **Console URL:** `http://localhost:9001`
-- **Docker Internal:** `http://minio:9000`
-- **Container Name:** `erynoa-services-minio-1`
+---
 
-### Authentication (ZITADEL)
-- **Service Name:** `zitadel`
-- **Port:** `8080`
-- **URL:** `http://localhost:8080`
-- **Docker Internal:** `http://zitadel:8080`
-- **Container Name:** `erynoa-services-zitadel-1`
+## 🌐 Frontend-Services
 
-### ZITADEL Database
-- **Service Name:** `zitadel-db`
-- **Port:** `5433` (external, mapped from 5432)
-- **Docker Internal:** `postgresql://zitadel-db:5432`
-- **Container Name:** `erynoa-services-zitadel-db-1`
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   🔀 CADDY PROXY (:3001)                                                    │
+│                                                                             │
+│   localhost:3001/console  ──────────▶  Console (:5173)                     │
+│   localhost:3001/platform ──────────▶  Platform (:5174)                    │
+│   localhost:3001/docs     ──────────▶  Docs (:5175)                        │
+│   localhost:3001/api      ──────────▶  Backend (:3000)                     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+<details>
+<summary><strong>📊 Console</strong></summary>
+
+| Eigenschaft  | Wert                            |
+| :----------- | :------------------------------ |
+| Service Name | `console`                       |
+| Direct Port  | `5173` (nur intern)             |
+| Proxy URL    | `http://localhost:3001/console` |
+| Container    | `erynoa-services-console-1`     |
+| Framework    | SvelteKit                       |
+
+</details>
+
+<details>
+<summary><strong>🖥️ Platform</strong></summary>
+
+| Eigenschaft  | Wert                             |
+| :----------- | :------------------------------- |
+| Service Name | `platform`                       |
+| Direct Port  | `5174` (nur intern)              |
+| Proxy URL    | `http://localhost:3001/platform` |
+| Container    | `erynoa-services-platform-1`     |
+| Framework    | SvelteKit                        |
+
+</details>
+
+<details>
+<summary><strong>📖 Docs</strong></summary>
+
+| Eigenschaft  | Wert                         |
+| :----------- | :--------------------------- |
+| Service Name | `docs`                       |
+| Direct Port  | `5175` (nur intern)          |
+| Proxy URL    | `http://localhost:3001/docs` |
+| Container    | `erynoa-services-docs-1`     |
+| Framework    | SvelteKit                    |
+
+</details>
+
+<details>
+<summary><strong>🔀 Caddy Proxy</strong></summary>
+
+| Eigenschaft  | Wert                      |
+| :----------- | :------------------------ |
+| Service Name | `caddy`                   |
+| Port         | `3001`                    |
+| URL          | `http://localhost:3001`   |
+| Container    | `erynoa-services-caddy-1` |
+| Config       | `infra/proxy/Caddyfile`   |
+
+</details>
+
+---
+
+## 🦀 Backend-Service
+
+<details>
+<summary><strong>🦀 Backend API</strong></summary>
+
+| Eigenschaft  | Wert                        |
+| :----------- | :-------------------------- |
+| Service Name | `backend`                   |
+| Port         | `3000`                      |
+| URL          | `http://localhost:3000`     |
+| Container    | `erynoa-services-backend-1` |
+| Framework    | Rust/Axum                   |
+
+</details>
+
+### Config Files
+
+```
+backend/config/
+├── base.toml         Basis-Konfiguration (alle Umgebungen)
+├── local.toml        Lokale Entwicklung
+└── production.toml   Produktions-Overrides
+```
+
+---
+
+## 💾 Datenbank-Services
+
+<details>
+<summary><strong>🐘 PostgreSQL (Haupt-DB)</strong></summary>
+
+| Eigenschaft  | Wert                   |
+| :----------- | :--------------------- |
+| Service Name | `db`                   |
+| Port         | `5432`                 |
+| Engine       | OrioleDB               |
+| Container    | `erynoa-services-db-1` |
+
+**Connection Strings:**
+
+| Umgebung | String                                             |
+| :------- | :------------------------------------------------- |
+| Local    | `postgresql://erynoa:erynoa@localhost:5432/erynoa` |
+| Docker   | `postgresql://erynoa:erynoa@db:5432/erynoa`        |
+
+</details>
+
+<details>
+<summary><strong>🐘 ZITADEL DB</strong></summary>
+
+| Eigenschaft  | Wert                           |
+| :----------- | :----------------------------- |
+| Service Name | `zitadel-db`                   |
+| Extern Port  | `5433`                         |
+| Intern Port  | `5432`                         |
+| Container    | `erynoa-services-zitadel-db-1` |
+
+**Connection Strings:**
+
+| Umgebung | String                         |
+| :------- | :----------------------------- |
+| Local    | `postgresql://localhost:5433`  |
+| Docker   | `postgresql://zitadel-db:5432` |
+
+</details>
+
+<details>
+<summary><strong>⚡ DragonflyDB (Cache)</strong></summary>
+
+| Eigenschaft  | Wert                      |
+| :----------- | :------------------------ |
+| Service Name | `cache`                   |
+| Port         | `6379`                    |
+| Protokoll    | Redis-kompatibel          |
+| Container    | `erynoa-services-cache-1` |
+
+**Connection Strings:**
+
+| Umgebung | String                   |
+| :------- | :----------------------- |
+| Local    | `redis://localhost:6379` |
+| Docker   | `redis://cache:6379`     |
+
+</details>
+
+---
+
+## 📦 Storage & Auth
+
+<details>
+<summary><strong>📦 MinIO (Storage)</strong></summary>
+
+| Eigenschaft  | Wert                      |
+| :----------- | :------------------------ |
+| Service Name | `minio`                   |
+| API Port     | `9000`                    |
+| Console Port | `9001`                    |
+| Protokoll    | S3-kompatibel             |
+| Container    | `erynoa-services-minio-1` |
+
+**URLs:**
+
+| Typ     | Umgebung | URL                     |
+| :------ | :------- | :---------------------- |
+| API     | Local    | `http://localhost:9000` |
+| API     | Docker   | `http://minio:9000`     |
+| Console | Local    | `http://localhost:9001` |
+
+</details>
+
+<details>
+<summary><strong>🔐 ZITADEL (Auth)</strong></summary>
+
+| Eigenschaft  | Wert                        |
+| :----------- | :-------------------------- |
+| Service Name | `zitadel`                   |
+| Port         | `8080`                      |
+| Protokoll    | OIDC/JWT                    |
+| Container    | `erynoa-services-zitadel-1` |
+
+**URLs:**
+
+| Umgebung | URL                     |
+| :------- | :---------------------- |
+| Local    | `http://localhost:8080` |
+| Docker   | `http://zitadel:8080`   |
+
+</details>
 
 ---
 
 ## 🔗 Connection Strings
 
-### Development (Local)
-```bash
-# Database
-postgresql://erynoa:erynoa@localhost:5432/erynoa
+### Schnellreferenz
 
-# Cache
-redis://localhost:6379
-
-# Storage
-http://localhost:9000
-
-# Auth
-http://localhost:8080
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   🔗 CONNECTION STRINGS                                                     │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   DEVELOPMENT (Local)               DOCKER (Internal)              │  │
+│   │   ───────────────────               ─────────────────              │  │
+│   │                                                                     │  │
+│   │   postgresql://erynoa:erynoa        postgresql://erynoa:erynoa     │  │
+│   │     @localhost:5432/erynoa            @db:5432/erynoa              │  │
+│   │                                                                     │  │
+│   │   redis://localhost:6379            redis://cache:6379             │  │
+│   │                                                                     │  │
+│   │   http://localhost:9000             http://minio:9000              │  │
+│   │                                                                     │  │
+│   │   http://localhost:8080             http://zitadel:8080            │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Docker (Internal)
+### Kopiervorlage – Development
+
 ```bash
 # Database
-postgresql://erynoa:erynoa@db:5432/erynoa
+DATABASE_URL="postgresql://erynoa:erynoa@localhost:5432/erynoa"
 
 # Cache
-redis://cache:6379
+REDIS_URL="redis://localhost:6379"
 
 # Storage
-http://minio:9000
+MINIO_ENDPOINT="http://localhost:9000"
+MINIO_ACCESS_KEY="minioadmin"
+MINIO_SECRET_KEY="minioadmin"
 
 # Auth
-http://zitadel:8080
+ZITADEL_URL="http://localhost:8080"
+```
+
+### Kopiervorlage – Docker
+
+```bash
+# Database
+DATABASE_URL="postgresql://erynoa:erynoa@db:5432/erynoa"
+
+# Cache
+REDIS_URL="redis://cache:6379"
+
+# Storage
+MINIO_ENDPOINT="http://minio:9000"
+
+# Auth
+ZITADEL_URL="http://zitadel:8080"
 ```
 
 ---
 
-## 📝 Verwendung
+## 📁 Config-Dateien
 
-Diese Konfiguration sollte als Referenz verwendet werden für:
-- Docker Compose Service-Definitionen
-- Backend-Konfiguration (`base.toml`)
-- Console-Konfiguration
-- Dokumentation
-- Scripts
+| Datei                             | Zweck                          |
+| :-------------------------------- | :----------------------------- |
+| `backend/config/base.toml`        | Basis-Config (alle Umgebungen) |
+| `backend/config/local.toml`       | Lokale Entwicklung             |
+| `backend/config/production.toml`  | Produktion                     |
+| `infra/proxy/Caddyfile`           | Reverse Proxy Routing          |
+| `infra/docker/docker-compose.yml` | Service-Definitionen           |
+| `.env`                            | Secrets (nicht committen!)     |
 
 ---
 
-## ⚠️ Wichtig
+## ⚠️ Wichtige Hinweise
 
-- **Service-Namen** müssen in `docker-compose.yml` und Backend-Config übereinstimmen
-- **Ports** müssen in `docker-compose.yml` und Dokumentation übereinstimmen
-- **URLs** müssen in Console- und Backend-Config übereinstimmen
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   ⚠️ KONSISTENZ-REGELN                                                      │
+│                                                                             │
+│   Bei Änderungen an Service-Namen oder Ports müssen folgende Dateien       │
+│   synchron gehalten werden:                                                 │
+│                                                                             │
+│   1. infra/docker/docker-compose.yml    (Service-Definitionen)             │
+│   2. backend/config/*.toml              (Backend-Konfiguration)            │
+│   3. infra/proxy/Caddyfile              (Routing-Regeln)                   │
+│   4. Diese Dokumentation                (config.md)                        │
+│                                                                             │
+│   ❌ Inkonsistente Konfigurationen führen zu Verbindungsfehlern!           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Checkliste bei Änderungen
+
+- [ ] `docker-compose.yml` Service-Name aktualisiert
+- [ ] `docker-compose.yml` Port-Mapping aktualisiert
+- [ ] `backend/config/*.toml` Connection Strings aktualisiert
+- [ ] `Caddyfile` Routing aktualisiert
+- [ ] `config.md` Dokumentation aktualisiert
+
+---
+
+## 📚 Weiterführende Dokumente
+
+| Dokument                              | Beschreibung            |
+| :------------------------------------ | :---------------------- |
+| [Architecture](architecture.md)       | System-Architektur      |
+| [Connections](connections.md)         | API-Verbindungen        |
+| [Docker Setup](../../setup/docker.md) | Container-Konfiguration |
+| [Dev Setup](../../setup/dev_setup.md) | Entwicklungsumgebung    |
+
+---
+
+<div align="center">
+
+```
+┌───────────────────────────────────────┐
+│                                       │
+│   🔧 Config   →   🐳 Docker   →   🚀  │
+│   TOML/ENV       Compose        Run   │
+│                                       │
+└───────────────────────────────────────┘
+```
+
+</div>
