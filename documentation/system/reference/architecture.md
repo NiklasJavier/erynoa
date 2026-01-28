@@ -3,9 +3,9 @@
 **Technische Architektur-Dokumentation für das Erynoa-Projekt (Plattform-Ebene)**
 
 > 💡 **Hinweis:** Diese Datei beschreibt die **konkrete System- und Plattformarchitektur** (Frontend, Backend, Infrastruktur).  
-> Die **Protokoll- und Konzeptarchitektur** von Erynoa (Triade ERY/ECHO/NOA, liquides Datenmodell, Cybernetic Loop) ist im Verzeichnis `concept/` dokumentiert, insbesondere in:
-> - `concept/kernkonzept.md`
-> - `concept/system-architecture-overview.md`
+> Die **Protokoll- und Konzeptarchitektur** von Erynoa (Triade ERY/ECHO/NOA, liquides Datenmodell, Cybernetic Loop) ist im Verzeichnis `../../concept/` dokumentiert, insbesondere in:
+> - `../../concept/kernkonzept.md`
+> - `../../concept/system-architecture-overview.md`
 
 **Letzte Aktualisierung**: 2026-01-28
 
@@ -361,5 +361,5 @@ Diese Features können bei Bedarf später hinzugefügt werden:
 | [Style Guide](../development/style-guide.md) | Code-Standards                          |
 | [Testing](../development/testing.md)         | Test-Strategien                         |
 | [TODOs](../development/todos.md)             | Offene Aufgaben                         |
-| [Kernkonzept](../concept/kernkonzept.md)     | Protokollidee & Problemraum             |
-| [System Architecture Overview](../concept/system-architecture-overview.md) | Triade ERY/ECHO/NOA & Layer-Modell |
+| [Kernkonzept](../../concept/kernkonzept.md)     | Protokollidee & Problemraum             |
+| [System Architecture Overview](../../concept/system-architecture-overview.md) | Triade ERY/ECHO/NOA & Layer-Modell |

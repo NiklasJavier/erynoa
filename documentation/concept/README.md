@@ -47,10 +47,10 @@
 
 | Konzeptdokument     | Relevante Docs                                             |
 | ------------------- | ---------------------------------------------------------- |
-| System Architecture | [Backend-Architektur](../docs/reference/architecture.md)   |
-| Alle Konzepte       | [Essential Guide](../docs/essential_guide.md)              |
-| Deployment          | [Unified Deployment](../docs/guides/unified-deployment.md) |
-| Erste Schritte      | [Getting Started](../docs/guides/getting-started.md)       |
+| System Architecture | [Backend-Architektur](../system/reference/architecture.md)   |
+| Alle Konzepte       | [Essential Guide](../system/essential_guide.md)              |
+| Deployment          | [Unified Deployment](../system/guides/unified-deployment.md) |
+| Erste Schritte      | [Getting Started](../system/guides/getting-started.md)       |
 
 ---
 

@@ -56,7 +56,7 @@ Das startet alles:
 
 **Status**: Alle High-Priority TODOs abgeschlossen ✅
 
-**Vollständige Liste**: [docs/development/todos.md](development/todos.md)
+**Vollständige Liste**: [development/todos.md](development/todos.md)
 
 ### 🔄 In Arbeit
 - Frontend Tests implementieren
@@ -126,11 +126,11 @@ Die **konzeptionelle Protokollarchitektur** von Erynoa – inklusive:
 - **Liquidem Datenmodell** (Blueprints & AMOs),
 - und **Cybernetic Loop** (Intent → Verhandlung → Exekution → Feedback),
 
-ist im Verzeichnis `concept/` detailliert beschrieben:
+ist im Verzeichnis `../concept/` detailliert beschrieben:
 
-- `concept/kernkonzept.md` – Kernidee & Problemraum
-- `concept/system-architecture-overview.md` – Triade & Layer-Modell
-- `concept/liquides-datenmodell.md` & `concept/trust-and-reputation.md`
+- `../concept/kernkonzept.md` – Kernidee & Problemraum
+- `../concept/system-architecture-overview.md` – Triade & Layer-Modell
+- `../concept/liquides-datenmodell.md` & `../concept/trust-and-reputation.md`
 
 ## 🧠 Workflows & Orchestrierung mit Restate
 
@@ -293,7 +293,7 @@ api/{feature}/
 └── index.ts          # Public API
 ```
 
-**Vollständiger Style Guide**: [docs/development/style-guide.md](development/style-guide.md)
+**Vollständiger Style Guide**: [development/style-guide.md](development/style-guide.md)
 
 ---
 
@@ -315,7 +315,7 @@ cd backend && cargo test
 **Status**: Vorbereitet für zukünftige Implementierung
 **Empfohlene Struktur**: `frontend/console/src/**/__tests__/`
 
-**Vollständiger Testing Guide**: [docs/development/testing.md](development/testing.md)
+**Vollständiger Testing Guide**: [development/testing.md](development/testing.md)
 
 ---
 
@@ -341,7 +341,7 @@ Falls nötig, kann das Setup manuell ausgeführt werden:
 just zitadel-setup
 ```
 
-**Vollständiger Guide**: [docs/guides/zitadel.md](guides/zitadel.md)
+**Vollständiger Guide**: [guides/zitadel.md](guides/zitadel.md)
 
 ---
 
@@ -497,9 +497,9 @@ just logs docs         # Nur Docs
 
 ### Historische Dokumente (Referenz)
 
-- `docs/development/HARMONIZATION_ROADMAP.md` - Harmonisierung (abgeschlossen)
-- `docs/development/PHASE_3_COMPLETE.md` - Phase 3 Status
-- `docs/changelog/*.md` - Changelog Einträge
+- `development/HARMONIZATION_ROADMAP.md` - Harmonisierung (abgeschlossen)
+- `development/PHASE_3_COMPLETE.md` - Phase 3 Status
+- `changelog/*.md` - Changelog Einträge
 
 ---
 

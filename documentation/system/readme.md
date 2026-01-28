@@ -47,11 +47,14 @@ just dev
 ## 🗂 Dokumentationsübersicht
 
 ```
-docs/
-├── 📘 guides/        # Schritt-für-Schritt Anleitungen
-├── ⚙️ setup/         # Setup & Installation
-├── 📗 reference/     # Technische Referenz
-└── 📙 development/   # Development-Standards
+documentation/
+├── concept/          # Protokoll-Konzepte (ERY/ECHO/NOA)
+└── system/           # System-/Plattform-Dokumentation
+    ├── 📘 guides/    # Schritt-für-Schritt Anleitungen
+    ├── ⚙️ setup/     # Setup & Installation
+    ├── 📗 reference/ # Technische Referenz
+    └── 📙 development/ # Development-Standards
+```
 ```
 
 ---

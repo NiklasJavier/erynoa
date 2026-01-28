@@ -1,8 +1,8 @@
 <div align="center">
 
-# Erynoa EU inc
+# Erynoa
 
-**Full-Stack Application mit Rust Backend und SvelteKit Frontends**
+**Kybernetisches Protokoll für die Maschinenökonomie**
 
 [![Rust](https://img.shields.io/badge/Rust-1.75+-orange?style=flat-square&logo=rust)](https://www.rust-lang.org/)
 [![SvelteKit](https://img.shields.io/badge/SvelteKit-2.0-FF3E00?style=flat-square&logo=svelte)](https://kit.svelte.dev/)
@@ -10,39 +10,87 @@
 [![Nix](https://img.shields.io/badge/Nix-Flakes-5277C3?style=flat-square&logo=nixos)](https://nixos.org/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
-[Schnellstart](#-schnellstart) •
-[Dokumentation](docs/readme.md) •
-[Tech Stack](#-tech-stack) •
-[Befehle](#-befehle)
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│   "Ein Protokoll, das Maschinen befähigt, eigenständig zu       │
+│    handeln, zu verhandeln und voneinander zu lernen –           │
+│    mit mathematisch fundiertem Vertrauen."                      │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+[Schnellstart](#-schnellstart) · [Konzept](#-was-ist-erynoa) · [Dokumentation](#-dokumentation) · [Befehle](#-befehle)
 
 </div>
 
 ---
 
+## 🧠 Was ist Erynoa?
+
+Erynoa ist ein **dezentrales Protokoll**, das autonomen Agenten ermöglicht, vertrauensbasierte Transaktionen ohne zentrale Vermittler durchzuführen.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                         DIE DREI SPHÄREN                                    │
+│                                                                             │
+│                              ┌─────────┐                                    │
+│                              │  ECHO   │                                    │
+│                              │ Emergent│  ← Agenten, Verhandlung            │
+│                              │  Swarm  │                                    │
+│                              └────┬────┘                                    │
+│                                   │                                         │
+│               ┌───────────────────┼───────────────────┐                     │
+│               │                   │                   │                     │
+│               ▼                   │                   ▼                     │
+│        ┌─────────────┐            │            ┌─────────────┐              │
+│        │     ERY     │◀───────────┴───────────▶│     NOA     │              │
+│        │  Semantic   │                         │   Causal    │              │
+│        │   Lattice   │                         │   Ledger    │              │
+│        └─────────────┘                         └─────────────┘              │
+│              ↑                                        ↑                     │
+│       Semantik, Trust                         Finalität, Wahrheit           │
+│                                                                             │
+│                        ERY + NOA = ERYNOA                                   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+| Sphäre   | Funktion                   | Technologie           |
+| -------- | -------------------------- | --------------------- |
+| **ERY**  | Semantik, Trust, Discovery | Qdrant, Karmic Engine |
+| **ECHO** | Agenten, Verhandlung, P2P  | WASM, libp2p, XMTP    |
+| **NOA**  | Finalität, Settlement      | MoveVM, Starfish BFT  |
+
+> 📖 **Mehr erfahren:** [Fachkonzept](documentation/concept/fachkonzept.md) · [Kernkonzept](documentation/concept/kernkonzept.md)
+
+---
+
 ## ⚡ Schnellstart
 
-> **Voraussetzungen:** [Nix](https://nixos.org/) und [Docker Desktop](https://www.docker.com/products/docker-desktop/) installiert
+> **Voraussetzungen:** [Nix](https://nixos.org/) und [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 >
-> → Detaillierte Installationsanleitung: [Setup Guide](docs/setup/setup.md)
+> 📖 **Detaillierte Anleitung:** [Setup Guide](documentation/system/setup/setup.md)
 
 ```bash
 # 1. Repository klonen
 git clone git@github.com:NiklasJavier/erynoa.git && cd erynoa
 
-# 2. Nix Dev-Shell betreten (lädt alle Tools automatisch)
+# 2. Nix Dev-Shell betreten
 nix develop
 
 # 3. Projekt starten
 just dev
 ```
 
-**Warte ~2 Minuten** ⏳ → Dann öffne **<http://localhost:3001>**
+**Warte ~2 Minuten** ⏳ → Öffne **<http://localhost:3001>**
 
 <details>
 <summary><strong>🔗 Alle URLs & Test-Login</strong></summary>
 
-| Service                 | URL                            |
-| ----------------------- | ------------------------------ |
+| Service                 | URL                              |
+| ----------------------- | -------------------------------- |
 | **Hauptzugang (Proxy)** | <http://localhost:3001>          |
 | Console                 | <http://localhost:3001/console>  |
 | Platform                | <http://localhost:3001/platform> |
@@ -58,6 +106,62 @@ just dev
 - Admin: `zitadel-admin` / `Password1!`
 
 </details>
+
+---
+
+## 📖 Dokumentation
+
+Die Dokumentation ist in zwei Bereiche unterteilt:
+
+```
+documentation/
+├── concept/          # 🧠 Protokoll & Konzept
+│   ├── fachkonzept.md           # ⭐ Master-Dokument (Start hier)
+│   ├── kernkonzept.md           # High-Level Überblick
+│   ├── system-architecture-overview.md
+│   ├── liquides-datenmodell.md
+│   ├── trust-and-reputation.md
+│   ├── cybernetic-loop.md
+│   ├── agents-and-adl.md
+│   ├── use-cases.md
+│   └── glossary.md
+│
+└── system/           # 🛠️ Plattform & Entwicklung
+    ├── readme.md                # System-Übersicht
+    ├── essential_guide.md       # Alles auf einen Blick
+    ├── guides/                  # Getting Started, ZITADEL
+    ├── setup/                   # Entwicklungsumgebung
+    ├── reference/               # Architektur, Config
+    └── development/             # Style Guide, Testing, TODOs
+```
+
+### 🧠 Konzept-Dokumentation
+
+| Dokument                                                                   | Beschreibung                                     |
+| -------------------------------------------------------------------------- | ------------------------------------------------ |
+| **[📋 Fachkonzept](documentation/concept/fachkonzept.md)**                 | **⭐ Hier starten** – Vollständige Spezifikation |
+| [Kernkonzept](documentation/concept/kernkonzept.md)                        | Kompakter High-Level-Überblick                   |
+| [Systemarchitektur](documentation/concept/system-architecture-overview.md) | Technische Architektur-Details                   |
+| [Liquides Datenmodell](documentation/concept/liquides-datenmodell.md)      | Blueprints, AMOs, Fluid Extensions               |
+| [Trust & Reputation](documentation/concept/trust-and-reputation.md)        | Karmic Engine, Trust Vectors                     |
+| [Cybernetic Loop](documentation/concept/cybernetic-loop.md)                | Der 6-Phasen-Workflow                            |
+| [Agents & ADL](documentation/concept/agents-and-adl.md)                    | Agentenmodell und Intent-Sprache                 |
+| [Use Cases](documentation/concept/use-cases.md)                            | EV-Charging, Industrie, Prosumer                 |
+| [Glossar](documentation/concept/glossary.md)                               | Begriffsdefinitionen                             |
+
+### 🛠️ System-Dokumentation
+
+| Dokument                                                          | Beschreibung                    |
+| ----------------------------------------------------------------- | ------------------------------- |
+| **[📚 Übersicht](documentation/system/readme.md)**                | Plattform-Dokumentation         |
+| [Essential Guide](documentation/system/essential_guide.md)        | Alles Wichtige auf einen Blick  |
+| [Getting Started](documentation/system/guides/getting-started.md) | Erste Schritte                  |
+| [Setup](documentation/system/setup/setup.md)                      | Entwicklungsumgebung einrichten |
+| [Architecture](documentation/system/reference/architecture.md)    | System-Architektur              |
+| [Configuration](documentation/system/reference/config.md)         | Service-Konfiguration           |
+| [Style Guide](documentation/system/development/style-guide.md)    | Code-Stil                       |
+| [Testing](documentation/system/development/testing.md)            | Test-Strategien                 |
+| [TODOs](documentation/system/development/todos.md)                | Offene Aufgaben                 |
 
 ---
 
@@ -124,13 +228,16 @@ erynoa/
 │   ├── platform/         # Main Platform
 │   └── docs/             # Documentation Site
 │
+├── documentation/        # 📖 Dokumentation
+│   ├── concept/          # 🧠 Protokoll & Konzept
+│   └── system/           # 🛠️ Plattform & Entwicklung
+│
 ├── infra/                # 🏗 Infrastructure
 │   ├── docker/           # Docker Compose & Dockerfiles
 │   ├── proxy/            # Caddy Reverse Proxy
 │   ├── auth/             # ZITADEL Config
 │   └── static/           # Static Files
 │
-├── docs/                 # 📚 Dokumentation
 ├── scripts/              # 🔧 Build & Dev Scripts
 │
 ├── flake.nix             # Nix Dev Environment
@@ -185,45 +292,9 @@ just --list
 
 ---
 
-## 📖 Dokumentation
-
-| Dokument                                          | Beschreibung                               |
-| ------------------------------------------------- | ------------------------------------------ |
-| **[📚 Docs Overview](docs/readme.md)**            | Plattform-Dokumentations-Übersicht         |
-| **[⚡ Essential Guide](docs/essential_guide.md)** | Alles Wichtige auf einen Blick (Plattform) |
-| **[🧠 Kernkonzept](concept/kernkonzept.md)**      | Protokollidee, Problemraum & Triade        |
-| **[🧭 Concept Navigation](concept/navigation.md)** | Einstieg in alle Protokoll-/Konzept-Dokus |
-
-### Guides
-
-| Guide                                             | Beschreibung                    |
-| ------------------------------------------------- | ------------------------------- |
-| [Getting Started](docs/guides/getting-started.md) | Erste Schritte                  |
-| [Setup](docs/setup/setup.md)                      | Entwicklungsumgebung einrichten |
-| [ZITADEL](docs/guides/zitadel.md)                 | Authentifizierung               |
-
-### Reference
-
-| Dokument                                       | Beschreibung                        |
-| ---------------------------------------------- | ----------------------------------- |
-| [Architecture](docs/reference/architecture.md) | System-/Plattformarchitektur        |
-| [Configuration](docs/reference/config.md)      | Service-Konfiguration               |
-| [Connections](docs/reference/connections.md)   | API-Verbindungen                    |
-| [System Architecture Overview](concept/system-architecture-overview.md) | Protokoll-Triade & Layer-Modell |
-
-### Development
-
-| Dokument                                       | Beschreibung    |
-| ---------------------------------------------- | --------------- |
-| [Style Guide](docs/development/style-guide.md) | Code-Stil       |
-| [Testing](docs/development/testing.md)         | Test-Strategien |
-| [TODOs](docs/development/todos.md)             | Offene Aufgaben |
-
----
-
 ## 📊 Status
 
-### ✅ Features
+### ✅ Implementiert
 
 - ✅ Connect-RPC API (Protobuf)
 - ✅ Monorepo mit pnpm & Turborepo
@@ -237,15 +308,15 @@ just --list
 ### 🔄 In Arbeit
 
 - Frontend Tests
-- Siehe [TODOs](docs/development/todos.md)
+- Weitere Details: [TODOs](documentation/system/development/todos.md)
 
 ---
 
 ## 🤝 Contributing
 
-1. Prüfe [TODOs](docs/development/todos.md) für offene Aufgaben
-2. Folge dem [Style Guide](docs/development/style-guide.md)
-3. Schreibe Tests ([Testing Guide](docs/development/testing.md))
+1. Prüfe [TODOs](documentation/system/development/todos.md) für offene Aufgaben
+2. Folge dem [Style Guide](documentation/system/development/style-guide.md)
+3. Schreibe Tests ([Testing Guide](documentation/system/development/testing.md))
 
 ---
 
@@ -253,15 +324,25 @@ just --list
 
 Bei Problemen:
 
-1. [Essential Guide](docs/essential_guide.md) - Troubleshooting
-2. [TODOs](docs/development/todos.md) - Bekannte Issues
-3. [Connections](docs/reference/connections.md) - Service-Probleme
+1. [Essential Guide](documentation/system/essential_guide.md) – Troubleshooting
+2. [TODOs](documentation/system/development/todos.md) – Bekannte Issues
+3. [Connections](documentation/system/reference/connections.md) – Service-Probleme
 
 ---
 
 <div align="center">
 
 **[MIT License](LICENSE)**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│          ERY + NOA = ERYNOA                            │
+│     Semantic Lattice + Causal Ledger                    │
+│          Wissen + Wahrheit = Vertrauen                  │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
 
 Made with ❤️ and 🦀
 

@@ -463,4 +463,4 @@ module credential {
 | [Liquides Datenmodell](./liquides-datenmodell.md)        | Blueprints, AMOs, Fluid Extensions |
 | [Trust & Reputation](./trust-and-reputation.md)          | Karmic Engine, Trust Vectors       |
 | [Agents & ADL](./agents-and-adl.md)                      | Agentenmodell, ADL-Syntax          |
-| [Backend-Architektur](../docs/reference/architecture.md) | Implementierungsdetails            |
+| [Backend-Architektur](../system/reference/architecture.md) | Implementierungsdetails            |

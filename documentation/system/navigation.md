@@ -11,42 +11,28 @@ Diese Datei bietet eine Übersicht über die gesamte Dokumentationsstruktur und 
 ## 📚 Dokumentationsstruktur
 
 ```
-docs/
-├── readme.md                    # Hauptübersicht
-├── essential_guide.md           # Konsolidierter Guide (alles Wichtige)
-├── navigation.md                # Diese Datei
-├── documentation_status.md      # Dokumentations-Status & Übersicht
+documentation/
+├── concept/                     # Protokoll-Konzepte (ERY/ECHO/NOA, etc.)
+│   ├── README.md                # Concept Navigation
+│   ├── kernkonzept.md           # Kernkonzept
+│   ├── system-architecture-overview.md
+│   └── ...
 │
-├── guides/                      # Schritt-für-Schritt Anleitungen
-│   ├── getting-started.md       # Schnellstart für neue Entwickler
-│   ├── setup.md                 # Setup-Übersicht (verweist auf setup/)
-│   ├── zitadel.md               # ZITADEL Authentifizierung (automatisch)
-│   └── unified-deployment.md    # Single Binary Deployment (Backend + Frontends)
-│
-├── setup/                       # Setup-Anleitungen
-│   ├── setup.md                 # Vollständige macOS Setup-Anleitung
-│   ├── dev_setup.md             # Container-in-Container Entwicklung
-│   └── docker.md                # Docker Development Setup
-│
-├── reference/                   # Technische Referenz
-│   ├── architecture.md          # Systemarchitektur & Design-Entscheidungen
-│   ├── platform-architecture.md # 🆕 Gesamtarchitektur & Roadmap (mit Diagrammen)
-│   ├── config.md                # Service-Konfiguration & Verbindungen
-│   └── connections.md          # API-Verbindungen & Harmonisierung
-│
-├── development/                 # Development-spezifisch
-│   ├── style-guide.md           # Code-Stil & Best Practices
-│   ├── testing.md               # Test-Strategien & Tools (cargo-nextest)
-│   ├── todos.md                 # Offene Aufgaben & Prioritäten
-│   ├── rest_deprecation_plan.md # Plan zur REST-API Entfernung
-│   └── folder_structure_analysis.md # Folder Structure Analysis & Optimization
-│
-└── archive/                     # Historische Dokumentation
-    └── structure_improvements.md # Strukturverbesserungen (2026-01-25, archiviert)
+└── system/                      # System-/Plattform-Dokumentation
+    ├── readme.md                # Hauptübersicht
+    ├── essential_guide.md       # Konsolidierter Guide (alles Wichtige)
+    ├── navigation.md            # Diese Datei
+    ├── documentation_status.md # Dokumentations-Status & Übersicht
+    │
+    ├── guides/                  # Schritt-für-Schritt Anleitungen
+    ├── setup/                   # Setup-Anleitungen
+    ├── reference/               # Technische Referenz
+    ├── development/             # Development-spezifisch
+    └── archive/                 # Historische Dokumentation
 ```
 
-> 💡 **Hinweis:** Höher-level **Konzept- und Protokoll-Dokumente** (Erynoa Triade, liquides Datenmodell, Cybernetic Loop etc.) befinden sich im Verzeichnis `concept/`.  
-> Einstieg: `concept/navigation.md`.
+> 💡 **Hinweis:** Höher-level **Konzept- und Protokoll-Dokumente** (Erynoa Triade, liquides Datenmodell, Cybernetic Loop etc.) befinden sich im Verzeichnis `../concept/`.  
+> Einstieg: `../concept/README.md`.
 
 ---
 
@@ -90,7 +76,7 @@ docs/
 ### 🧠 Für Konzept/Protokoll-Interessierte
 
 - **[Kernkonzept](../concept/kernkonzept.md)** – Problemraum, Triade, Cybernetic Loop
-- **[Concept Navigation](../concept/navigation.md)** – Übersicht über alle Protokoll- und Architekturkonzepte
+- **[Concept README](../concept/README.md)** – Übersicht über alle Protokoll- und Architekturkonzepte
 
 ---
 
@@ -149,7 +135,7 @@ docs/
 
 ### "Wie funktioniert das Erynoa-Protokoll konzeptionell?"
 
-→ **[Kernkonzept](../concept/kernkonzept.md)** und **[Concept Navigation](../concept/navigation.md)**
+→ **[Kernkonzept](../concept/kernkonzept.md)** und **[Concept README](../concept/README.md)**
 
 ### "Welche Ports werden verwendet?"
 
