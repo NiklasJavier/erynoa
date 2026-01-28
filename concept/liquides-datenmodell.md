@@ -1,208 +1,510 @@
 # Erynoa – Liquides Datenmodell
 
-> **Zielgruppe:** Protokoll- und Datenarchitekt:innen, Research/Domain-Expert:innen
-> **Kontext:** Tiefes Verständnis des Objekt- und Datenmodells
-> **Verwandte Dokumente:** [Trust & Reputation](./trust-and-reputation.md), [Kernkonzept](./kernkonzept.md), [Glossar](./glossary.md)
+> **Zielgruppe:** Protokoll- und Datenarchitekt:innen, Domain-Expert:innen
+> **Lesezeit:** ca. 10 Minuten
+> **Voraussetzung:** [Kernkonzept](./kernkonzept.md) gelesen
+> **Verwandte Dokumente:** [Trust & Reputation](./trust-and-reputation.md) · [Glossar](./glossary.md)
 
 ---
 
-## 1. Motivation
+## Das Konzept auf einen Blick
 
-Klassische Distributed-Ledger-Systeme modellieren digitale Güter häufig als starre Datenstrukturen:
+Das **Liquide Datenmodell** trennt _was etwas bedeutet_ von _was konkret existiert_:
 
-- Ein „Asset" ist ein festes Datenobjekt mit wenigen, hart codierten Attributen.
-- Kontext (rechtlich, physikalisch, normativ) liegt außerhalb des Ledgers in Dokumenten, Verträgen oder proprietären Systemen.
-- Änderungen in Domänen (z. B. neue Normen, regulatorische Anforderungen) erzwingen oft Protokoll- oder Smart-Contract-Migrationen.
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   📐 DEFINITION (ERY)              →        📦 INSTANZ (NOA)                │
+│   ─────────────────────                     ────────────────                │
+│                                                                             │
+│   "Wie soll eine Ladesäule         →        "Diese konkrete Ladesäule       │
+│    beschaffen sein?"                         in München, Betreiber X"       │
+│                                                                             │
+│   ┌─────────────────┐              →        ┌─────────────────┐             │
+│   │    Blueprint    │                       │      AMO        │             │
+│   │   (Schablone)   │                       │   (Objekt)      │             │
+│   └─────────────────┘                       └─────────────────┘             │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-Das **Liquide Datenmodell** von Erynoa trennt konsequent:
-
-- **semantische Definitionen** (Blueprints, Normen, Regeln) und
-- **exekutive Instanzen** (Atomic Market Objects, AMOs),
-
-um eine anpassungsfähige, normbasierte und skalierbare Maschinenökonomie zu ermöglichen.
-
----
-
-## 2. Architektonische Basis: Erynoa Object Standard (EOS)
-
-Der **Erynoa Object Standard (EOS)** definiert, wie Objekte in Erynoa beschrieben, validiert und ausgeführt werden.
-
-Er unterscheidet drei Ebenen:
-
-1. **Normative Standards (Evolutionary Blueprints)**
-2. **Domain Blueprints**
-3. **Atomic Market Objects (AMOs)**
-
-Während die ersten beiden Ebenen in **ERY** (Semantic Lattice) verankert sind, manifestieren sich AMOs auf **NOA** (Causal Ledger).
+**Warum „liquide"?** Weil sich Definitionen weiterentwickeln können, ohne dass bestehende Objekte kaputt gehen.
 
 ---
 
-## 3. Normative Standards als „Evolutionary Blueprints"
+## Das Problem mit klassischen Blockchains
 
-**Normative Standards** bilden die stabile Grundlage des Liquiden Datenmodells.
+| Problem                         | Konsequenz                       |
+| ------------------------------- | -------------------------------- |
+| Assets sind starre Datenobjekte | Keine semantische Bedeutung      |
+| Kontext liegt außerhalb         | Normen, Regeln nur in PDFs       |
+| Änderungen = Migration          | Neue Norm → neuer Smart Contract |
+| Alles wird gespeichert          | State Bloat, Skalierungsprobleme |
 
-**Beispiele:**
-
-- **ISO 19112** – Geo-Kontexte
-- **eCl@ss** – technische Merkmale und Produktklassifikation
-- weitere Industrie- und Regulierungsstandards
-
-**Drei Funktionen:**
-
-- **Ontologische Verankerung**
-  Ein Standard definiert, _was_ ein Objekt oder eine Eigenschaft in einer Domäne bedeutet.
-  Beispiel: Was ist eine Ladesäule, welche Parameter sind relevant, wie werden sie gemessen?
-
-- **Normative Referenz**
-  Standards dienen als Referenz für Compliance und Zertifizierung.
-  Agenten können prüfen, ob Objekte einem Standard entsprechen, ohne dessen Inhalt „raten" zu müssen.
-
-- **Vertrauensanker**
-  Normative Standards tragen einen eigenen Vertrauenswert.
-  Über die Karmic Engine propagiert sich dieses Vertrauen fraktal auf alle abgeleiteten Blueprints und AMOs.
-
-**Evolutionäres Verhalten:**
-
-- Der Kern eines Standards bleibt **immutabel**, um Referenzstabilität zu gewährleisten.
-- Gleichzeitig erlaubt Erynoa eine **kontrollierte Evolution:**
-  - Neue Versionen eines Standards können eingeführt werden.
-  - Governance-Mechanismen definieren, wann und wie Agenten auf neue Normversionen migrieren.
-
-Damit wird ein Spannungsfeld aufgelöst:
-
-- Stabil genug für Rechtssicherheit.
-- Flexibel genug für technologische und regulatorische Weiterentwicklung.
+**Erynoa löst das** durch konsequente Trennung von Definition und Instanz.
 
 ---
 
-## 4. Domain Blueprints – Spezialisierte Objektdefinitionen
+## Die drei Ebenen des Datenmodells
 
-Auf Basis normativer Standards werden **Domain Blueprints** definiert.
-
-**Aufgabe der Domain Blueprints:**
-
-- Operationalisieren Normen für konkrete Anwendungsdomänen (z. B. Industriebatterien, Energie-Assets, Mobilitätsservices, Zertifikate).
-- Definieren:
-  - relevante Attribute (z. B. Kapazität, Effizienz, Standort)
-  - zulässige Wertebereiche
-  - Validierungslogik in Form von **MoveScripts**
-
-**Beispiele:**
-
-- **Blueprint „EV-Charging-Station"**
-  Basiert auf ISO- und eCl@ss-Standards für Energie- und Infrastruktur.
-  Definiert technische Parameter wie Ladeleistung, Steckertyp, Spannungsbereich.
-  Enthält Policies zur Abrechnung, Verfügbarkeit, Sicherheitsanforderungen.
-
-- **Blueprint „KYC-Credential"**
-  Basiert auf regulatorischen Anforderungen (z. B. AML/KYC-Richtlinien).
-  Definiert, welche Attribute ein Credential haben muss und wie es verifiziert wird.
-
-**Technische Verankerung:**
-
-- Domain Blueprints werden als Einträge im **Static Knowledge Layer** des Semantic Index (Qdrant) gespeichert.
-- Sie verlinken:
-  - auf ihre normativen Wurzeln (Evolutionary Blueprints)
-  - auf die dazugehörigen **MoveScripts** in NOA
-
----
-
-## 5. Atomic Market Objects (AMOs) – Exekutive Ebene in NOA
-
-In **NOA** materialisieren sich die abstrakten Definitionen aus ERY als **Atomic Market Objects (AMOs)**.
-
-**Allgemeine Eigenschaften von AMOs:**
-
-- Ein AMO ist ein digitaler Container, dessen Verhalten durch den referenzierten Blueprint und die zugrunde liegende **MoveVM** bestimmt wird.
-- Jede Zustandsänderung eines AMOs unterliegt:
-  - den **Logic Guards** des zugehörigen Blueprints
-  - den globalen Invarianten von NOA (Resource Safety)
-
-**Drei fundamentale Archetypen:**
-
-1. **Material AMOs (Physische Güter)**
-   Modellieren Real World Assets und IoT-Hardware.
-   - **Transferierbar** über Atomic Settlement
-   - Abbildbarkeit physischer Knappheit (ein Asset kann nicht an zwei Stellen gleichzeitig genutzt werden)
-   - Beispiele: Ladesäulen, Sensoren, Speicheranlagen, Maschinen
-
-2. **Credential AMOs (Immaterielle Nachweise)**
-   Modellieren Nachweise, Zertifikate, Qualifikationen.
-   - **Soulbound** – untrennbar mit einer DID verknüpft
-   - Nicht transferierbar, nur **verifizierbar** (Verifiable Presentations)
-   - Beispiele: KYC-/AML-Nachweise, Sicherheitszertifikate, Wartungszertifikate
-
-3. **Service AMOs (Zeitgebundene Verträge)**
-   Modellieren laufende Dienstleistungen und Flüsse.
-   - **Flüchtig** – existieren nur für die Dauer der Dienstleistung
-   - Unterstützen **Continuous Value Streaming** (z. B. sekundenbasierte Bezahlung von Energie, Rechenleistung, Datenstreams)
-   - Beispiele: Ladevorgang, Energieliefervertrag in Echtzeit, API-Nutzung pro Anfrage
-
-Diese Archetypen können kombiniert und erweitert werden, um komplexe Wertschöpfungsketten abzubilden.
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                        ERY (Semantic Lattice)                               │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   EBENE 1: Normative Standards                                      │  │
+│   │   ════════════════════════════                                      │  │
+│   │   ISO 19112 · eCl@ss · AML/KYC · Industrienormen                   │  │
+│   │                                                                     │  │
+│   │                          ▼                                          │  │
+│   │                                                                     │  │
+│   │   EBENE 2: Domain Blueprints                                        │  │
+│   │   ══════════════════════════                                        │  │
+│   │   EV-Charging-Station · KYC-Credential · Energy-Asset              │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│                               ▼                                             │
+│                                                                             │
+│                        NOA (Causal Ledger)                                  │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   EBENE 3: Atomic Market Objects (AMOs)                             │  │
+│   │   ═════════════════════════════════════                             │  │
+│   │   Ladesäule-München-001 · KYC-Max-Mustermann · Ladevorgang-47291   │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 6. Fluid Extensions – Umgang mit flüchtigen Daten
+## Ebene 1: Normative Standards
 
-Ein zentrales Problem klassischer Ledgers:
+> _Die stabilen Fundamente_
 
-- Dynamische Zustände (z. B. Sensordaten, Geo-Positionen) werden dauerhaft gespeichert.
-- Die Kette wächst unkontrolliert („State Bloat"), ohne dass der Großteil der Daten langfristig relevant ist.
+### Was sind Normative Standards?
 
-Erynoa führt hierfür **Fluid Extensions** ein.
+Etablierte Industrie- und Regulierungsstandards, die als **Evolutionary Blueprints** in ERY verankert werden.
 
-**Fluid Extensions:**
+| Standard      | Domäne      | Beispiel                                   |
+| ------------- | ----------- | ------------------------------------------ |
+| **ISO 19112** | Geografie   | Geo-Kontexte, Koordinatensysteme           |
+| **eCl@ss**    | Industrie   | Produktklassifikation, technische Merkmale |
+| **AML/KYC**   | Finanzen    | Identitätsprüfung, Geldwäscheprävention    |
+| **OCPP**      | E-Mobilität | Ladestationen-Protokoll                    |
 
-- Temporäre Erweiterungen eines AMOs um flüchtige Attribute
-- Beispiele:
-  - aktuelle Standortkoordinate einer Ladesäule
-  - momentane Auslastung
-  - kurzfristige Preissignale oder Messwerte
+### Drei Funktionen
 
-**Time-To-Live (TTL):**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Normative Standards                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   1️⃣ Ontologische Verankerung                                   │
+│      "Was IST eine Ladesäule?"                                  │
+│      → Definition, Parameter, Messverfahren                     │
+│                                                                 │
+│   2️⃣ Normative Referenz                                         │
+│      "Entspricht dieses Objekt dem Standard?"                   │
+│      → Compliance, Zertifizierung, Audit                        │
+│                                                                 │
+│   3️⃣ Vertrauensanker                                            │
+│      "Wie vertrauenswürdig ist dieser Standard?"                │
+│      → Trust propagiert zu allen abgeleiteten Objekten          │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-- Jede Fluid Extension besitzt ein **TTL-Attribut**.
-- Nach Ablauf der TTL:
-  - verfällt die Erweiterung automatisch
-  - wird aus dem Semantic Index entfernt
-  - ohne dass zusätzliche On-Chain-Transaktionen nötig sind
+### Evolution ohne Bruch
 
-**Effekte:**
-
-- Der Ledger wird von kurzlebigen Daten entkoppelt.
-- ERY kann Milliarden von Objekten und Attributen verwalten, ohne unkontrolliert zu wachsen.
-- Agenten erhalten trotzdem Zugriff auf hochaktuelle Informationen.
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│   ISO 19112 v1.0                    ISO 19112 v2.0              │
+│   ══════════════                    ══════════════              │
+│   (immutabel)         ───────▶      (immutabel)                 │
+│        │                                  │                     │
+│        │              Migration           │                     │
+│        ▼              Governance          ▼                     │
+│   ┌─────────┐         ─────────▶    ┌─────────┐                │
+│   │Blueprint│                       │Blueprint│                 │
+│   │  v1.x   │                       │  v2.x   │                 │
+│   └─────────┘                       └─────────┘                 │
+│                                                                 │
+│   Stabil genug für Rechtssicherheit                             │
+│   Flexibel genug für Weiterentwicklung                          │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 7. Liquide Ontologie: Kombination aus Stabilität und Dynamik
+## Ebene 2: Domain Blueprints
 
-Das Liquide Datenmodell vereint:
+> _Die anwendungsspezifischen Schablonen_
 
-- **Stabile, normative Schichten:**
-  - Normative Standards als Evolutionary Blueprints
-  - Domain Blueprints als domänenspezifische Spezialisierung
+### Was sind Domain Blueprints?
 
-- **Dynamische, exekutive Schichten:**
-  - AMOs auf NOA als ausführbare Container
-  - Fluid Extensions und Trust-Daten in ERY
+Konkrete Objektdefinitionen für eine Anwendungsdomäne, die auf Normativen Standards basieren.
 
-Dadurch wird der Ledger nicht nur eine Historie von Transaktionen, sondern eine **kontextbewusste Exekutivinstanz**, die:
+### Aufbau eines Blueprints
 
-- Normen respektiert,
-- Domänenwissen einbettet,
-- und sich gleichzeitig an die Realität der Maschinenökonomie anpasst.
+```yaml
+# Beispiel: Blueprint für EV-Charging-Station
+blueprint:
+  id: "erynoa:blueprint:ev-charging-station:v1.2"
+  name: "EV Charging Station"
+
+  # Normative Wurzeln
+  based_on:
+    - "iso:19112:2019" # Geo-Kontext
+    - "eclass:27-27-90-01" # Ladestationen
+    - "ocpp:2.0.1" # Kommunikationsprotokoll
+
+  # Attribute mit Validierung
+  attributes:
+    power_output:
+      type: number
+      unit: kW
+      min: 3.7
+      max: 350
+      required: true
+
+    connector_type:
+      type: enum
+      values: [Type2, CCS, CHAdeMO, Tesla]
+      required: true
+
+    location:
+      type: geo
+      format: geohash
+      precision: 8
+      required: true
+
+    operator:
+      type: did
+      required: true
+      trust_min: 0.7 # Trust-Gating auf Blueprint-Ebene
+
+  # Validierungslogik (referenziert MoveScript)
+  logic_guard: "0x1::ev_charging::validate"
+
+  # Erlaubte AMO-Typen
+  amo_types: [material, service]
+```
+
+### Beispiele für Domain Blueprints
+
+| Blueprint               | Basiert auf         | Definiert                                   |
+| ----------------------- | ------------------- | ------------------------------------------- |
+| **EV-Charging-Station** | ISO, eCl@ss, OCPP   | Ladeleistung, Steckertyp, Standort          |
+| **KYC-Credential**      | AML/KYC-Richtlinien | Identitätsattribute, Verifizierungsmethoden |
+| **Energy-Certificate**  | Herkunftsnachweise  | Energiequelle, Zeitraum, Menge              |
+| **Maintenance-Record**  | DIN, ISO            | Wartungstyp, Intervalle, Zertifizierer      |
+
+### Speicherung in ERY
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Semantic Index (Qdrant)                     │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Static Knowledge Layer                                        │
+│   ══════════════════════                                        │
+│                                                                 │
+│   ┌──────────────┐    ┌──────────────┐    ┌──────────────┐     │
+│   │  Blueprint   │    │  Blueprint   │    │  Blueprint   │     │
+│   │  EV-Station  │───▶│  Normative   │───▶│  MoveScript  │     │
+│   │              │    │  Standards   │    │  Reference   │     │
+│   └──────────────┘    └──────────────┘    └──────────────┘     │
+│         │                                                       │
+│         │ Vektor-Embedding                                      │
+│         ▼                                                       │
+│   Semantische Suche: "Finde Blueprints für Ladeinfrastruktur"   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 8. Fazit
+## Ebene 3: Atomic Market Objects (AMOs)
 
-In Kombination mit dem **Trust- und Reputationsmodell** (Karmic Engine, Trust Vectors) entsteht eine Ontologie, in der Objekte nicht nur „existieren", sondern mit **Bedeutung**, **Qualität** und **Vertrauen** verknüpft sind.
+> _Die konkreten Instanzen auf dem Ledger_
+
+### Was sind AMOs?
+
+Digitale Container auf NOA, deren Verhalten durch ihren Blueprint und die MoveVM bestimmt wird.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                            AMO                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   ┌─────────────────────────────────────────────────────────┐  │
+│   │  Blueprint Reference                                     │  │
+│   │  "erynoa:blueprint:ev-charging-station:v1.2"            │  │
+│   └─────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│   ┌─────────────────────────────────────────────────────────┐  │
+│   │  State                                                   │  │
+│   │  {                                                       │  │
+│   │    owner: "did:erynoa:operator-123",                    │  │
+│   │    power_output: 150,                                    │  │
+│   │    connector_type: "CCS",                                │  │
+│   │    location: "u281z",                                    │  │
+│   │    status: "available"                                   │  │
+│   │  }                                                       │  │
+│   └─────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│   ┌─────────────────────────────────────────────────────────┐  │
+│   │  Logic Guards (via MoveVM)                               │  │
+│   │  • Resource Safety                                       │  │
+│   │  • Blueprint-Validierung                                 │  │
+│   │  • Domain-spezifische Regeln                            │  │
+│   └─────────────────────────────────────────────────────────┘  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Die drei AMO-Archetypen
+
+| Typ            | Symbol | Transfer     | Lebensdauer    | Beispiele                     |
+| -------------- | ------ | ------------ | -------------- | ----------------------------- |
+| **Material**   | 🏭     | ✅ Ja        | Permanent      | Ladesäule, Sensor, Maschine   |
+| **Credential** | 🎫     | ❌ Soulbound | Permanent      | KYC, Zertifikat, Lizenz       |
+| **Service**    | ⏱️     | ❌ Nein      | Temporär (TTL) | Ladevorgang, API-Call, Stream |
+
+### 🏭 Material AMOs
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      Material AMO                               │
+│                   (Real World Asset)                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Eigenschaften:                                                │
+│   • Transferierbar via Atomic Settlement                        │
+│   • Bildet physische Knappheit ab                              │
+│   • 1 Asset ≠ 2 Orte gleichzeitig                              │
+│                                                                 │
+│   ┌─────────┐         Transfer         ┌─────────┐             │
+│   │ Owner A │  ───────────────────▶   │ Owner B │             │
+│   └─────────┘                          └─────────┘             │
+│                                                                 │
+│   Beispiele: Ladesäulen, Sensoren, Speicheranlagen              │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 🎫 Credential AMOs
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Credential AMO                              │
+│                      (Soulbound)                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Eigenschaften:                                                │
+│   • Untrennbar mit DID verknüpft                               │
+│   • NICHT transferierbar                                        │
+│   • Nur verifizierbar (Verifiable Presentations)               │
+│                                                                 │
+│   ┌─────────┐         ══════╳══════    ┌─────────┐             │
+│   │   DID   │         kein Transfer    │   DID   │             │
+│   │  Owner  │                          │  Other  │             │
+│   └────┬────┘                          └─────────┘             │
+│        │                                                        │
+│        │ gebunden                                               │
+│        ▼                                                        │
+│   ┌─────────┐                                                   │
+│   │Credential                                                   │
+│   │   AMO   │  ────▶  Verifier kann prüfen, nicht besitzen     │
+│   └─────────┘                                                   │
+│                                                                 │
+│   Beispiele: KYC-Nachweis, Wartungszertifikat, Lizenz          │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### ⏱️ Service AMOs
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                       Service AMO                               │
+│                   (Zeitgebunden, TTL)                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Eigenschaften:                                                │
+│   • Existiert nur für Dauer der Dienstleistung                 │
+│   • Unterstützt Continuous Value Streaming                      │
+│   • Automatische Beendigung nach TTL                           │
+│                                                                 │
+│   ┌─────────────────────────────────────────────────────────┐  │
+│   │                                                         │  │
+│   │   Start ════════════════════════════════════════▶ Ende  │  │
+│   │     │                                              │    │  │
+│   │     │    💰 ─── 💰 ─── 💰 ─── 💰 ─── 💰           │    │  │
+│   │     │         Continuous Streaming                 │    │  │
+│   │     │                                              │    │  │
+│   │   Create                                        Destroy │  │
+│   │                                                         │  │
+│   └─────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│   Beispiele: Ladevorgang (€/kWh/s), API-Nutzung, Energiefluss  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-**Weiterführende Dokumente:**
+## Fluid Extensions
 
-- [Trust & Reputation](./trust-and-reputation.md) – Wie Vertrauen berechnet und genutzt wird
-- [Cybernetic Loop](./cybernetic-loop.md) – Der universelle Workflow
-- [Agents & ADL](./agents-and-adl.md) – Agenten und ihre Interaktionen
+> _Flüchtige Daten ohne State Bloat_
+
+### Das Problem
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   Klassische Blockchain                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Sensordaten: 38.5°C  ──▶  On-Chain  ──▶  Für immer gespeichert│
+│   GPS: 48.1351, 11.582 ──▶  On-Chain  ──▶  Für immer gespeichert│
+│   Preis: 0.35€/kWh     ──▶  On-Chain  ──▶  Für immer gespeichert│
+│                                                                 │
+│   Result: State Bloat 📈📈📈                                    │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Die Lösung: TTL-gesteuerte Extensions
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      Fluid Extensions                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   AMO (permanent, NOA)                                          │
+│   ════════════════════                                          │
+│   │                                                             │
+│   │    ┌─────────────────────────────────────────────┐         │
+│   │    │  Fluid Extension (temporär, ERY)            │         │
+│   │    │  ───────────────────────────────            │         │
+│   │    │  {                                          │         │
+│   │    │    temperature: 38.5,                       │         │
+│   │    │    current_load: 0.73,                      │         │
+│   │    │    spot_price: 0.35,                        │         │
+│   │    │    ttl: "5m"  ◀── Nach 5 Min: weg           │         │
+│   │    │  }                                          │         │
+│   │    └─────────────────────────────────────────────┘         │
+│   │                                                             │
+│                                                                 │
+│   ✅ Agenten sehen aktuelle Daten                               │
+│   ✅ Kein State Bloat                                           │
+│   ✅ Keine On-Chain-Transaktion zum Löschen                     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Typische Fluid Extensions
+
+| Extension         | TTL    | Beispiel                             |
+| ----------------- | ------ | ------------------------------------ |
+| **Geo-Position**  | 1 min  | Aktuelle Koordinaten eines Fahrzeugs |
+| **Auslastung**    | 5 min  | 73% Kapazität belegt                 |
+| **Spot-Preis**    | 15 min | 0.35 €/kWh aktuell                   |
+| **Sensor-Daten**  | 30 sec | Temperatur, Spannung, Strom          |
+| **Verfügbarkeit** | 5 min  | „frei" / „belegt" / „außer Betrieb"  |
+
+---
+
+## Zusammenspiel der Ebenen
+
+### Beispiel: Ladevorgang
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   1️⃣ Normative Standards (ERY)                                              │
+│      ISO 19112, eCl@ss, OCPP                                                │
+│                    │                                                        │
+│                    ▼                                                        │
+│   2️⃣ Domain Blueprint (ERY)                                                 │
+│      "EV-Charging-Station" v1.2                                             │
+│                    │                                                        │
+│                    ▼                                                        │
+│   3️⃣ Material AMO (NOA)                                                     │
+│      Ladesäule-München-001                                                  │
+│      Owner: did:erynoa:operator-123                                         │
+│      Power: 150 kW, CCS                                                     │
+│           │                                                                 │
+│           │  + Fluid Extension (ERY)                                        │
+│           │    Status: "available"                                          │
+│           │    Spot-Price: 0.32 €/kWh                                       │
+│           │    TTL: 5 min                                                   │
+│           │                                                                 │
+│           ▼                                                                 │
+│   4️⃣ Service AMO (NOA)                                                      │
+│      Ladevorgang-47291                                                      │
+│      Seeker: did:erynoa:vehicle-456                                         │
+│      Provider: did:erynoa:operator-123                                      │
+│      Streaming: 0.32 €/kWh                                                  │
+│      TTL: bis Ladeende                                                      │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Vergleich: Traditionell vs. Liquid
+
+| Aspekt                | Traditionelle Blockchain | Liquides Datenmodell           |
+| --------------------- | ------------------------ | ------------------------------ |
+| **Semantik**          | Nicht vorhanden          | Blueprints in ERY              |
+| **Validierung**       | Hardcoded in Contracts   | Dynamisch via Blueprint        |
+| **Evolution**         | Migration erforderlich   | Kontrollierte Versionierung    |
+| **Flüchtige Daten**   | Permanent gespeichert    | TTL-gesteuert, auto-cleanup    |
+| **Vertrauen**         | Nicht modelliert         | Trust vererbt sich von Normen  |
+| **Interoperabilität** | Schwierig                | Standards als gemeinsame Basis |
+
+---
+
+## Zusammenfassung
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                     Das Liquide Datenmodell                                 │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   📐 Normative Standards     →  Stabile Fundamente (ISO, eCl@ss)   │  │
+│   │            ↓                                                        │  │
+│   │   📋 Domain Blueprints       →  Anwendungsspezifische Schablonen   │  │
+│   │            ↓                                                        │  │
+│   │   📦 AMOs (Material/Cred/Srv)→  Konkrete Instanzen auf NOA         │  │
+│   │            +                                                        │  │
+│   │   💧 Fluid Extensions        →  Flüchtige Daten mit TTL            │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│   Ergebnis: Objekte mit Bedeutung, Qualität und Vertrauen                  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Das Liquide Datenmodell** macht Erynoa zu mehr als einem Transaktions-Ledger: Es wird zu einer **kontextbewussten Ontologie**, in der jedes Objekt weiß, _was_ es ist, _woher_ es kommt und _wie vertrauenswürdig_ es ist.
+
+---
+
+## Weiterführend
+
+| Dokument                                                 | Fokus                                      |
+| -------------------------------------------------------- | ------------------------------------------ |
+| [Trust & Reputation](./trust-and-reputation.md)          | Wie Vertrauen von Standards zu AMOs fließt |
+| [Cybernetic Loop](./cybernetic-loop.md)                  | Wie AMOs im Workflow genutzt werden        |
+| [Agents & ADL](./agents-and-adl.md)                      | Wie Agenten mit AMOs interagieren          |
+| [System Architecture](./system-architecture-overview.md) | ERY und NOA im Detail                      |
