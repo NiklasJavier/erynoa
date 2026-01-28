@@ -251,8 +251,8 @@ http://localhost:3001
 | Console | http://localhost:3001/console |
 | Platform | http://localhost:3001/platform |
 | Docs | http://localhost:3001/docs |
-| Backend API | http://localhost:3001/api |
-| Backend direkt | http://localhost:3000 |
+| Backend API (via Proxy) | http://localhost:3001/api |
+| Backend API (direkt) | http://localhost:3000 |
 | ZITADEL | http://localhost:8080 |
 | MinIO Console | http://localhost:9001 |
 
