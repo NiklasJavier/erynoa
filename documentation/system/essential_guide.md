@@ -1,72 +1,170 @@
-# 📚 Essential Guide - Alles was du brauchst
+# Erynoa – Essential Guide
 
-**Letzte Aktualisierung**: 2026-01-27 (23:40)
-
-Diese Datei konsolidiert alle wichtigen Informationen aus den verschiedenen Dokumenten.
+> **Dokumenttyp:** Referenz
+> **Version:** 2.0
+> **Status:** Aktiv
+> **Lesezeit:** ca. 10 Minuten
 
 ---
 
-## 🚀 Quick Start
+## Auf einen Blick
 
-**Voraussetzungen:** (siehe [Setup Guide](setup/setup.md))
-- Nix installiert
-- Docker Desktop installiert und gestartet
+Dieser Guide enthält **alles Wichtige** für die tägliche Entwicklung mit Erynoa – Quick Start, Befehle, Konfiguration, Troubleshooting.
 
-**3 Schritte zum laufenden Projekt:**
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   📋 ESSENTIAL GUIDE – INHALTSÜBERSICHT                                    │
+│                                                                             │
+│   ┌───────────────┐  ┌───────────────┐  ┌───────────────┐                  │
+│   │  ⚡ START     │  │  🔧 BEFEHLE   │  │  🔗 SERVICES  │                  │
+│   │  Quick Start  │  │  just dev     │  │  URLs & Ports │                  │
+│   │  3 Schritte   │  │  Alle Befehle │  │  Verbindungen │                  │
+│   └───────────────┘  └───────────────┘  └───────────────┘                  │
+│                                                                             │
+│   ┌───────────────┐  ┌───────────────┐  ┌───────────────┐                  │
+│   │  ⚙️ CONFIG    │  │  🐛 DEBUG     │  │  📊 STATUS    │                  │
+│   │  Backend      │  │  Trouble-     │  │  Features     │                  │
+│   │  Frontend     │  │  shooting     │  │  Roadmap      │                  │
+│   └───────────────┘  └───────────────┘  └───────────────┘                  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## ⚡ Quick Start
+
+### Voraussetzungen
+
+| Tool       | Installation                                                               |
+| :--------- | :------------------------------------------------------------------------- |
+| **Nix**    | `curl -sSf -L https://install.determinate.systems/nix \| sh -s -- install` |
+| **Docker** | [Docker Desktop](https://www.docker.com/products/docker-desktop/)          |
+
+### 3 Schritte
 
 ```bash
-# 1. Repository klonen
-git clone git@github.com:NiklasJavier/erynoa.git
-cd erynoa
+# 1. Klonen
+git clone git@github.com:NiklasJavier/erynoa.git && cd erynoa
 
-# 2. Nix Dev-Shell betreten (lädt alle Tools automatisch)
+# 2. Dev-Shell (lädt alle Tools)
 nix develop
 
-# 3. Projekt starten
+# 3. Starten
 just dev
 ```
 
-**4. Warte 2 Minuten** ⏳
+<div align="center">
 
-Die Services starten und ZITADEL wird automatisch konfiguriert. Nach ca. 2 Minuten kannst du im Browser öffnen:
+⏳ **~2 Minuten warten** → 🌐 **http://localhost:3001**
 
-```
-http://localhost:3001
-```
+</div>
 
-**Fertig!** 🎉
+### Test-Zugänge
 
-Das startet alles:
-- **Proxy** auf http://localhost:3001 (Caddy Reverse Proxy)
-  - **Console** auf http://localhost:3001/console
-  - **Platform** auf http://localhost:3001/platform
-  - **Docs** auf http://localhost:3001/docs
-  - **Backend API** auf http://localhost:3001/api
-- **Backend** direkt auf http://localhost:3000 (für Tests)
-- **ZITADEL** auf http://localhost:8080 (Auth)
-- **MinIO** auf http://localhost:9001 (S3 Storage Console)
-
-**Test Login:**
-- User: `testuser` / `Test123!`
-- Admin: `zitadel-admin` / `Password1!`
+| Rolle | User            | Passwort     |
+| :---- | :-------------- | :----------- |
+| User  | `testuser`      | `Test123!`   |
+| Admin | `zitadel-admin` | `Password1!` |
 
 ---
 
-## 📋 Offene TODOs
+## 🔗 Services & URLs
 
-**Status**: Alle High-Priority TODOs abgeschlossen ✅
+### Entwicklungs-URLs
 
-**Vollständige Liste**: [development/todos.md](development/todos.md)
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   🌐 HAUPTZUGANG: http://localhost:3001                                    │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   /console   ───▶  Admin Console                                   │  │
+│   │   /platform  ───▶  Hauptplattform                                  │  │
+│   │   /docs      ───▶  Dokumentation                                   │  │
+│   │   /api       ───▶  Backend API                                     │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-### 🔄 In Arbeit
-- Frontend Tests implementieren
-- Performance Monitoring
-- Erweiterte Error-Tracking
+| Service      | URL                            | Beschreibung        |
+| :----------- | :----------------------------- | :------------------ |
+| 🌐 **Proxy** | http://localhost:3001          | Caddy Reverse Proxy |
+| 📊 Console   | http://localhost:3001/console  | Admin-Bereich       |
+| 🖥️ Platform  | http://localhost:3001/platform | Hauptplattform      |
+| 📖 Docs      | http://localhost:3001/docs     | Dokumentation       |
+| 🔌 API       | http://localhost:3001/api      | Backend API         |
+| 🦀 Backend   | http://localhost:3000          | Direkt (für Tests)  |
+| 🔐 ZITADEL   | http://localhost:8080          | Auth Server         |
+| 📦 MinIO     | http://localhost:9001          | Storage Console     |
 
-### 📅 Geplant
-- REST Endpoints deprecaten
-- Documentation - API Examples
-- Type Definitions Cleanup
+### Interne Docker-Namen
+
+| Service  | Name      | Connection String                           |
+| :------- | :-------- | :------------------------------------------ |
+| Database | `db`      | `postgresql://erynoa:erynoa@db:5432/erynoa` |
+| Cache    | `cache`   | `redis://cache:6379`                        |
+| Storage  | `minio`   | `http://minio:9000`                         |
+| Auth     | `zitadel` | `http://zitadel:8080`                       |
+
+---
+
+## 🔧 Befehle
+
+### Entwicklung
+
+| Befehl              | Beschreibung          |
+| :------------------ | :-------------------- |
+| `just dev`          | 🚀 **Startet alles**  |
+| `just dev console`  | Nur Console           |
+| `just dev platform` | Nur Platform          |
+| `just status`       | Service-Status        |
+| `just logs`         | Alle Logs             |
+| `just logs backend` | Backend-Logs          |
+| `just stop`         | Container stoppen     |
+| `just restart`      | Neustart              |
+| `just reset`        | Komplett zurücksetzen |
+
+### Backend
+
+| Befehl       | Beschreibung          |
+| :----------- | :-------------------- |
+| `just check` | Cargo check           |
+| `just lint`  | Clippy                |
+| `just fmt`   | Formatieren           |
+| `just test`  | Tests (cargo-nextest) |
+| `just ci`    | fmt + lint + test     |
+
+### Frontend
+
+| Befehl                | Beschreibung     |
+| :-------------------- | :--------------- |
+| `just frontend-lint`  | Biome Lint       |
+| `just frontend-check` | TypeScript Check |
+
+### Setup & Tools
+
+| Befehl               | Beschreibung                     |
+| :------------------- | :------------------------------- |
+| `just init`          | Initialisieren (ohne Dev-Server) |
+| `just init-env`      | .env erstellen                   |
+| `just zitadel-setup` | Auth konfigurieren               |
+| `just zitadel-reset` | Auth zurücksetzen                |
+| `just proto-gen`     | Protobuf Types generieren        |
+| `just services`      | Nur Hintergrund-Services         |
+
+<details>
+<summary><strong>📋 Alle Befehle</strong></summary>
+
+```bash
+just --list
+```
+
+</details>
 
 ---
 
@@ -75,302 +173,50 @@ Das startet alles:
 ### Projektstruktur
 
 ```
-/workspace
-├── backend/              # Rust API (Axum + Connect-RPC)
-│   ├── src/api/v1/       # Feature-basierte API
-│   │   ├── health/       # Health Checks
-│   │   ├── info/         # Info & Status
-│   │   ├── users/        # User Management
-│   │   └── storage/      # Storage Operations
-│   ├── config/           # Konfiguration (TOML)
-│   └── proto/            # Protobuf Definitionen
-├── frontend/            # Frontend Monorepo (pnpm Workspace)
-│   ├── console/         # SvelteKit Console
-│   ├── platform/        # SvelteKit Platform
-│   └── docs/            # SvelteKit Docs
-│   ├── src/api/          # API Clients (Connect-RPC)
-│   ├── src/components/   # UI Komponenten
-│   └── src/lib/          # Auth, Config, Utils
-├── infra/                # Infrastructure & Deployment
-│   ├── docker/          # Docker Compose & Dockerfiles
-│   ├── proxy/           # Reverse Proxy (Caddyfile)
-│   ├── auth/            # Authentication (ZITADEL)
-│   └── static/          # Static Files (landing.html)
-├── docs/                 # Dokumentation
-├── buf.gen.yaml         # Protobuf Code-Generierung (TypeScript)
-└── buf.yaml             # Protobuf Module-Konfiguration
+erynoa/
+│
+├── 🦀 backend/                    Rust API Server
+│   ├── src/api/v1/                Feature-basierte API
+│   │   ├── health/                Health Checks
+│   │   ├── info/                  Info & Status
+│   │   ├── users/                 User Management
+│   │   └── storage/               Storage Operations
+│   ├── config/                    TOML Konfiguration
+│   └── proto/                     Protobuf Definitionen
+│
+├── 🎨 frontend/                   SvelteKit Apps
+│   ├── console/                   Admin Console
+│   ├── platform/                  Hauptplattform
+│   └── docs/                      Dokumentation
+│
+├── 📖 documentation/              Dokumentation
+│   ├── concept/                   Protokoll & Konzept
+│   └── system/                    Plattform & Entwicklung
+│
+└── 🏗️ infra/                      Infrastruktur
+    ├── docker/                    Docker Compose
+    ├── proxy/                     Caddy Config
+    └── auth/                      ZITADEL Setup
 ```
 
 ### Tech Stack
 
-| Komponente | Technologie |
-|------------|-------------|
-| Backend | Rust, Axum, Tokio, SQLx, Lettre, Rinja |
-| Console | SvelteKit, Tailwind |
-| API | Connect-RPC/gRPC-Web (Protobuf) |
-| Orchestrierung | Restate (durable workflows & state) |
-| Dokumente/PDF | Typst (PDF-Generierung) |
-| Auth | ZITADEL (OIDC/JWT) |
-| Database | PostgreSQL (OrioleDB) |
-| Cache | DragonflyDB (Redis) |
-| Storage | MinIO (S3) |
-
----
-
-## 🧩 Protokoll- & Konzeptarchitektur (High-Level)
-
-Die oben beschriebene Architektur fokussiert auf die **konkrete Implementierung** (Plattform, Services, Infrastruktur).  
-Die **konzeptionelle Protokollarchitektur** von Erynoa – inklusive:
-
-- kybernetischer Triade (**ERY**, **ECHO**, **NOA**),
-- **Liquidem Datenmodell** (Blueprints & AMOs),
-- und **Cybernetic Loop** (Intent → Verhandlung → Exekution → Feedback),
-
-ist im Verzeichnis `../concept/` detailliert beschrieben:
-
-- `../concept/kernkonzept.md` – Kernidee & Problemraum
-- `../concept/system-architecture-overview.md` – Triade & Layer-Modell
-- `../concept/liquides-datenmodell.md` & `../concept/trust-and-reputation.md`
-
-## 🧠 Workflows & Orchestrierung mit Restate
-
-Erynoa nutzt **Restate** als leichtgewichtige, event-getriebene Orchestrierungsplattform für langlebige, fehlertolerante Abläufe.
-
-- **Durable Execution**: Jeder Schritt in einem Workflow wird persistent gespeichert; bei Fehlern wird ab dem letzten erfolgreichen Schritt fortgesetzt.
-- **Integrierter State**: Workflows können eigenen, stark konsistenten Zustand halten (z. B. für Sagas, Approval-Flows, langlaufende Prozesse).
-- **Zuverlässige Kommunikation**: Service-Aufrufe (HTTP / RPC) werden mit automatischen Retries und genau-einmal-Ausführung koordiniert.
-- **Zeitbasierte Koordination**: Langlebige Timer (z. B. Reminder, Delays, Deadlines) sind direkt im Orchestrierungsmodell eingebaut.
-
-Typische Einsatzszenarien in Erynoa:
-
-- Orchestrierung mehrstufiger Backend-Operationen (z. B. User‑Provisioning, Storage‑Workflows)
-- Robuste Hintergrundprozesse, die Fehler und Neustarts automatisch überleben
-- Integration externer Services mit klaren Zustandsübergängen (z. B. Webhooks, Approval‑Flows)
-
-Weitere Infos zu Restate: `https://docs.restate.dev`
-
----
-
-## 🔧 Wichtige Befehle
-
-### Entwicklung
-| Befehl | Beschreibung |
-|--------|--------------|
-| `just dev` | Startet alles (Console + Platform + Docs + Backend + Services) |
-| `just dev [frontend]` | Startet spezifisches Frontend (console, platform, docs, all) |
-| `just status` | Zeigt Status aller Services |
-| `just check` | Health Check aller Services |
-| `just restart` | Schneller Neustart aller Dev-Services |
-
-### 📦 Nix Installation
-
-**macOS:**
-```bash
-curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
-```
-
-**Ubuntu/Debian:**
-```bash
-curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
-```
-
-Terminal neu starten, dann verifizieren:
-```bash
-nix --version
-```
-
-**Was Nix automatisch bereitstellt:**
-- ✅ Rust Toolchain (inkl. rust-analyzer, clippy)
-- ✅ Node.js & pnpm
-- ✅ buf (Protobuf)
-- ✅ just (Task Runner)
-- ✅ sqlx CLI
-- ✅ Alle Build-Tools
-
-**Vorteile:**
-- ⚡ **Schnell**: Keine manuelle Tool-Installation nötig
-- 🔒 **Reproduzierbar**: Gleiche Tools für alle Entwickler
-- 🧹 **Sauber**: Keine System-Installationen (außer Nix selbst)
-
-Siehe [Setup Guide](setup/setup.md#-schnelles-setup-mit-nix-empfohlen-für-erfahrene-entwickler) für Details.
-
-### Container Management
-| Befehl | Beschreibung |
-|--------|--------------|
-| `just stop` | Stoppt alle Container |
-| `just logs [service]` | Logs anzeigen (alle oder spezifischer Service) |
-| `just shell [service]` | Shell in Container (backend, console, platform, docs) |
-| `just build` | Baue alle Docker Images |
-
-### Code Quality
-| Befehl | Beschreibung |
-|--------|--------------|
-| `just lint` | Backend Clippy |
-| `just fmt` | Backend Format |
-| `just test` | Backend Tests (mit cargo-nextest) |
-| `just proto-gen` | Protobuf Types generieren |
-| `just frontend-lint` | Frontend Lint (Biome) |
-| `just frontend-check` | Frontend TypeScript Check |
-
-### Setup & Reset
-| Befehl | Beschreibung |
-|--------|--------------|
-| `just init` | Initialisierung ohne Dev-Server |
-| `just reset` | Alles löschen und neu starten |
-| `just services` | Nur Hintergrund-Services starten |
-
-Alle Befehle: `just --list`
-
----
-
-## 🔗 Service-Konfiguration
-
-### Service URLs (Development)
-
-| Service | Port | URL |
-|---------|------|-----|
-| Console | 3001/console | http://localhost:3001/console (via Caddy Proxy) |
-| Platform | 3001/platform | http://localhost:3001/platform (via Caddy Proxy) |
-| Docs | 3001/docs | http://localhost:3001/docs (via Caddy Proxy) |
-| Proxy | 3001 | http://localhost:3001 (Caddy Reverse Proxy) |
-| Backend | 3000 | http://localhost:3000 |
-| Database | 5432 | postgresql://localhost:5432 |
-| Cache | 6379 | redis://localhost:6379 |
-| MinIO API | 9000 | http://localhost:9000 |
-| MinIO Console | 9001 | http://localhost:9001 |
-| ZITADEL | 8080 | http://localhost:8080 |
-
-### Docker Service Names (Internal)
-
-| Service | Docker Name |
-|---------|-------------|
-| Database | `db` |
-| Cache | `cache` |
-| Storage | `minio` |
-| Auth | `zitadel` |
-
-**Connection Strings im Docker:**
-- Database: `postgresql://erynoa:erynoa@db:5432/erynoa`
-- Cache: `redis://cache:6379`
-- Storage: `http://minio:9000`
-- Auth: `http://zitadel:8080`
-
----
-
-## 📝 Code Standards
-
-### Naming Conventions
-
-**Backend (Rust):**
-- Functions: `snake_case` (z.B. `create_user`)
-- Structs/Enums: `PascalCase` (z.B. `UserResponse`)
-- Modules: `snake_case` (z.B. `user_handler`)
-- Constants: `SCREAMING_SNAKE_CASE` (z.B. `API_VERSION`)
-
-**Console (TypeScript):**
-- Functions: `camelCase` (z.B. `createUser`)
-- Classes/Interfaces: `PascalCase` (z.B. `UserResponse`)
-- Files: `kebab-case.ts` oder `PascalCase.tsx` (Components)
-- Constants: `SCREAMING_SNAKE_CASE` (z.B. `API_VERSION`)
-
-### File Organization
-
-**Backend API:**
-```
-api/v1/{feature}/
-├── handler.rs      # REST handlers
-├── connect.rs      # Connect-RPC handlers
-├── models.rs       # Request/Response types
-├── routes.rs       # Route definitions
-└── mod.rs          # Module exports
-```
-
-**Console API:**
-```
-api/{feature}/
-├── connect-client.ts  # Connect-RPC client
-├── types.ts          # Type definitions (from proto)
-└── index.ts          # Public API
-```
-
-**Vollständiger Style Guide**: [development/style-guide.md](development/style-guide.md)
-
----
-
-## 🧪 Testing
-
-### Backend Tests
-
-```bash
-cd backend && cargo test
-```
-
-**Location**: `backend/tests/api.rs`
-- Integration Tests für alle Endpoints
-- TestApp Helper für Server-Setup
-- 13+ Tests (Health, Info, Users, Storage, Routes, CORS)
-
-### Console Tests
-
-**Status**: Vorbereitet für zukünftige Implementierung
-**Empfohlene Struktur**: `frontend/console/src/**/__tests__/`
-
-**Vollständiger Testing Guide**: [development/testing.md](development/testing.md)
-
----
-
-## 🔐 ZITADEL Setup
-
-### Automatisches Setup (Empfohlen)
-
-ZITADEL wird automatisch beim ersten Start konfiguriert:
-
-```bash
-just dev
-```
-
-Das Setup-Skript (`scripts/infra/setup-zitadel.sh`) erstellt automatisch:
-- Projekt `erynoa`
-- OIDC Applications für alle Frontends (console, platform, docs) mit dynamischen Client-IDs
-- Test-User `testuser` / `Test123!`
-- Aktualisiert `backend/config/local.toml` mit den generierten Client-IDs
-
-**Manuelles Setup:**
-Falls nötig, kann das Setup manuell ausgeführt werden:
-```bash
-just zitadel-setup
-```
-
-**Vollständiger Guide**: [guides/zitadel.md](guides/zitadel.md)
-
----
-
-## 🔌 Connect-RPC
-
-### Status
-
-✅ **Vollständig implementiert und aktiv**
-- Backend: Connect-RPC Handler für alle Services
-- Console: Connect-RPC Clients für alle Services
-- Protobuf: Alle Services definiert
-- Authentication: JWT Token Injection
-
-### Protobuf Services
-
-- `HealthService` - Health Checks
-- `InfoService` - Info & Status
-- `UserService` - User Management
-- `StorageService` - Storage Operations
-
-**Vollständiger Guide**: Siehe [docs/reference/architecture.md](reference/architecture.md) für Connect-RPC Details
+| Bereich            | Technologie                     |
+| :----------------- | :------------------------------ |
+| **Backend**        | Rust · Axum · Tokio · SQLx      |
+| **API**            | Connect-RPC (Protobuf)          |
+| **Frontend**       | SvelteKit · Svelte 5 · Tailwind |
+| **Database**       | PostgreSQL (OrioleDB)           |
+| **Cache**          | DragonflyDB (Redis)             |
+| **Storage**        | MinIO (S3)                      |
+| **Auth**           | ZITADEL (OIDC/JWT)              |
+| **Orchestrierung** | Restate                         |
 
 ---
 
 ## ⚙️ Konfiguration
 
-### Backend
-
-**Datei**: `backend/config/base.toml`
+### Backend (`backend/config/base.toml`)
 
 ```toml
 [application]
@@ -378,18 +224,17 @@ api_url = "http://localhost:3000"
 console_url = "http://localhost:3001/console"
 
 [database]
-host = "db"  # "localhost" außerhalb Docker
+host = "db"
 port = 5432
 username = "erynoa"
 password = "erynoa"
 database = "erynoa"
 
 [cache]
-url = "redis://cache:6379"  # "redis://localhost:6379" außerhalb Docker
+url = "redis://cache:6379"
 
 [storage]
-endpoint = "http://minio:9000"  # "http://localhost:9000" außerhalb Docker
-region = "us-east-1"
+endpoint = "http://minio:9000"
 access_key_id = "erynoa"
 secret_access_key = "erynoa123"
 default_bucket = "erynoa"
@@ -397,127 +242,208 @@ default_bucket = "erynoa"
 [auth]
 issuer = "http://localhost:8080"
 internal_issuer = "http://zitadel:8080"
-client_id = "erynoa-backend"
-console_client_id = "erynoa-console"
 ```
 
-**Konfigurationspriorität:**
-1. Umgebungsvariablen (`APP_DATABASE__HOST=db`)
-2. `local.toml` (auto-generated, gitignored)
-3. `base.toml` (Standard-Werte)
+### Konfigurationspriorität
 
-### Console
+```
+┌──────────────────────────────────────────────────────────────┐
+│                                                              │
+│   1. Umgebungsvariablen    APP_DATABASE__HOST=db            │
+│   2. local.toml            (auto-generated, gitignored)      │
+│   3. base.toml             (Standard-Werte)                  │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
 
-**Datei**: `frontend/console/src/lib/config.ts`
+---
 
-Konfiguration wird vom Backend `/api/v1/info` Endpoint geladen.
+## 🔌 Connect-RPC
+
+### Status: ✅ Aktiv
+
+| Service          | Beschreibung       |
+| :--------------- | :----------------- |
+| `HealthService`  | Health Checks      |
+| `InfoService`    | Info & Status      |
+| `UserService`    | User Management    |
+| `StorageService` | Storage Operations |
+
+### Protobuf generieren
+
+```bash
+just proto-gen
+```
+
+---
+
+## 🔐 ZITADEL Auth
+
+### Automatisches Setup
+
+ZITADEL wird beim ersten `just dev` automatisch konfiguriert:
+
+- Projekt `erynoa` erstellt
+- OIDC Applications für alle Frontends
+- Test-User `testuser` / `Test123!`
+- `backend/config/local.toml` aktualisiert
+
+### Manuelles Setup
+
+```bash
+just zitadel-setup    # Neu konfigurieren
+just zitadel-reset    # Zurücksetzen
+```
 
 ---
 
 ## 🐛 Troubleshooting
 
 ### Services starten nicht
+
 ```bash
 just reset
 just dev
 ```
 
 ### ZITADEL Client-ID ungültig
+
 ```bash
 just zitadel-reset
 ```
 
 ### Backend kompiliert nicht
+
 ```bash
 just shell backend
-cargo check  # Zeigt Fehler
+cargo check
 ```
 
 ### Port bereits belegt
+
 ```bash
 just stop
-lsof -i :3000  # Check welcher Prozess
+lsof -i :3000
 ```
 
 ### Logs prüfen
+
 ```bash
 just logs              # Alle
-just logs backend      # Nur Backend
-just logs console      # Nur Console
-just logs platform     # Nur Platform
-just logs docs         # Nur Docs
+just logs backend      # Backend
+just logs console      # Console
 ```
+
+### Häufige Probleme
+
+| Problem                | Lösung                       |
+| :--------------------- | :--------------------------- |
+| Services starten nicht | `just reset && just dev`     |
+| Auth-Fehler            | `just zitadel-reset`         |
+| Port belegt            | `just stop && lsof -i :PORT` |
+| Build-Fehler           | `cargo check` / `pnpm check` |
+| Docker-Probleme        | Docker Desktop neustarten    |
 
 ---
 
-## 📊 Projekt-Status
+## 📝 Code Standards
 
-### ✅ Abgeschlossen
+### Naming Conventions
 
-- ✅ Phase 1: Quick Wins (Error-Interceptor, Logging, Style Guide)
-- ✅ Phase 2: Strukturelle Verbesserungen (Feature-basierte API, Protobuf-Types)
-- ✅ Phase 3: Langfristige Verbesserungen (Test-Struktur, TODO-Management)
-- ✅ Connect-RPC vollständig implementiert
-- ✅ Monorepo mit pnpm Workspace & Turborepo
-- ✅ Svelte 5 Migration (Runes: $state, $derived, $effect)
-- ✅ Health Checks verbessert
-- ✅ GitHub Workflows optimiert (Turborepo, cargo-nextest, pnpm)
-- ✅ Justfile optimiert (neue Befehle: test-ci, devcontainer-remove, docker-cleanup)
-- ✅ VS Code Extensions optimiert (22 Extensions)
-- ✅ DevContainer optimiert (Host-Services, keine Docker-in-Docker)
-- ✅ ZITADEL automatisches Setup mit dynamischer App-ID-Generierung
-- ✅ Caddy Reverse Proxy für alle Frontends (Port 3001)
-- ✅ Protobuf Code-Generierung für alle Frontends (buf.gen.yaml im Root)
+| Sprache        | Functions    | Types        | Files           |
+| :------------- | :----------- | :----------- | :-------------- |
+| **Rust**       | `snake_case` | `PascalCase` | `snake_case.rs` |
+| **TypeScript** | `camelCase`  | `PascalCase` | `kebab-case.ts` |
+
+### Backend API Struktur
+
+```
+api/v1/{feature}/
+├── handler.rs       # REST handlers
+├── connect.rs       # Connect-RPC handlers
+├── models.rs        # Request/Response types
+├── routes.rs        # Route definitions
+└── mod.rs           # Module exports
+```
+
+→ Vollständig: [Style Guide](development/style-guide.md)
+
+---
+
+## 📊 Status
+
+### ✅ Implementiert
+
+| Feature                        | Status |
+| :----------------------------- | :----- |
+| Connect-RPC API                | ✅     |
+| Monorepo (pnpm + Turborepo)    | ✅     |
+| SvelteKit Frontends (Svelte 5) | ✅     |
+| ZITADEL Auth (auto-setup)      | ✅     |
+| Caddy Reverse Proxy            | ✅     |
+| DevContainer Support           | ✅     |
+| GitHub Actions CI/CD           | ✅     |
+| Nix Flakes Environment         | ✅     |
+| Protobuf Code-Gen              | ✅     |
 
 ### 🔄 In Arbeit
 
-- Console Tests implementieren
-- High-Priority TODOs (siehe oben)
+- Frontend Tests
+- Performance Monitoring
+- Extended Error-Tracking
 
 ### 📅 Geplant
 
 - REST Endpoints deprecaten
-- Performance Monitoring
-- Erweiterte Error-Tracking
+- API Documentation
+- Type Definitions Cleanup
+
+→ Details: [TODOs](development/todos.md)
 
 ---
 
-## 📚 Weitere Dokumentation
+## 🧠 Protokoll-Konzepte
 
-### Wichtigste Dokumente
+Die System-Dokumentation fokussiert auf die **Implementierung**. Für das **Protokoll-Design** siehe:
 
-- **[readme.md](../readme.md)** - Projekt-Übersicht
-- **[Dev Setup](setup/dev_setup.md)** - Entwicklungsumgebung
-- **[Docker Setup](setup/docker.md)** - Docker-spezifische Infos
-- **[todos](development/todos.md)** - Offene Aufgaben
-- **[Style Guide](development/style-guide.md)** - Code Standards
-- **[Architecture](reference/architecture.md)** - System-Architektur
-- **[Testing](development/testing.md)** - Testing Guide
-- **[ZITADEL Setup](guides/zitadel.md)** - ZITADEL Konfiguration
-
-### Historische Dokumente (Referenz)
-
-- `development/HARMONIZATION_ROADMAP.md` - Harmonisierung (abgeschlossen)
-- `development/PHASE_3_COMPLETE.md` - Phase 3 Status
-- `changelog/*.md` - Changelog Einträge
+| Dokument                                                           | Inhalt                        |
+| :----------------------------------------------------------------- | :---------------------------- |
+| [📋 Fachkonzept](../concept/fachkonzept.md)                        | Vollständige Spezifikation    |
+| [🎯 Kernkonzept](../concept/kernkonzept.md)                        | High-Level Überblick          |
+| [🏗️ Systemarchitektur](../concept/system-architecture-overview.md) | Drei-Sphären (ERY, ECHO, NOA) |
+| [📖 Glossar](../concept/glossary.md)                               | Begriffsdefinitionen          |
 
 ---
 
-## 🔄 Workflow
+## 📚 Weiterführende Dokumente
 
-### Neue Features entwickeln
-
-1. Prüfe [todos](development/todos.md) für bekannte Aufgaben
-2. Folge [Style Guide](development/style-guide.md) für Naming
-3. Verwende [Testing Guide](development/testing.md) für Tests
-4. Dokumentiere in [TODOs](development/TODOS.md) wenn nötig
-
-### Bug-Fixes
-
-1. Prüfe Troubleshooting Guides
-2. Schaue [Connections Guide](reference/connections.md) für Service-Probleme
-3. Prüfe [TODOs](development/TODOS.md) für bekannte Issues
+| Dokument                                  | Beschreibung                 |
+| :---------------------------------------- | :--------------------------- |
+| [Setup Guide](setup/setup.md)             | Vollständige Setup-Anleitung |
+| [Architecture](reference/architecture.md) | System-Architektur           |
+| [Configuration](reference/config.md)      | Service-Konfiguration        |
+| [Style Guide](development/style-guide.md) | Code Standards               |
+| [Testing](development/testing.md)         | Test-Strategien              |
+| [TODOs](development/todos.md)             | Offene Aufgaben              |
+| [ZITADEL Guide](guides/zitadel.md)        | Auth-Setup                   |
 
 ---
 
-**Letzte Aktualisierung**: 2026-01-27 (23:40)
+<div align="center">
+
+```
+┌─────────────────────────────────────────────┐
+│                                             │
+│   Probleme?                                 │
+│                                             │
+│   1. Troubleshooting (oben)                 │
+│   2. just logs prüfen                       │
+│   3. TODOs durchsuchen                      │
+│   4. Issue erstellen                        │
+│                                             │
+└─────────────────────────────────────────────┘
+```
+
+**Letzte Aktualisierung:** Januar 2026
+
+</div>
