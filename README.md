@@ -20,7 +20,7 @@
 └─────────────────────────────────────────────────────────────────┘
 </pre>
 
-[Schnellstart](#-schnellstart) · [Konzept](#-was-ist-erynoa) · [Dokumentation](#-dokumentation) · [Befehle](#-befehle)
+[Schnellstart](#-schnellstart) · [Konzept](#-was-ist-erynoa) · [Roadmap](#-roadmap) · [Dokumentation](#-dokumentation) · [Befehle](#-befehle)
 
 </div>
 
@@ -64,6 +64,46 @@ Erynoa ist ein **dezentrales Protokoll**, das autonomen Agenten ermöglicht, ver
 | **NOA**  | Finalität, Settlement      | MoveVM, Starfish BFT  |
 
 > 📖 **Mehr erfahren:** [Fachkonzept](documentation/concept/fachkonzept.md) · [Kernkonzept](documentation/concept/kernkonzept.md)
+
+---
+
+## 🗺️ Roadmap
+
+Die Entwicklung von Erynoa ist in **4 Phasen** über **3-4 Jahre** strukturiert:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   PHASE 1        PHASE 2          PHASE 3           PHASE 4                │
+│   FOUNDATION     PROTOCOL         NETWORK           ECOSYSTEM              │
+│   ──────────     ────────         ───────           ─────────              │
+│   6-9 Monate     9-12 Monate      12-18 Monate      Ongoing                │
+│                                                                             │
+│   ┌─────────┐    ┌─────────┐      ┌─────────┐       ┌─────────┐           │
+│   │ 🏗️      │───▶│ 🔮🤖⚡  │─────▶│ 🌐      │──────▶│ 🚀      │           │
+│   │ Core    │    │ 3-Sphere│      │ Testnet │       │ Mainnet │           │
+│   │ Platform│    │ Protocol│      │ Launch  │       │ & Scale │           │
+│   └─────────┘    └─────────┘      └─────────┘       └─────────┘           │
+│                                                                             │
+│   Q1-Q3 2026     Q3 2026-Q2 2027  Q2 2027-Q4 2028   2028+                  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+| Phase       | Zeitraum        | Fokus      | Key Milestones                              |
+| ----------- | --------------- | ---------- | ------------------------------------------- |
+| **Phase 1** | Q1-Q3 2026      | Foundation | ✅ Core Platform, 🔄 Identity Layer, SDKs   |
+| **Phase 2** | Q3 2026-Q2 2027 | Protocol   | ERY (Semantic), ECHO (Agents), NOA (Ledger) |
+| **Phase 3** | Q2 2027-Q4 2028 | Network    | Testnet, Pilot Use Cases, Pre-Mainnet       |
+| **Phase 4** | 2028+           | Ecosystem  | Mainnet Launch, Skalierung, Governance      |
+
+### Aktuelle Prioritäten (Q1 2026)
+
+- 🔄 **DID:erynoa** – Decentralized Identity Spezifikation
+- 📋 **Verifiable Credentials** – Infrastruktur für Agenten & Assets
+- 📋 **Developer SDKs** – Rust & TypeScript
+
+> 📖 **Vollständige Roadmap:** [documentation/ROADMAP.md](documentation/ROADMAP.md)
 
 ---
 
@@ -115,6 +155,7 @@ Die Dokumentation ist in zwei Bereiche unterteilt:
 
 ```
 documentation/
+├── ROADMAP.md        # 🗺️ Strategische Roadmap (NEU)
 ├── concept/          # 🧠 Protokoll & Konzept
 │   ├── fachkonzept.md           # ⭐ Master-Dokument (Start hier)
 │   ├── kernkonzept.md           # High-Level Überblick
@@ -134,6 +175,12 @@ documentation/
     ├── reference/               # Architektur, Config
     └── development/             # Style Guide, Testing, TODOs
 ```
+
+### 🗺️ Roadmap
+
+| Dokument                                   | Beschreibung                                             |
+| ------------------------------------------ | -------------------------------------------------------- |
+| **[🗺️ Roadmap](documentation/ROADMAP.md)** | **Strategischer Entwicklungsplan** – 4 Phasen, 3-4 Jahre |
 
 ### 🧠 Konzept-Dokumentation
 
