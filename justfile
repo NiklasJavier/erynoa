@@ -715,20 +715,31 @@ reset:
     echo "⚠️  Lösche alle Daten, Container, Volumes und Build-Artifakte..."
     echo ""
     
-    # WORKSPACE_ROOT absolut auflösen (falls relativ)
-    if [ -z "${WORKSPACE_ROOT}" ] || [ "${WORKSPACE_ROOT}" = "." ]; then
-        # Finde das Workspace-Root (Verzeichnis mit justfile)
-        SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-        WORKSPACE_ROOT="$(cd "$SCRIPT_DIR" && pwd)"
-    else
-        WORKSPACE_ROOT="$(cd "{{WORKSPACE_ROOT}}" && pwd)"
+    # WORKSPACE_ROOT absolut auflösen
+    # Finde das Workspace-Root (Verzeichnis mit justfile)
+    # Starte vom aktuellen Verzeichnis und gehe nach oben bis justfile gefunden wird
+    WORKSPACE_ROOT="$(pwd)"
+    while [ ! -f "$WORKSPACE_ROOT/justfile" ] && [ "$WORKSPACE_ROOT" != "/" ]; do
+        WORKSPACE_ROOT="$(dirname "$WORKSPACE_ROOT")"
+    done
+    
+    if [ ! -f "$WORKSPACE_ROOT/justfile" ]; then
+        echo "❌ Fehler: justfile nicht gefunden. Bitte im Projekt-Root ausführen."
+        exit 1
     fi
+    
+    WORKSPACE_ROOT="$(cd "$WORKSPACE_ROOT" && pwd)"
     
     # 1. Docker Container & Volumes
     echo "━━━ [1/6] Docker Container & Volumes ━━━"
-    cd "$WORKSPACE_ROOT/infra/docker"
-    docker compose --profile auth down -v 2>/dev/null || true
-    echo "  ✓ Container gestoppt und Volumes entfernt"
+    if [ -d "$WORKSPACE_ROOT/infra/docker" ]; then
+        cd "$WORKSPACE_ROOT/infra/docker"
+        docker compose --profile auth down -v 2>/dev/null || true
+        echo "  ✓ Container gestoppt und Volumes entfernt"
+        cd "$WORKSPACE_ROOT"
+    else
+        echo "  ℹ️  infra/docker Verzeichnis nicht gefunden, überspringe"
+    fi
     
     # 2. Zusätzliche Volumes
     echo ""
@@ -750,10 +761,14 @@ reset:
     # 4. Frontend Build-Artifakte
     echo ""
     echo "━━━ [4/6] Frontend Build-Artifakte ━━━"
-    rm -rf "$WORKSPACE_ROOT/frontend/console/.svelte-kit" "$WORKSPACE_ROOT/frontend/console/dist"
-    rm -rf "$WORKSPACE_ROOT/frontend/platform/.svelte-kit" "$WORKSPACE_ROOT/frontend/platform/dist"
-    rm -rf "$WORKSPACE_ROOT/frontend/docs/.svelte-kit" "$WORKSPACE_ROOT/frontend/docs/dist"
-    echo "  ✓ Frontend Build-Artifakte gelöscht"
+    if [ -d "$WORKSPACE_ROOT/frontend" ]; then
+        [ -d "$WORKSPACE_ROOT/frontend/console" ] && rm -rf "$WORKSPACE_ROOT/frontend/console/.svelte-kit" "$WORKSPACE_ROOT/frontend/console/dist" 2>/dev/null || true
+        [ -d "$WORKSPACE_ROOT/frontend/platform" ] && rm -rf "$WORKSPACE_ROOT/frontend/platform/.svelte-kit" "$WORKSPACE_ROOT/frontend/platform/dist" 2>/dev/null || true
+        [ -d "$WORKSPACE_ROOT/frontend/docs" ] && rm -rf "$WORKSPACE_ROOT/frontend/docs/.svelte-kit" "$WORKSPACE_ROOT/frontend/docs/dist" 2>/dev/null || true
+        echo "  ✓ Frontend Build-Artifakte gelöscht"
+    else
+        echo "  ℹ️  Frontend-Verzeichnis nicht gefunden, überspringe"
+    fi
     
     # 5. Backend Build-Artifakte
     echo ""
