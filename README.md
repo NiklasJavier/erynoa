@@ -1,288 +1,319 @@
 <div align="center">
 
-# Erynoa
+<br>
 
-**Kybernetisches Protokoll für die Maschinenökonomie**
+# 🌊 Erynoa
 
-[![Rust](https://img.shields.io/badge/Rust-1.75+-orange?style=flat-square&logo=rust)](https://www.rust-lang.org/)
-[![SvelteKit](https://img.shields.io/badge/SvelteKit-2.0-FF3E00?style=flat-square&logo=svelte)](https://kit.svelte.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
-[![Nix](https://img.shields.io/badge/Nix-Flakes-5277C3?style=flat-square&logo=nixos)](https://nixos.org/)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+### Kybernetisches Protokoll für die Maschinenökonomie
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│   "Ein Protokoll, das Maschinen befähigt, eigenständig zu       │
-│    handeln, zu verhandeln und voneinander zu lernen –           │
-│    mit mathematisch fundiertem Vertrauen."                      │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
+<br>
 
-[Schnellstart](#-schnellstart) · [Konzept](#-was-ist-erynoa) · [Dokumentation](#-dokumentation) · [Befehle](#-befehle)
+[![Rust](https://img.shields.io/badge/Rust-1.75+-orange?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
+[![SvelteKit](https://img.shields.io/badge/SvelteKit-2.0-FF3E00?style=for-the-badge&logo=svelte&logoColor=white)](https://kit.svelte.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+
+<br>
+
+**Maschinen verhandeln autonom · Vertrauen ist berechenbar · Keine Vermittler**
+
+<br>
+
+[**Schnellstart**](#-schnellstart) · [**Konzept**](#-das-protokoll) · [**Dokumentation**](#-dokumentation) · [**Befehle**](#-befehle)
+
+<br>
 
 </div>
 
 ---
 
-## 🧠 Was ist Erynoa?
+<br>
 
-Erynoa ist ein **dezentrales Protokoll**, das autonomen Agenten ermöglicht, vertrauensbasierte Transaktionen ohne zentrale Vermittler durchzuführen.
+## 🎯 Das Protokoll
+
+> **Erynoa** ermöglicht autonomen Agenten, vertrauensbasierte Transaktionen ohne zentrale Vermittler durchzuführen.
+
+<br>
+
+<div align="center">
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│                         DIE DREI SPHÄREN                                    │
-│                                                                             │
-│                              ┌─────────┐                                    │
-│                              │  ECHO   │                                    │
-│                              │ Emergent│  ← Agenten, Verhandlung            │
-│                              │  Swarm  │                                    │
-│                              └────┬────┘                                    │
-│                                   │                                         │
-│               ┌───────────────────┼───────────────────┐                     │
-│               │                   │                   │                     │
-│               ▼                   │                   ▼                     │
-│        ┌─────────────┐            │            ┌─────────────┐              │
-│        │     ERY     │◀───────────┴───────────▶│     NOA     │              │
-│        │  Semantic   │                         │   Causal    │              │
-│        │   Lattice   │                         │   Ledger    │              │
-│        └─────────────┘                         └─────────────┘              │
-│              ↑                                        ↑                     │
-│       Semantik, Trust                         Finalität, Wahrheit           │
-│                                                                             │
-│                        ERY + NOA = ERYNOA                                   │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+                              ╭─────────────╮
+                              │    ECHO     │
+                              │   ───────   │
+                              │   Agenten   │
+                              │  Verhandlung│
+                              ╰──────┬──────╯
+                                     │
+                    ╭────────────────┼────────────────╮
+                    │                │                │
+                    ▼                │                ▼
+             ╭─────────────╮         │         ╭─────────────╮
+             │     ERY     │◀────────┴────────▶│     NOA     │
+             │   ───────   │                   │   ───────   │
+             │  Semantik   │                   │  Finalität  │
+             │    Trust    │                   │  Settlement │
+             ╰─────────────╯                   ╰─────────────╯
+
+                        E R Y   +   N O A
+                      ═══════════════════════
+                            E R Y N O A
 ```
 
-| Sphäre   | Funktion                   | Technologie           |
-| -------- | -------------------------- | --------------------- |
-| **ERY**  | Semantik, Trust, Discovery | Qdrant, Karmic Engine |
-| **ECHO** | Agenten, Verhandlung, P2P  | WASM, libp2p, XMTP    |
-| **NOA**  | Finalität, Settlement      | MoveVM, Starfish BFT  |
+</div>
 
-> 📖 **Mehr erfahren:** [Fachkonzept](documentation/concept/fachkonzept.md) · [Kernkonzept](documentation/concept/kernkonzept.md)
+<br>
+
+### Die drei Sphären
+
+|  Sphäre  | Aufgabe                           | Kerntechnologie        |
+| :------: | :-------------------------------- | :--------------------- |
+| **ERY**  | Semantik · Trust · Discovery      | Qdrant · Karmic Engine |
+| **ECHO** | Agenten · P2P · Verhandlung       | WASM · libp2p · XMTP   |
+| **NOA**  | Finalität · Settlement · Wahrheit | MoveVM · Starfish BFT  |
+
+<br>
 
 ---
+
+<br>
 
 ## ⚡ Schnellstart
 
-> **Voraussetzungen:** [Nix](https://nixos.org/) und [Docker Desktop](https://www.docker.com/products/docker-desktop/)
->
-> 📖 **Detaillierte Anleitung:** [Setup Guide](documentation/system/setup/setup.md)
-
-```bash
-# 1. Repository klonen
-git clone git@github.com:NiklasJavier/erynoa.git && cd erynoa
-
-# 2. Nix Dev-Shell betreten
-nix develop
-
-# 3. Projekt starten
-just dev
-```
-
-**Warte ~2 Minuten** ⏳ → Öffne **<http://localhost:3001>**
-
-<details>
-<summary><strong>🔗 Alle URLs & Test-Login</strong></summary>
-
-| Service                 | URL                              |
-| ----------------------- | -------------------------------- |
-| **Hauptzugang (Proxy)** | <http://localhost:3001>          |
-| Console                 | <http://localhost:3001/console>  |
-| Platform                | <http://localhost:3001/platform> |
-| Docs                    | <http://localhost:3001/docs>     |
-| Backend API             | <http://localhost:3001/api>      |
-| Backend direkt          | <http://localhost:3000>          |
-| ZITADEL (Auth)          | <http://localhost:8080>          |
-| MinIO (Storage)         | <http://localhost:9001>          |
-
-**Test-Login:**
-
-- User: `testuser` / `Test123!`
-- Admin: `zitadel-admin` / `Password1!`
-
-</details>
-
----
-
-## 📖 Dokumentation
-
-Die Dokumentation ist in zwei Bereiche unterteilt:
-
-```
-documentation/
-├── concept/          # 🧠 Protokoll & Konzept
-│   ├── fachkonzept.md           # ⭐ Master-Dokument (Start hier)
-│   ├── kernkonzept.md           # High-Level Überblick
-│   ├── system-architecture-overview.md
-│   ├── liquides-datenmodell.md
-│   ├── trust-and-reputation.md
-│   ├── cybernetic-loop.md
-│   ├── agents-and-adl.md
-│   ├── use-cases.md
-│   └── glossary.md
-│
-└── system/           # 🛠️ Plattform & Entwicklung
-    ├── readme.md                # System-Übersicht
-    ├── essential_guide.md       # Alles auf einen Blick
-    ├── guides/                  # Getting Started, ZITADEL
-    ├── setup/                   # Entwicklungsumgebung
-    ├── reference/               # Architektur, Config
-    └── development/             # Style Guide, Testing, TODOs
-```
-
-### 🧠 Konzept-Dokumentation
-
-| Dokument                                                                   | Beschreibung                                     |
-| -------------------------------------------------------------------------- | ------------------------------------------------ |
-| **[📋 Fachkonzept](documentation/concept/fachkonzept.md)**                 | **⭐ Hier starten** – Vollständige Spezifikation |
-| [Kernkonzept](documentation/concept/kernkonzept.md)                        | Kompakter High-Level-Überblick                   |
-| [Systemarchitektur](documentation/concept/system-architecture-overview.md) | Technische Architektur-Details                   |
-| [Liquides Datenmodell](documentation/concept/liquides-datenmodell.md)      | Blueprints, AMOs, Fluid Extensions               |
-| [Trust & Reputation](documentation/concept/trust-and-reputation.md)        | Karmic Engine, Trust Vectors                     |
-| [Cybernetic Loop](documentation/concept/cybernetic-loop.md)                | Der 6-Phasen-Workflow                            |
-| [Agents & ADL](documentation/concept/agents-and-adl.md)                    | Agentenmodell und Intent-Sprache                 |
-| [Use Cases](documentation/concept/use-cases.md)                            | EV-Charging, Industrie, Prosumer                 |
-| [Glossar](documentation/concept/glossary.md)                               | Begriffsdefinitionen                             |
-
-### 🛠️ System-Dokumentation
-
-| Dokument                                                          | Beschreibung                    |
-| ----------------------------------------------------------------- | ------------------------------- |
-| **[📚 Übersicht](documentation/system/readme.md)**                | Plattform-Dokumentation         |
-| [Essential Guide](documentation/system/essential_guide.md)        | Alles Wichtige auf einen Blick  |
-| [Getting Started](documentation/system/guides/getting-started.md) | Erste Schritte                  |
-| [Setup](documentation/system/setup/setup.md)                      | Entwicklungsumgebung einrichten |
-| [Architecture](documentation/system/reference/architecture.md)    | System-Architektur              |
-| [Configuration](documentation/system/reference/config.md)         | Service-Konfiguration           |
-| [Style Guide](documentation/system/development/style-guide.md)    | Code-Stil                       |
-| [Testing](documentation/system/development/testing.md)            | Test-Strategien                 |
-| [TODOs](documentation/system/development/todos.md)                | Offene Aufgaben                 |
-
----
-
-## 🛠 Tech Stack
-
 <table>
 <tr>
-<td width="50%">
+<td>
 
-### Backend
-
-| Komponente | Technologie            |
-| ---------- | ---------------------- |
-| Runtime    | **Rust**, Tokio        |
-| Framework  | Axum                   |
-| API        | Connect-RPC (Protobuf) |
-| Database   | PostgreSQL (OrioleDB)  |
-| Cache      | DragonflyDB (Redis)    |
-| Storage    | MinIO (S3)             |
-| Auth       | ZITADEL (OIDC/JWT)     |
+**Voraussetzungen**
 
 </td>
-<td width="50%">
+<td>
 
-### Frontend
-
-| Komponente      | Technologie              |
-| --------------- | ------------------------ |
-| Framework       | **SvelteKit** (Svelte 5) |
-| Styling         | Tailwind CSS             |
-| Build           | Vite, Turborepo          |
-| Package Manager | pnpm                     |
-| Linting         | Biome                    |
-| Types           | TypeScript               |
+[Nix](https://nixos.org/) · [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
 </td>
 </tr>
 </table>
 
-### Infrastructure
+```bash
+# Repository klonen
+git clone git@github.com:NiklasJavier/erynoa.git && cd erynoa
 
-| Komponente       | Technologie    |
-| ---------------- | -------------- |
-| Dev Environment  | Nix Flakes     |
-| Containerization | Docker Compose |
-| Reverse Proxy    | Caddy          |
-| Task Runner      | just           |
-| Code Generation  | buf (Protobuf) |
+# Dev-Shell betreten (lädt alle Tools)
+nix develop
+
+# Starten
+just dev
+```
+
+<br>
+
+<div align="center">
+
+⏳ **~2 Minuten warten** → 🌐 **http://localhost:3001** öffnen
+
+</div>
+
+<br>
+
+<details>
+<summary><strong>🔗 Alle Services & Test-Zugänge</strong></summary>
+
+<br>
+
+| Service      | URL                            | Beschreibung   |
+| :----------- | :----------------------------- | :------------- |
+| 🌐 **Proxy** | http://localhost:3001          | Hauptzugang    |
+| 📊 Console   | http://localhost:3001/console  | Admin-Bereich  |
+| 🖥️ Platform  | http://localhost:3001/platform | Hauptplattform |
+| 📖 Docs      | http://localhost:3001/docs     | Dokumentation  |
+| 🔌 API       | http://localhost:3001/api      | Backend-API    |
+| 🔐 ZITADEL   | http://localhost:8080          | Auth-Server    |
+| 📦 MinIO     | http://localhost:9001          | Object Storage |
+
+<br>
+
+**Test-Zugänge:**
+
+| Rolle | User            | Passwort     |
+| :---- | :-------------- | :----------- |
+| User  | `testuser`      | `Test123!`   |
+| Admin | `zitadel-admin` | `Password1!` |
+
+</details>
+
+<br>
 
 ---
+
+<br>
+
+## 📖 Dokumentation
+
+<br>
+
+<div align="center">
+
+|     | Konzept                                                                    |     | System                                                            |
+| :-: | :------------------------------------------------------------------------- | :-: | :---------------------------------------------------------------- |
+| 📋  | [**Fachkonzept**](documentation/concept/fachkonzept.md) ⭐                 | 📚  | [**System-Übersicht**](documentation/system/readme.md)            |
+| 🎯  | [Kernkonzept](documentation/concept/kernkonzept.md)                        | ⚡  | [Essential Guide](documentation/system/essential_guide.md)        |
+| 🏗️  | [Systemarchitektur](documentation/concept/system-architecture-overview.md) | 🚀  | [Getting Started](documentation/system/guides/getting-started.md) |
+| 💧  | [Liquides Datenmodell](documentation/concept/liquides-datenmodell.md)      | 🔧  | [Setup](documentation/system/setup/setup.md)                      |
+| 🤝  | [Trust & Reputation](documentation/concept/trust-and-reputation.md)        | 🏛️  | [Architecture](documentation/system/reference/architecture.md)    |
+| 🔄  | [Cybernetic Loop](documentation/concept/cybernetic-loop.md)                | ⚙️  | [Configuration](documentation/system/reference/config.md)         |
+| 🤖  | [Agents & ADL](documentation/concept/agents-and-adl.md)                    | 📝  | [Style Guide](documentation/system/development/style-guide.md)    |
+| 💡  | [Use Cases](documentation/concept/use-cases.md)                            | 🧪  | [Testing](documentation/system/development/testing.md)            |
+| 📖  | [Glossar](documentation/concept/glossary.md)                               | ✅  | [TODOs](documentation/system/development/todos.md)                |
+
+</div>
+
+<br>
+
+> 💡 **Empfehlung:** Starte mit dem [Fachkonzept](documentation/concept/fachkonzept.md) für einen vollständigen Überblick.
+
+<br>
+
+---
+
+<br>
+
+## 🛠️ Tech Stack
+
+<br>
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### Backend
+
+|              | Technologie            |
+| :----------- | :--------------------- |
+| 🦀 Runtime   | **Rust** · Tokio       |
+| 🌐 Framework | Axum                   |
+| 📡 API       | Connect-RPC (Protobuf) |
+| 🗄️ Database  | PostgreSQL (OrioleDB)  |
+| ⚡ Cache     | DragonflyDB            |
+| 📦 Storage   | MinIO (S3)             |
+| 🔐 Auth      | ZITADEL (OIDC)         |
+
+</td>
+<td width="50%" valign="top">
+
+### Frontend
+
+|              | Technologie              |
+| :----------- | :----------------------- |
+| 🎨 Framework | **SvelteKit** (Svelte 5) |
+| 💅 Styling   | Tailwind CSS             |
+| ⚡ Build     | Vite · Turborepo         |
+| 📦 Packages  | pnpm                     |
+| ✨ Linting   | Biome                    |
+| 📘 Types     | TypeScript               |
+
+</td>
+</tr>
+</table>
+
+<br>
+
+### Infrastruktur
+
+|     | Technologie    | Zweck                        |
+| :-- | :------------- | :--------------------------- |
+| ❄️  | Nix Flakes     | Reproduzierbare Dev-Umgebung |
+| 🐳  | Docker Compose | Container-Orchestrierung     |
+| 🔀  | Caddy          | Reverse Proxy                |
+| ⚙️  | just           | Task Runner                  |
+| 📋  | buf            | Protobuf Code-Gen            |
+
+<br>
+
+---
+
+<br>
 
 ## 📁 Projektstruktur
 
 ```
 erynoa/
-├── backend/              # 🦀 Rust API Server
-│   ├── src/              # Source Code
-│   ├── config/           # TOML Konfiguration
-│   ├── migrations/       # SQL Migrations
-│   └── proto/            # Protobuf Definitionen
 │
-├── frontend/             # 🎨 SvelteKit Apps (pnpm Workspace)
-│   ├── console/          # Admin Console
-│   ├── platform/         # Main Platform
-│   └── docs/             # Documentation Site
+├── 🦀 backend/                    Rust API Server
+│   ├── src/                       Source Code
+│   ├── config/                    TOML Konfiguration
+│   ├── migrations/                SQL Migrations
+│   └── proto/                     Protobuf Definitionen
 │
-├── documentation/        # 📖 Dokumentation
-│   ├── concept/          # 🧠 Protokoll & Konzept
-│   └── system/           # 🛠️ Plattform & Entwicklung
+├── 🎨 frontend/                   SvelteKit Apps
+│   ├── console/                   Admin Console
+│   ├── platform/                  Hauptplattform
+│   └── docs/                      Dokumentations-Site
 │
-├── infra/                # 🏗 Infrastructure
-│   ├── docker/           # Docker Compose & Dockerfiles
-│   ├── proxy/            # Caddy Reverse Proxy
-│   ├── auth/             # ZITADEL Config
-│   └── static/           # Static Files
+├── 📖 documentation/              Dokumentation
+│   ├── concept/                   Protokoll & Konzept
+│   └── system/                    Plattform & Entwicklung
 │
-├── scripts/              # 🔧 Build & Dev Scripts
+├── 🏗️ infra/                      Infrastruktur
+│   ├── docker/                    Docker Compose & Images
+│   ├── proxy/                     Caddy Config
+│   └── auth/                      ZITADEL Setup
 │
-├── flake.nix             # Nix Dev Environment
-├── justfile              # Task Runner Commands
-├── buf.yaml              # Protobuf Config
-└── turbo.json            # Turborepo Config
+├── 🔧 scripts/                    Build & Dev Scripts
+│
+├── ❄️ flake.nix                   Nix Environment
+├── ⚙️ justfile                    Task Commands
+└── 📋 buf.yaml                    Protobuf Config
 ```
+
+<br>
 
 ---
 
+<br>
+
 ## 🔧 Befehle
+
+<br>
 
 ### Entwicklung
 
-| Befehl             | Beschreibung                                       |
-| ------------------ | -------------------------------------------------- |
-| `just dev`         | **Startet alles** (Frontends + Backend + Services) |
-| `just dev console` | Nur Console starten                                |
-| `just status`      | Status aller Services                              |
-| `just logs`        | Logs anzeigen                                      |
-| `just stop`        | Alle Container stoppen                             |
-| `just restart`     | Schneller Neustart                                 |
-| `just reset`       | Alles löschen und neu starten                      |
+| Befehl             | Aktion                |
+| :----------------- | :-------------------- |
+| `just dev`         | 🚀 **Alles starten**  |
+| `just dev console` | Console starten       |
+| `just status`      | Service-Status        |
+| `just logs`        | Logs anzeigen         |
+| `just stop`        | Stoppen               |
+| `just reset`       | Komplett zurücksetzen |
+
+<br>
 
 ### Backend
 
-| Befehl       | Beschreibung      |
-| ------------ | ----------------- |
+| Befehl       | Aktion            |
+| :----------- | :---------------- |
 | `just check` | Cargo check       |
-| `just lint`  | Clippy Linter     |
-| `just fmt`   | Code formatieren  |
-| `just test`  | Tests ausführen   |
-| `just ci`    | fmt + lint + test |
+| `just lint`  | Clippy            |
+| `just fmt`   | Formatieren       |
+| `just test`  | Tests             |
+| `just ci`    | CI-Pipeline lokal |
+
+<br>
 
 ### Setup
 
-| Befehl               | Beschreibung                    |
-| -------------------- | ------------------------------- |
-| `just init`          | Initialisierung ohne Dev-Server |
-| `just init-env`      | `.env` erstellen                |
-| `just zitadel-setup` | ZITADEL neu konfigurieren       |
-| `just proto-gen`     | Protobuf Types generieren       |
+| Befehl               | Aktion             |
+| :------------------- | :----------------- |
+| `just init`          | Initialisieren     |
+| `just init-env`      | .env erstellen     |
+| `just zitadel-setup` | Auth konfigurieren |
+| `just proto-gen`     | Types generieren   |
+
+<br>
 
 <details>
-<summary><strong>📋 Alle Befehle anzeigen</strong></summary>
+<summary><strong>📋 Alle Befehle</strong></summary>
 
 ```bash
 just --list
@@ -290,60 +321,103 @@ just --list
 
 </details>
 
+<br>
+
 ---
+
+<br>
 
 ## 📊 Status
 
+<br>
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
 ### ✅ Implementiert
 
-- ✅ Connect-RPC API (Protobuf)
-- ✅ Monorepo mit pnpm & Turborepo
-- ✅ SvelteKit Frontends (Svelte 5)
-- ✅ ZITADEL Auth mit automatischem Setup
-- ✅ Caddy Reverse Proxy
-- ✅ DevContainer Support
-- ✅ GitHub Actions CI/CD
-- ✅ Nix Flakes Dev Environment
+- Connect-RPC API (Protobuf)
+- Monorepo (pnpm + Turborepo)
+- SvelteKit Frontends (Svelte 5)
+- ZITADEL Auth (auto-setup)
+- Caddy Reverse Proxy
+- DevContainer Support
+- GitHub Actions CI/CD
+- Nix Flakes Environment
+
+</td>
+<td width="50%" valign="top">
 
 ### 🔄 In Arbeit
 
 - Frontend Tests
-- Weitere Details: [TODOs](documentation/system/development/todos.md)
+- E2E Testing
+- Performance Monitoring
+
+<br>
+
+→ Details: [TODOs](documentation/system/development/todos.md)
+
+</td>
+</tr>
+</table>
+
+<br>
 
 ---
+
+<br>
 
 ## 🤝 Contributing
 
-1. Prüfe [TODOs](documentation/system/development/todos.md) für offene Aufgaben
-2. Folge dem [Style Guide](documentation/system/development/style-guide.md)
-3. Schreibe Tests ([Testing Guide](documentation/system/development/testing.md))
+1. **[TODOs](documentation/system/development/todos.md)** prüfen
+2. **[Style Guide](documentation/system/development/style-guide.md)** befolgen
+3. **[Tests](documentation/system/development/testing.md)** schreiben
+
+<br>
 
 ---
 
-## 📞 Support
+<br>
 
-Bei Problemen:
+## 📞 Hilfe
 
-1. [Essential Guide](documentation/system/essential_guide.md) – Troubleshooting
-2. [TODOs](documentation/system/development/todos.md) – Bekannte Issues
-3. [Connections](documentation/system/reference/connections.md) – Service-Probleme
+| Problem         | Lösung                                                       |
+| :-------------- | :----------------------------------------------------------- |
+| Allgemein       | [Essential Guide](documentation/system/essential_guide.md)   |
+| Bekannte Issues | [TODOs](documentation/system/development/todos.md)           |
+| Services        | [Connections](documentation/system/reference/connections.md) |
+
+<br>
 
 ---
+
+<br>
 
 <div align="center">
 
+<br>
+
+```
+    ╭───────────────────────────────────────────╮
+    │                                           │
+    │         E R Y   +   N O A                 │
+    │      ═════════════════════════            │
+    │           E R Y N O A                     │
+    │                                           │
+    │    Semantic Lattice + Causal Ledger       │
+    │       Wissen + Wahrheit = Vertrauen       │
+    │                                           │
+    ╰───────────────────────────────────────────╯
+```
+
+<br>
+
 **[MIT License](LICENSE)**
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                                                         │
-│          ERY + NOA = ERYNOA                            │
-│     Semantic Lattice + Causal Ledger                    │
-│          Wissen + Wahrheit = Vertrauen                  │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
-```
-
 Made with ❤️ and 🦀
+
+<br>
 
 </div>
