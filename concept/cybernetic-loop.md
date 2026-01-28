@@ -1,8 +1,12 @@
-## Erynoa – Cybernetic Loop (Universeller Workflow)
+# Erynoa – Cybernetic Loop (Universeller Workflow)
 
-**Zielgruppe:** Architekt:innen, Protocol/Backend-Engineers, Product Owner – alle, die End-to-End-Prozesse des Protokolls modellieren oder erklären müssen.
+> **Zielgruppe:** Architekt:innen, Protocol/Backend-Engineers, Product Owner
+> **Kontext:** End-to-End-Prozesse des Protokolls modellieren und verstehen
+> **Verwandte Dokumente:** [Agents & ADL](./agents-and-adl.md), [Trust & Reputation](./trust-and-reputation.md), [Glossar](./glossary.md)
 
-### 1. Ziel dieses Dokuments
+---
+
+## 1. Ziel dieses Dokuments
 
 Dieses Dokument beschreibt den **Cybernetic Loop** von Erynoa – den universellen
 Prozess, mit dem ein subjektiver Intent zu einer objektiv finalisierten Transaktion
@@ -16,7 +20,7 @@ Fokus:
 
 ---
 
-### 2. Überblick: Vom Intent zur Feedback-Schleife
+## 2. Überblick: Vom Intent zur Feedback-Schleife
 
 Der Cybernetic Loop besteht aus sechs Phasen:
 
@@ -29,16 +33,16 @@ Der Cybernetic Loop besteht aus sechs Phasen:
 
 Gedankliches Sequenzdiagramm:
 
-- Nutzer / Maschine → **Seeker-Agent (ECHO)**  
-  → nutzt **Semantic Index & Karmic Engine (ERY)**  
-  → verhandelt mit **Provider-Agent (ECHO)**  
-  → finalisiert über **MoveVM & AMOs (NOA)**  
-  → Events zurück an **Karmic Engine (ERY)**  
+- Nutzer / Maschine → **Seeker-Agent (ECHO)**
+  → nutzt **Semantic Index & Karmic Engine (ERY)**
+  → verhandelt mit **Provider-Agent (ECHO)**
+  → finalisiert über **MoveVM & AMOs (NOA)**
+  → Events zurück an **Karmic Engine (ERY)**
   → aktualisierte Trust-Daten beeinflussen zukünftige Intents und Entscheidungen.
 
 ---
 
-### 3. Phase 1 – Sensing & Intent (Initialisierung, ECHO)
+## 3. Phase 1 – Sensing & Intent (Initialisierung, ECHO)
 
 **Ziel:** Ein Intent beschreibt, _was_ erreicht werden soll, ohne die exakte Gegenpartei
 oder alle technischen Details zu kennen.
@@ -71,7 +75,7 @@ oder alle technischen Details zu kennen.
 
 ---
 
-### 4. Phase 2 – Discovery & Context (ECHO ↔ ERY)
+## 4. Phase 2 – Discovery & Context (ECHO ↔ ERY)
 
 **Ziel:** Passende Provider und Objekte finden, die den Intent potenziell erfüllen können.
 
@@ -87,7 +91,7 @@ oder alle technischen Details zu kennen.
    - Vektor-Suchen (semantische Ähnlichkeit),
    - Filter auf Domain Blueprints und Normative Standards,
    - geografische Filter via DHT + Geohashing
-   durch.
+     durch.
 3. Potenzielle Provider-DIDs und relevante AMOs werden identifiziert.
 
 **Wichtige Eigenschaften:**
@@ -104,7 +108,7 @@ oder alle technischen Details zu kennen.
 
 ---
 
-### 5. Phase 3 – Validation & Trust-Gating (ERY)
+## 5. Phase 3 – Validation & Trust-Gating (ERY)
 
 **Ziel:** Kandidaten auf strukturellen Trust und Reputation prüfen, bevor Ressourcen in Verhandlungen fließen.
 
@@ -130,7 +134,7 @@ oder alle technischen Details zu kennen.
 - Kandidaten, die:
   - strukturelle Anforderungen nicht erfüllen,
   - oder unterhalb des geforderten Vertrauen-Levels liegen,
-  werden verworfen.
+    werden verworfen.
 
 **Ergebnis der Phase:**
 
@@ -140,7 +144,7 @@ oder alle technischen Details zu kennen.
 
 ---
 
-### 6. Phase 4 – Negotiation & Progressive Disclosure (ECHO)
+## 6. Phase 4 – Negotiation & Progressive Disclosure (ECHO)
 
 **Ziel:** Einen privatwirtschaftlichen Konsens über konkrete Vertragsbedingungen finden.
 
@@ -178,7 +182,7 @@ oder alle technischen Details zu kennen.
 
 ---
 
-### 7. Phase 5 – Execution & Logic Guards (NOA)
+## 7. Phase 5 – Execution & Logic Guards (NOA)
 
 **Ziel:** Den Off-Chain-Konsens als On-Chain-Faktum in NOA finalisieren.
 
@@ -209,7 +213,7 @@ oder alle technischen Details zu kennen.
 
 ---
 
-### 8. Phase 6 – Feedback & Ripple Effect (NOA → ERY)
+## 8. Phase 6 – Feedback & Ripple Effect (NOA → ERY)
 
 **Ziel:** Aus jeder Interaktion lernen und das Vertrauensgefüge aktualisieren.
 
@@ -226,7 +230,7 @@ oder alle technischen Details zu kennen.
 3. Die Karmic Engine berechnet den neuen Trust Vector:
 
    \[
-   R_\text{new}(t) = R_\text{old}(t-1) + \eta \left(F_\text{Event} - E[F]\right)
+   R*\text{new}(t) = R*\text{old}(t-1) + \eta \left(F\_\text{Event} - E[F]\right)
    \]
 
 4. **Trust Inheritance**:
@@ -244,28 +248,37 @@ oder alle technischen Details zu kennen.
 
 ---
 
-### 9. Zusammenfassung: Eigenschaften des Cybernetic Loop
+## 9. Zusammenfassung: Eigenschaften des Cybernetic Loop
 
 Der Cybernetic Loop von Erynoa zeichnet sich aus durch:
 
-- **Funktionstrennung**:
-  - ECHO: Intents, Agenten, Verhandlung.
-  - ERY: Semantik, Kontext, Vertrauen.
-  - NOA: Wahrheit, Finalität, Exekution.
+- **Funktionstrennung:**
+  - ECHO: Intents, Agenten, Verhandlung
+  - ERY: Semantik, Kontext, Vertrauen
+  - NOA: Wahrheit, Finalität, Exekution
 
-- **Kontinuierliches Lernen**:
+- **Kontinuierliches Lernen:**
   - Jede Transaktion verändert die Vertrauenslandschaft.
   - Entscheidungen werden dynamisch besser, ohne zentrale Koordinatoren.
 
-- **Privacy-by-Design**:
+- **Privacy-by-Design:**
   - Nur minimale, notwendige Fakten landen On-Chain.
   - Details bleiben in Consensus Bubbles und Fluid Extensions.
 
-- **Skalierbarkeit**:
-  - Rechenintensive Prozesse Off-Chain,
-  - formale Sicherheit und Kausalität On-Chain.
+- **Skalierbarkeit:**
+  - Rechenintensive Prozesse Off-Chain
+  - Formale Sicherheit und Kausalität On-Chain
 
-Damit fungiert der Cybernetic Loop als „Herzschlag“ von Erynoa:
-Er wandelt Intents in verlässliche Fakten um – und nutzt jede Interaktion,
-um das System langfristig robuster und intelligenter zu machen.
+---
 
+## 10. Fazit
+
+Der Cybernetic Loop fungiert als „Herzschlag“ von Erynoa: Er wandelt Intents in verlässliche Fakten um – und nutzt jede Interaktion, um das System langfristig robuster und intelligenter zu machen.
+
+---
+
+**Weiterführende Dokumente:**
+
+- [Agents & ADL](./agents-and-adl.md) – Agentenmodell und Agent Definition Language
+- [Trust & Reputation](./trust-and-reputation.md) – Details zum Vertrauensmodell
+- [Use Cases](./use-cases.md) – Der Cybernetic Loop in der Praxis

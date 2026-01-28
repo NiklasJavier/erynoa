@@ -1,8 +1,12 @@
-## Erynoa – Glossar
+# Erynoa – Glossar
 
-**Zielgruppe:** Alle Leser:innen der Erynoa-Dokumentation (Concept, Docs, externe Materialien), die eine konsistente Begriffsbasis benötigen.
+> **Zielgruppe:** Alle Leser:innen der Erynoa-Dokumentation
+> **Kontext:** Konsistente Begriffsbasis für alle Konzept- und Architekturdokumente
+> **Verwandte Dokumente:** [Kernkonzept](./kernkonzept.md), [Navigation](./navigation.md)
 
-### 1. Zweck
+---
+
+## 1. Zweck
 
 Dieses Glossar definiert zentrale Begriffe des Erynoa-Protokolls in knapper,
 referenzierbarer Form. Es dient als gemeinsame Sprache für Konzept-, Architektur-
@@ -10,153 +14,159 @@ und Implementierungsdokumente.
 
 ---
 
-### 2. Begriffe
+## 2. Begriffe
 
-**ADL (Agent Definition Language)**  
+**ADL (Agent Definition Language)**
 Deklarative Sprache zur Beschreibung von Intents, Constraints und Policies für
 Seeker- und Provider-Agenten in der ECHO-Sphäre.
 
-**AMO (Atomic Market Object)**  
+**AMO (Atomic Market Object)**
 Zentrale On-Chain-Entität in NOA. Digitaler Container, dessen Verhalten durch
 Blueprints und die MoveVM definiert ist. Drei Archetypen: Material, Credential,
 Service.
 
-**Attestation**  
+**Attestation**
 Signierte Aussage einer externen oder internen Instanz über ein Subjekt
 (z. B. DID, AMO). Beispiele: DNS-Bindung, Zertifikate, Konformitätsnachweise.
 
-**Blueprint**  
+**Blueprint**
 Semantische und technische Schablone für Objekte und Prozesse. Es gibt
 normative Standards (Evolutionary Blueprints) und Domain Blueprints, die
 konkrete Validierungslogiken und Taxonomien definieren.
 
-**Continuous Value Streaming**  
+**Continuous Value Streaming**
 Abrechnungsmodell, bei dem der Wert kontinuierlich und fein granular über
 Zeit transferiert wird (z. B. pro Sekunde Energiefluss), statt in diskreten
 Einmalzahlungen.
 
-**Consensus Bubble**  
+**Consensus Bubble**
 Verschlüsselte Off-Chain-Kommunikationsumgebung (XMTP), in der Seeker- und
 Provider-Agenten privat verhandeln, bevor sie das Ergebnis auf NOA finalisieren.
 
-**Credential AMO**  
+**Credential AMO**
 AMO-Typ, der immaterielle Nachweise modelliert (z. B. KYC, Wartungszertifikate).
 Soulbound an eine DID, nicht transferierbar, nur verifizierbar.
 
-**DHT (Distributed Hash Table)**  
+**DHT (Distributed Hash Table)**
 Verteilte Datenstruktur zur Partitionierung und Auffindbarkeit von Daten im
 Netzwerk. In Erynoa kombiniert mit Geohashing für synaptisches Sharding.
 
-**DID (Decentralized Identifier)**  
+**DID (Decentralized Identifier)**
 Dezentraler Identifikator für Akteure (Personen, Organisationen, Maschinen),
 der kryptografisch gesichert ist und on- bzw. off-chain referenziert werden kann.
 
-**ECHO (Emergent Swarm)**  
+**ECHO (Emergent Swarm)**
 Sphäre der operativen Intelligenz. Führt Agentenlogik aus, wickelt Discovery,
 Verhandlung und Ausführung von Intents ab.
 
-**ERY (Semantic Lattice)**  
+**ERY (Semantic Lattice)**
 Semantische Sphäre und Gedächtnis des Netzwerks. Speichert Blueprints,
 Trust Vectors, Attestations und Fluid Extensions. Basis für semantische Suchen
 und Trust-Berechnung.
 
-**EOS (Erynoa Object Standard)**  
+**EOS (Erynoa Object Standard)**
 Architektonische Grundlage des liquiden Datenmodells. Definiert die Beziehung
 zwischen Normativen Standards, Domain Blueprints und AMOs.
 
-**Event**  
+**Event**
 Abstraktion eines finalisierten Vorgangs in NOA (z. B. erfolgreiche Lieferung,
 SLA-Verstoß). Dient als Input für die Karmic Engine.
 
-**Fluid Extensions**  
+**Fluid Extensions**
 Temporäre Attribut-Erweiterungen von AMOs, die flüchtige Daten (z. B. aktuelle
 Geo-Position, Sensorwerte) modellieren. Besitzen ein TTL und werden automatisch
 entfernt, um State Bloat zu vermeiden.
 
-**Geohashing**  
+**Geohashing**
 Kodierung geographischer Regionen in kompakte Strings. In Erynoa genutzt zur
 räumlichen Partitionierung (DHT) und zur Definition von Geo-Constraints in ADL.
 
-**Karmic Engine**  
+**Karmic Engine**
 Komponente in ERY, die aus Events und Attestations Trust Vectors berechnet.
 Nutzt den Ripple-Effekt, um Vertrauen dynamisch und fraktal zu aktualisieren.
 
-**Layer 0 (NOA)**  
+**Layer 0 (NOA)**
 On-Chain-Ebene des Erynoa-Protokolls. Basierend auf IOTA Rebased und Starfish BFT.
 Speichert kausale Wahrheiten, führt Move-Transaktionen aus und verwaltet AMOs.
 
-**Layer 2 (ERY, ECHO)**  
+**Layer 2 (ERY, ECHO)**
 Off-Chain-Ebene für Semantik und Intelligenz. Umfasst Semantic Lattice (ERY)
 und Agentensphäre (ECHO). Entlastet Layer 0 von rechenintensiven Aufgaben.
 
-**Logic Guards**  
+**Logic Guards**
 Smart-Contract-artige Prüfmechanismen in NOA, die vor jeder Zustandsänderung
 Invarianten sicherstellen (z. B. Soulbound-Regeln, Compliance, Ressourcensicherheit).
 
-**Material AMO**  
+**Material AMO**
 AMO-Typ, der physische Güter und Real World Assets modelliert (z. B. Ladesäulen,
 Maschinen, Sensoren). Transferierbar, knüpft an physische Knappheit an.
 
-**Move / MoveVM**  
+**Move / MoveVM**
 Programmiersprache und virtuelle Maschine in NOA. Optimiert auf Resource Safety
 und formale Kontrolle über Assets.
 
-**NOA (Causal Ledger)**  
+**NOA (Causal Ledger)**
 Sphäre der kausalen Wahrheit. On-Chain-Ledger, der Transaktionen finalisiert und
 Zustandsänderungen an AMOs vollzieht.
 
-**Normative Standards (Evolutionary Blueprints)**  
+**Normative Standards (Evolutionary Blueprints)**
 Etablierte Industriestandards (z. B. ISO 19112, eCl@ss), die als unveränderliche
 Grundlagen für Domain Blueprints dienen und als Evolutionary Blueprints in ERY
 verankert sind.
 
-**Progressive Disclosure**  
+**Progressive Disclosure**
 Prinzip, nach dem sensible Informationen in Verhandlungen nur schrittweise
 offengelegt werden, wenn Vertrauen und Interesse beidseitig gegeben sind.
 
-**Seeker Agent**  
+**Seeker Agent**
 Agentenrolle für Nachfrager. Formuliert Intents, führt Discovery durch, wählt
 Provider aus und initiiert Verhandlungen.
 
-**Service AMO**  
+**Service AMO**
 AMO-Typ, der zeitgebundene Dienstleistungen modelliert (z. B. Ladevorgänge,
 Energieflüsse, API-Nutzung). Unterstützt Continuous Value Streaming.
 
-**Starfish BFT**  
+**Starfish BFT**
 Leaderloser Konsensmechanismus in NOA. Sorgt für deterministische Finalität
 von Transaktionen in unter zwei Sekunden.
 
-**Synapse (ERY-Synapse)**  
+**Synapse (ERY-Synapse)**
 Elementare, inhaltsadressierte Speichereinheit in ERY, die Daten und ihre
 semantischen Beziehungen verwaltet. Grundlage der synaptischen Sharding-
 Architektur.
 
-**Trust Gating**  
+**Trust Gating**
 Mechanismus, bei dem minimale Trust-Schwellen und Attestationsanforderungen
 als Zugangskriterium für Interaktionen dienen. Implementiert in ADL-Constraints
 und ERY-Prüfschritten.
 
-**Trust Vector**  
+**Trust Vector**
 Mehrdimensionaler Vektor, der das Vertrauen in ein Subjekt beschreibt. Wird
 von der Karmic Engine auf Basis von Events und Attestations berechnet und
 im Semantic Index gespeichert.
 
-**TTL (Time-To-Live)**  
+**TTL (Time-To-Live)**
 Lebensdauer eines flüchtigen Dateneintrags (z. B. Fluid Extension). Nach Ablauf
 des TTL wird der Eintrag automatisch aus ERY entfernt.
 
-**XMTP (Extensible Message Transport Protocol)**  
+**XMTP (Extensible Message Transport Protocol)**
 Protokoll für verschlüsselte Nachrichtenkanäle zwischen Agenten. In Erynoa
 für Consensus Bubbles und Progressive Disclosure genutzt.
 
 ---
 
-### 3. Verwendung
+## 3. Verwendung
 
-Dieses Glossar sollte bei neuen Begriffen erweitert werden und dient als
-Referenzpunkt für:
+Dieses Glossar sollte bei neuen Begriffen erweitert werden und dient als Referenzpunkt für:
 
-- Konzeptdokumente im `concept/`-Verzeichnis,
-- Architektur- und Implementierungsdokumente in `docs/`,
-- externe Kommunikation (Whitepaper, Präsentationen).
+- Konzeptdokumente im `concept/`-Verzeichnis
+- Architektur- und Implementierungsdokumente in `docs/`
+- Externe Kommunikation (Whitepaper, Präsentationen)
 
+---
+
+**Weiterführende Dokumente:**
+
+- [Kernkonzept](./kernkonzept.md) – High-Level-Überblick
+- [System Architecture Overview](./system-architecture-overview.md) – Technische Architektur
+- [Navigation](./navigation.md) – Übersicht aller Konzeptdokumente

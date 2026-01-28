@@ -1,8 +1,12 @@
-## Erynoa – Use Cases & Narrative
+# Erynoa – Use Cases & Narrative
 
-**Zielgruppe:** Product/Business, Partner, Marketing, aber auch technische Leser:innen, die das Protokoll über konkrete Geschichten verstehen wollen.
+> **Zielgruppe:** Product/Business, Partner, Marketing, technische Leser:innen
+> **Kontext:** Das Protokoll über konkrete Geschichten verstehen
+> **Verwandte Dokumente:** [Kernkonzept](./kernkonzept.md), [Cybernetic Loop](./cybernetic-loop.md), [Glossar](./glossary.md)
 
-### 1. Ziel dieses Dokuments
+---
+
+## 1. Ziel dieses Dokuments
 
 Dieses Dokument beschreibt ausgewählte Use Cases, um das abstrakte Konzept von Erynoa
 in konkrete, nachvollziehbare Szenarien zu übersetzen.
@@ -15,9 +19,9 @@ Für jeden Use Case werden dargestellt:
 
 ---
 
-### 2. Use Case: Intelligentes Laden von Elektrofahrzeugen
+## 2. Use Case: Intelligentes Laden von Elektrofahrzeugen
 
-#### 2.1 Problem im Status quo
+### 2.1 Problem im Status quo
 
 - Ladeinfrastruktur ist fragmentiert:
   - unterschiedliche Betreiber, Tarife, Authentifizierungsmechanismen.
@@ -28,7 +32,7 @@ Für jeden Use Case werden dargestellt:
   - ihre Qualität und Zuverlässigkeit schwer glaubhaft machen,
   - sich kaum durch nachweisbar gutes Verhalten differenzieren.
 
-#### 2.2 Ablauf im Cybernetic Loop
+### 2.2 Ablauf im Cybernetic Loop
 
 **Phase 1 – Intent (ECHO, ADL)**
 
@@ -78,7 +82,7 @@ Für jeden Use Case werden dargestellt:
 - Die Karmic Engine:
   - aktualisiert Trust Vectors des Betreibers, der Ladesäule und ggf. des Fahrzeugs (Nutzungsverhalten).
 
-#### 2.3 Nutzen von Erynoa
+### 2.3 Nutzen von Erynoa
 
 - **Für Nutzer / Fahrzeuge**
   - Transparent nachvollziehbare Qualität und Herkunft der Energie.
@@ -93,9 +97,9 @@ Für jeden Use Case werden dargestellt:
 
 ---
 
-### 3. Use Case: Zertifizierte Wartung von Industrieanlagen
+## 3. Use Case: Zertifizierte Wartung von Industrieanlagen
 
-#### 3.1 Problem im Status quo
+### 3.1 Problem im Status quo
 
 - Wartungszertifikate werden oft:
   - in isolierten Systemen verwaltet,
@@ -105,7 +109,7 @@ Für jeden Use Case werden dargestellt:
   - haben hohen manuellen Prüfaufwand,
   - kämpfen mit Betrug oder unvollständigen Nachweisen.
 
-#### 3.2 Ablauf im Cybernetic Loop
+### 3.2 Ablauf im Cybernetic Loop
 
 **Phase 1 – Intent (ECHO, ADL)**
 
@@ -152,9 +156,9 @@ Für jeden Use Case werden dargestellt:
 - Erfolgreiche oder mangelhafte Wartungen fließen als Events in die Karmic Engine ein.
 - Trust Vectors der Provider und ggf. der Zertifizierungsstellen werden angepasst.
 
-#### 3.3 Nutzen von Erynoa
+### 3.3 Nutzen von Erynoa
 
-- **Automatisierte Verifikation**:
+- **Automatisierte Verifikation:**
   - Credentials sind maschinenlesbar, normbasiert und on-chain verankert.
 - **Reduzierter Prüfaufwand**:
   - Versicherer und Auditoren können Zustände kryptografisch prüfen, statt Dokumente manuell zu sichten.
@@ -163,9 +167,9 @@ Für jeden Use Case werden dargestellt:
 
 ---
 
-### 4. Use Case: Echtzeit-Energiehandel zwischen Prosumer und Netz
+## 4. Use Case: Echtzeit-Energiehandel zwischen Prosumer und Netz
 
-#### 4.1 Problem im Status quo
+### 4.1 Problem im Status quo
 
 - Prosumer (z. B. Haushalte mit PV-Anlage) haben:
   - eingeschränkte Möglichkeiten, flexibel und granular Energie zu handeln.
@@ -174,7 +178,7 @@ Für jeden Use Case werden dargestellt:
 - Märkte:
   - sind träge, zentralisiert und schwer für kleine Akteure zugänglich.
 
-#### 4.2 Ablauf im Cybernetic Loop
+### 4.2 Ablauf im Cybernetic Loop
 
 **Phase 1 – Intent (ECHO, ADL)**
 
@@ -214,28 +218,35 @@ Für jeden Use Case werden dargestellt:
 - Karmic Engine:
   - passt Trust Vectors aller Beteiligten an.
 
-#### 4.3 Nutzen von Erynoa
+### 4.3 Nutzen von Erynoa
 
-- **Feingranulare Märkte**:
-  - auch kleine Akteure können am Echtzeitmarkt teilnehmen.
-- **Systemstabilität**:
-  - Netzbetreiber können auf aggregierte Informationen und Trust-Daten zugreifen.
-- **Transparenz & Fairness**:
-  - Preise und Leistungen werden durch nachvollziehbare Reputation und Normen gestützt.
+- **Feingranulare Märkte:** Auch kleine Akteure können am Echtzeitmarkt teilnehmen.
+- **Systemstabilität:** Netzbetreiber können auf aggregierte Informationen und Trust-Daten zugreifen.
+- **Transparenz & Fairness:** Preise und Leistungen werden durch nachvollziehbare Reputation und Normen gestützt.
 
 ---
 
-### 5. Narrative Klammer
+## 5. Narrative Klammer
 
 Über alle Use Cases hinweg zeigt sich:
 
-- Erynoa:
-  - verbindet reale Assets, Daten und Akteure über Blueprints und AMOs,
-  - bewertet Verhalten kontinuierlich über Trust & Reputation,
-  - und orchestriert Interaktionen über Agenten und den Cybernetic Loop.
+- **Erynoa:**
+  - verbindet reale Assets, Daten und Akteure über Blueprints und AMOs
+  - bewertet Verhalten kontinuierlich über Trust & Reputation
+  - und orchestriert Interaktionen über Agenten und den Cybernetic Loop
 
-Damit verschiebt sich der Fokus von:
+Damit verschiebt sich der Fokus von **„Transaktionen auf einer Blockchain“** hin zu **„lebendigen Märkten zwischen lernenden Maschinen und Organisationen“**.
 
-- **„Transaktionen auf einer Blockchain“** hin zu
-- **„lebendigen Märkten zwischen lernenden Maschinen und Organisationen“**.
+---
 
+## 6. Fazit
+
+Die Use Cases illustrieren, wie Erynoa abstrakte Konzepte in konkrete Wertschöpfung übersetzt: automatisierte, vertrauensbasierte Interaktionen zwischen Maschinen, Unternehmen und Nutzern – ohne zentrale Vermittler.
+
+---
+
+**Weiterführende Dokumente:**
+
+- [Kernkonzept](./kernkonzept.md) – High-Level-Überblick
+- [Cybernetic Loop](./cybernetic-loop.md) – Detaillierter Workflow
+- [Agents & ADL](./agents-and-adl.md) – Agentenmodell und Sprache

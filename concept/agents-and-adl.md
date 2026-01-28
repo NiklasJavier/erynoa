@@ -1,8 +1,12 @@
-## Erynoa – Agents & Agent Definition Language (ADL)
+# Erynoa – Agents & Agent Definition Language (ADL)
 
-**Zielgruppe:** Agenten-Entwickler:innen, Protocol Engineers, Architekt:innen für Agenten-/Policy-Layer.
+> **Zielgruppe:** Agenten-Entwickler:innen, Protocol Engineers, Architekt:innen für Agenten-/Policy-Layer
+> **Kontext:** Agentenmodell und deklarative Sprache für Intents
+> **Verwandte Dokumente:** [Cybernetic Loop](./cybernetic-loop.md), [Trust & Reputation](./trust-and-reputation.md), [Glossar](./glossary.md)
 
-### 1. Ziel dieses Dokuments
+---
+
+## 1. Ziel dieses Dokuments
 
 Dieses Dokument beschreibt:
 
@@ -13,7 +17,7 @@ Dieses Dokument beschreibt:
 
 ---
 
-### 2. Agentenmodell in ECHO
+## 2. Agentenmodell in ECHO
 
 ECHO ist die Sphäre der **operativen Intelligenz**. Hier werden Intents
 von Menschen, Unternehmen und Maschinen durch Agenten ausgeführt.
@@ -31,7 +35,7 @@ von Menschen, Unternehmen und Maschinen durch Agenten ausgeführt.
 
 ---
 
-### 3. Agententypen
+## 3. Agententypen
 
 Erynoa unterscheidet zwei primäre Agentenrollen:
 
@@ -70,7 +74,7 @@ Erynoa unterscheidet zwei primäre Agentenrollen:
 
 ---
 
-### 4. Ausführungsumgebung – WASM-Sandbox
+## 4. Ausführungsumgebung – WASM-Sandbox
 
 Agenten laufen in einer strikt isolierten **WebAssembly (WASM) Sandbox**.
 
@@ -99,7 +103,7 @@ Diese Trennung erlaubt:
 
 ---
 
-### 5. Agent Definition Language (ADL) – Grundprinzipien
+## 5. Agent Definition Language (ADL) – Grundprinzipien
 
 Die **Agent Definition Language (ADL)** ist eine deklarative Sprache, mit der
 Intents und Policies beschrieben werden.
@@ -115,7 +119,7 @@ Intents und Policies beschrieben werden.
 
 ---
 
-### 6. Kernbausteine von ADL
+## 6. Kernbausteine von ADL
 
 Ein ADL-Dokument (oder -Objekt) besteht typischerweise aus folgenden Bausteinen:
 
@@ -148,7 +152,7 @@ Ein ADL-Dokument (oder -Objekt) besteht typischerweise aus folgenden Bausteinen:
 
 6. **Geospatial Constraints**
    - Geohashing-basierte Regionen:
-     - z. B. „Nur Anbieter in Region GH123*“, ohne exakte Koordinaten offenzulegen.
+     - z. B. „Nur Anbieter in Region GH123\*“, ohne exakte Koordinaten offenzulegen.
 
 7. **Economic Constraints**
    - Preisspannen, Vergütungsmodelle:
@@ -161,7 +165,7 @@ Ein ADL-Dokument (oder -Objekt) besteht typischerweise aus folgenden Bausteinen:
 
 ---
 
-### 7. Von ADL zur laufenden Agenteninstanz
+## 7. Von ADL zur laufenden Agenteninstanz
 
 Der Weg von einer ADL-Spezifikation zur ausführenden Agenteninstanz umfasst:
 
@@ -194,7 +198,7 @@ sondern wird über ERY und NOA referenziert.
 
 ---
 
-### 8. Provider-Policies und Matching
+## 8. Provider-Policies und Matching
 
 Provider Agents nutzen ebenfalls ADL-ähnliche Strukturen, um ihre Angebote und
 Teilnahmebedingungen zu beschreiben.
@@ -215,7 +219,7 @@ Teilnahmebedingungen zu beschreiben.
 
 ---
 
-### 9. Sicherheit & Missbrauchsprävention auf Agentenebene
+## 9. Sicherheit & Missbrauchsprävention auf Agentenebene
 
 Mögliche Risiken:
 
@@ -237,19 +241,24 @@ Erynoa begegnet dem mit:
 
 ---
 
-### 10. Zusammenspiel mit anderen Konzepten
+## 10. Zusammenspiel mit anderen Konzepten
 
 Das Agenten- und ADL-Modell steht nicht isoliert, sondern ist eingebettet in:
 
-- das **Liquide Datenmodell**:
-  - ADL referenziert Blueprints und AMO-Typen.
-- das **Trust- & Reputationsmodell**:
-  - ADL-Constraints nutzen Trust Vectors und Attestations.
-- den **Cybernetic Loop**:
-  - Agenten sind die aktiven Akteure in Phasen 1–4.
+- das **Liquide Datenmodell:** ADL referenziert Blueprints und AMO-Typen.
+- das **Trust- & Reputationsmodell:** ADL-Constraints nutzen Trust Vectors und Attestations.
+- den **Cybernetic Loop:** Agenten sind die aktiven Akteure in Phasen 1–4.
 
-Damit bildet ECHO mit seinen Agenten die **operative Oberfläche** von Erynoa:
-Menschen, Maschinen und Organisationen interagieren nicht direkt mit dem Ledger,
-sondern über Agenten, die ihre Interessen in einer sicheren, normbasierten
-und vertrauensbewussten Weise durchsetzen.
+---
 
+## 11. Fazit
+
+ECHO mit seinen Agenten bildet die **operative Oberfläche** von Erynoa: Menschen, Maschinen und Organisationen interagieren nicht direkt mit dem Ledger, sondern über Agenten, die ihre Interessen in einer sicheren, normbasierten und vertrauensbewussten Weise durchsetzen.
+
+---
+
+**Weiterführende Dokumente:**
+
+- [Cybernetic Loop](./cybernetic-loop.md) – Der universelle Workflow
+- [Trust & Reputation](./trust-and-reputation.md) – Vertrauensmodell im Detail
+- [Use Cases](./use-cases.md) – Agenten in der Praxis

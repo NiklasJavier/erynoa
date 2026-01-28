@@ -1,8 +1,12 @@
-## Erynoa – Trust & Reputation
+# Erynoa – Trust & Reputation
 
-**Zielgruppe:** Protokoll-Designer, Sicherheits-/Risk-Teams, Data Scientists und Architekt:innen, die das Vertrauensmodell im Detail nutzen oder erweitern wollen.
+> **Zielgruppe:** Protokoll-Designer, Sicherheits-/Risk-Teams, Data Scientists und Architekt:innen
+> **Kontext:** Detailverständnis des Vertrauensmodells
+> **Verwandte Dokumente:** [Liquides Datenmodell](./liquides-datenmodell.md), [Cybernetic Loop](./cybernetic-loop.md), [Glossar](./glossary.md)
 
-### 1. Motivation: Warum Vertrauen zentral ist
+---
+
+## 1. Motivation: Warum Vertrauen zentral ist
 
 In einer Maschinenökonomie treffen:
 
@@ -23,23 +27,23 @@ Erynoa macht **Vertrauen** zum **erstklassigen Konzept**:
 
 ---
 
-### 2. Grundbegriffe
+## 2. Grundbegriffe
 
-- **Trust Vector**  
+- **Trust Vector**
   - Mehrdimensionaler Reputationsvektor eines Subjekts (z. B. DID, AMO, Hersteller).
   - Kann verschiedene Dimensionen abbilden (Zuverlässigkeit, Compliance, Performance, etc.).
 
-- **Event**  
+- **Event**
   - Ein finalisiertes Ereignis auf NOA (z. B. erfolgreicher Service, Ausfall, Vertragsbruch).
   - Dient als Input für die Karmic Engine.
 
-- **Attestation**  
+- **Attestation**
   - Externe, signierte Aussage über ein Subjekt (z. B. DNS-Verknüpfung, Zertifikat).
   - Wird in ERY gespeichert und in Trust-Berechnung einbezogen.
 
 ---
 
-### 3. Karmic Engine – Mathematischer Kern
+## 3. Karmic Engine – Mathematischer Kern
 
 Die **Karmic Engine** ist die Komponente in ERY, die aus Events und Attestations
 einen dynamischen Trust Vector berechnet.
@@ -47,11 +51,11 @@ einen dynamischen Trust Vector berechnet.
 Zentrale Formel (Ripple Effect):
 
 \[
-R_\text{new}(t) = R_\text{old}(t-1) + \eta \left(F_\text{Event} - E[F]\right)
+R*\text{new}(t) = R*\text{old}(t-1) + \eta \left(F\_\text{Event} - E[F]\right)
 \]
 
-- \( R_\text{old}(t-1) \): bisheriger Trust Vector zur Zeit \( t-1 \)
-- \( F_\text{Event} \): Beitrag des aktuellen Events (z. B. erfolgreich, neutral, negativ)
+- \( R\_\text{old}(t-1) \): bisheriger Trust Vector zur Zeit \( t-1 \)
+- \( F\_\text{Event} \): Beitrag des aktuellen Events (z. B. erfolgreich, neutral, negativ)
 - \( E[F] \): erwarteter oder durchschnittlicher Eventbeitrag
 - \( \eta \): Lernrate / Sensitivitätsfaktor
 
@@ -63,7 +67,7 @@ R_\text{new}(t) = R_\text{old}(t-1) + \eta \left(F_\text{Event} - E[F]\right)
 
 ---
 
-### 4. Fraktale Trust-Vererbung (Trust Inheritance)
+## 4. Fraktale Trust-Vererbung (Trust Inheritance)
 
 Vertrauen ist in Erynoa **hierarchisch** organisiert.
 
@@ -92,7 +96,7 @@ Dies wird durch einen Dämpfungsfaktor \( \lambda \) modelliert:
 
 ---
 
-### 5. Attestations & struktureller Trust
+## 5. Attestations & struktureller Trust
 
 Neben verhaltensbasiertem Vertrauen (Events) erfasst Erynoa auch **strukturellen Trust**.
 
@@ -114,24 +118,24 @@ Beispiele:
 
 ---
 
-### 6. Trust-Gating im Cybernetic Loop
+## 6. Trust-Gating im Cybernetic Loop
 
 Trust wird nicht nur gemessen, sondern auch **erzwingt Marktzugänge**:
 
-1. **Intent-Phase (ECHO)**  
+1. **Intent-Phase (ECHO)**
    - Ein Seeker-Agent definiert in ADL einen **MinTrust**-Wert und ggf. benötigte Attestations.
 
-2. **Discovery-Phase (ECHO ↔ ERY)**  
+2. **Discovery-Phase (ECHO ↔ ERY)**
    - Die Kandidatenliste wird anhand von:
      - Trust Vectors,
      - Attestations,
      - Norm-/Blueprint-Konformität
-     gefiltert.
+       gefiltert.
 
-3. **Verhandlungs-Phase (ECHO)**  
+3. **Verhandlungs-Phase (ECHO)**
    - Nur Kandidaten, die die Trust-Anforderungen erfüllen, gelangen in die Consensus Bubble.
 
-4. **Post-Event (NOA → ERY)**  
+4. **Post-Event (NOA → ERY)**
    - Nach der finalen Transaktion aktualisiert die Karmic Engine die Trust Vectors.
 
 **Ergebnis:**
@@ -141,7 +145,7 @@ Trust wird nicht nur gemessen, sondern auch **erzwingt Marktzugänge**:
 
 ---
 
-### 7. Speicherung von Trust-Daten im Semantic Index
+## 7. Speicherung von Trust-Daten im Semantic Index
 
 Trust- und Reputationsdaten werden im **Dynamic State Layer** des Semantic Index (ERY) verwaltet:
 
@@ -157,7 +161,7 @@ Trust- und Reputationsdaten werden im **Dynamic State Layer** des Semantic Index
 
 ---
 
-### 8. Governance und Missbrauchsprävention
+## 8. Governance und Missbrauchsprävention
 
 Ein Vertrauenssystem ist angreifbar, wenn:
 
@@ -179,7 +183,7 @@ Erynoa adressiert diese Risiken durch:
 
 ---
 
-### 9. Zusammenspiel mit dem liquiden Datenmodell
+## 9. Zusammenspiel mit dem Liquiden Datenmodell
 
 Trust & Reputation entfaltet seine volle Wirkung erst in Verbindung mit dem **Liquiden Datenmodell**:
 
@@ -195,11 +199,11 @@ So entsteht ein System, in dem:
   - Normkonformität,
   - aktuelle Zustände
   - und historisches Verhalten
-  gleichzeitig berücksichtigen.
+    gleichzeitig berücksichtigen.
 
 ---
 
-### 10. Fazit
+## 10. Fazit
 
 Das Trust- und Reputationsmodell von Erynoa macht:
 
@@ -209,6 +213,12 @@ Das Trust- und Reputationsmodell von Erynoa macht:
 
 ohne auf zentrale Plattformbetreiber oder intransparente Scoring-Modelle angewiesen zu sein.
 
-Damit bildet es, zusammen mit dem liquiden Datenmodell, die Grundlage für eine robuste,
-skalierbare und faire Maschinenökonomie.
+Damit bildet es, zusammen mit dem Liquiden Datenmodell, die Grundlage für eine robuste, skalierbare und faire Maschinenökonomie.
 
+---
+
+**Weiterführende Dokumente:**
+
+- [Cybernetic Loop](./cybernetic-loop.md) – Der universelle Workflow
+- [Agents & ADL](./agents-and-adl.md) – Agenten und ihre Interaktionen
+- [Use Cases](./use-cases.md) – Konkrete Anwendungsbeispiele

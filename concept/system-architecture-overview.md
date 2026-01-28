@@ -1,8 +1,12 @@
-## Erynoa – System Architecture Overview
+# Erynoa – System Architecture Overview
 
-**Zielgruppe:** Software-/Systemarchitekt:innen, Senior Developers, Protokoll-Designer (Übergang von Konzept zu technischer Architektur).
+> **Zielgruppe:** Software-/Systemarchitekt:innen, Senior Developers, Protokoll-Designer
+> **Kontext:** Übergang von Konzept zu technischer Architektur
+> **Verwandte Dokumente:** [Kernkonzept](./kernkonzept.md), [Cybernetic Loop](./cybernetic-loop.md), [Glossar](./glossary.md)
 
-### 1. Ziel dieses Dokuments
+---
+
+## 1. Ziel dieses Dokuments
 
 Dieses Dokument beschreibt die Systemarchitektur von Erynoa auf hohem Abstraktionsniveau.
 Es bildet die Brücke zwischen dem **Kernkonzept** (`kernkonzept.md`) und den detaillierten
@@ -16,7 +20,7 @@ Fokus:
 
 ---
 
-### 2. High-Level Architektur
+## 2. High-Level Architektur
 
 Erynoa besteht aus drei spezialisierten Sphären, die gemeinsam eine kybernetische Triade bilden:
 
@@ -36,17 +40,17 @@ Diese Sphären verteilen sich auf zwei technologische Ebenen:
 
 Gedankliches Diagramm (vereinfacht):
 
-- Nutzer / Maschinen / Unternehmen  
-  ↓ (Intents in ADL)  
-- **ECHO (Agenten, Verhandlung)**  
-  ↔ **ERY (Semantik, Trust, Index)**  
-  ↓ (finalisiertes Ergebnis)  
-- **NOA (Ledger, AMOs, MoveVM)**  
+- Nutzer / Maschinen / Unternehmen
+  ↓ (Intents in ADL)
+- **ECHO (Agenten, Verhandlung)**
+  ↔ **ERY (Semantik, Trust, Index)**
+  ↓ (finalisiertes Ergebnis)
+- **NOA (Ledger, AMOs, MoveVM)**
   → Events → zurück zu **ERY** (Karmic Feedback)
 
 ---
 
-### 3. ERY – Semantic Lattice
+## 3. ERY – Semantic Lattice
 
 **Rolle:** Semantisches Rückgrat und Gedächtnis des Netzwerks.
 
@@ -68,7 +72,7 @@ ERY beantwortet die Fragen:
 - **Karmic Engine**
   - Berechnet **Trust Vectors** für Akteure und Objekte.
   - Nutzt den **Ripple Effect**:
-    - \( R_\text{new}(t) = R_\text{old}(t-1) + \eta (F_\text{Event} - E[F]) \)
+    - \( R*\text{new}(t) = R*\text{old}(t-1) + \eta (F\_\text{Event} - E[F]) \)
   - Implementiert **Trust Inheritance**:
     - Vertrauen propagiert entlang hierarchischer Strukturen (z. B. Hersteller → Betreiber → Asset).
 
@@ -87,7 +91,7 @@ ERY beantwortet die Fragen:
 
 ---
 
-### 4. ECHO – Emergent Swarm
+## 4. ECHO – Emergent Swarm
 
 **Rolle:** Operative Intelligenz und Durchführung von Intents.
 
@@ -125,7 +129,7 @@ ECHO beantwortet die Fragen:
 
 ---
 
-### 5. NOA – Causal Ledger
+## 5. NOA – Causal Ledger
 
 **Rolle:** Ebene der Wahrheit und exekutiven Finalität.
 
@@ -158,15 +162,15 @@ NOA beantwortet die Fragen:
 
 ---
 
-### 6. Zusammenspiel: Der kybernetische Regelkreis
+## 6. Zusammenspiel: Der kybernetische Regelkreis
 
-Die drei Sphären bilden gemeinsam einen geschlossenen **Cybernetic Loop**:  
-Intents werden in **ECHO** formuliert und verhandelt, durch **NOA** kausal finalisiert und fließen als Events zurück in **ERY**, wo die Karmic Engine Vertrauen und Kontext aktualisiert.  
+Die drei Sphären bilden gemeinsam einen geschlossenen **Cybernetic Loop**:
+Intents werden in **ECHO** formuliert und verhandelt, durch **NOA** kausal finalisiert und fließen als Events zurück in **ERY**, wo die Karmic Engine Vertrauen und Kontext aktualisiert.
 Eine ausführliche, phasenweise Beschreibung (inkl. Inputs/Outputs) findet sich in `cybernetic-loop.md`.
 
 ---
 
-### 7. Abgrenzung zu klassischen Blockchain-Architekturen
+## 7. Abgrenzung zu klassischen Blockchain-Architekturen
 
 Im Vergleich zu herkömmlichen Blockchains:
 
@@ -176,6 +180,18 @@ Im Vergleich zu herkömmlichen Blockchains:
 - macht **Vertrauen** zu einem erstklassigen Konzept (Trust Vectors, Karmic Engine),
 - und behandelt reale Domänen über ein liquides, normbasiertes Datenmodell (Blueprints + AMOs).
 
-Damit ist Erynoa keine „noch eine Blockchain“, sondern ein kybernetisches Protokoll für
-skalierbare, vertrauensbasierte Maschinenökonomien.
+Damit ist Erynoa keine „noch eine Blockchain“, sondern ein kybernetisches Protokoll für skalierbare, vertrauensbasierte Maschinenökonomien.
 
+---
+
+## 8. Fazit
+
+Die Systemarchitektur von Erynoa trennt bewusst Semantik (ERY), Intelligenz (ECHO) und Exekution (NOA) in spezialisierte Sphären. Diese Trennung ermöglicht Skalierbarkeit ohne Kompromisse bei Sicherheit und Finalität.
+
+---
+
+**Weiterführende Dokumente:**
+
+- [Cybernetic Loop](./cybernetic-loop.md) – Detaillierte Workflow-Beschreibung
+- [Liquides Datenmodell](./liquides-datenmodell.md) – Blueprints und AMOs im Detail
+- [Agents & ADL](./agents-and-adl.md) – Agentenmodell und Agent Definition Language

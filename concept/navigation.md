@@ -1,58 +1,78 @@
-## Erynoa – Concept Navigation
+# Erynoa – Concept Navigation
 
-Dieses Dokument ist die Einstiegskarte in alle konzeptionellen Erynoa-Dokumente.
-
-### Empfohlene Lesereihenfolge
-
-1. **Überblick & Motivation**  
-   - [Kernkonzept](./kernkonzept.md)
-2. **Systemebene & Triade**  
-   - [System Architecture Overview](./system-architecture-overview.md)
-3. **Daten- & Vertrauensmodell**  
-   - [Liquides Datenmodell](./liquides-datenmodell.md)  
-   - [Trust & Reputation](./trust-and-reputation.md)
-4. **Abläufe & Agenten**  
-   - [Cybernetic Loop](./cybernetic-loop.md)  
-   - [Agents & ADL](./agents-and-adl.md)
-5. **Beispiele & Storytelling**  
-   - [Use Cases & Narrative](./use-cases.md)
+> **Zielgruppe:** Alle Leser:innen der Erynoa-Konzeptdokumente
+> **Kontext:** Einstiegskarte und Orientierungshilfe für das Konzeptverzeichnis
 
 ---
 
+## Empfohlene Lesereihenfolge
+
+| Schritt | Dokument                                                          | Fokus                   |
+| ------- | ----------------------------------------------------------------- | ----------------------- |
+| 1       | [Kernkonzept](./kernkonzept.md)                                   | Überblick & Motivation  |
+| 2       | [System Architecture Overview](./system-architecture-overview.md) | Technische Systemebene  |
+| 3       | [Liquides Datenmodell](./liquides-datenmodell.md)                 | Blueprints & AMOs       |
+| 4       | [Trust & Reputation](./trust-and-reputation.md)                   | Vertrauensmodell        |
+| 5       | [Cybernetic Loop](./cybernetic-loop.md)                           | Universeller Workflow   |
+| 6       | [Agents & ADL](./agents-and-adl.md)                               | Agentenmodell & Sprache |
+| 7       | [Use Cases](./use-cases.md)                                       | Praktische Beispiele    |
+
+---
+
+## Dokumentenstruktur
+
 ### Einstieg & Überblick
 
-- **Einstieg**
-  - [Kernkonzept](./kernkonzept.md)
-  - [System Architecture Overview](./system-architecture-overview.md)
-  - [Essential Guide](../docs/essential_guide.md)
+- [Kernkonzept](./kernkonzept.md) – High-Level-Einführung für Business/Product
+- [System Architecture Overview](./system-architecture-overview.md) – Brücke zu technischen Details
+- [Glossar](./glossary.md) – Zentrale Begriffsdefinitionen
 
-- **Zentrale Referenz**
-  - [Glossar](./glossary.md)
+### Daten- & Vertrauensmodell
 
-### Domänenmodelle & Daten
-
-- **Liquides Datenmodell**
-  - [Liquides Datenmodell](./liquides-datenmodell.md)
-  - [Trust & Reputation](./trust-and-reputation.md)
+- [Liquides Datenmodell](./liquides-datenmodell.md) – Blueprints, AMOs, Fluid Extensions
+- [Trust & Reputation](./trust-and-reputation.md) – Karmic Engine, Trust Vectors, Trust-Gating
 
 ### Prozesse & Agenten
 
-- **Prozesssicht**
-  - [Cybernetic Loop (Universeller Workflow)](./cybernetic-loop.md)
-
-- **Agenten & Sprache**
-  - [Agents & ADL](./agents-and-adl.md)
+- [Cybernetic Loop](./cybernetic-loop.md) – Der universelle Workflow von Intent bis Feedback
+- [Agents & ADL](./agents-and-adl.md) – Seeker/Provider-Agenten, Agent Definition Language
 
 ### Use Cases & Narrative
 
-- **Use Cases**
-  - [Use Cases & Narrative](./use-cases.md)
+- [Use Cases](./use-cases.md) – Konkrete Anwendungsszenarien (E-Mobility, Wartung, Energie)
 
-### Implementierung & Plattform
+---
 
-- **Architektur & Deployment**
-  - [Backend-Architektur (Referenz)](../docs/reference/architecture.md)
-  - [Unified Deployment](../docs/guides/unified-deployment.md)
-  - [Getting Started](../docs/guides/getting-started.md)
+## Verknüpfung mit der Dokumentation
 
+| Konzeptdokument     | Relevante Docs                                             |
+| ------------------- | ---------------------------------------------------------- |
+| System Architecture | [Backend-Architektur](../docs/reference/architecture.md)   |
+| Alle Konzepte       | [Essential Guide](../docs/essential_guide.md)              |
+| Deployment          | [Unified Deployment](../docs/guides/unified-deployment.md) |
+| Erste Schritte      | [Getting Started](../docs/guides/getting-started.md)       |
 
+---
+
+## Legende: Die kybernetische Triade
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      ERYNOA PROTOKOLL                       │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│   ┌─────────────┐   ┌─────────────┐   ┌─────────────┐      │
+│   │     ERY     │   │    ECHO     │   │     NOA     │      │
+│   │  Semantic   │◄──│  Emergent   │──►│   Causal    │      │
+│   │  Lattice    │   │   Swarm     │   │   Ledger    │      │
+│   └─────────────┘   └─────────────┘   └─────────────┘      │
+│         ▲                                    │              │
+│         │         Feedback Loop              │              │
+│         └────────────────────────────────────┘              │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+- **ERY:** Semantik & Gedächtnis (Blueprints, Trust Vectors, Attestations)
+- **ECHO:** Intelligenz & Agenten (Seeker/Provider, ADL, Verhandlung)
+- **NOA:** Wahrheit & Exekution (AMOs, MoveVM, Starfish BFT)
