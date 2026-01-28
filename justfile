@@ -715,9 +715,18 @@ reset:
     echo "⚠️  Lösche alle Daten, Container, Volumes und Build-Artifakte..."
     echo ""
     
+    # WORKSPACE_ROOT absolut auflösen (falls relativ)
+    if [ -z "${WORKSPACE_ROOT}" ] || [ "${WORKSPACE_ROOT}" = "." ]; then
+        # Finde das Workspace-Root (Verzeichnis mit justfile)
+        SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        WORKSPACE_ROOT="$(cd "$SCRIPT_DIR" && pwd)"
+    else
+        WORKSPACE_ROOT="$(cd "{{WORKSPACE_ROOT}}" && pwd)"
+    fi
+    
     # 1. Docker Container & Volumes
     echo "━━━ [1/6] Docker Container & Volumes ━━━"
-    cd {{WORKSPACE_ROOT}}/infra/docker
+    cd "$WORKSPACE_ROOT/infra/docker"
     docker compose --profile auth down -v 2>/dev/null || true
     echo "  ✓ Container gestoppt und Volumes entfernt"
     
@@ -735,29 +744,33 @@ reset:
     # 3. Setup-Dateien
     echo ""
     echo "━━━ [3/6] Setup-Dateien ━━━"
-    rm -rf {{WORKSPACE_ROOT}}/.data/
+    rm -rf "$WORKSPACE_ROOT/.data/"
     echo "  ✓ .data/ Verzeichnis gelöscht"
     
     # 4. Frontend Build-Artifakte
     echo ""
     echo "━━━ [4/6] Frontend Build-Artifakte ━━━"
-    rm -rf {{WORKSPACE_ROOT}}/frontend/console/.svelte-kit {{WORKSPACE_ROOT}}/frontend/console/dist
-    rm -rf {{WORKSPACE_ROOT}}/frontend/platform/.svelte-kit {{WORKSPACE_ROOT}}/frontend/platform/dist
-    rm -rf {{WORKSPACE_ROOT}}/frontend/docs/.svelte-kit {{WORKSPACE_ROOT}}/frontend/docs/dist
+    rm -rf "$WORKSPACE_ROOT/frontend/console/.svelte-kit" "$WORKSPACE_ROOT/frontend/console/dist"
+    rm -rf "$WORKSPACE_ROOT/frontend/platform/.svelte-kit" "$WORKSPACE_ROOT/frontend/platform/dist"
+    rm -rf "$WORKSPACE_ROOT/frontend/docs/.svelte-kit" "$WORKSPACE_ROOT/frontend/docs/dist"
     echo "  ✓ Frontend Build-Artifakte gelöscht"
     
     # 5. Backend Build-Artifakte
     echo ""
     echo "━━━ [5/6] Backend Build-Artifakte ━━━"
-    cd {{WORKSPACE_ROOT}}/backend
-    cargo clean 2>/dev/null || true
-    echo "  ✓ Backend target/ Verzeichnis gelöscht"
+    if [ -d "$WORKSPACE_ROOT/backend" ]; then
+        cd "$WORKSPACE_ROOT/backend"
+        cargo clean 2>/dev/null || true
+        echo "  ✓ Backend target/ Verzeichnis gelöscht"
+    else
+        echo "  ℹ️  Backend-Verzeichnis nicht gefunden, überspringe"
+    fi
     
     # 6. Cache & Build-Artifakte
     echo ""
     echo "━━━ [6/6] Cache & Build-Artifakte ━━━"
-    rm -rf {{WORKSPACE_ROOT}}/.turbo
-    rm -f {{WORKSPACE_ROOT}}/result
+    rm -rf "$WORKSPACE_ROOT/.turbo"
+    rm -f "$WORKSPACE_ROOT/result"
     echo "  ✓ Turbo Cache und Nix Build-Artifakte gelöscht"
     
     echo ""
