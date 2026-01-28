@@ -187,10 +187,12 @@ just --list
 
 ## 📖 Dokumentation
 
-| Dokument                                          | Beschreibung                   |
-| ------------------------------------------------- | ------------------------------ |
-| **[📚 Docs Overview](docs/readme.md)**            | Dokumentations-Übersicht       |
-| **[⚡ Essential Guide](docs/essential_guide.md)** | Alles Wichtige auf einen Blick |
+| Dokument                                          | Beschreibung                               |
+| ------------------------------------------------- | ------------------------------------------ |
+| **[📚 Docs Overview](docs/readme.md)**            | Plattform-Dokumentations-Übersicht         |
+| **[⚡ Essential Guide](docs/essential_guide.md)** | Alles Wichtige auf einen Blick (Plattform) |
+| **[🧠 Kernkonzept](concept/kernkonzept.md)**      | Protokollidee, Problemraum & Triade        |
+| **[🧭 Concept Navigation](concept/navigation.md)** | Einstieg in alle Protokoll-/Konzept-Dokus |
 
 ### Guides
 
@@ -202,11 +204,12 @@ just --list
 
 ### Reference
 
-| Dokument                                       | Beschreibung          |
-| ---------------------------------------------- | --------------------- |
-| [Architecture](docs/reference/architecture.md) | Systemarchitektur     |
-| [Configuration](docs/reference/config.md)      | Service-Konfiguration |
-| [Connections](docs/reference/connections.md)   | API-Verbindungen      |
+| Dokument                                       | Beschreibung                        |
+| ---------------------------------------------- | ----------------------------------- |
+| [Architecture](docs/reference/architecture.md) | System-/Plattformarchitektur        |
+| [Configuration](docs/reference/config.md)      | Service-Konfiguration               |
+| [Connections](docs/reference/connections.md)   | API-Verbindungen                    |
+| [System Architecture Overview](concept/system-architecture-overview.md) | Protokoll-Triade & Layer-Modell |
 
 ### Development
 

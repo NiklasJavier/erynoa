@@ -7,6 +7,10 @@
 
 Dieser Guide beschreibt den **"Single Binary Deployment"** oder **"Modular Monolith"** Ansatz für Erynoa. Die Idee: SvelteKit-Apps werden zu statischen Assets (HTML/JS/CSS) kompiliert und vom Rust-Server (Axum) ausgeliefert.
 
+> 💡 **Bezug zum Protokoll:**  
+> Konzeptionell bildet dieses Deployment-Modell primär die Plattform-Schicht ab, auf der Erynoa läuft (insbesondere ECHO-nahe Services und ERY-Integrationen).  
+> Die Protokoll-Architektur (Triade ERY/ECHO/NOA, liquides Datenmodell, Cybernetic Loop) ist in `concept/kernkonzept.md` und `concept/system-architecture-overview.md` beschrieben.
+
 ### Architektur
 
 ```

@@ -45,6 +45,9 @@ docs/
     └── structure_improvements.md # Strukturverbesserungen (2026-01-25, archiviert)
 ```
 
+> 💡 **Hinweis:** Höher-level **Konzept- und Protokoll-Dokumente** (Erynoa Triade, liquides Datenmodell, Cybernetic Loop etc.) befinden sich im Verzeichnis `concept/`.  
+> Einstieg: `concept/navigation.md`.
+
 ---
 
 ## 🎯 Schnellzugriff nach Zielgruppe
@@ -83,6 +86,11 @@ docs/
 - **[Architecture](reference/architecture.md)** - Frontend Monorepo & Shared Core
 - **[Connections](reference/connections.md)** - API-Verbindungen
 - **[Style Guide](development/style-guide.md)** - Code-Standards
+
+### 🧠 Für Konzept/Protokoll-Interessierte
+
+- **[Kernkonzept](../concept/kernkonzept.md)** – Problemraum, Triade, Cybernetic Loop
+- **[Concept Navigation](../concept/navigation.md)** – Übersicht über alle Protokoll- und Architekturkonzepte
 
 ---
 
@@ -139,6 +147,10 @@ docs/
 
 → **[Architecture](reference/architecture.md)**
 
+### "Wie funktioniert das Erynoa-Protokoll konzeptionell?"
+
+→ **[Kernkonzept](../concept/kernkonzept.md)** und **[Concept Navigation](../concept/navigation.md)**
+
 ### "Welche Ports werden verwendet?"
 
 → **[Configuration](reference/config.md)** - Service-Konfiguration Sektion
@@ -168,6 +180,11 @@ docs/
 - **[essential_guide.md](essential_guide.md)** - Konsolidierter Guide mit allen wichtigen Informationen
 - **[readme.md](readme.md)** - Dokumentations-Übersicht
 - **[documentation_status.md](documentation_status.md)** - Dokumentations-Status & Übersicht
+
+### 🧩 Konzept & Protokoll
+
+- **[Kernkonzept](../concept/kernkonzept.md)** – High-Level Protokollbeschreibung
+- **[System Architecture Overview](../concept/system-architecture-overview.md)** – Triade ERY/ECHO/NOA & Layer-Modell
 
 ### 📝 Aktuelle Aufgaben
 

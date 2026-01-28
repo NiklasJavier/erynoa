@@ -1,6 +1,11 @@
 # 🏗️ System-Architektur
 
-**Technische Architektur-Dokumentation für das Erynoa-Projekt**
+**Technische Architektur-Dokumentation für das Erynoa-Projekt (Plattform-Ebene)**
+
+> 💡 **Hinweis:** Diese Datei beschreibt die **konkrete System- und Plattformarchitektur** (Frontend, Backend, Infrastruktur).  
+> Die **Protokoll- und Konzeptarchitektur** von Erynoa (Triade ERY/ECHO/NOA, liquides Datenmodell, Cybernetic Loop) ist im Verzeichnis `concept/` dokumentiert, insbesondere in:
+> - `concept/kernkonzept.md`
+> - `concept/system-architecture-overview.md`
 
 **Letzte Aktualisierung**: 2026-01-28
 
@@ -20,7 +25,7 @@
 
 ## 🎯 Übersicht
 
-Erynoa basiert auf einem **performanten, typsicheren und skalierbaren** Fundament:
+Erynoa basiert auf einem **performanten, typsicheren und skalierbaren** Fundament für die Umsetzung der Plattform, auf der das Protokoll aufsetzt:
 
 | Schicht      | Technologie            | Beschreibung               |
 | ------------ | ---------------------- | -------------------------- |
@@ -124,6 +129,13 @@ frontend/
 | **SQLx**        | 0.8     | DB mit Compile-Time Checks |
 | **Connect-RPC** | -       | gRPC-Web API               |
 | **Jemalloc**    | -       | Memory Allocator           |
+
+### Backend-Fähigkeiten im Überblick
+
+- **Transaktionale API**: Rust/Axum + SQLx für typsichere, performante Geschäftsvorgänge.
+- **Workflows**: Restate für langlebige, fehlertolerante Orchestrierung (Retries, Timer, State).
+- **Dokumente**: Typst für reproduzierbare PDF‑Generierung aus Templates.
+- **E-Mails**: Lettre (tokio‑1) + Rinja für templatisierte, asynchrone Mailzustellung.
 
 ### E-Mail & Templating (Lettre + Rinja)
 
@@ -342,10 +354,12 @@ Diese Features können bei Bedarf später hinzugefügt werden:
 
 ## 📚 Weiterführende Dokumentation
 
-| Dokument                                     | Beschreibung          |
-| -------------------------------------------- | --------------------- |
-| [Configuration](config.md)                   | Service-Konfiguration |
-| [Connections](connections.md)                | API-Verbindungen      |
-| [Style Guide](../development/style-guide.md) | Code-Standards        |
-| [Testing](../development/testing.md)         | Test-Strategien       |
-| [TODOs](../development/todos.md)             | Offene Aufgaben       |
+| Dokument                                     | Beschreibung                            |
+| -------------------------------------------- | --------------------------------------- |
+| [Configuration](config.md)                   | Service-Konfiguration                   |
+| [Connections](connections.md)                | API-Verbindungen                        |
+| [Style Guide](../development/style-guide.md) | Code-Standards                          |
+| [Testing](../development/testing.md)         | Test-Strategien                         |
+| [TODOs](../development/todos.md)             | Offene Aufgaben                         |
+| [Kernkonzept](../concept/kernkonzept.md)     | Protokollidee & Problemraum             |
+| [System Architecture Overview](../concept/system-architecture-overview.md) | Triade ERY/ECHO/NOA & Layer-Modell |

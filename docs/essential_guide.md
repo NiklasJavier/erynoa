@@ -117,6 +117,21 @@ Das startet alles:
 
 ---
 
+## 🧩 Protokoll- & Konzeptarchitektur (High-Level)
+
+Die oben beschriebene Architektur fokussiert auf die **konkrete Implementierung** (Plattform, Services, Infrastruktur).  
+Die **konzeptionelle Protokollarchitektur** von Erynoa – inklusive:
+
+- kybernetischer Triade (**ERY**, **ECHO**, **NOA**),
+- **Liquidem Datenmodell** (Blueprints & AMOs),
+- und **Cybernetic Loop** (Intent → Verhandlung → Exekution → Feedback),
+
+ist im Verzeichnis `concept/` detailliert beschrieben:
+
+- `concept/kernkonzept.md` – Kernidee & Problemraum
+- `concept/system-architecture-overview.md` – Triade & Layer-Modell
+- `concept/liquides-datenmodell.md` & `concept/trust-and-reputation.md`
+
 ## 🧠 Workflows & Orchestrierung mit Restate
 
 Erynoa nutzt **Restate** als leichtgewichtige, event-getriebene Orchestrierungsplattform für langlebige, fehlertolerante Abläufe.
