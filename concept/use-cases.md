@@ -1,252 +1,602 @@
-# Erynoa – Use Cases & Narrative
+# Erynoa – Use Cases
 
 > **Zielgruppe:** Product/Business, Partner, Marketing, technische Leser:innen
-> **Kontext:** Das Protokoll über konkrete Geschichten verstehen
-> **Verwandte Dokumente:** [Kernkonzept](./kernkonzept.md), [Cybernetic Loop](./cybernetic-loop.md), [Glossar](./glossary.md)
+> **Lesezeit:** ca. 15 Minuten
+> **Voraussetzung:** [Kernkonzept](./kernkonzept.md) gelesen
+> **Verwandte Dokumente:** [Cybernetic Loop](./cybernetic-loop.md) · [Agents & ADL](./agents-and-adl.md) · [Glossar](./glossary.md)
 
 ---
 
-## 1. Ziel dieses Dokuments
+## Das Konzept greifbar machen
 
-Dieses Dokument beschreibt ausgewählte Use Cases, um das abstrakte Konzept von Erynoa
-in konkrete, nachvollziehbare Szenarien zu übersetzen.
+Erynoa wird durch konkrete Geschichten lebendig. Jeder Use Case zeigt:
 
-Für jeden Use Case werden dargestellt:
-
-- Problem im Status quo
-- Ablauf im Cybernetic Loop (phasenweise)
-- Nutzen von Erynoa gegenüber bestehenden Lösungen
-
----
-
-## 2. Use Case: Intelligentes Laden von Elektrofahrzeugen
-
-### 2.1 Problem im Status quo
-
-- Ladeinfrastruktur ist fragmentiert:
-  - unterschiedliche Betreiber, Tarife, Authentifizierungsmechanismen.
-- Nutzer haben:
-  - wenig Transparenz über Herkunft der Energie (z. B. erneuerbar vs. fossil),
-  - keine verlässliche Aussage über Verfügbarkeit und Qualität einer Ladesäule.
-- Betreiber können:
-  - ihre Qualität und Zuverlässigkeit schwer glaubhaft machen,
-  - sich kaum durch nachweisbar gutes Verhalten differenzieren.
-
-### 2.2 Ablauf im Cybernetic Loop
-
-**Phase 1 – Intent (ECHO, ADL)**
-
-- Das Fahrzeug (oder der Fahrer) initiiert einen Seeker-Agent mit folgendem Intent:
-  - Lade 50 kWh in den nächsten 30 Minuten,
-  - ausschließlich aus erneuerbaren Quellen,
-  - innerhalb einer bestimmten Geohashing-Region,
-  - nur bei Betreibern mit hoher Zuverlässigkeitsreputation und gültigen Zertifikaten.
-
-**Phase 2 – Discovery & Kontext (ECHO ↔ ERY)**
-
-- Der Seeker-Agent nutzt den Semantic Index:
-  - filtert nach Blueprints für „EV-Charging-Station“,
-  - berücksichtigt Domain- und Normanforderungen,
-  - sucht nach Material AMOs (Ladesäulen) in der Zielregion.
-
-**Phase 3 – Validation & Trust-Gating (ERY)**
-
-- Die Karmic Engine liefert Trust Vectors für Betreiber und Ladesäulen:
-  - SLA-Einhaltung, Ausfallhistorie, Nutzerfeedback-Ereignisse.
-- Attestations verifizieren:
-  - DNS-Bindung zwischen Betreiber-DID und dessen Domain,
-  - Zertifikate zu erneuerbarer Energie.
-- Kandidaten, die MinTrust oder Zertifikatsanforderungen nicht erfüllen, werden ausgeschlossen.
-
-**Phase 4 – Negotiation (ECHO)**
-
-- Seeker- und Provider-Agent (des Betreibers) verhandeln:
-  - Preis pro kWh,
-  - maximale Ladeleistung,
-  - Startzeit und Höchstdauer.
-- Die Verhandlung findet in einer XMTP-Consensus-Bubble statt:
-  - interne Kostendaten oder Auslastungsprognosen des Betreibers bleiben privat.
-
-**Phase 5 – Execution (NOA)**
-
-- Ein Service AMO wird für die Ladesession erstellt:
-  - verknüpft das Fahrzeug, die Ladesäule und den Betreiber.
-- Move-Transaktion:
-  - startet einen Continuous Value Stream für die abgerufene Energie,
-  - aktualisiert den Zustand der beteiligten AMOs (z. B. Nutzungszähler).
-
-**Phase 6 – Feedback (NOA → ERY)**
-
-- Nach Abschluss des Ladevorgangs:
-  - werden Events (erfolgreich, unterbrochen, SLA eingehalten/verfehlt) nach ERY gespiegelt.
-- Die Karmic Engine:
-  - aktualisiert Trust Vectors des Betreibers, der Ladesäule und ggf. des Fahrzeugs (Nutzungsverhalten).
-
-### 2.3 Nutzen von Erynoa
-
-- **Für Nutzer / Fahrzeuge**
-  - Transparent nachvollziehbare Qualität und Herkunft der Energie.
-  - Automatisierte Auswahl der besten Option nach Preis, Vertrauen und Normen.
-
-- **Für Betreiber**
-  - Nachweisbar gute Performance erhöht Reputation und Marktanteil.
-  - Keine zentrale Plattform nötig, um Kunden zu erreichen.
-
-- **Für das System**
-  - Jede Ladesession verbessert das Vertrauensmodell und das Wissen über Infrastrukturqualität.
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   ❌ PROBLEM HEUTE          →          ✅ LÖSUNG MIT ERYNOA                 │
+│   ════════════════                     ═══════════════════                  │
+│                                                                             │
+│   Fragmentierung                       Semantic Index (ERY)                 │
+│   Intransparenz                        Trust & Reputation                   │
+│   Zentrale Gatekeeper                  P2P via ECHO                         │
+│   Manuelle Prozesse                    Autonome Agenten                     │
+│   Starre Verträge                      Continuous Value Streaming           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 3. Use Case: Zertifizierte Wartung von Industrieanlagen
+## Use Case 1: Intelligentes EV-Laden
 
-### 3.1 Problem im Status quo
+> _Das Flaggschiff-Beispiel: Von „Wo kann ich laden?" zu „Mein Auto verhandelt den besten Deal"_
 
-- Wartungszertifikate werden oft:
-  - in isolierten Systemen verwaltet,
-  - als PDF oder proprietäre Einträge geführt,
-  - schwer automatisiert überprüfbar.
-- Betreiber und Versicherer:
-  - haben hohen manuellen Prüfaufwand,
-  - kämpfen mit Betrug oder unvollständigen Nachweisen.
+### Das Problem heute
 
-### 3.2 Ablauf im Cybernetic Loop
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   🚗 Fahrer:in will laden...                                                │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   😤 Fragmentierte Apps       → 5 Apps für 5 Betreiber             │  │
+│   │   😤 Unklare Verfügbarkeit    → "Belegt" erst vor Ort sichtbar     │  │
+│   │   😤 Intransparente Preise    → Endpreis unklar bis Rechnung       │  │
+│   │   😤 Energie-Herkunft?        → Woher kommt der Strom wirklich?    │  │
+│   │   😤 Qualität?                → Säule funktioniert oft nicht       │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│   🏢 Betreiber will sich differenzieren...                                  │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   😤 Qualität nicht sichtbar  → Gute Wartung zahlt sich nicht aus  │  │
+│   │   😤 Zentrale Plattformen     → Hohe Gebühren, Abhängigkeit        │  │
+│   │   😤 Kein Feedback-Loop       → Keine Daten zur Verbesserung       │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-**Phase 1 – Intent (ECHO, ADL)**
+### Der Ablauf mit Erynoa
 
-- Ein Betreiber initiiert einen Seeker-Agent:
-  - Ziel: zertifizierte Wartung für eine Maschine mit bestimmten Normanforderungen.
-  - Normative Constraints:
-    - bestimmte Wartungsstandards,
-    - nur Provider mit gültigem „Maintenance-Credential“-AMO.
-  - Trust-Constraints:
-    - Mindestreputation für Zuverlässigkeit und Compliance.
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                    EV-CHARGING: CYBERNETIC LOOP                            │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   1️⃣ INTENT                                                         │  │
+│   │   ══════════                                                        │  │
+│   │                                                                     │  │
+│   │   🚗 Fahrzeug → Seeker-Agent:                                       │  │
+│   │                                                                     │  │
+│   │   ┌─────────────────────────────────────────────────────────────┐  │  │
+│   │   │  intent:                                                    │  │  │
+│   │   │    energy: 50 kWh                                           │  │  │
+│   │   │    power_min: 50 kW                                         │  │  │
+│   │   │    source: renewable                                        │  │  │
+│   │   │    max_price: 0.40 €/kWh                                    │  │  │
+│   │   │    trust_min: 0.8                                           │  │  │
+│   │   │    location: geohash "u281z" (München)                      │  │  │
+│   │   │    deadline: 30 min                                         │  │  │
+│   │   └─────────────────────────────────────────────────────────────┘  │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                              │                                              │
+│                              ▼                                              │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   2️⃣ DISCOVERY                                                      │  │
+│   │   ═════════════                                                     │  │
+│   │                                                                     │  │
+│   │   ERY Semantic Index findet:                                        │  │
+│   │                                                                     │  │
+│   │   ┌──────────┬────────┬───────────┬────────────┬──────────────┐    │  │
+│   │   │ Station  │ Power  │ Preis     │ Verfügbar  │ Trust        │    │  │
+│   │   ├──────────┼────────┼───────────┼────────────┼──────────────┤    │  │
+│   │   │ Alpha-01 │ 150 kW │ 0.35€/kWh │ ✅ Frei    │ 0.92         │    │  │
+│   │   │ Beta-07  │ 50 kW  │ 0.38€/kWh │ ✅ Frei    │ 0.78         │    │  │
+│   │   │ Gamma-03 │ 350 kW │ 0.32€/kWh │ ❌ Belegt  │ 0.89         │    │  │
+│   │   │ Delta-12 │ 75 kW  │ 0.40€/kWh │ ✅ Frei    │ 0.85         │    │  │
+│   │   └──────────┴────────┴───────────┴────────────┴──────────────┘    │  │
+│   │                                                                     │  │
+│   │   + Fluid Extensions: Echtzeit-Verfügbarkeit, Spot-Preise          │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                              │                                              │
+│                              ▼                                              │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   3️⃣ TRUST-GATING                                                   │  │
+│   │   ════════════════                                                  │  │
+│   │                                                                     │  │
+│   │   Karmic Engine prüft:                                              │  │
+│   │                                                                     │  │
+│   │   Alpha-01: Trust 0.92 ≥ 0.8, Renewable-Cert ✅  →  ✅ PASS        │  │
+│   │   Beta-07:  Trust 0.78 < 0.8                     →  ❌ FAIL        │  │
+│   │   Gamma-03: Belegt                               →  ❌ SKIP        │  │
+│   │   Delta-12: Trust 0.85 ≥ 0.8, Renewable-Cert ✅  →  ✅ PASS        │  │
+│   │                                                                     │  │
+│   │   Ergebnis: Alpha-01 und Delta-12 zur Verhandlung                  │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                              │                                              │
+│                              ▼                                              │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   4️⃣ NEGOTIATION                                                    │  │
+│   │   ═══════════════                                                   │  │
+│   │                                                                     │  │
+│   │   Consensus Bubble (XMTP):                                          │  │
+│   │                                                                     │  │
+│   │   🚗 Seeker ◀═══════════════════════════▶ 🔌 Alpha-01 Agent        │  │
+│   │                                                                     │  │
+│   │   "Ich biete 0.34€/kWh für 50kWh, Start sofort"                    │  │
+│   │   "Akzeptiert. CCS-Stecker reserviert für 5min."                   │  │
+│   │                                                                     │  │
+│   │   → Deal: 0.34€/kWh, 50kWh, 150kW, sofort                          │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                              │                                              │
+│                              ▼                                              │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   5️⃣ EXECUTION                                                      │  │
+│   │   ═════════════                                                     │  │
+│   │                                                                     │  │
+│   │   NOA (MoveVM):                                                     │  │
+│   │                                                                     │  │
+│   │   ┌─────────────────────────────────────────────────────────────┐  │  │
+│   │   │  Service-AMO erstellt: "charging-session-47291"             │  │  │
+│   │   │                                                             │  │  │
+│   │   │  Seeker: did:erynoa:vehicle-456                             │  │  │
+│   │   │  Provider: did:erynoa:operator-alpha                        │  │  │
+│   │   │  Station: erynoa:amo:alpha-01                               │  │  │
+│   │   │  Rate: 0.34€/kWh                                            │  │  │
+│   │   │  Mode: Continuous Value Streaming                           │  │  │
+│   │   │                                                             │  │  │
+│   │   │  💰 ─── 💰 ─── 💰 ─── 💰 ─── 💰                             │  │  │
+│   │   │  Mikro-Zahlungen fließen pro kWh in Echtzeit               │  │  │
+│   │   └─────────────────────────────────────────────────────────────┘  │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                              │                                              │
+│                              ▼                                              │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   6️⃣ FEEDBACK                                                       │  │
+│   │   ════════════                                                      │  │
+│   │                                                                     │  │
+│   │   Event: "charging_session_completed"                               │  │
+│   │   • Duration: 22 min (schneller als erwartet!)                     │  │
+│   │   • Energy: 50.2 kWh                                               │  │
+│   │   • Status: SUCCESS                                                 │  │
+│   │                                                                     │  │
+│   │   Karmic Engine Updates:                                            │  │
+│   │   • Station Alpha-01: Trust 0.92 → 0.922 (+)                       │  │
+│   │   • Operator Alpha: Trust propagiert (gedämpft)                    │  │
+│   │   • Fahrzeug: Trust 0.88 → 0.882 (+) (hat bezahlt)                 │  │
+│   │                                                                     │  │
+│   │   → Nächste Discovery bevorzugt Alpha-Stationen noch mehr          │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-**Phase 2 – Discovery & Kontext (ECHO ↔ ERY)**
+### Vorteile
 
-- Semantic Index:
-  - filtert Provider Agents, die den Wartungs-Blueprint unterstützen,
-  - prüft Domain Blueprints für „Maintenance-Service“,
-  - berücksichtigt Geo- und Industriespezifika.
-
-**Phase 3 – Validation & Trust-Gating (ERY)**
-
-- Karmic Engine:
-  - prüft historische Erfolgsquote und SLA-Einhaltung der Wartungsanbieter.
-- Attestations:
-  - Zertifizierungsstellen signieren Credential AMOs,
-  - DNS-Bindung zu Unternehmensdomains wird verifiziert.
-
-**Phase 4 – Negotiation (ECHO)**
-
-- Vertragsverhandlung in der Consensus Bubble:
-  - Preis, Umfang, Zeitfenster,
-  - Haftung und Service-Levels.
-
-**Phase 5 – Execution (NOA)**
-
-- Nach durchgeführter Wartung:
-  - wird ein **Credential AMO** ausgestellt:
-    - Soulbound an die DID der Maschine,
-    - referenziert den Wartungs-Blueprint und Normen.
-  - Logic Guards stellen sicher:
-    - dass nur autorisierte Provider dieses Credential erzeugen können.
-
-**Phase 6 – Feedback (NOA → ERY)**
-
-- Erfolgreiche oder mangelhafte Wartungen fließen als Events in die Karmic Engine ein.
-- Trust Vectors der Provider und ggf. der Zertifizierungsstellen werden angepasst.
-
-### 3.3 Nutzen von Erynoa
-
-- **Automatisierte Verifikation:**
-  - Credentials sind maschinenlesbar, normbasiert und on-chain verankert.
-- **Reduzierter Prüfaufwand**:
-  - Versicherer und Auditoren können Zustände kryptografisch prüfen, statt Dokumente manuell zu sichten.
-- **Belohnung guter Akteure**:
-  - zuverlässige Wartungsdienstleister bauen nachhaltige Reputation auf.
+| Für           | Vorher                  | Mit Erynoa                         |
+| ------------- | ----------------------- | ---------------------------------- |
+| **Fahrer:in** | 5 Apps, unklare Preise  | Ein Agent, bester Deal automatisch |
+| **Betreiber** | Qualität unsichtbar     | Reputation = Wettbewerbsvorteil    |
+| **System**    | Keine Feedback-Schleife | Jede Session verbessert Markt      |
 
 ---
 
-## 4. Use Case: Echtzeit-Energiehandel zwischen Prosumer und Netz
+## Use Case 2: Zertifizierte Industrie-Wartung
 
-### 4.1 Problem im Status quo
+> _Von PDF-Zertifikaten zu maschinenlesbaren, kryptografisch verifizierbaren Credentials_
 
-- Prosumer (z. B. Haushalte mit PV-Anlage) haben:
-  - eingeschränkte Möglichkeiten, flexibel und granular Energie zu handeln.
-- Netzbetreiber:
-  - verfügen oft nur verzögert über Informationen zu lokaler Erzeugung und Nachfrage.
-- Märkte:
-  - sind träge, zentralisiert und schwer für kleine Akteure zugänglich.
+### Das Problem heute
 
-### 4.2 Ablauf im Cybernetic Loop
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   🏭 Industrieanlage braucht Wartung...                                     │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   📄 Wartungszertifikate als PDF                                    │  │
+│   │      └── Manuell prüfbar, fälschbar, verlierbar                    │  │
+│   │                                                                     │  │
+│   │   🏢 Isolierte Systeme                                              │  │
+│   │      └── Jeder Dienstleister, jede Versicherung eigene Datenbank   │  │
+│   │                                                                     │  │
+│   │   🔍 Hoher Prüfaufwand                                              │  │
+│   │      └── Auditor muss Ordner durchblättern                         │  │
+│   │                                                                     │  │
+│   │   😤 Kein Qualitätsanreiz                                           │  │
+│   │      └── Gute Wartung sieht aus wie schlechte                      │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-**Phase 1 – Intent (ECHO, ADL)**
+### Der Ablauf mit Erynoa
 
-- Ein Prosumer initiiert einen Seeker-Agent:
-  - Ziel: Verkaufen von Überschussenergie in den nächsten 15 Minuten,
-  - Mindestpreis, Herkunftsanforderungen (z. B. lokal), bevorzugte Käufer (z. B. Nachbarn, bestimmte Profile).
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                  WARTUNG: CYBERNETIC LOOP                                  │
+│                                                                             │
+│   1️⃣ INTENT                                                                 │
+│   ══════════                                                                │
+│                                                                             │
+│   🏭 Anlagenbetreiber → Seeker-Agent:                                       │
+│                                                                             │
+│   intent:                                                                   │
+│     service: "predictive-maintenance"                                       │
+│     asset: "erynoa:amo:turbine-alpha-7"                                    │
+│     blueprint: "erynoa:bp:maintenance-record:v2"                           │
+│     standards:                                                              │
+│       - "din:31051"                                                         │
+│       - "iso:13379"                                                         │
+│     trust_min: 0.85                                                         │
+│     certifications_required:                                                │
+│       - "maintenance-provider-license"                                      │
+│                                                                             │
+│   ─────────────────────────────────────────────────────────────────────    │
+│                                                                             │
+│   2️⃣ DISCOVERY                                                              │
+│   ═════════════                                                             │
+│                                                                             │
+│   ERY findet Provider mit:                                                  │
+│   • Maintenance-Blueprint-Kompetenz                                         │
+│   • Gültigem Credential AMO (Lizenz)                                       │
+│   • Erfahrung mit Turbinentyp                                              │
+│                                                                             │
+│   ─────────────────────────────────────────────────────────────────────    │
+│                                                                             │
+│   3️⃣ TRUST-GATING                                                           │
+│   ════════════════                                                          │
+│                                                                             │
+│   ┌──────────────────┬─────────┬────────────────┬─────────────────────┐    │
+│   │ Provider         │ Trust   │ Credentials    │ Status              │    │
+│   ├──────────────────┼─────────┼────────────────┼─────────────────────┤    │
+│   │ TechServ GmbH    │ 0.91    │ DIN ✅ ISO ✅  │ ✅ PASS            │    │
+│   │ QuickFix AG      │ 0.72    │ DIN ✅ ISO ❌  │ ❌ Trust + Cert    │    │
+│   │ IndustryPro      │ 0.88    │ DIN ✅ ISO ✅  │ ✅ PASS            │    │
+│   └──────────────────┴─────────┴────────────────┴─────────────────────┘    │
+│                                                                             │
+│   ─────────────────────────────────────────────────────────────────────    │
+│                                                                             │
+│   4️⃣ NEGOTIATION                                                            │
+│   ═══════════════                                                           │
+│                                                                             │
+│   Consensus Bubble:                                                         │
+│   • Zeitfenster: nächste Woche Dienstag                                    │
+│   • Umfang: Predictive + Präventiv                                         │
+│   • Preis: 4.500€ pauschal                                                 │
+│   • SLA: 99% Verfügbarkeit für 12 Monate                                   │
+│                                                                             │
+│   ─────────────────────────────────────────────────────────────────────    │
+│                                                                             │
+│   5️⃣ EXECUTION                                                              │
+│   ═════════════                                                             │
+│                                                                             │
+│   Nach Wartung → NOA:                                                       │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   🎫 CREDENTIAL AMO (Soulbound)                                     │  │
+│   │   ═══════════════════════════════                                   │  │
+│   │                                                                     │  │
+│   │   Gebunden an: did:erynoa:turbine-alpha-7                          │  │
+│   │   Ausgestellt von: did:erynoa:techserv                             │  │
+│   │   Blueprint: erynoa:bp:maintenance-record:v2                       │  │
+│   │                                                                     │  │
+│   │   Inhalt:                                                           │  │
+│   │   • Wartungstyp: Predictive + Präventiv                            │  │
+│   │   • Datum: 2026-02-04                                              │  │
+│   │   • Standards: DIN 31051, ISO 13379                                │  │
+│   │   • Nächste Wartung: 2026-08-04                                    │  │
+│   │   • Signatur: 0x7f3a...                                            │  │
+│   │                                                                     │  │
+│   │   ❌ NICHT TRANSFERIERBAR                                           │  │
+│   │   ✅ Maschinenlesbar                                                │  │
+│   │   ✅ Kryptografisch verifizierbar                                   │  │
+│   │   ✅ On-Chain verankert                                             │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│   ─────────────────────────────────────────────────────────────────────    │
+│                                                                             │
+│   6️⃣ FEEDBACK                                                               │
+│   ════════════                                                              │
+│                                                                             │
+│   12 Monate später: Turbine läuft störungsfrei                             │
+│   → TechServ Trust: 0.91 → 0.93                                            │
+│   → Zertifizierer-Trust propagiert                                         │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-**Phase 2 – Discovery & Kontext (ECHO ↔ ERY)**
+### Vorteile
 
-- ERY:
-  - kennt Material AMOs für Erzeugungsanlagen,
-  - kennt Service AMOs und mögliche Abnehmer in der Region (über Geohashing).
-
-**Phase 3 – Validation & Trust-Gating (ERY)**
-
-- Trust:
-  - bewertet die Zuverlässigkeit des Prosumers (z. B. Einhaltung früherer Lieferzusagen),
-  - und der potenziellen Abnehmer (Zahlungsverhalten).
-
-**Phase 4 – Negotiation (ECHO)**
-
-- Aushandlung:
-  - Preis pro kWh,
-  - Zeitfenster und Menge,
-  - ggf. Bedingungen (z. B. CO₂-Intensität).
-
-**Phase 5 – Execution (NOA)**
-
-- Service AMO:
-  - repräsentiert den temporären Energiefluss,
-  - Continuous Value Streaming fließt vom Käufer zum Verkäufer proportional zur gelieferten Energie.
-
-**Phase 6 – Feedback (NOA → ERY)**
-
-- Ereignisse:
-  - erfolgreiche Lieferungen, Ausfälle, Abweichungen.
-- Karmic Engine:
-  - passt Trust Vectors aller Beteiligten an.
-
-### 4.3 Nutzen von Erynoa
-
-- **Feingranulare Märkte:** Auch kleine Akteure können am Echtzeitmarkt teilnehmen.
-- **Systemstabilität:** Netzbetreiber können auf aggregierte Informationen und Trust-Daten zugreifen.
-- **Transparenz & Fairness:** Preise und Leistungen werden durch nachvollziehbare Reputation und Normen gestützt.
+| Stakeholder               | Vorteile                                                  |
+| ------------------------- | --------------------------------------------------------- |
+| **Betreiber**             | Automatische Wartungs-Historie, reduzierter Admin-Aufwand |
+| **Wartungsdienstleister** | Reputation aufbauen, Qualität wird sichtbar               |
+| **Versicherer**           | Kryptografische Prüfung statt Aktenordner                 |
+| **Auditor**               | Ein Query statt tagelange Dokumentensichtung              |
 
 ---
 
-## 5. Narrative Klammer
+## Use Case 3: Echtzeit-Energiehandel (Prosumer)
 
-Über alle Use Cases hinweg zeigt sich:
+> _Von starren Einspeisevergütungen zu dynamischen Peer-to-Peer-Märkten_
 
-- **Erynoa:**
-  - verbindet reale Assets, Daten und Akteure über Blueprints und AMOs
-  - bewertet Verhalten kontinuierlich über Trust & Reputation
-  - und orchestriert Interaktionen über Agenten und den Cybernetic Loop
+### Das Problem heute
 
-Damit verschiebt sich der Fokus von **„Transaktionen auf einer Blockchain“** hin zu **„lebendigen Märkten zwischen lernenden Maschinen und Organisationen“**.
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   🏠 Prosumer (Haushalt mit PV-Anlage)                                      │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   ☀️ Sonne scheint → Überschuss → ?                                 │  │
+│   │                                                                     │  │
+│   │   Option A: Feste Einspeisevergütung (8ct/kWh)                     │  │
+│   │             └── Egal ob Nachbar gerade 35ct/kWh zahlen würde       │  │
+│   │                                                                     │  │
+│   │   Option B: Batteriespeicher                                        │  │
+│   │             └── Teuer, begrenzte Kapazität                         │  │
+│   │                                                                     │  │
+│   │   Option C: Komplexe P2P-Plattform                                 │  │
+│   │             └── Registrierung, KYC, Gebühren, Wartezeiten          │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│   🏢 Netzbetreiber                                                          │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   Keine Echtzeit-Sicht auf lokale Erzeugung/Nachfrage              │  │
+│   │   Netzstabilität durch starre Prognosen statt Echtzeitdaten        │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Der Ablauf mit Erynoa
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                PROSUMER ENERGY TRADING: CYBERNETIC LOOP                    │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   1️⃣ INTENT (Verkäufer)                                             │  │
+│   │   ══════════════════════                                            │  │
+│   │                                                                     │  │
+│   │   🏠 Prosumer-Agent:                                                │  │
+│   │                                                                     │  │
+│   │   intent:                                                           │  │
+│   │     action: sell                                                    │  │
+│   │     energy: ~3 kWh (nächste 15 min)                                │  │
+│   │     min_price: 0.15 €/kWh                                          │  │
+│   │     source: solar_pv                                                │  │
+│   │     location: geohash "u0v9q" (lokal)                              │  │
+│   │     prefer_buyers:                                                  │  │
+│   │       - neighbors                                                   │  │
+│   │       - ev_charging                                                 │  │
+│   │     trust_min: 0.6                                                  │  │
+│   │                                                                     │  │
+│   │   ─────────────────────────────────────────────────────────────    │  │
+│   │                                                                     │  │
+│   │   1️⃣ INTENT (Käufer)                                                │  │
+│   │   ═══════════════════                                               │  │
+│   │                                                                     │  │
+│   │   🏠 Nachbar-Agent:                                                 │  │
+│   │                                                                     │  │
+│   │   intent:                                                           │  │
+│   │     action: buy                                                     │  │
+│   │     energy: 2 kWh (nächste 15 min)                                 │  │
+│   │     max_price: 0.25 €/kWh                                          │  │
+│   │     prefer_source: local_renewable                                  │  │
+│   │     location: geohash "u0v9q"                                      │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                              │                                              │
+│                              ▼                                              │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   2️⃣ DISCOVERY                                                      │  │
+│   │   ═════════════                                                     │  │
+│   │                                                                     │  │
+│   │   ERY matcht:                                                       │  │
+│   │   • Seller (Prosumer) mit 3 kWh Überschuss                         │  │
+│   │   • Buyer (Nachbar) mit 2 kWh Bedarf                               │  │
+│   │   • Weitere Buyer: EV in Nachbarschaft                             │  │
+│   │                                                                     │  │
+│   │   Fluid Extensions liefern:                                         │  │
+│   │   • Aktuelle Erzeugungsrate: 4.2 kW                                │  │
+│   │   • Aktueller Grid-Preis: 0.32 €/kWh                               │  │
+│   │   • Lokale Nachfrage: hoch                                          │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                              │                                              │
+│                              ▼                                              │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   3️⃣ + 4️⃣ TRUST-GATING & NEGOTIATION                                │  │
+│   │   ════════════════════════════════════                              │  │
+│   │                                                                     │  │
+│   │   Seller Trust: 0.78 (neu, aber DNS-verifiziert)                   │  │
+│   │   Buyer Trust: 0.82 (gutes Zahlungsverhalten)                      │  │
+│   │                                                                     │  │
+│   │   Automatische Einigung:                                            │  │
+│   │   • Preis: 0.20 €/kWh (Mitte zwischen Min/Max)                     │  │
+│   │   • Menge: 2 kWh                                                    │  │
+│   │   • Dauer: 15 min                                                   │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                              │                                              │
+│                              ▼                                              │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   5️⃣ EXECUTION                                                      │  │
+│   │   ═════════════                                                     │  │
+│   │                                                                     │  │
+│   │   ┌─────────────────────────────────────────────────────────────┐  │  │
+│   │   │                                                             │  │  │
+│   │   │   ⏱️ SERVICE AMO (TTL: 15 min)                              │  │  │
+│   │   │   ════════════════════════════                              │  │  │
+│   │   │                                                             │  │  │
+│   │   │   🏠 Seller ═══════════════════════════▶ 🏠 Buyer           │  │  │
+│   │   │         ⚡ Energie fließt                                   │  │  │
+│   │   │                                                             │  │  │
+│   │   │   🏠 Buyer ═══════════════════════════▶ 🏠 Seller           │  │  │
+│   │   │         💰 Zahlung fließt (Streaming)                       │  │  │
+│   │   │                                                             │  │  │
+│   │   │   Rate: 0.20€ × 0.133 kWh/min = 0.027€/min                 │  │  │
+│   │   │                                                             │  │  │
+│   │   └─────────────────────────────────────────────────────────────┘  │  │
+│   │                                                                     │  │
+│   │   Parallel: 1 kWh Überschuss → Grid (Fallback)                     │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                              │                                              │
+│                              ▼                                              │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   6️⃣ FEEDBACK                                                       │  │
+│   │   ════════════                                                      │  │
+│   │                                                                     │  │
+│   │   Event: "energy_transfer_completed"                                │  │
+│   │   • Delivered: 2.1 kWh (leicht über Plan – gut!)                   │  │
+│   │   • Paid: 0.42€                                                     │  │
+│   │   • Grid-Alternative wäre: 0.64€                                    │  │
+│   │                                                                     │  │
+│   │   Trust Updates:                                                    │  │
+│   │   • Seller: 0.78 → 0.79 (zuverlässig geliefert)                    │  │
+│   │   • Buyer: 0.82 → 0.83 (pünktlich bezahlt)                         │  │
+│   │                                                                     │  │
+│   │   Aggregierte Daten → Netzbetreiber (anonymisiert):                │  │
+│   │   • Lokale Überschüsse: 847 kWh in Region u0v9                     │  │
+│   │   • Lokale Nachfrage: 612 kWh                                       │  │
+│   │   → Bessere Netzplanung                                            │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Vorteile
+
+| Stakeholder       | Vorher               | Mit Erynoa               |
+| ----------------- | -------------------- | ------------------------ |
+| **Prosumer**      | 8ct/kWh Einspeisung  | 15-25ct/kWh P2P          |
+| **Nachbar**       | 32ct/kWh vom Grid    | 20ct/kWh lokal + grün    |
+| **Netzbetreiber** | Blinde Prognosen     | Echtzeit-Aggregation     |
+| **Umwelt**        | Energie oft verloren | Lokale Nutzung optimiert |
 
 ---
 
-## 6. Fazit
+## Die narrative Klammer
 
-Die Use Cases illustrieren, wie Erynoa abstrakte Konzepte in konkrete Wertschöpfung übersetzt: automatisierte, vertrauensbasierte Interaktionen zwischen Maschinen, Unternehmen und Nutzern – ohne zentrale Vermittler.
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                    WAS ALLE USE CASES GEMEINSAM HABEN                      │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   📋 BLUEPRINTS                                                     │  │
+│   │   → Gemeinsames Verständnis, was ein "Ladevorgang",                │  │
+│   │     "Wartungszertifikat" oder "Energietransfer" ist                │  │
+│   │                                                                     │  │
+│   │   📦 AMOs                                                           │  │
+│   │   → Konkrete Instanzen: diese Ladesäule, jenes Zertifikat,         │  │
+│   │     dieser Energiefluss                                            │  │
+│   │                                                                     │  │
+│   │   🔒 TRUST                                                          │  │
+│   │   → Vertrauen wird verdient, nicht behauptet                       │  │
+│   │   → Gutes Verhalten wird sichtbar und belohnt                      │  │
+│   │                                                                     │  │
+│   │   🤖 AGENTEN                                                        │  │
+│   │   → Autonome Vertreter, die 24/7 die besten Deals finden          │  │
+│   │                                                                     │  │
+│   │   🔄 FEEDBACK-LOOP                                                  │  │
+│   │   → Jede Interaktion macht das System klüger                       │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│                                 ▼                                           │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   Von: "Transaktionen auf einer Blockchain"                        │  │
+│   │                                                                     │  │
+│   │   Zu:  "Lebendige Märkte zwischen lernenden                        │  │
+│   │         Maschinen und Organisationen"                              │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-**Weiterführende Dokumente:**
+## Zusammenfassung
 
-- [Kernkonzept](./kernkonzept.md) – High-Level-Überblick
-- [Cybernetic Loop](./cybernetic-loop.md) – Detaillierter Workflow
-- [Agents & ADL](./agents-and-adl.md) – Agentenmodell und Sprache
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                          USE CASES: ÜBERBLICK                              │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   🚗 EV-LADEN                                                       │  │
+│   │      Agent findet beste Säule nach Preis, Trust, Verfügbarkeit     │  │
+│   │      Continuous Value Streaming während Ladung                      │  │
+│   │                                                                     │  │
+│   │   🏭 INDUSTRIE-WARTUNG                                              │  │
+│   │      Soulbound Credential AMO statt PDF                            │  │
+│   │      Kryptografisch verifizierbar, Trust propagiert                │  │
+│   │                                                                     │  │
+│   │   ⚡ PROSUMER ENERGY                                                │  │
+│   │      P2P-Handel in 15-Minuten-Intervallen                          │  │
+│   │      Lokaler Überschuss → lokale Nachfrage                         │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│   Erynoa macht abstrakte Konzepte zu konkreter Wertschöpfung:              │
+│   Automatisierte, vertrauensbasierte Interaktionen –                       │
+│   ohne zentrale Vermittler.                                                │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Weiterführend
+
+| Dokument                                          | Fokus                              |
+| ------------------------------------------------- | ---------------------------------- |
+| [Kernkonzept](./kernkonzept.md)                   | High-Level-Überblick über Erynoa   |
+| [Cybernetic Loop](./cybernetic-loop.md)           | Der detaillierte 6-Phasen-Workflow |
+| [Agents & ADL](./agents-and-adl.md)               | Intent-Spezifikation im Detail     |
+| [Trust & Reputation](./trust-and-reputation.md)   | Wie Vertrauen berechnet wird       |
+| [Liquides Datenmodell](./liquides-datenmodell.md) | Blueprints und AMOs                |
