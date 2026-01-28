@@ -1,197 +1,466 @@
 # Erynoa – System Architecture Overview
 
 > **Zielgruppe:** Software-/Systemarchitekt:innen, Senior Developers, Protokoll-Designer
-> **Kontext:** Übergang von Konzept zu technischer Architektur
-> **Verwandte Dokumente:** [Kernkonzept](./kernkonzept.md), [Cybernetic Loop](./cybernetic-loop.md), [Glossar](./glossary.md)
+> **Lesezeit:** ca. 12 Minuten
+> **Voraussetzung:** [Kernkonzept](./kernkonzept.md) gelesen
+> **Verwandte Dokumente:** [Cybernetic Loop](./cybernetic-loop.md) · [Glossar](./glossary.md)
 
 ---
 
-## 1. Ziel dieses Dokuments
+## Architektur auf einen Blick
 
-Dieses Dokument beschreibt die Systemarchitektur von Erynoa auf hohem Abstraktionsniveau.
-Es bildet die Brücke zwischen dem **Kernkonzept** (`kernkonzept.md`) und den detaillierten
-Architektur- und Implementierungsdokumenten unter `docs/`.
-
-Fokus:
-
-- klare Rollen der drei Sphären **ERY**, **ECHO**, **NOA**
-- Aufteilung in **Layer 2 (Off-Chain)** und **Layer 0 (On-Chain)**
-- Zusammenspiel im **kybernetischen Regelkreis (Cybernetic Loop)**
-
----
-
-## 2. High-Level Architektur
-
-Erynoa besteht aus drei spezialisierten Sphären, die gemeinsam eine kybernetische Triade bilden:
-
-- **ERY – Semantic Lattice (Semantik & Gedächtnis)**
-- **ECHO – Emergent Swarm (Intelligenz & Agenten)**
-- **NOA – Causal Ledger (Wahrheit & Exekution)**
-
-Diese Sphären verteilen sich auf zwei technologische Ebenen:
-
-- **Layer 2 – Off-Chain Intelligence & Semantics**
-  - ERY und ECHO
-  - Hohe Rechenlast, flexible Entwicklung, keine globale Konsenspflicht
-
-- **Layer 0 – Causal Ledger**
-  - NOA
-  - Deterministische Finalität, formale Sicherheit, minimale aber belastbare Zustände
-
-Gedankliches Diagramm (vereinfacht):
-
-- Nutzer / Maschinen / Unternehmen
-  ↓ (Intents in ADL)
-- **ECHO (Agenten, Verhandlung)**
-  ↔ **ERY (Semantik, Trust, Index)**
-  ↓ (finalisiertes Ergebnis)
-- **NOA (Ledger, AMOs, MoveVM)**
-  → Events → zurück zu **ERY** (Karmic Feedback)
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              LAYER 2 (Off-Chain)                            │
+│  ┌───────────────────────────────┐    ┌───────────────────────────────┐     │
+│  │         🔮 ERY                │    │         🤖 ECHO               │     │
+│  │      Semantic Lattice         │◀──▶│      Emergent Swarm           │     │
+│  │                               │    │                               │     │
+│  │  ┌─────────┐  ┌─────────┐    │    │  ┌─────────┐  ┌─────────┐    │     │
+│  │  │Semantic │  │ Karmic  │    │    │  │ Seeker  │  │Provider │    │     │
+│  │  │  Index  │  │ Engine  │    │    │  │ Agents  │  │ Agents  │    │     │
+│  │  └─────────┘  └─────────┘    │    │  └─────────┘  └─────────┘    │     │
+│  │                               │    │                               │     │
+│  │  Qdrant · DHT · Geohashing    │    │  WASM · libp2p · XMTP        │     │
+│  └───────────────────────────────┘    └───────────────────────────────┘     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                       │
+                                       │ Events ↑↓ Transaktionen
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              LAYER 0 (On-Chain)                             │
+│  ┌───────────────────────────────────────────────────────────────────┐      │
+│  │                          ⚡ NOA                                    │      │
+│  │                      Causal Ledger                                 │      │
+│  │                                                                    │      │
+│  │   ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐   │      │
+│  │   │  AMOs    │    │  Logic   │    │  MoveVM  │    │ Starfish │   │      │
+│  │   │ (Assets) │    │  Guards  │    │          │    │   BFT    │   │      │
+│  │   └──────────┘    └──────────┘    └──────────┘    └──────────┘   │      │
+│  │                                                                    │      │
+│  │   IOTA Rebased · DAG · < 2s Finalität                             │      │
+│  └───────────────────────────────────────────────────────────────────┘      │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 3. ERY – Semantic Lattice
+## Layer-Übersicht
 
-**Rolle:** Semantisches Rückgrat und Gedächtnis des Netzwerks.
+| Layer       | Sphären    | Zweck                      | Konsens      |
+| ----------- | ---------- | -------------------------- | ------------ |
+| **Layer 2** | ERY + ECHO | Denken, Suchen, Verhandeln | Keiner nötig |
+| **Layer 0** | NOA        | Finalisieren, Beweisen     | Starfish BFT |
 
-ERY beantwortet die Fragen:
-
-- _Was_ bedeutet ein Objekt oder Ereignis im Kontext von Normen und Domänen?
-- _Wie vertrauenswürdig_ sind Akteure, Objekte und Prozesse im Zeitverlauf?
-
-**Zentrale Komponenten:**
-
-- **Erynoa Node (Verifiable Oracle)**
-  - Rust-basierte Binary auf Tokio-Runtime.
-  - Nimmt Events aus NOA entgegen, reichert sie mit Kontext an und signiert Ergebnisse (Ed25519).
-
-- **Event Ingestor**
-  - Konsumiert „Raw Events“ aus NOA in Echtzeit.
-  - Normalisiert, filtert und routet Ereignisse an die Karmic Engine und den Semantic Index.
-
-- **Karmic Engine**
-  - Berechnet **Trust Vectors** für Akteure und Objekte.
-  - Nutzt den **Ripple Effect**:
-    - \( R*\text{new}(t) = R*\text{old}(t-1) + \eta (F\_\text{Event} - E[F]) \)
-  - Implementiert **Trust Inheritance**:
-    - Vertrauen propagiert entlang hierarchischer Strukturen (z. B. Hersteller → Betreiber → Asset).
-
-- **Semantic Index (Qdrant-basiert)**
-  - Vektorbasierte Wissensverwaltung für:
-    - Normative Standards und Blueprints (Static Knowledge)
-    - Trust Vectors, Attestations, Fluid Extensions (Dynamic State)
-  - Skalierung über horizontales Sharding (DHT + Geohashing).
-
-**Architekturprinzipien:**
-
-- Trennung von **unveränderlichen Normen** und **dynamischen Zuständen**.
-- Biologisch inspirierte **Synapsen-Architektur**:
-  - Synapsen als inhaltsadressierte, kontextuelle Speichereinheiten (CIDs).
-  - TTL-Mechanismen für flüchtige Daten (Fluid Persistence, Vermeidung von State Bloat).
+**Designprinzip:** Intelligenz Off-Chain, Wahrheit On-Chain.
 
 ---
 
-## 4. ECHO – Emergent Swarm
+## 🔮 ERY – Semantic Lattice
 
-**Rolle:** Operative Intelligenz und Durchführung von Intents.
+> _Das Gedächtnis des Netzwerks_
 
-ECHO beantwortet die Fragen:
+### Was ERY macht
 
-- _Wer_ interagiert mit wem, um einen Intent zu erfüllen?
-- _Unter welchen Bedingungen_ (Kosten, Normen, Vertrauen, Geografie) wird ein Deal geschlossen?
+| Frage                          | ERY liefert                      |
+| ------------------------------ | -------------------------------- |
+| Was bedeutet dieses Objekt?    | Blueprint-Referenz, Norm-Kontext |
+| Wem kann ich vertrauen?        | Trust Vectors, Attestations      |
+| Wo finde ich passende Partner? | Semantic Search, Geohashing      |
 
-**Zentrale Konzepte:**
+### Komponenten
 
-- **Agenten**
-  - **Seeker Agents**: repräsentieren Nachfrager (Nutzer, Unternehmen, IoT-Geräte).
-  - **Provider Agents**: repräsentieren Anbieter von Gütern und Services.
-  - Beide laufen als **zustandsloser Code („Agent as Code“) in einer WASM-Sandbox**.
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         ERY Node                                │
+│                    (Verifiable Oracle)                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐        │
+│   │   Event     │───▶│   Karmic    │───▶│  Semantic   │        │
+│   │  Ingestor   │    │   Engine    │    │   Index     │        │
+│   └─────────────┘    └─────────────┘    └─────────────┘        │
+│         ▲                   │                   │               │
+│         │                   │                   │               │
+│    Events von NOA      Trust Vectors      Vektor-Suche          │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-- **Agent Definition Language (ADL)**
-  - Deklarative Beschreibung von Intents und Constraints:
-    - Funktionale Anforderungen (z. B. Leistung, Qualität).
-    - Normative Anforderungen (Blueprints, Standards).
-    - Vertrauen (MinTrust).
-    - Geografie (Geohashing-Regionen).
+| Komponente         | Technologie       | Funktion                                          |
+| ------------------ | ----------------- | ------------------------------------------------- |
+| **ERY Node**       | Rust, Tokio       | Verifiable Oracle – signiert Ergebnisse (Ed25519) |
+| **Event Ingestor** | Stream Processing | Konsumiert NOA-Events in Echtzeit                 |
+| **Karmic Engine**  | Custom            | Berechnet & propagiert Trust Vectors              |
+| **Semantic Index** | Qdrant            | Vektorbasierte Wissens- & Trust-Suche             |
 
-- **Netzwerk & Kommunikation**
-  - P2P-Kommunikation über **libp2p**.
-  - Discovery von Handelspartnern über DHT + Geohashing.
-  - Verhandlung in verschlüsselten **XMTP Secure Tunnels** („Consensus Bubbles“):
-    - Off-Chain, privat, mit **Progressive Disclosure** sensibler Daten.
+### Datenmodell
 
-**Architekturprinzipien:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Semantic Index                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Static Knowledge          │    Dynamic State                  │
+│   ─────────────────         │    ─────────────                  │
+│   • Blueprints              │    • Trust Vectors                │
+│   • Normative Standards     │    • Attestations                 │
+│   • Domain Ontologies       │    • Fluid Extensions (TTL)       │
+│                             │                                   │
+│   Immutable                 │    Mutable, TTL-gesteuert         │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-- **Ephemeral Intelligence**:
-  - Agenten sind kurzlebig und zustandslos, Zustand liegt in ERY und NOA.
-- **Privacy-by-Design**:
-  - Geschäftsgeheimnisse bleiben Off-Chain; On-Chain landen nur minimale, notwendige Fakten.
+### Karmic Engine – Trust-Berechnung
 
----
+```
+Event (z.B. erfolgreiche Lieferung)
+           │
+           ▼
+┌──────────────────────────────────────┐
+│  R_new = R_old + η(F_event - E[F])   │
+│                                      │
+│  η = Lernrate                        │
+│  F_event = Event-Beitrag             │
+│  E[F] = Erwartungswert               │
+└──────────────────────────────────────┘
+           │
+           ▼
+Trust Inheritance (fraktal)
+           │
+           ├── Hersteller (+0.8)
+           ├── Betreiber  (+0.5)
+           └── Asset      (+0.3)
+```
 
-## 5. NOA – Causal Ledger
+### Skalierung
 
-**Rolle:** Ebene der Wahrheit und exekutiven Finalität.
-
-NOA beantwortet die Fragen:
-
-- _Was ist tatsächlich passiert?_ (kausale Historie)
-- _Wem gehört was?_ (Zustand von Assets, Credentials und Services)
-
-**Technologische Basis:**
-
-- DAG-basierter Ledger auf **IOTA Rebased**.
-- Konsensmechanismus: **Starfish BFT** (leaderless, deterministische Finalität, < 2 Sekunden).
-
-**Ausführungsumgebung: MoveVM**
-
-- Programmiersprache **Move** mit Fokus auf Resource Safety:
-  - Assets können nicht dupliziert oder implizit gelöscht werden.
-- **Logic Guards** als Smart Contracts:
-  - Prüfen Invarianten vor jeder Zustandsänderung.
-  - Erzwingen z. B. Soulbound-Eigenschaften, Besitzwechsel-Regeln, Domain-spezifische Policy.
-
-**Datenmodell: Atomic Market Objects (AMOs)**
-
-- Zentrale On-Chain-Entität in NOA.
-- Verhält sich gemäß Blueprint-Definition in ERY.
-- Archetypen:
-  - **Material AMOs**: transferierbare Real World Assets (RWA, IoT).
-  - **Credential AMOs**: Soulbound-Credentials, an eine DID gebunden.
-  - **Service AMOs**: zeitgebundene Services mit Continuous Value Streaming.
-
----
-
-## 6. Zusammenspiel: Der kybernetische Regelkreis
-
-Die drei Sphären bilden gemeinsam einen geschlossenen **Cybernetic Loop**:
-Intents werden in **ECHO** formuliert und verhandelt, durch **NOA** kausal finalisiert und fließen als Events zurück in **ERY**, wo die Karmic Engine Vertrauen und Kontext aktualisiert.
-Eine ausführliche, phasenweise Beschreibung (inkl. Inputs/Outputs) findet sich in `cybernetic-loop.md`.
-
----
-
-## 7. Abgrenzung zu klassischen Blockchain-Architekturen
-
-Im Vergleich zu herkömmlichen Blockchains:
-
-- trennt Erynoa konsequent **Semantik**, **Intelligenz** und **Exekution**,
-- nutzt Off-Chain-Komponenten (ERY, ECHO) für komplexe Logik und Suche,
-- reduziert On-Chain-Logik (NOA) auf formale, kausale Wahrheiten,
-- macht **Vertrauen** zu einem erstklassigen Konzept (Trust Vectors, Karmic Engine),
-- und behandelt reale Domänen über ein liquides, normbasiertes Datenmodell (Blueprints + AMOs).
-
-Damit ist Erynoa keine „noch eine Blockchain“, sondern ein kybernetisches Protokoll für skalierbare, vertrauensbasierte Maschinenökonomien.
+| Mechanismus              | Beschreibung                                       |
+| ------------------------ | -------------------------------------------------- |
+| **DHT**                  | Distributed Hash Table für dezentrale Datenhaltung |
+| **Geohashing**           | Räumliche Partitionierung für lokale Queries       |
+| **Synapsen-Architektur** | CID-adressierte Speichereinheiten mit TTL          |
 
 ---
 
-## 8. Fazit
+## 🤖 ECHO – Emergent Swarm
 
-Die Systemarchitektur von Erynoa trennt bewusst Semantik (ERY), Intelligenz (ECHO) und Exekution (NOA) in spezialisierte Sphären. Diese Trennung ermöglicht Skalierbarkeit ohne Kompromisse bei Sicherheit und Finalität.
+> _Die operative Intelligenz_
+
+### Was ECHO macht
+
+| Frage                   | ECHO liefert           |
+| ----------------------- | ---------------------- |
+| Wer braucht was?        | Intent-Parsing via ADL |
+| Wer kann liefern?       | Discovery via ERY      |
+| Zu welchen Konditionen? | Private Verhandlung    |
+
+### Agentenmodell
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         ECHO Sphäre                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Seeker Agent                    Provider Agent                │
+│   ─────────────                   ──────────────                │
+│                                                                 │
+│   ┌─────────────┐                 ┌─────────────┐              │
+│   │   Intent    │                 │   Offer     │              │
+│   │   (ADL)     │                 │   (ADL)     │              │
+│   └──────┬──────┘                 └──────┬──────┘              │
+│          │                               │                      │
+│          │      ┌───────────────┐        │                      │
+│          └─────▶│  Consensus    │◀───────┘                      │
+│                 │    Bubble     │                               │
+│                 │   (XMTP)      │                               │
+│                 └───────────────┘                               │
+│                        │                                        │
+│                        ▼                                        │
+│                 Verhandlungsergebnis                            │
+│                        │                                        │
+│                        ▼                                        │
+│                    NOA Transaktion                              │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+| Agentenrolle | Repräsentiert | Beispiele                                     |
+| ------------ | ------------- | --------------------------------------------- |
+| **Seeker**   | Nachfrage     | Fahrzeug sucht Ladesäule, Firma sucht Wartung |
+| **Provider** | Angebot       | Ladesäulen-Betreiber, Wartungsdienstleister   |
+
+### Agent Definition Language (ADL)
+
+```yaml
+# Beispiel: Intent eines Seeker-Agenten
+intent:
+  type: "ev-charging"
+  constraints:
+    functional:
+      power_min: 50kW
+      energy_source: renewable
+    geographic:
+      geohash: "u0v9*" # München-Region
+      radius: 5km
+    trust:
+      min_trust: 0.8
+      required_attestations:
+        - type: "energy-certificate"
+        - type: "operator-license"
+    economic:
+      max_price: 0.40 EUR/kWh
+      payment: streaming
+```
+
+### Technologie-Stack
+
+| Komponente      | Technologie  | Funktion                                      |
+| --------------- | ------------ | --------------------------------------------- |
+| **Runtime**     | WASM Sandbox | Isolierte, sichere Agentenausführung          |
+| **Netzwerk**    | libp2p       | P2P-Kommunikation, Discovery                  |
+| **Verhandlung** | XMTP         | E2E-verschlüsselte Secure Tunnels             |
+| **State**       | Stateless    | Zustand liegt in ERY (Trust) und NOA (Assets) |
+
+### Sicherheitsmodell
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    WASM Sandbox                                 │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Agent Code                                                    │
+│       │                                                         │
+│       ▼                                                         │
+│   Host APIs (kontrolliert)                                      │
+│       │                                                         │
+│       ├── ERY Query API (read-only)                             │
+│       ├── libp2p Network API (rate-limited)                     │
+│       └── NOA Transaction API (Trust-gated)                     │
+│                                                                 │
+│   Kein direkter System-Zugriff                                  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-**Weiterführende Dokumente:**
+## ⚡ NOA – Causal Ledger
 
-- [Cybernetic Loop](./cybernetic-loop.md) – Detaillierte Workflow-Beschreibung
-- [Liquides Datenmodell](./liquides-datenmodell.md) – Blueprints und AMOs im Detail
-- [Agents & ADL](./agents-and-adl.md) – Agentenmodell und Agent Definition Language
+> _Die Quelle der Wahrheit_
+
+### Was NOA macht
+
+| Frage             | NOA liefert                       |
+| ----------------- | --------------------------------- |
+| Was ist passiert? | Kausale, unveränderliche Historie |
+| Wem gehört was?   | Aktueller Zustand aller Assets    |
+| Ist das erlaubt?  | Logic Guards prüfen Invarianten   |
+
+### Technologische Basis
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         NOA Ledger                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   ┌───────────────────────────────────────────────────────┐    │
+│   │                    IOTA Rebased                        │    │
+│   │                    (DAG-Struktur)                      │    │
+│   └───────────────────────────────────────────────────────┘    │
+│                            │                                    │
+│                            ▼                                    │
+│   ┌───────────────────────────────────────────────────────┐    │
+│   │                   Starfish BFT                         │    │
+│   │         (Leaderless, < 2 Sekunden Finalität)          │    │
+│   └───────────────────────────────────────────────────────┘    │
+│                            │                                    │
+│                            ▼                                    │
+│   ┌───────────────────────────────────────────────────────┐    │
+│   │                      MoveVM                            │    │
+│   │              (Resource Safety, Logic Guards)           │    │
+│   └───────────────────────────────────────────────────────┘    │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+| Komponente       | Beschreibung                                      |
+| ---------------- | ------------------------------------------------- |
+| **IOTA Rebased** | DAG-basierter Ledger, keine klassische Blockchain |
+| **Starfish BFT** | Leaderloser Konsens, deterministische Finalität   |
+| **MoveVM**       | Sichere Ausführung mit Resource Safety            |
+
+### Atomic Market Objects (AMOs)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                           AMO                                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   ┌─────────────┐                                               │
+│   │  Blueprint  │ ◀── Referenz zu ERY (Validierungsregeln)      │
+│   │  Reference  │                                               │
+│   └─────────────┘                                               │
+│                                                                 │
+│   ┌─────────────┐                                               │
+│   │    State    │ ◀── Aktueller Zustand (Owner, Werte, etc.)    │
+│   └─────────────┘                                               │
+│                                                                 │
+│   ┌─────────────┐                                               │
+│   │   Logic     │ ◀── Invarianten (via Logic Guards)            │
+│   │   Guards    │                                               │
+│   └─────────────┘                                               │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+| AMO-Typ           | Transfer | Bindung         | Beispiel               |
+| ----------------- | -------- | --------------- | ---------------------- |
+| 🏭 **Material**   | ✅ Ja    | Asset           | Ladesäule, Sensor      |
+| 🎫 **Credential** | ❌ Nein  | DID (Soulbound) | KYC, Zertifikat        |
+| ⏱️ **Service**    | ❌ Nein  | Zeit (TTL)      | Ladevorgang, Streaming |
+
+### Logic Guards
+
+```move
+// Beispiel: Logic Guard für Soulbound Credential
+module credential {
+    struct Credential has key {
+        id: ID,
+        owner: address,
+        attestations: vector<Attestation>,
+    }
+
+    // Transfer ist nicht erlaubt
+    public fun transfer(_cred: Credential, _new_owner: address) {
+        abort(ERR_SOULBOUND) // Immer fehlschlagen
+    }
+
+    // Nur Verifizierung ist möglich
+    public fun verify(cred: &Credential, claim: Claim): bool {
+        // Prüfe Attestations gegen Claim
+    }
+}
+```
+
+---
+
+## Zusammenspiel: Der kybernetische Regelkreis
+
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│                                                                            │
+│    1. INTENT                    2. DISCOVERY                               │
+│    ┌──────────┐                 ┌──────────┐                               │
+│    │  Seeker  │────────────────▶│   ERY    │                               │
+│    │  (ECHO)  │ ADL Query       │  Index   │                               │
+│    └──────────┘                 └────┬─────┘                               │
+│                                      │                                     │
+│                                      │ Kandidaten + Trust Vectors          │
+│                                      ▼                                     │
+│    3. TRUST-GATING              4. VERHANDLUNG                             │
+│    ┌──────────┐                 ┌──────────┐                               │
+│    │  Karmic  │────────────────▶│Consensus │                               │
+│    │  Engine  │ Filter          │  Bubble  │                               │
+│    └──────────┘                 └────┬─────┘                               │
+│                                      │                                     │
+│                                      │ Verhandlungsergebnis                │
+│                                      ▼                                     │
+│    6. FEEDBACK                  5. EXEKUTION                               │
+│    ┌──────────┐                 ┌──────────┐                               │
+│    │   ERY    │◀────────────────│   NOA    │                               │
+│    │  Update  │ Events          │  Ledger  │                               │
+│    └──────────┘                 └──────────┘                               │
+│         │                                                                  │
+│         │                                                                  │
+│         └─────────── beeinflusst nächste Discovery ────────────────────────│
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+
+| Phase           | Ort  | Input        | Output              |
+| --------------- | ---- | ------------ | ------------------- |
+| 1. Intent       | ECHO | Nutzerbedarf | ADL-Spezifikation   |
+| 2. Discovery    | ERY  | ADL-Query    | Kandidatenliste     |
+| 3. Trust-Gating | ERY  | Kandidaten   | Gefilterte Liste    |
+| 4. Verhandlung  | ECHO | Partner      | Vertragsbedingungen |
+| 5. Exekution    | NOA  | Transaktion  | Finalisierter State |
+| 6. Feedback     | ERY  | Events       | Trust-Update        |
+
+---
+
+## Vergleich: Erynoa vs. klassische Blockchain
+
+| Aspekt          | Klassische Blockchain    | Erynoa                      |
+| --------------- | ------------------------ | --------------------------- |
+| **Architektur** | Alles auf einer Ebene    | Drei spezialisierte Sphären |
+| **Semantik**    | Nicht vorhanden          | ERY: Blueprints, Ontologien |
+| **Intelligenz** | On-Chain Smart Contracts | ECHO: Off-Chain Agenten     |
+| **Konsens**     | Für alles                | Nur für Zustandsänderungen  |
+| **Vertrauen**   | Implizit (oder nicht)    | Explizit: Trust Vectors     |
+| **Skalierung**  | Schwierig                | Off-Chain Entlastung        |
+| **Privacy**     | Alles öffentlich         | Progressive Disclosure      |
+
+---
+
+## Deployment-Perspektive
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Production Deployment                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   ┌─────────────────────────────────────────────────────────┐  │
+│   │                    ERY Cluster                           │  │
+│   │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐    │  │
+│   │  │  Node   │  │  Node   │  │  Node   │  │  Node   │    │  │
+│   │  └─────────┘  └─────────┘  └─────────┘  └─────────┘    │  │
+│   │                    Qdrant Cluster                        │  │
+│   └─────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│   ┌─────────────────────────────────────────────────────────┐  │
+│   │                   ECHO Network                           │  │
+│   │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐    │  │
+│   │  │ Agent   │  │ Agent   │  │ Agent   │  │ Agent   │    │  │
+│   │  │ Runtime │  │ Runtime │  │ Runtime │  │ Runtime │    │  │
+│   │  └─────────┘  └─────────┘  └─────────┘  └─────────┘    │  │
+│   │                    libp2p Mesh                           │  │
+│   └─────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│   ┌─────────────────────────────────────────────────────────┐  │
+│   │                    NOA Network                           │  │
+│   │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐    │  │
+│   │  │Validator│  │Validator│  │Validator│  │Validator│    │  │
+│   │  └─────────┘  └─────────┘  └─────────┘  └─────────┘    │  │
+│   │                  IOTA Rebased Network                    │  │
+│   └─────────────────────────────────────────────────────────┘  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Zusammenfassung
+
+| Sphäre      | Rolle                     | Technologie      | Skalierung            |
+| ----------- | ------------------------- | ---------------- | --------------------- |
+| 🔮 **ERY**  | Wissen & Vertrauen        | Qdrant, DHT      | Horizontal (Sharding) |
+| 🤖 **ECHO** | Intelligenz & Verhandlung | WASM, libp2p     | Horizontal (Agents)   |
+| ⚡ **NOA**  | Wahrheit & Finalität      | MoveVM, Starfish | Durch Entlastung      |
+
+**Das Designprinzip:** Jede Sphäre macht genau das, was sie am besten kann – nicht mehr, nicht weniger. Zusammen bilden sie einen lernenden, kybernetischen Organismus.
+
+---
+
+## Weiterführend
+
+| Dokument                                                 | Fokus                              |
+| -------------------------------------------------------- | ---------------------------------- |
+| [Cybernetic Loop](./cybernetic-loop.md)                  | Workflow im Detail (6 Phasen)      |
+| [Liquides Datenmodell](./liquides-datenmodell.md)        | Blueprints, AMOs, Fluid Extensions |
+| [Trust & Reputation](./trust-and-reputation.md)          | Karmic Engine, Trust Vectors       |
+| [Agents & ADL](./agents-and-adl.md)                      | Agentenmodell, ADL-Syntax          |
+| [Backend-Architektur](../docs/reference/architecture.md) | Implementierungsdetails            |
