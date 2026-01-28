@@ -1,284 +1,573 @@
-# Erynoa – Cybernetic Loop (Universeller Workflow)
+# Erynoa – Cybernetic Loop
 
 > **Zielgruppe:** Architekt:innen, Protocol/Backend-Engineers, Product Owner
-> **Kontext:** End-to-End-Prozesse des Protokolls modellieren und verstehen
-> **Verwandte Dokumente:** [Agents & ADL](./agents-and-adl.md), [Trust & Reputation](./trust-and-reputation.md), [Glossar](./glossary.md)
+> **Lesezeit:** ca. 12 Minuten
+> **Voraussetzung:** [Kernkonzept](./kernkonzept.md) gelesen
+> **Verwandte Dokumente:** [Agents & ADL](./agents-and-adl.md) · [Trust & Reputation](./trust-and-reputation.md) · [Glossar](./glossary.md)
 
 ---
 
-## 1. Ziel dieses Dokuments
+## Das Konzept auf einen Blick
 
-Dieses Dokument beschreibt den **Cybernetic Loop** von Erynoa – den universellen
-Prozess, mit dem ein subjektiver Intent zu einer objektiv finalisierten Transaktion
-auf dem Ledger wird und wie das System daraus lernt.
+Der **Cybernetic Loop** ist der universelle Workflow, der einen subjektiven _Intent_ in eine objektiv finalisierte _Transaktion_ verwandelt – und aus jeder Interaktion lernt.
 
-Fokus:
-
-- Phasen des Workflows (von Intent bis Feedback)
-- Rollen von ERY, ECHO und NOA in jeder Phase
-- Typische Inputs/Outputs pro Schritt
-
----
-
-## 2. Überblick: Vom Intent zur Feedback-Schleife
-
-Der Cybernetic Loop besteht aus sechs Phasen:
-
-1. **Sensing & Intent (ECHO)**
-2. **Discovery & Context (ECHO ↔ ERY)**
-3. **Validation & Trust-Gating (ERY)**
-4. **Negotiation & Progressive Disclosure (ECHO)**
-5. **Execution & Logic Guards (NOA)**
-6. **Feedback & Ripple Effect (NOA → ERY)**
-
-Gedankliches Sequenzdiagramm:
-
-- Nutzer / Maschine → **Seeker-Agent (ECHO)**
-  → nutzt **Semantic Index & Karmic Engine (ERY)**
-  → verhandelt mit **Provider-Agent (ECHO)**
-  → finalisiert über **MoveVM & AMOs (NOA)**
-  → Events zurück an **Karmic Engine (ERY)**
-  → aktualisierte Trust-Daten beeinflussen zukünftige Intents und Entscheidungen.
-
----
-
-## 3. Phase 1 – Sensing & Intent (Initialisierung, ECHO)
-
-**Ziel:** Ein Intent beschreibt, _was_ erreicht werden soll, ohne die exakte Gegenpartei
-oder alle technischen Details zu kennen.
-
-**Akteure:**
-
-- Nutzer, Unternehmen oder Maschine
-- Seeker-Agent (in der ECHO-Sphäre)
-
-**Technische Mittel:**
-
-- **Agent Definition Language (ADL)**
-
-**Typische Inhalte einer ADL-Intent-Definition:**
-
-- Funktionale Anforderungen:
-  - z. B. „Ladeleistung > 50 kW“, „Energiequelle erneuerbar“, „Latenz < X ms“.
-- Normative Anforderungen:
-  - z. B. Konformität zu bestimmten Norm-Blueprints (ISO, eCl@ss, regulatorische Standards).
-- Vertrauensanforderungen:
-  - Mindest-Trust (MinTrust) pro Dimension oder aggregiert.
-- Geografische / kontextuelle Anforderungen:
-  - Region über **Geohashing** statt exakter Koordinaten.
-- Ökonomische Parameter:
-  - Preisspannen, Laufzeiten, Vertragskonditionen.
-
-**Ergebnis der Phase:**
-
-- Ein vollständig spezifizierter Intent in ADL, der als Eingabe für die Discovery-Phase dient.
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                          DER CYBERNETIC LOOP                                │
+│                                                                             │
+│                              ┌─────────┐                                    │
+│                        ┌────▶│ SENSING │─────┐                              │
+│                        │     │& INTENT │     │                              │
+│                        │     └─────────┘     │                              │
+│                        │          │          ▼                              │
+│                  ┌─────────┐      │     ┌─────────┐                         │
+│                  │FEEDBACK │      │     │DISCOVERY│                         │
+│                  │& RIPPLE │      │     │& CONTEXT│                         │
+│                  └─────────┘      │     └─────────┘                         │
+│                        ▲          │          │                              │
+│                        │          │          ▼                              │
+│                  ┌─────────┐      │     ┌─────────┐                         │
+│                  │EXECUTION│      │     │VALIDATION                         │
+│                  │& GUARDS │◀─────┴────▶│& TRUST  │                         │
+│                  └─────────┘            └─────────┘                         │
+│                        ▲                     │                              │
+│                        │     ┌─────────┐     │                              │
+│                        └─────│NEGOTIA- │◀────┘                              │
+│                              │  TION   │                                    │
+│                              └─────────┘                                    │
+│                                                                             │
+│   „Ich will laden" ──▶ Suche ──▶ Prüfung ──▶ Verhandlung ──▶ Ausführung    │
+│                  ──▶ Feedback ──▶ Lernen ──▶ Nächste Entscheidung besser   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 4. Phase 2 – Discovery & Context (ECHO ↔ ERY)
+## Die sechs Phasen im Überblick
 
-**Ziel:** Passende Provider und Objekte finden, die den Intent potenziell erfüllen können.
-
-**Akteure:**
-
-- Seeker-Agent (ECHO)
-- ERY Semantic Index
-
-**Ablauf:**
-
-1. Der Seeker-Agent übergibt die Intent-Parameter an den **Semantic Index**.
-2. Der Semantic Index führt:
-   - Vektor-Suchen (semantische Ähnlichkeit),
-   - Filter auf Domain Blueprints und Normative Standards,
-   - geografische Filter via DHT + Geohashing
-     durch.
-3. Potenzielle Provider-DIDs und relevante AMOs werden identifiziert.
-
-**Wichtige Eigenschaften:**
-
-- Suche basiert nicht nur auf Keywords, sondern auf **semantischer Kompatibilität**:
-  - Blueprint-Referenzen, Domänenkontexte und Normen werden berücksichtigt.
-- Skalierbarkeit durch:
-  - horizontales Sharding (DHT),
-  - geographische Partitionierung.
-
-**Ergebnis der Phase:**
-
-- Eine **Kandidatenliste** von Providern und AMOs, die technisch und kontextuell passen könnten.
+| Phase | Name                          | Sphäre     | Kernfrage                      |
+| ----- | ----------------------------- | ---------- | ------------------------------ |
+| 1️⃣    | **Sensing & Intent**          | ECHO       | _„Was will ich erreichen?"_    |
+| 2️⃣    | **Discovery & Context**       | ECHO ↔ ERY | _„Wer kann mir helfen?"_       |
+| 3️⃣    | **Validation & Trust-Gating** | ERY        | _„Kann ich ihnen vertrauen?"_  |
+| 4️⃣    | **Negotiation**               | ECHO       | _„Zu welchen Konditionen?"_    |
+| 5️⃣    | **Execution & Logic Guards**  | NOA        | _„Ist der Deal rechtsgültig?"_ |
+| 6️⃣    | **Feedback & Ripple Effect**  | NOA → ERY  | _„Wie hat es funktioniert?"_   |
 
 ---
 
-## 5. Phase 3 – Validation & Trust-Gating (ERY)
+## Phase 1: Sensing & Intent
 
-**Ziel:** Kandidaten auf strukturellen Trust und Reputation prüfen, bevor Ressourcen in Verhandlungen fließen.
+> _„Was will ich erreichen?"_
 
-**Akteure:**
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   PHASE 1: SENSING & INTENT (ECHO)                                         │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   👤 Nutzer / 🤖 Maschine                                           │  │
+│   │         │                                                           │  │
+│   │         │ "Ich brauche Ladung, 50+ kW, erneuerbar, max. 0.40€/kWh" │  │
+│   │         │                                                           │  │
+│   │         ▼                                                           │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │               SEEKER-AGENT (ADL)                          │    │  │
+│   │   ├───────────────────────────────────────────────────────────┤    │  │
+│   │   │                                                           │    │  │
+│   │   │   intent:                                                 │    │  │
+│   │   │     type: "ev-charging"                                   │    │  │
+│   │   │                                                           │    │  │
+│   │   │   requirements:                                           │    │  │
+│   │   │     functional:                                           │    │  │
+│   │   │       power_min: 50kW                                     │    │  │
+│   │   │       energy_source: renewable                            │    │  │
+│   │   │     normative:                                            │    │  │
+│   │   │       blueprint: "erynoa:bp:ev-charging-station:v1"       │    │  │
+│   │   │     trust:                                                │    │  │
+│   │   │       min_trust: 0.8                                      │    │  │
+│   │   │     geo:                                                  │    │  │
+│   │   │       geohash: "u281z"      # München                     │    │  │
+│   │   │       radius: 5km                                         │    │  │
+│   │   │     economic:                                             │    │  │
+│   │   │       max_price: 0.40€/kWh                                │    │  │
+│   │   │                                                           │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│   OUTPUT: Vollständig spezifizierter Intent in ADL                         │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-- ERY-Node (Verifiable Oracle)
-- Karmic Engine
+### Intent-Dimensionen
 
-**Prüfschritte:**
-
-1. **Struktureller Trust**
-   - Verifizierung des **DNS-Bootstrap**:
-     - Bindung von DIDs an Domains (z. B. via DNS-TXT).
-   - Überprüfung von **Attestations**:
-     - Zertifikate, regulatorische Nachweise, externe Signaturen.
-
-2. **Reputationsprüfung**
-   - Abfrage der **Trust Vectors** für Kandidaten.
-   - Vergleich mit den in ADL definierten MinTrust-Schwellen.
-
-**Effekt von Trust-Gating:**
-
-- Kandidaten, die:
-  - strukturelle Anforderungen nicht erfüllen,
-  - oder unterhalb des geforderten Vertrauen-Levels liegen,
-    werden verworfen.
-
-**Ergebnis der Phase:**
-
-- Eine **bereinigte Liste** von Providern, die:
-  - technisch passen,
-  - und vertrauenswürdig genug sind, um in eine Verhandlung einzutreten.
-
----
-
-## 6. Phase 4 – Negotiation & Progressive Disclosure (ECHO)
-
-**Ziel:** Einen privatwirtschaftlichen Konsens über konkrete Vertragsbedingungen finden.
-
-**Akteure:**
-
-- Seeker-Agent und Provider-Agent (beide in ECHO)
-
-**Kommunikationskanal:**
-
-- **XMTP Secure Tunnels** (verschlüsselte Off-Chain-Kommunikation)
-- Ein solcher Tunnel bildet eine **Consensus Bubble**
-
-**Prinzip der Progressive Disclosure:**
-
-- Sensible Daten (z. B. interne Kostenstrukturen, genaue Standorte, proprietäre Parameter):
-  - werden erst offengelegt, wenn:
-    - die Basis-Kompatibilität geklärt ist,
-    - beidseitiges Interesse und Mindestvertrauen bestehen.
-- Schrittweiser Informationsaustausch:
-  - reduziert Informationslecks,
-  - schützt Geschäftsgeheimnisse,
-  - und minimiert unnötigen Datenverkehr.
-
-**Verhandlungsergebnis:**
-
-- Konkreter Vertrag mit:
-  - referenziertem Blueprint und AMO-Typ,
-  - Preisen, Mengen, Zeiträumen,
-  - Service-Levels und Sanktionen,
-  - Identitäten der beteiligten Parteien (DIDs / AMOs).
-
-**Ergebnis der Phase:**
-
-- Ein **transaktionales Paket**, das in die Exekution überführt werden kann.
+| Dimension      | Beispiele                       | Zweck                           |
+| -------------- | ------------------------------- | ------------------------------- |
+| **Funktional** | Leistung, Kapazität, Latenz     | Technische Mindestanforderungen |
+| **Normativ**   | Blueprint, ISO-Norm, Zertifikat | Compliance & Interoperabilität  |
+| **Trust**      | MinTrust, Attestations          | Risikominimierung               |
+| **Geo**        | Geohash, Radius                 | Lokale Relevanz                 |
+| **Ökonomisch** | Preis, Laufzeit, SLA            | Wirtschaftliche Grenzen         |
 
 ---
 
-## 7. Phase 5 – Execution & Logic Guards (NOA)
+## Phase 2: Discovery & Context
 
-**Ziel:** Den Off-Chain-Konsens als On-Chain-Faktum in NOA finalisieren.
+> _„Wer kann mir helfen?"_
 
-**Akteure:**
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   PHASE 2: DISCOVERY & CONTEXT (ECHO ↔ ERY)                                │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   SEEKER-AGENT                                                      │  │
+│   │        │                                                            │  │
+│   │        │  Intent-Parameter                                          │  │
+│   │        ▼                                                            │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │               SEMANTIC INDEX (ERY)                        │    │  │
+│   │   ├───────────────────────────────────────────────────────────┤    │  │
+│   │   │                                                           │    │  │
+│   │   │   🔍 Vektor-Suche                                         │    │  │
+│   │   │      → Semantische Ähnlichkeit zu Intent                  │    │  │
+│   │   │                                                           │    │  │
+│   │   │   📋 Blueprint-Filter                                      │    │  │
+│   │   │      → Nur ev-charging-station:v1 kompatible              │    │  │
+│   │   │                                                           │    │  │
+│   │   │   🌍 Geo-Filter (DHT + Geohash)                           │    │  │
+│   │   │      → Nur in 5km um "u281z"                              │    │  │
+│   │   │                                                           │    │  │
+│   │   │   ⚡ Fluid Extensions                                      │    │  │
+│   │   │      → Aktuelle Verfügbarkeit, Spot-Preise                │    │  │
+│   │   │                                                           │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   │        │                                                            │  │
+│   │        ▼                                                            │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │  KANDIDATENLISTE                                          │    │  │
+│   │   │  ─────────────────                                        │    │  │
+│   │   │  • Provider A (did:erynoa:op-123) – 150kW, 0.35€/kWh     │    │  │
+│   │   │  • Provider B (did:erynoa:op-456) – 50kW, 0.38€/kWh      │    │  │
+│   │   │  • Provider C (did:erynoa:op-789) – 350kW, 0.32€/kWh     │    │  │
+│   │   │  • Provider D (did:erynoa:op-012) – 75kW, 0.40€/kWh      │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│   OUTPUT: Kandidatenliste (technisch & kontextuell passend)                │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-- MoveVM in NOA
-- Logic Guards
-- AMOs der beteiligten Parteien
+### Skalierung der Discovery
 
-**Ablauf:**
-
-1. Das transaktionale Paket wird in eine **Move-Transaktion** übersetzt.
-2. Vor Ausführung greifen **Logic Guards**:
-   - Prüfen, ob:
-     - alle Domain-spezifischen Regeln eingehalten sind,
-     - Soulbound-Eigenschaften respektiert werden,
-     - Ressourcenverbräuche konsistent sind (Resource Safety).
-3. Bei erfolgreicher Prüfung:
-   - wird der Zustand der betroffenen AMOs aktualisiert (z. B. Eigentumswechsel, Credential-Ausstellung, Start eines Service-Streams).
-4. **Starfish BFT** finalisiert die Transaktion:
-   - deterministische Finalität,
-   - unter zwei Sekunden,
-   - ohne zentrale Block-Produzenten (leaderless).
-
-**Ergebnis der Phase:**
-
-- Eine **unumkehrbare, kausal verankerte Transaktion** im NOA-Ledger.
-
----
-
-## 8. Phase 6 – Feedback & Ripple Effect (NOA → ERY)
-
-**Ziel:** Aus jeder Interaktion lernen und das Vertrauensgefüge aktualisieren.
-
-**Akteure:**
-
-- Event Ingestor (ERY)
-- Karmic Engine (ERY)
-
-**Ablauf:**
-
-1. NOA emittiert nach jeder finalisierten Transaktion ein oder mehrere **Events**.
-2. Der **Event Ingestor** in ERY nimmt diese Events auf und klassifiziert sie:
-   - erfolgreich, neutral, fehlerhaft, betrügerisch, SLA-verletzend, usw.
-3. Die Karmic Engine berechnet den neuen Trust Vector:
-
-   \[
-   R*\text{new}(t) = R*\text{old}(t-1) + \eta \left(F\_\text{Event} - E[F]\right)
-   \]
-
-4. **Trust Inheritance**:
-   - Die Auswirkungen propagieren fraktal:
-     - vom unmittelbaren AMO zu:
-       - Betreiber,
-       - Hersteller,
-       - Zertifizierern,
-       - und ggf. betroffenen Blueprints.
-
-**Ergebnis der Phase:**
-
-- Aktualisierte **Trust Vectors** und Kontextdaten im Semantic Index.
-- Die nächste Discovery-Phase baut automatisch auf einem veränderten Vertrauensgefüge auf.
-
----
-
-## 9. Zusammenfassung: Eigenschaften des Cybernetic Loop
-
-Der Cybernetic Loop von Erynoa zeichnet sich aus durch:
-
-- **Funktionstrennung:**
-  - ECHO: Intents, Agenten, Verhandlung
-  - ERY: Semantik, Kontext, Vertrauen
-  - NOA: Wahrheit, Finalität, Exekution
-
-- **Kontinuierliches Lernen:**
-  - Jede Transaktion verändert die Vertrauenslandschaft.
-  - Entscheidungen werden dynamisch besser, ohne zentrale Koordinatoren.
-
-- **Privacy-by-Design:**
-  - Nur minimale, notwendige Fakten landen On-Chain.
-  - Details bleiben in Consensus Bubbles und Fluid Extensions.
-
-- **Skalierbarkeit:**
-  - Rechenintensive Prozesse Off-Chain
-  - Formale Sicherheit und Kausalität On-Chain
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   SKALIERUNGSMECHANISMEN                                                    │
+│                                                                             │
+│   ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐        │
+│   │   DHT-Sharding  │    │  Geo-Partition  │    │  Vektor-Index   │        │
+│   │   ─────────────  │    │  ────────────── │    │  ─────────────  │        │
+│   │   Horizontal     │    │  Regionale      │    │  HNSW-Algo in   │        │
+│   │   verteilt       │    │  Zuständigkeit  │    │  Qdrant         │        │
+│   └─────────────────┘    └─────────────────┘    └─────────────────┘        │
+│                                                                             │
+│   → Millionen von Providern durchsuchbar in < 100ms                        │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 10. Fazit
+## Phase 3: Validation & Trust-Gating
 
-Der Cybernetic Loop fungiert als „Herzschlag“ von Erynoa: Er wandelt Intents in verlässliche Fakten um – und nutzt jede Interaktion, um das System langfristig robuster und intelligenter zu machen.
+> _„Kann ich ihnen vertrauen?"_
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   PHASE 3: VALIDATION & TRUST-GATING (ERY)                                 │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   KANDIDATENLISTE                                                   │  │
+│   │        │                                                            │  │
+│   │        ▼                                                            │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │           KARMIC ENGINE + ATTESTATION CHECK               │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   │        │                                                            │  │
+│   │        ▼                                                            │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │                                                           │    │  │
+│   │   │  TRUST-GATING (MinTrust: 0.8)                            │    │  │
+│   │   │  ════════════════════════════                             │    │  │
+│   │   │                                                           │    │  │
+│   │   │  Provider A │ Trust: 0.92 │ DNS ✅ │ ISO ✅ │ → ✅ PASS  │    │  │
+│   │   │  Provider B │ Trust: 0.75 │ DNS ✅ │ ISO ✅ │ → ❌ FAIL  │    │  │
+│   │   │  Provider C │ Trust: 0.88 │ DNS ✅ │ ISO ❌ │ → ❌ FAIL  │    │  │
+│   │   │  Provider D │ Trust: 0.85 │ DNS ✅ │ ISO ✅ │ → ✅ PASS  │    │  │
+│   │   │                                                           │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   │        │                                                            │  │
+│   │        ▼                                                            │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │  BEREINIGTE LISTE                                         │    │  │
+│   │   │  ────────────────                                         │    │  │
+│   │   │  • Provider A (did:erynoa:op-123) – Trust 0.92           │    │  │
+│   │   │  • Provider D (did:erynoa:op-012) – Trust 0.85           │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│   OUTPUT: Vertrauenswürdige Provider, bereit für Verhandlung               │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Prüfungen im Detail
+
+| Prüfung                    | Quelle          | Beispiel                 |
+| -------------------------- | --------------- | ------------------------ |
+| **Trust Vector**           | Karmic Engine   | Reliability ≥ 0.8        |
+| **DNS-Attestation**        | DNS-TXT-Record  | DID ↔ Domain verifiziert |
+| **Zertifikate**            | Credential AMOs | ISO 27001, OCPP 2.0.1    |
+| **Verbandsmitgliedschaft** | Attestation     | BDEW-Mitglied            |
 
 ---
 
-**Weiterführende Dokumente:**
+## Phase 4: Negotiation
 
-- [Agents & ADL](./agents-and-adl.md) – Agentenmodell und Agent Definition Language
-- [Trust & Reputation](./trust-and-reputation.md) – Details zum Vertrauensmodell
-- [Use Cases](./use-cases.md) – Der Cybernetic Loop in der Praxis
+> _„Zu welchen Konditionen?"_
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   PHASE 4: NEGOTIATION (ECHO)                                              │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │                      CONSENSUS BUBBLE                               │  │
+│   │                   (XMTP Secure Tunnel)                              │  │
+│   │                                                                     │  │
+│   │   ┌───────────┐                           ┌───────────┐            │  │
+│   │   │  SEEKER   │                           │ PROVIDER  │            │  │
+│   │   │  AGENT    │◀═══════════════════════▶│  AGENT    │            │  │
+│   │   └───────────┘    🔐 End-to-End         └───────────┘            │  │
+│   │        │              verschlüsselt            │                   │  │
+│   │        │                                       │                   │  │
+│   │        └───────────────────┬───────────────────┘                   │  │
+│   │                            │                                       │  │
+│   │                            ▼                                       │  │
+│   │                                                                     │  │
+│   │   PROGRESSIVE DISCLOSURE                                           │  │
+│   │   ══════════════════════                                           │  │
+│   │                                                                     │  │
+│   │   Schritt 1: Basis-Kompatibilität                                  │  │
+│   │   ┌─────────────────────────────────────────────────────────────┐  │  │
+│   │   │ "50kW? ✅ Erneuerbar? ✅ Verfügbar? ✅"                      │  │  │
+│   │   └─────────────────────────────────────────────────────────────┘  │  │
+│   │                            │                                       │  │
+│   │                            ▼                                       │  │
+│   │   Schritt 2: Wirtschaftliche Parameter                             │  │
+│   │   ┌─────────────────────────────────────────────────────────────┐  │  │
+│   │   │ Seeker: "Max 0.38€/kWh" ←→ Provider: "Ab 0.35€/kWh"         │  │  │
+│   │   └─────────────────────────────────────────────────────────────┘  │  │
+│   │                            │                                       │  │
+│   │                            ▼                                       │  │
+│   │   Schritt 3: Sensible Details (erst nach Einigung)                │  │
+│   │   ┌─────────────────────────────────────────────────────────────┐  │  │
+│   │   │ Exakte Position, interne IDs, proprietäre Parameter         │  │  │
+│   │   └─────────────────────────────────────────────────────────────┘  │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│   OUTPUT: Transaktionales Paket (Vertrag) zur Ausführung                   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Vorteile der Progressive Disclosure
+
+| Aspekt                   | Ohne Progressive Disclosure | Mit Progressive Disclosure |
+| ------------------------ | --------------------------- | -------------------------- |
+| **Datenlecks**           | Alles sofort offengelegt    | Schrittweise, nach Bedarf  |
+| **Geschäftsgeheimnisse** | Gefährdet                   | Geschützt                  |
+| **Netzwerkverkehr**      | Unnötig hoch                | Minimiert                  |
+| **Verhandlungsposition** | Schwach                     | Stark                      |
+
+---
+
+## Phase 5: Execution & Logic Guards
+
+> _„Ist der Deal rechtsgültig?"_
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   PHASE 5: EXECUTION & LOGIC GUARDS (NOA)                                  │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   TRANSAKTIONALES PAKET                                             │  │
+│   │        │                                                            │  │
+│   │        ▼                                                            │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │                     MOVE VM                               │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   │        │                                                            │  │
+│   │        ▼                                                            │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │                   LOGIC GUARDS                            │    │  │
+│   │   ├───────────────────────────────────────────────────────────┤    │  │
+│   │   │                                                           │    │  │
+│   │   │   ☑️ Blueprint-Konformität                                 │    │  │
+│   │   │      → AMO entspricht ev-charging-station:v1?             │    │  │
+│   │   │                                                           │    │  │
+│   │   │   ☑️ Resource Safety                                       │    │  │
+│   │   │      → Keine doppelten Ausgaben, konsistenter State       │    │  │
+│   │   │                                                           │    │  │
+│   │   │   ☑️ Soulbound-Check                                       │    │  │
+│   │   │      → Credentials nicht transferiert?                    │    │  │
+│   │   │                                                           │    │  │
+│   │   │   ☑️ Domain-Regeln                                         │    │  │
+│   │   │      → Minimale Ladeleistung eingehalten?                 │    │  │
+│   │   │                                                           │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   │        │                                                            │  │
+│   │        ▼ Alle Checks bestanden                                      │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │                   STARFISH BFT                            │    │  │
+│   │   ├───────────────────────────────────────────────────────────┤    │  │
+│   │   │                                                           │    │  │
+│   │   │   • Leaderless Consensus                                  │    │  │
+│   │   │   • Deterministische Finalität                            │    │  │
+│   │   │   • < 2 Sekunden bis Finalität                           │    │  │
+│   │   │                                                           │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   │        │                                                            │  │
+│   │        ▼                                                            │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │  ✅ FINALISIERTE TRANSAKTION                              │    │  │
+│   │   │     Service-AMO erstellt: Ladevorgang-47291               │    │  │
+│   │   │     Streaming: 0.36€/kWh, Start: now                      │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│   OUTPUT: Unumkehrbare, kausal verankerte Transaktion im Ledger            │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Move-Code Beispiel
+
+```move
+/// Logic Guard für EV-Charging Service
+public entry fun start_charging_session(
+    seeker: &signer,
+    station_amo: &mut ChargingStation,
+    price_per_kwh: u64,
+    max_duration_seconds: u64
+) {
+    // Blueprint-Konformität
+    assert!(station_amo.blueprint == @ev_charging_station_v1, E_INVALID_BLUEPRINT);
+
+    // Verfügbarkeit
+    assert!(station_amo.status == STATUS_AVAILABLE, E_NOT_AVAILABLE);
+
+    // Domain-Regeln
+    assert!(station_amo.power_output >= 50_000, E_INSUFFICIENT_POWER); // 50kW min
+
+    // Service-AMO erstellen (TTL-gesteuert)
+    let session = ServiceAMO {
+        seeker: signer::address_of(seeker),
+        provider: station_amo.owner,
+        price_per_kwh,
+        started_at: timestamp::now_seconds(),
+        ttl: max_duration_seconds,
+    };
+
+    // State Update
+    station_amo.status = STATUS_CHARGING;
+    station_amo.current_session = option::some(session);
+}
+```
+
+---
+
+## Phase 6: Feedback & Ripple Effect
+
+> _„Wie hat es funktioniert?"_
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   PHASE 6: FEEDBACK & RIPPLE EFFECT (NOA → ERY)                            │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   FINALISIERTE TRANSAKTION (NOA)                                    │  │
+│   │        │                                                            │  │
+│   │        │ Event emittiert                                            │  │
+│   │        ▼                                                            │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │                   EVENT INGESTOR (ERY)                    │    │  │
+│   │   ├───────────────────────────────────────────────────────────┤    │  │
+│   │   │                                                           │    │  │
+│   │   │   Event: "charging_session_completed"                     │    │  │
+│   │   │   Duration: 45 min                                        │    │  │
+│   │   │   Energy: 38.5 kWh                                        │    │  │
+│   │   │   Status: SUCCESS                                         │    │  │
+│   │   │                                                           │    │  │
+│   │   │   Klassifikation: ✅ Erfolgreich, pünktlich               │    │  │
+│   │   │                                                           │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   │        │                                                            │  │
+│   │        ▼                                                            │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │                   KARMIC ENGINE                           │    │  │
+│   │   ├───────────────────────────────────────────────────────────┤    │  │
+│   │   │                                                           │    │  │
+│   │   │   R_new = R_old + η × (F_event - E[F])                   │    │  │
+│   │   │                                                           │    │  │
+│   │   │   Provider Trust: 0.85 → 0.852 (+0.002)                  │    │  │
+│   │   │   Seeker Trust:   0.91 → 0.912 (+0.002)                  │    │  │
+│   │   │                                                           │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   │        │                                                            │  │
+│   │        ▼                                                            │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │                   TRUST INHERITANCE                       │    │  │
+│   │   ├───────────────────────────────────────────────────────────┤    │  │
+│   │   │                                                           │    │  │
+│   │   │   AMO (Station)     ───▶  +0.002                         │    │  │
+│   │   │        │                                                  │    │  │
+│   │   │        ▼ (λ=0.99)                                         │    │  │
+│   │   │   Betreiber         ───▶  +0.00002 (gedämpft)            │    │  │
+│   │   │        │                                                  │    │  │
+│   │   │        ▼ (λ=0.99)                                         │    │  │
+│   │   │   Hersteller        ───▶  +0.0000002 (stark gedämpft)    │    │  │
+│   │   │                                                           │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│   OUTPUT: Aktualisierte Trust Vectors → beeinflussen nächste Discovery    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Die Feedback-Schleife schließt sich
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   KONTINUIERLICHES LERNEN                                                   │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   Transaktion 1    →    Trust Update    →    Discovery 2           │  │
+│   │        │                     │                     │                │  │
+│   │        │                     │                     │                │  │
+│   │   Transaktion 2    →    Trust Update    →    Discovery 3           │  │
+│   │        │                     │                     │                │  │
+│   │        │                     │                     │                │  │
+│   │   Transaktion N    →    Trust Update    →    Discovery N+1         │  │
+│   │                                                                     │  │
+│   │   ════════════════════════════════════════════════════════════════ │  │
+│   │                                                                     │  │
+│   │   📈 Gute Akteure werden sichtbarer und bevorzugt                  │  │
+│   │   📉 Schlechte Akteure werden aus Märkten verdrängt                │  │
+│   │   🎯 Ohne zentrale Koordination, rein datengetrieben               │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Sphären-Zuständigkeiten
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   WER MACHT WAS IM CYBERNETIC LOOP?                                        │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   ECHO (Emergent Swarm)                                            │  │
+│   │   ═════════════════════                                             │  │
+│   │   • Intent-Spezifikation (ADL)                                      │  │
+│   │   • Agent-zu-Agent-Kommunikation                                    │  │
+│   │   • Verhandlung in Consensus Bubbles                                │  │
+│   │   • Ephemere Koordination                                           │  │
+│   │                                                                     │  │
+│   │   ─────────────────────────────────────────────────────────────    │  │
+│   │                                                                     │  │
+│   │   ERY (Semantic Lattice)                                           │  │
+│   │   ══════════════════════                                            │  │
+│   │   • Semantische Discovery                                           │  │
+│   │   • Trust-Gating (Karmic Engine)                                   │  │
+│   │   • Blueprint-Kontext                                               │  │
+│   │   • Feedback-Integration                                            │  │
+│   │                                                                     │  │
+│   │   ─────────────────────────────────────────────────────────────    │  │
+│   │                                                                     │  │
+│   │   NOA (Causal Ledger)                                              │  │
+│   │   ═══════════════════                                               │  │
+│   │   • Logic Guards (MoveVM)                                          │  │
+│   │   • Atomare Ausführung                                              │  │
+│   │   • Finale Wahrheit                                                 │  │
+│   │   • Event-Emission                                                  │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Zusammenfassung
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                         DER CYBERNETIC LOOP                                │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   1️⃣ Sensing & Intent      →  „Was will ich?" (ADL in ECHO)        │  │
+│   │   2️⃣ Discovery & Context   →  „Wer kann helfen?" (ERY)             │  │
+│   │   3️⃣ Validation & Trust    →  „Kann ich vertrauen?" (Karmic)       │  │
+│   │   4️⃣ Negotiation           →  „Zu welchen Konditionen?" (XMTP)     │  │
+│   │   5️⃣ Execution & Guards    →  „Rechtsgültig?" (MoveVM)             │  │
+│   │   6️⃣ Feedback & Ripple     →  „Wie hat es geklappt?" (Learning)    │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│   Der „Herzschlag" von Erynoa:                                             │
+│   Intent → Fakten → Lernen → Bessere Entscheidungen                        │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Weiterführend
+
+| Dokument                                          | Fokus                                         |
+| ------------------------------------------------- | --------------------------------------------- |
+| [Agents & ADL](./agents-and-adl.md)               | Intent-Spezifikation in Phase 1               |
+| [Trust & Reputation](./trust-and-reputation.md)   | Trust-Gating in Phase 3 & Feedback in Phase 6 |
+| [Liquides Datenmodell](./liquides-datenmodell.md) | AMOs und Blueprints in allen Phasen           |
+| [Use Cases](./use-cases.md)                       | Der Loop in konkreten Szenarien               |
