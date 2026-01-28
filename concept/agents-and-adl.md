@@ -1,264 +1,593 @@
-# Erynoa – Agents & Agent Definition Language (ADL)
+# Erynoa – Agents & ADL
 
-> **Zielgruppe:** Agenten-Entwickler:innen, Protocol Engineers, Architekt:innen für Agenten-/Policy-Layer
-> **Kontext:** Agentenmodell und deklarative Sprache für Intents
-> **Verwandte Dokumente:** [Cybernetic Loop](./cybernetic-loop.md), [Trust & Reputation](./trust-and-reputation.md), [Glossar](./glossary.md)
-
----
-
-## 1. Ziel dieses Dokuments
-
-Dieses Dokument beschreibt:
-
-- das Agentenmodell von Erynoa (**ECHO-Sphäre**) und
-- die Grundprinzipien der **Agent Definition Language (ADL)**,
-
-über die Intents, Constraints und Policies für autonome Interaktionen ausgedrückt werden.
+> **Zielgruppe:** Agenten-Entwickler:innen, Protocol Engineers, Policy-Architekt:innen
+> **Lesezeit:** ca. 12 Minuten
+> **Voraussetzung:** [Kernkonzept](./kernkonzept.md) gelesen
+> **Verwandte Dokumente:** [Cybernetic Loop](./cybernetic-loop.md) · [Trust & Reputation](./trust-and-reputation.md) · [Glossar](./glossary.md)
 
 ---
 
-## 2. Agentenmodell in ECHO
+## Das Konzept auf einen Blick
 
-ECHO ist die Sphäre der **operativen Intelligenz**. Hier werden Intents
-von Menschen, Unternehmen und Maschinen durch Agenten ausgeführt.
+**Agenten** sind die handelnden Akteure in Erynoa. Sie setzen Absichten (Intents) in Handlungen um – autonom, sicher und vertrauensbewusst.
 
-**Grundannahmen:**
-
-- Agenten sind:
-  - **zustandsloser Code („Agent as Code“)**
-  - der **Just-in-Time** instanziiert wird,
-  - und in einer **WASM-Sandbox** läuft.
-
-- Persistenter Zustand liegt nicht im Agenten selbst, sondern:
-  - in **ERY** (Semantik, Trust, Kontext),
-  - und in **NOA** (AMOs, finale Zustände).
-
----
-
-## 3. Agententypen
-
-Erynoa unterscheidet zwei primäre Agentenrollen:
-
-#### 3.1 Seeker Agents
-
-**Rolle:**
-
-- Repräsentieren die **Nachfrageseite**:
-  - Nutzer,
-  - Unternehmen,
-  - IoT-Geräte oder andere Protokolle.
-
-**Aufgaben:**
-
-- Intent-Definition via ADL.
-- Discovery und Auswahl passender Provider (in Zusammenarbeit mit ERY).
-- Führen Off-Chain-Verhandlungen in Consensus Bubbles.
-- Übermitteln finalisierte Vertragsparameter an NOA.
-
-#### 3.2 Provider Agents
-
-**Rolle:**
-
-- Repräsentieren die **Angebotsseite**:
-  - Betreiber von Infrastrukturen,
-  - Dienstleister,
-  - Hersteller,
-  - Plattformen.
-
-**Aufgaben:**
-
-- Empfangen und interpretieren Intents.
-- Entscheiden über die Teilnahme an Verhandlungen (basierend auf Policies).
-- Verhandeln Preise, Konditionen, Service-Levels.
-- Binden konkrete AMOs und Services an Vertragszusagen.
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   MENSCHEN & MASCHINEN INTERAGIEREN NICHT DIREKT MIT DEM LEDGER            │
+│                                                                             │
+│   ┌─────────────┐                                     ┌─────────────┐      │
+│   │   👤 User   │                                     │   🏭 Asset  │      │
+│   │   🏢 Org    │                                     │   ⚡ Service │      │
+│   │   🚗 IoT    │                                     │   📦 Ressource│     │
+│   └──────┬──────┘                                     └──────┬──────┘      │
+│          │                                                   │              │
+│          ▼                                                   ▼              │
+│   ┌─────────────┐         ECHO (P2P)          ┌─────────────┐              │
+│   │   SEEKER    │◀═══════════════════════════▶│  PROVIDER   │              │
+│   │   AGENT     │      Verhandlung            │   AGENT     │              │
+│   └──────┬──────┘                             └──────┬──────┘              │
+│          │                                           │                      │
+│          │    ┌───────────────────────────┐         │                      │
+│          └───▶│         ERY & NOA         │◀────────┘                      │
+│               │   (Kontext & Finalität)   │                                │
+│               └───────────────────────────┘                                │
+│                                                                             │
+│   Agenten sind die „Übersetzer" zwischen Absicht und Protokoll.            │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 4. Ausführungsumgebung – WASM-Sandbox
+## Das Agentenmodell
 
-Agenten laufen in einer strikt isolierten **WebAssembly (WASM) Sandbox**.
+### Grundprinzipien
 
-**Eigenschaften:**
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                          AGENT AS CODE                                      │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   📦 Zustandslos        ⚡ Just-in-Time         🔒 WASM-Sandbox     │  │
+│   │   ═══════════════       ══════════════════      ════════════════    │  │
+│   │                                                                     │  │
+│   │   Kein persistenter     Wird bei Bedarf        Isoliert vom        │  │
+│   │   State im Agenten      instanziiert           Host-System         │  │
+│   │                                                                     │  │
+│   │   State liegt in:       Lebt nur für die       Nur definierte      │  │
+│   │   • ERY (Kontext)       Dauer des Intents      APIs verfügbar      │  │
+│   │   • NOA (Fakten)                                                    │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-- Sprachagnostisch:
-  - Agenten können in Sprachen geschrieben werden, die nach WASM kompilieren.
-- Sicherheit:
-  - Kein direkter Zugriff auf das Host-System.
-  - Zugriff nur über explizit definierte Host-APIs.
+### Die zwei Agentenrollen
 
-**Exemplarische Host-APIs:**
-
-- Lesen aus ERY:
-  - Query des Semantic Index (z. B. Kandidatensuche, Trust-Abfragen).
-- Interaktion mit Netzwerk:
-  - Aufbauen von P2P-Verbindungen (libp2p).
-  - Eröffnung von XMTP-Tunneln.
-- Interaktion mit NOA:
-  - Konstruktion von Transaktionen (z. B. Nutzung von AMOs).
-
-Diese Trennung erlaubt:
-
-- schnelle Iteration im Agentencode,
-- bei gleichzeitig klar definiertem, sicheren Interaktionsrahmen.
-
----
-
-## 5. Agent Definition Language (ADL) – Grundprinzipien
-
-Die **Agent Definition Language (ADL)** ist eine deklarative Sprache, mit der
-Intents und Policies beschrieben werden.
-
-**Zentrale Designziele:**
-
-- **Deklarativ statt imperativ**:
-  - Der Agent beschreibt _was_ erreicht werden soll, nicht _wie_ genau.
-- **Domänenspezifisch erweiterbar**:
-  - Neue Domänen können eigene Constraints einführen, ohne das Kernprotokoll zu ändern.
-- **Maschinenlesbar & formalisierbar**:
-  - ADL-Spezifikationen können automatisiert ausgewertet, validiert und in Agentenlogik übersetzt werden.
-
----
-
-## 6. Kernbausteine von ADL
-
-Ein ADL-Dokument (oder -Objekt) besteht typischerweise aus folgenden Bausteinen:
-
-1. **Identity & Context**
-   - Referenzen auf:
-     - DID des Auftraggebers,
-     - Domain oder Organisation,
-     - ggf. referenzierte Credentials.
-
-2. **Objective**
-   - Beschreibung des Ziels:
-     - z. B. „Lade Fahrzeug X mit mindestens 50 kW in Region Y aus erneuerbaren Quellen.“
-   - Verknüpfung mit Domain Blueprints:
-     - z. B. Blueprint „EV-Charging-Session“.
-
-3. **Functional Constraints**
-   - Mindest- oder Zielparameter:
-     - Leistung, Kapazität, Latenz, Verfügbarkeit, etc.
-
-4. **Normative Constraints**
-   - Erforderliche Norm- bzw. Blueprint-Konformität:
-     - z. B. „Muss Standard Z erfüllen“, „Nur zertifizierte Betreiber mit Credential-Typ X“.
-
-5. **Trust Constraints**
-   - MinTrust-Schwellen:
-     - global oder pro Dimension,
-     - z. B. „Reputation >= 0.9 in Zuverlässigkeit, >= 0.8 in Compliance“.
-   - Mindestanforderungen an Attestations:
-     - DNS-Verknüpfung, bestimmte Zertifikate.
-
-6. **Geospatial Constraints**
-   - Geohashing-basierte Regionen:
-     - z. B. „Nur Anbieter in Region GH123\*“, ohne exakte Koordinaten offenzulegen.
-
-7. **Economic Constraints**
-   - Preisspannen, Vergütungsmodelle:
-     - fixe Preise, dynamische Preise, Value Streaming-Modelle.
-
-8. **Policy & Risk Preferences**
-   - Risikoprofil:
-     - konservativ (bevorzugt etablierte, hoch reputierte Provider),
-     - opportunistisch (erlaubt günstigere, aber riskantere Provider).
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   ┌─────────────────────────────────┐  ┌─────────────────────────────────┐ │
+│   │        🔍 SEEKER AGENT          │  │       📡 PROVIDER AGENT         │ │
+│   ├─────────────────────────────────┤  ├─────────────────────────────────┤ │
+│   │                                 │  │                                 │ │
+│   │  Repräsentiert:                 │  │  Repräsentiert:                 │ │
+│   │  • Nutzer                       │  │  • Betreiber                    │ │
+│   │  • Unternehmen                  │  │  • Dienstleister                │ │
+│   │  • IoT-Geräte                   │  │  • Hersteller                   │ │
+│   │  • Andere Protokolle            │  │  • Plattformen                  │ │
+│   │                                 │  │                                 │ │
+│   │  ─────────────────────────────  │  │  ─────────────────────────────  │ │
+│   │                                 │  │                                 │ │
+│   │  Aufgaben:                      │  │  Aufgaben:                      │ │
+│   │  ✓ Intent definieren (ADL)     │  │  ✓ Intents empfangen            │ │
+│   │  ✓ Provider entdecken          │  │  ✓ Policies anwenden            │ │
+│   │  ✓ Verhandeln                   │  │  ✓ Angebote machen             │ │
+│   │  ✓ Transaktion auslösen        │  │  ✓ AMOs binden                  │ │
+│   │                                 │  │                                 │ │
+│   └─────────────────────────────────┘  └─────────────────────────────────┘ │
+│                                                                             │
+│                              ▼                                              │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                      MATCHING = DEAL                                │  │
+│   │                                                                     │  │
+│   │   Seeker-Constraints  ∩  Provider-Policies  ∩  ERY-Kontext         │  │
+│   │                              │                                      │  │
+│   │                              ▼                                      │  │
+│   │                    Potenzial für Transaktion                        │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 7. Von ADL zur laufenden Agenteninstanz
+## Die WASM-Sandbox
 
-Der Weg von einer ADL-Spezifikation zur ausführenden Agenteninstanz umfasst:
+> _Sichere, isolierte Ausführungsumgebung_
 
-1. **Parsing & Validierung**
-   - Syntax-Check der ADL-Spezifikation.
-   - Validierung gegen bekannte Blueprints und Normen in ERY.
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                         WASM EXECUTION ENVIRONMENT                          │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │                        HOST SYSTEM                                  │  │
+│   │   ┌─────────────────────────────────────────────────────────────┐  │  │
+│   │   │                                                             │  │  │
+│   │   │                    WASM SANDBOX                             │  │  │
+│   │   │   ┌─────────────────────────────────────────────────────┐  │  │  │
+│   │   │   │                                                     │  │  │  │
+│   │   │   │                 AGENT CODE                          │  │  │  │
+│   │   │   │          (Rust, Go, TypeScript, ...)               │  │  │  │
+│   │   │   │                                                     │  │  │  │
+│   │   │   └─────────────────────────────────────────────────────┘  │  │  │
+│   │   │                          │                                  │  │  │
+│   │   │                          │ nur via Host-APIs                │  │  │
+│   │   │                          ▼                                  │  │  │
+│   │   │   ┌─────────────────────────────────────────────────────┐  │  │  │
+│   │   │   │                   HOST APIS                         │  │  │  │
+│   │   │   ├─────────────────────────────────────────────────────┤  │  │  │
+│   │   │   │  🔍 ery_query()      → Semantic Index abfragen      │  │  │  │
+│   │   │   │  🔐 ery_trust()      → Trust Vectors lesen          │  │  │  │
+│   │   │   │  🌐 p2p_connect()    → libp2p Verbindung            │  │  │  │
+│   │   │   │  💬 xmtp_tunnel()    → Consensus Bubble öffnen      │  │  │  │
+│   │   │   │  📝 noa_tx()         → Transaktion konstruieren     │  │  │  │
+│   │   │   └─────────────────────────────────────────────────────┘  │  │  │
+│   │   │                                                             │  │  │
+│   │   │   ❌ Kein Dateisystem-Zugriff                               │  │  │
+│   │   │   ❌ Kein Netzwerk außer APIs                               │  │  │
+│   │   │   ❌ Keine Systemaufrufe                                    │  │  │
+│   │   │                                                             │  │  │
+│   │   └─────────────────────────────────────────────────────────────┘  │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-2. **Planung**
-   - Ableitung eines Ausführungsplans:
-     - Welche Queries an den Semantic Index?
-     - Welche Filter und Schwellen?
-     - Welche Verhandlungsstrategie?
+### Vorteile der WASM-Isolation
 
-3. **Instantiation**
-   - Start einer WASM-Agenteninstanz (Seeker oder Provider).
-   - Übergabe des ADL-Objekts und des Ausführungsplans.
-
-4. **Ausführung im Cybernetic Loop**
-   - Discovery, Validation, Negotiation.
-   - Erzeugung des transaktionalen Pakets für NOA.
-
-5. **Termination**
-   - Agenteninstanz wird beendet, sobald der Intent:
-     - erfolgreich erfüllt wurde,
-     - abgebrochen wurde,
-     - oder ausgelaufen ist.
-
-Persistenter Kontext (z. B. langfristige Präferenzen) liegt nicht im Agenten,
-sondern wird über ERY und NOA referenziert.
-
----
-
-## 8. Provider-Policies und Matching
-
-Provider Agents nutzen ebenfalls ADL-ähnliche Strukturen, um ihre Angebote und
-Teilnahmebedingungen zu beschreiben.
-
-**Beispiele für Provider-Policies:**
-
-- Minimalpreise, maximale Auslastung, bevorzugte Kundensegmente.
-- Bedingungen, unter denen keine Angebote abgegeben werden:
-  - unzureichender Trust des Seekers,
-  - fehlende Attestations,
-  - bestimmte regulatorische Einschränkungen.
-
-**Matching-Prozess:**
-
-- Matching ist ein **wechselseitiger Constraint-Satisfiability-Prozess**:
-  - Seeker-Constraints ∩ Provider-Policies ∩ Kontext (ERY) → Potenzial für Deal.
-- Nur wenn beide Seiten ihre Constraints erfüllt sehen, kommt es zur Verhandlung.
-
----
-
-## 9. Sicherheit & Missbrauchsprävention auf Agentenebene
-
-Mögliche Risiken:
-
-- bösartige Agentenlogik,
-- Ressourcenmissbrauch,
-- Denial-of-Service-Angriffe,
-- Privacy-Lecks.
-
-Erynoa begegnet dem mit:
-
-- **WASM-Isolation**:
-  - begrenzte und kontrollierte Host-APIs.
-- **Rate-Limiting & Quotas**:
-  - Beschränkung der Anzahl und Frequenz von Agentenaktionen.
-- **Trust-basierten Limits**:
-  - Gering vertrauenswürdige Akteure erhalten strengere Quoten und Limits.
-- **Auditing & Observability**:
-  - Telemetrie über Agentenaktionen (aggregiert, ohne Geschäftsgeheimnisse zu verletzen).
+| Aspekt                  | Vorteil                                                    |
+| ----------------------- | ---------------------------------------------------------- |
+| **Sprachagnostisch**    | Rust, Go, TypeScript, C++ – alles was nach WASM kompiliert |
+| **Sicherheit**          | Kein direkter Host-Zugriff, minimale Angriffsfläche        |
+| **Portabilität**        | Gleicher Code auf verschiedenen Nodes                      |
+| **Ressourcenkontrolle** | CPU, Memory, Zeit – alles limitierbar                      |
+| **Deterministisch**     | Reproduzierbare Ausführung                                 |
 
 ---
 
-## 10. Zusammenspiel mit anderen Konzepten
+## Agent Definition Language (ADL)
 
-Das Agenten- und ADL-Modell steht nicht isoliert, sondern ist eingebettet in:
+> _Die deklarative Sprache für Intents_
 
-- das **Liquide Datenmodell:** ADL referenziert Blueprints und AMO-Typen.
-- das **Trust- & Reputationsmodell:** ADL-Constraints nutzen Trust Vectors und Attestations.
-- den **Cybernetic Loop:** Agenten sind die aktiven Akteure in Phasen 1–4.
+### Design-Prinzipien
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                            ADL DESIGN                                       │
+│                                                                             │
+│   ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐          │
+│   │   DEKLARATIV    │   │   ERWEITERBAR   │   │ MASCHINENLESBAR │          │
+│   │   ════════════   │   │  ═════════════  │   │  ══════════════ │          │
+│   │                 │   │                 │   │                 │          │
+│   │   Beschreibt    │   │   Domänen       │   │   Automatisch   │          │
+│   │   WAS, nicht    │   │   können eigene │   │   validierbar   │          │
+│   │   WIE           │   │   Constraints   │   │   und ausführbar│          │
+│   │                 │   │   hinzufügen    │   │                 │          │
+│   └─────────────────┘   └─────────────────┘   └─────────────────┘          │
+│                                                                             │
+│   "Ich will laden" statt "Sende Nachricht an Server X, parse Response..."  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Die 8 Bausteine eines ADL-Dokuments
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                         ADL STRUCTURE                                       │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   1️⃣ IDENTITY         Wer bin ich?                                  │  │
+│   │   ─────────────────────────────────────────────────────────────    │  │
+│   │   DID, Organisation, Credentials                                    │  │
+│   │                                                                     │  │
+│   │   2️⃣ OBJECTIVE        Was will ich erreichen?                       │  │
+│   │   ─────────────────────────────────────────────────────────────    │  │
+│   │   Ziel, Blueprint-Referenz, Service-Typ                            │  │
+│   │                                                                     │  │
+│   │   3️⃣ FUNCTIONAL       Welche technischen Anforderungen?            │  │
+│   │   ─────────────────────────────────────────────────────────────    │  │
+│   │   Leistung, Kapazität, Latenz, Verfügbarkeit                       │  │
+│   │                                                                     │  │
+│   │   4️⃣ NORMATIVE        Welche Standards müssen erfüllt sein?        │  │
+│   │   ─────────────────────────────────────────────────────────────    │  │
+│   │   Blueprint-Konformität, Zertifikate, Regulatorik                  │  │
+│   │                                                                     │  │
+│   │   5️⃣ TRUST            Wie vertrauenswürdig muss der Partner sein?  │  │
+│   │   ─────────────────────────────────────────────────────────────    │  │
+│   │   MinTrust, Attestations, Reputation                               │  │
+│   │                                                                     │  │
+│   │   6️⃣ GEOSPATIAL       Wo soll der Service stattfinden?             │  │
+│   │   ─────────────────────────────────────────────────────────────    │  │
+│   │   Geohash, Radius (ohne exakte Koordinaten)                        │  │
+│   │                                                                     │  │
+│   │   7️⃣ ECONOMIC         Welche wirtschaftlichen Grenzen gelten?      │  │
+│   │   ─────────────────────────────────────────────────────────────    │  │
+│   │   Preislimits, Vergütungsmodelle, Laufzeiten                       │  │
+│   │                                                                     │  │
+│   │   8️⃣ POLICY           Welches Risikoprofil habe ich?               │  │
+│   │   ─────────────────────────────────────────────────────────────    │  │
+│   │   Konservativ vs. opportunistisch, Fallbacks                       │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Vollständiges ADL-Beispiel
+
+```yaml
+# ADL: Seeker Intent für EV-Charging
+adl_version: "1.0"
+
+# 1️⃣ Identity
+identity:
+  did: "did:erynoa:vehicle-456"
+  organization: "FleetCo GmbH"
+  credentials:
+    - type: "fleet-operator-license"
+      issuer: "did:erynoa:authority-de"
+
+# 2️⃣ Objective
+objective:
+  type: "ev-charging-session"
+  blueprint: "erynoa:bp:ev-charging-station:v1.2"
+  description: "Charge electric vehicle with renewable energy"
+
+# 3️⃣ Functional Constraints
+functional:
+  power_min: 50 # kW
+  power_preferred: 150 # kW
+  energy_source:
+    - renewable
+    - green-certified
+  connector:
+    - CCS
+    - Type2
+  availability: immediate # oder: scheduled
+
+# 4️⃣ Normative Constraints
+normative:
+  blueprints:
+    - "erynoa:bp:ev-charging-station:v1"
+    - "erynoa:bp:energy-certificate:v1"
+  standards:
+    - "ocpp:2.0.1"
+    - "iso:15118"
+  certifications:
+    - "eichrecht-compliant"
+
+# 5️⃣ Trust Constraints
+trust:
+  min_overall: 0.8
+  dimensions:
+    reliability: 0.85
+    compliance: 0.9
+  attestations_required:
+    - dns_verified
+    - iso_27001
+
+# 6️⃣ Geospatial Constraints
+geospatial:
+  geohash: "u281z" # München
+  radius_km: 5
+  exclude_geohashes: # Blacklist
+    - "u281zx"
+
+# 7️⃣ Economic Constraints
+economic:
+  max_price_kwh: 0.40 # EUR
+  preferred_price_kwh: 0.35
+  payment_models:
+    - streaming # Continuous Value Streaming
+    - prepaid
+  max_session_duration: 120 # Minuten
+
+# 8️⃣ Policy & Risk
+policy:
+  risk_profile: balanced # conservative | balanced | opportunistic
+  fallback:
+    if_no_match: expand_radius # oder: wait | abort
+    max_radius_km: 20
+  timeout_minutes: 5
+```
 
 ---
 
-## 11. Fazit
+## ADL zu Agent – Der Weg
 
-ECHO mit seinen Agenten bildet die **operative Oberfläche** von Erynoa: Menschen, Maschinen und Organisationen interagieren nicht direkt mit dem Ledger, sondern über Agenten, die ihre Interessen in einer sicheren, normbasierten und vertrauensbewussten Weise durchsetzen.
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                    VON ADL ZUR LAUFENDEN INSTANZ                           │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   📄 ADL DOKUMENT                                                   │  │
+│   │        │                                                            │  │
+│   │        ▼                                                            │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │  1️⃣ PARSING & VALIDIERUNG                                 │    │  │
+│   │   │     • Syntax-Check                                         │    │  │
+│   │   │     • Blueprint-Referenzen in ERY validieren              │    │  │
+│   │   │     • Constraints auf Konsistenz prüfen                   │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   │        │                                                            │  │
+│   │        ▼                                                            │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │  2️⃣ PLANUNG                                               │    │  │
+│   │   │     • Discovery-Strategie ableiten                        │    │  │
+│   │   │     • Filter und Schwellen konfigurieren                  │    │  │
+│   │   │     • Verhandlungsstrategie wählen                        │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   │        │                                                            │  │
+│   │        ▼                                                            │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │  3️⃣ INSTANTIATION                                         │    │  │
+│   │   │     • WASM-Agent starten                                   │    │  │
+│   │   │     • ADL + Plan übergeben                                │    │  │
+│   │   │     • Host-APIs freischalten                              │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   │        │                                                            │  │
+│   │        ▼                                                            │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │  4️⃣ AUSFÜHRUNG (Cybernetic Loop)                          │    │  │
+│   │   │     • Discovery → Validation → Negotiation → Execution    │    │  │
+│   │   │     • Transaktionales Paket für NOA                       │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   │        │                                                            │  │
+│   │        ▼                                                            │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │  5️⃣ TERMINATION                                           │    │  │
+│   │   │     • Intent erfüllt ✅  → Agent beendet                   │    │  │
+│   │   │     • Intent abgebrochen → Agent beendet                  │    │  │
+│   │   │     • Timeout erreicht → Agent beendet                    │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│   Persistenter Kontext (Präferenzen, Historie) liegt in ERY, nicht im      │
+│   Agenten selbst.                                                          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-**Weiterführende Dokumente:**
+## Provider Policies
 
-- [Cybernetic Loop](./cybernetic-loop.md) – Der universelle Workflow
-- [Trust & Reputation](./trust-and-reputation.md) – Vertrauensmodell im Detail
-- [Use Cases](./use-cases.md) – Agenten in der Praxis
+> _Die Gegenseite: Was Anbieter definieren_
+
+```yaml
+# ADL-ähnliche Provider Policy
+policy_version: "1.0"
+
+provider:
+  did: "did:erynoa:operator-123"
+  assets:
+    - "erynoa:amo:station-munich-001"
+    - "erynoa:amo:station-munich-002"
+
+# Teilnahmebedingungen
+participation:
+  # Wann nehme ich teil?
+  accept_if:
+    seeker_trust_min: 0.7
+    attestations:
+      - dns_verified
+    payment_models:
+      - streaming
+      - prepaid
+
+  # Wann lehne ich ab?
+  reject_if:
+    seeker_trust_below: 0.5
+    jurisdictions:
+      - "sanctioned-country"
+    time_of_day:
+      - after: "23:00"
+        before: "06:00"
+
+# Preisgestaltung
+pricing:
+  base_price_kwh: 0.32
+  dynamic_pricing: true
+  surge_multiplier_max: 1.5
+  discount_for_trust_above: 0.9 # -5% für Top-Kunden
+
+# Kapazitätsmanagement
+capacity:
+  max_concurrent_sessions: 2
+  reservation_window_minutes: 30
+```
+
+### Matching-Prozess
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                        CONSTRAINT MATCHING                                  │
+│                                                                             │
+│   ┌─────────────────┐                         ┌─────────────────┐          │
+│   │ SEEKER INTENT   │                         │ PROVIDER POLICY │          │
+│   │ ═══════════════ │                         │ ═══════════════ │          │
+│   │                 │                         │                 │          │
+│   │ power_min: 50kW │                         │ power: 150kW    │          │
+│   │ price_max: 0.40 │                         │ price: 0.35     │          │
+│   │ trust_min: 0.8  │                         │ trust: 0.92     │          │
+│   │ geo: "u281z"    │                         │ geo: "u281z"    │          │
+│   │                 │                         │                 │          │
+│   └────────┬────────┘                         └────────┬────────┘          │
+│            │                                           │                    │
+│            └─────────────────┬─────────────────────────┘                    │
+│                              │                                              │
+│                              ▼                                              │
+│                    ┌─────────────────┐                                      │
+│                    │  ERY KONTEXT    │                                      │
+│                    │  ────────────── │                                      │
+│                    │  Blueprint ✅   │                                      │
+│                    │  Trust ✅       │                                      │
+│                    │  Attestation ✅ │                                      │
+│                    └────────┬────────┘                                      │
+│                             │                                               │
+│                             ▼                                               │
+│                    ┌─────────────────┐                                      │
+│                    │    MATCH! ✅    │                                      │
+│                    │  ────────────── │                                      │
+│                    │  → Negotiation  │                                      │
+│                    │    kann starten │                                      │
+│                    └─────────────────┘                                      │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Sicherheit auf Agentenebene
+
+### Risiken und Gegenmaßnahmen
+
+| Risiko                   | Beschreibung                       | Gegenmaßnahme                             |
+| ------------------------ | ---------------------------------- | ----------------------------------------- |
+| **Bösartige Logik**      | Agent versucht Schaden anzurichten | WASM-Isolation, nur kontrollierte APIs    |
+| **Ressourcenmissbrauch** | CPU/Memory/Netzwerk-Flooding       | Rate-Limiting, Quotas, Timeouts           |
+| **DoS-Angriffe**         | Massenhafte Agent-Instanziierung   | Trust-basierte Limits, Stake-Requirements |
+| **Privacy-Lecks**        | Unerlaubte Datenexfiltration       | Kein externer Netzwerkzugriff außer APIs  |
+| **Replay-Angriffe**      | Alte Intents erneut abspielen      | Nonces, Timestamps, Expiry                |
+
+### Schutzschichten
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                       DEFENSE IN DEPTH                                      │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   Layer 1: WASM-Isolation                                          │  │
+│   │   ────────────────────────                                          │  │
+│   │   • Kein Zugriff auf Host-Filesystem                               │  │
+│   │   • Kein Zugriff auf Systemcalls                                    │  │
+│   │   • Memory-Sandbox                                                  │  │
+│   │                                                                     │  │
+│   │   Layer 2: API-Kontrolle                                           │  │
+│   │   ───────────────────────                                           │  │
+│   │   • Whitelist an erlaubten Host-Funktionen                         │  │
+│   │   • Rate-Limiting pro API                                          │  │
+│   │   • Audit-Logging aller Aufrufe                                    │  │
+│   │                                                                     │  │
+│   │   Layer 3: Trust-basierte Limits                                   │  │
+│   │   ──────────────────────────────                                    │  │
+│   │   • Niedrig-Trust → strengere Quotas                               │  │
+│   │   • Hoch-Trust → mehr Ressourcen                                   │  │
+│   │   • Anomalie-Erkennung                                             │  │
+│   │                                                                     │  │
+│   │   Layer 4: Economic Security                                       │  │
+│   │   ──────────────────────────                                        │  │
+│   │   • Stake-Requirements für teure Operationen                       │  │
+│   │   • Slashing bei Fehlverhalten                                     │  │
+│   │   • Reputation-Impact                                               │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Integration mit anderen Konzepten
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│            WIE AGENTS & ADL MIT ALLEM ZUSAMMENHÄNGEN                       │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   📋 LIQUIDES DATENMODELL                                           │  │
+│   │   ───────────────────────                                           │  │
+│   │   ADL referenziert Blueprints und AMO-Typen.                       │  │
+│   │   Agent interagiert mit Material-, Credential-, Service-AMOs.      │  │
+│   │                                                                     │  │
+│   │   ─────────────────────────────────────────────────────────────    │  │
+│   │                                                                     │  │
+│   │   🔒 TRUST & REPUTATION                                             │  │
+│   │   ─────────────────────                                             │  │
+│   │   ADL-Constraints nutzen Trust Vectors und Attestations.           │  │
+│   │   Agent-Verhalten beeinflusst zukünftigen Trust.                   │  │
+│   │                                                                     │  │
+│   │   ─────────────────────────────────────────────────────────────    │  │
+│   │                                                                     │  │
+│   │   🔄 CYBERNETIC LOOP                                                │  │
+│   │   ──────────────────                                                │  │
+│   │   Agenten sind die aktiven Akteure in:                             │  │
+│   │   • Phase 1: Sensing & Intent (ADL)                                │  │
+│   │   • Phase 2: Discovery (Query ERY)                                 │  │
+│   │   • Phase 3: Validation (Trust-Check)                              │  │
+│   │   • Phase 4: Negotiation (Consensus Bubble)                        │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Zusammenfassung
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                         AGENTS & ADL                                       │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   🤖 Agenten        →  Übersetzer zwischen Mensch und Protokoll    │  │
+│   │   📦 WASM-Sandbox   →  Sichere, isolierte Ausführung               │  │
+│   │   📄 ADL            →  Deklarative Intent-Sprache                  │  │
+│   │   🔍 Seeker         →  Nachfrageseite (Intent definieren)          │  │
+│   │   📡 Provider       →  Angebotsseite (Policies anwenden)           │  │
+│   │   🤝 Matching       →  Constraint-Satisfiability beider Seiten     │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│   ECHO ist die „operative Oberfläche" von Erynoa.                          │
+│   Nutzer, Maschinen und Organisationen interagieren via Agenten –          │
+│   sicher, normbasiert und vertrauensbewusst.                               │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Weiterführend
+
+| Dokument                                          | Fokus                                 |
+| ------------------------------------------------- | ------------------------------------- |
+| [Cybernetic Loop](./cybernetic-loop.md)           | Der vollständige Workflow mit Agenten |
+| [Trust & Reputation](./trust-and-reputation.md)   | Trust-Constraints in ADL              |
+| [Liquides Datenmodell](./liquides-datenmodell.md) | Blueprints und AMOs                   |
+| [Use Cases](./use-cases.md)                       | Agenten in konkreten Szenarien        |
