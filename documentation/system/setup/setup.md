@@ -1,146 +1,189 @@
-# ⚙️ Setup Guide
+# Erynoa – Setup Guide
 
-**Vollständige Anleitung zur Einrichtung der Entwicklungsumgebung**
-
-**Letzte Aktualisierung**: 2026-01-28
-
----
-
-## 📋 Voraussetzungen
-
-Für die Entwicklung benötigst du:
-
-| Tool               | Beschreibung                                       | Installation                                           |
-| ------------------ | -------------------------------------------------- | ------------------------------------------------------ |
-| **Nix**            | Package Manager (stellt alle anderen Tools bereit) | [→ Nix installieren](#-nix-installieren)               |
-| **Docker Desktop** | Container Runtime für Services                     | [→ Docker installieren](#-docker-desktop-installieren) |
-| **Git + SSH**      | Repository-Zugriff (optional)                      | [→ Git/SSH Setup](#-git--ssh-setup-optional)           |
-
-**Zeitaufwand**: ~5-10 Minuten
+> **Dokumenttyp:** Guide
+> **Zielgruppe:** Neue Entwickler
+> **Dauer:** ca. 10-15 Minuten
+> **OS:** macOS, Linux (Ubuntu/Debian)
 
 ---
 
-## 📦 Nix installieren
+## Übersicht
 
-Nix ist der einzige Package Manager, den du installieren musst. Alle anderen Tools (Rust, Node.js, pnpm, buf, just, etc.) werden automatisch von Nix bereitgestellt.
+Dieser Guide führt dich durch die vollständige Einrichtung der Erynoa-Entwicklungsumgebung.
 
-### macOS
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   ⚙️ SETUP-ABLAUF                                                           │
+│                                                                             │
+│   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐ │
+│   │     1       │    │     2       │    │     3       │    │     4       │ │
+│   │    Nix      │───▶│   Docker    │───▶│    Git      │───▶│   Start     │ │
+│   │  ~2 Min.    │    │   ~3 Min.   │    │  Optional   │    │   ~2 Min.   │ │
+│   └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘ │
+│                                                                             │
+│   Nix stellt alle anderen Tools bereit:                                    │
+│   Rust · Node.js · pnpm · buf · just · sqlx                                │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Voraussetzungen
+
+| Tool          | Zweck                                      | Erforderlich |
+| :------------ | :----------------------------------------- | :----------: |
+| **Nix**       | Package Manager (stellt alle Tools bereit) |      ✅      |
+| **Docker**    | Container-Services                         |      ✅      |
+| **Git + SSH** | Repository-Zugriff, Commit-Signierung      |   Optional   |
+
+---
+
+## 1️⃣ Nix installieren
+
+Nix ist der einzige Package Manager, den du manuell installieren musst. Alle anderen Tools werden automatisch bereitgestellt.
+
+<details open>
+<summary><strong>macOS</strong></summary>
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
 ```
 
-Terminal neu starten, dann verifizieren:
+**Terminal neu starten**, dann verifizieren:
 
 ```bash
 nix --version
 ```
 
-### Ubuntu/Debian
+</details>
+
+<details>
+<summary><strong>Linux (Ubuntu/Debian)</strong></summary>
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
 ```
 
-Terminal neu starten, dann verifizieren:
+**Terminal neu starten**, dann verifizieren:
 
 ```bash
 nix --version
 ```
 
-**Hinweis:** Für Ubuntu/Debian wird `systemd` benötigt. Falls nicht vorhanden, siehe [Nix Installation Guide](https://nixos.org/download).
+> ℹ️ Benötigt `systemd`. Falls nicht vorhanden: [Nix Installation Guide](https://nixos.org/download)
+
+</details>
+
+### Was Nix bereitstellt
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   ✅ AUTOMATISCH VERFÜGBAR (nach `nix develop`)                            │
+│                                                                             │
+│   🦀 Rust Toolchain       rustc · cargo · rust-analyzer · clippy           │
+│   📦 Node.js & pnpm       Frontend-Entwicklung                             │
+│   📋 buf                  Protobuf Code-Generierung                        │
+│   ⚙️ just                 Task Runner (alle `just` Befehle)                │
+│   🗄️ sqlx CLI             Datenbank-Migrationen                            │
+│   🔗 mold                 Schneller Linker                                 │
+│   🧪 cargo-nextest        Schnellere Tests                                 │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 🐳 Docker Desktop installieren
+## 2️⃣ Docker installieren
 
-### macOS
+<details open>
+<summary><strong>macOS</strong></summary>
 
-**Option 1: Via Nix (empfohlen, wenn Nix bereits installiert)**
+**Option A: Download (empfohlen)**
 
-```bash
-nix profile install nixpkgs#docker
-```
+1. Download: [Docker Desktop für Mac](https://www.docker.com/products/docker-desktop/)
+2. Installieren und starten
+3. Warten bis Docker läuft (Wal-Icon in Menüleiste)
 
-**Option 2: Via Homebrew**
+**Option B: Homebrew**
 
 ```bash
 brew install --cask docker
 ```
 
-**Option 3: Manuell**
+</details>
 
-Download von: https://www.docker.com/products/docker-desktop/
-
-### Ubuntu/Debian
-
-**Option 1: Via Nix (empfohlen, wenn Nix bereits installiert)**
+<details>
+<summary><strong>Linux (Ubuntu/Debian)</strong></summary>
 
 ```bash
-nix profile install nixpkgs#docker
-```
-
-**Option 2: Via Installationsskript**
-
-```bash
-# Docker installieren
+# Docker Engine installieren
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 
-# Docker Desktop installieren (optional, für GUI)
-# Download von: https://www.docker.com/products/docker-desktop/
+# Ohne sudo verwenden
+sudo usermod -aG docker $USER
+newgrp docker
+
+# Verifizieren
+docker --version
 ```
 
-Nach der Installation Docker Desktop starten und warten bis es läuft.
+**Optional:** [Docker Desktop für Linux](https://www.docker.com/products/docker-desktop/) für GUI.
+
+</details>
+
+### Verifizieren
+
+```bash
+docker ps
+```
+
+> ℹ️ Docker Desktop muss gestartet sein.
 
 ---
 
-## 🔑 Git & SSH Setup (Optional)
+## 3️⃣ Git & SSH Setup (Optional)
 
-> **Hinweis:** Nur nötig, wenn du das Repository über SSH klonen oder Commits signieren möchtest.
+> Nur nötig für SSH-Zugriff auf das Repository oder Commit-Signierung.
 
-### Git installieren
+<details>
+<summary><strong>Git installieren</strong></summary>
 
 **macOS:**
 
 ```bash
-# Option 1: Via Nix
-nix profile install nixpkgs#git
-
-# Option 2: Via Homebrew
-brew install git
-
-# Option 3: Via Xcode Command Line Tools (oft bereits installiert)
+# Meist bereits installiert, sonst:
 xcode-select --install
-```
-
-**Ubuntu/Debian:**
-
-```bash
-# Option 1: Via Nix
+# oder via Nix:
 nix profile install nixpkgs#git
+```
 
-# Option 2: Via apt
+**Linux:**
+
+```bash
 sudo apt update && sudo apt install git
+# oder via Nix:
+nix profile install nixpkgs#git
 ```
 
-Verifizieren:
+</details>
+
+<details>
+<summary><strong>SSH-Key erstellen</strong></summary>
 
 ```bash
-git --version
-```
-
-### SSH-Key erstellen
-
-```bash
-# Key für Authentication (Repository klonen/pushen)
+# Authentication Key (Repository klonen/pushen)
 ssh-keygen -t ed25519 -C "deine-email@example.com" -f ~/.ssh/id_ed25519
 
-# Key für Commit-Signierung
+# Signing Key (Commits signieren)
 ssh-keygen -t ed25519 -C "git-signing" -f ~/.ssh/id_ed25519_signing -N ""
 ```
 
-### SSH-Agent konfigurieren
+</details>
+
+<details>
+<summary><strong>SSH-Agent konfigurieren</strong></summary>
 
 **macOS:**
 
@@ -155,7 +198,7 @@ EOF
 ssh-add --apple-use-keychain ~/.ssh/id_ed25519
 ```
 
-**Ubuntu/Debian:**
+**Linux:**
 
 ```bash
 eval "$(ssh-agent -s)"
@@ -167,21 +210,25 @@ EOF
 ssh-add ~/.ssh/id_ed25519
 ```
 
-### Public Keys zu GitHub hinzufügen
+</details>
+
+<details>
+<summary><strong>Keys zu GitHub hinzufügen</strong></summary>
 
 ```bash
-# Authentication Key anzeigen
+# Keys anzeigen
 cat ~/.ssh/id_ed25519.pub
-
-# Signing Key anzeigen
 cat ~/.ssh/id_ed25519_signing.pub
 ```
 
-1. Gehe zu **GitHub → Settings → SSH and GPG keys**
-2. **New SSH key** → Key Type: **Authentication Key** → Füge `id_ed25519.pub` ein
-3. **New SSH key** → Key Type: **Signing Key** → Füge `id_ed25519_signing.pub` ein
+1. **GitHub → Settings → SSH and GPG keys**
+2. **New SSH key** → Type: **Authentication Key** → `id_ed25519.pub` einfügen
+3. **New SSH key** → Type: **Signing Key** → `id_ed25519_signing.pub` einfügen
 
-### Git konfigurieren
+</details>
+
+<details>
+<summary><strong>Git konfigurieren</strong></summary>
 
 ```bash
 git config --global user.name "Dein Name"
@@ -191,75 +238,80 @@ git config --global user.signingkey ~/.ssh/id_ed25519_signing.pub
 git config --global commit.gpgsign true
 ```
 
+</details>
+
 ---
 
-## 🚀 Projekt starten
+## 4️⃣ Projekt starten
 
-Sobald Nix und Docker installiert sind, kannst du das Projekt starten:
-
-### 1. Repository klonen
+### Schritt für Schritt
 
 ```bash
+# 1. Repository klonen
 git clone git@github.com:NiklasJavier/erynoa.git
 cd erynoa
-```
 
-### 2. Nix Dev-Shell betreten
-
-```bash
+# 2. Nix Dev-Shell betreten
 nix develop
-```
 
-Dies lädt automatisch alle Tools:
-
-- ✅ Rust Toolchain (inkl. rust-analyzer, clippy)
-- ✅ Node.js & pnpm
-- ✅ buf (Protobuf)
-- ✅ just (Task Runner)
-- ✅ sqlx CLI
-- ✅ Alle Build-Tools
-
-### 3. Projekt starten
-
-```bash
+# 3. Projekt starten
 just dev
 ```
 
-### 4. Warte 2 Minuten ⏳
+<div align="center">
 
-Die Services starten und ZITADEL wird automatisch konfiguriert.
+⏳ **~2 Minuten warten** → 🌐 **http://localhost:3001**
 
-**Was passiert automatisch:**
+</div>
 
-- Services starten (PostgreSQL, DragonflyDB, MinIO, ZITADEL)
-- ZITADEL wird konfiguriert (Projekt, Apps, Test-User)
-- Frontends werden über Caddy Proxy bereitgestellt
-- Backend läuft auf Port 3000
-
-### 5. Im Browser öffnen
+### Was passiert automatisch?
 
 ```
-http://localhost:3001
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   `just dev` startet:                                                       │
+│                                                                             │
+│   1. 🐳 Docker-Services                                                     │
+│      PostgreSQL · DragonflyDB · MinIO · ZITADEL                            │
+│                                                                             │
+│   2. 🔐 ZITADEL Auto-Setup                                                  │
+│      Projekt · OIDC Apps · Test-User                                       │
+│                                                                             │
+│   3. 🦀 Backend                                                             │
+│      Rust API auf Port 3000                                                │
+│                                                                             │
+│   4. 🎨 Frontends                                                           │
+│      Console · Platform · Docs                                             │
+│                                                                             │
+│   5. 🔀 Caddy Proxy                                                         │
+│      Alles unter Port 3001                                                 │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Fertig!** 🎉
+---
 
-**Alle URLs:**
-| Service | URL |
-|---------|-----|
-| **Proxy (Hauptzugang)** | http://localhost:3001 |
-| Console | http://localhost:3001/console |
-| Platform | http://localhost:3001/platform |
-| Docs | http://localhost:3001/docs |
-| Backend API (via Proxy) | http://localhost:3001/api |
-| Backend API (direkt) | http://localhost:3000 |
-| ZITADEL | http://localhost:8080 |
-| MinIO Console | http://localhost:9001 |
+## 🎉 Fertig!
 
-**Test Login:**
+### Alle Services
 
-- User: `testuser` / `Test123!`
-- Admin: `zitadel-admin` / `Password1!`
+| Service      | URL                            | Beschreibung   |
+| :----------- | :----------------------------- | :------------- |
+| 🌐 **Proxy** | http://localhost:3001          | Hauptzugang    |
+| 📊 Console   | http://localhost:3001/console  | Admin          |
+| 🖥️ Platform  | http://localhost:3001/platform | Hauptplattform |
+| 📖 Docs      | http://localhost:3001/docs     | Dokumentation  |
+| 🔌 API       | http://localhost:3001/api      | Backend API    |
+| 🦀 Backend   | http://localhost:3000          | Direkt         |
+| 🔐 ZITADEL   | http://localhost:8080          | Auth           |
+| 📦 MinIO     | http://localhost:9001          | Storage        |
+
+### Test-Login
+
+| Rolle | User            | Passwort     |
+| :---- | :-------------- | :----------- |
+| User  | `testuser`      | `Test123!`   |
+| Admin | `zitadel-admin` | `Password1!` |
 
 ---
 
@@ -267,55 +319,57 @@ http://localhost:3001
 
 ### Entwicklung
 
-| Befehl                | Beschreibung                                                       |
-| --------------------- | ------------------------------------------------------------------ |
-| `just dev`            | **Startet alles** - Console + Platform + Docs + Backend + Services |
-| `just dev [frontend]` | Startet spezifisches Frontend (console, platform, docs)            |
-| `just status`         | Zeigt Status aller Services                                        |
-| `just logs [service]` | Logs anzeigen (alle oder spezifischer Service)                     |
-| `just stop`           | Stoppt alle Container                                              |
-| `just restart`        | Schneller Neustart aller Dev-Services                              |
+| Befehl             | Beschreibung          |
+| :----------------- | :-------------------- |
+| `just dev`         | 🚀 **Startet alles**  |
+| `just dev console` | Nur Console           |
+| `just status`      | Service-Status        |
+| `just logs`        | Alle Logs             |
+| `just stop`        | Container stoppen     |
+| `just restart`     | Neustart              |
+| `just reset`       | Komplett zurücksetzen |
 
-### Setup & Reset
+### Setup & Wartung
 
-| Befehl               | Beschreibung                       |
-| -------------------- | ---------------------------------- |
-| `just init`          | Initialisierung ohne Dev-Server    |
-| `just init-env`      | Erstellt `.env` aus `.env.example` |
-| `just zitadel-setup` | ZITADEL neu konfigurieren          |
-| `just minio-setup`   | MinIO Buckets erstellen            |
-| `just reset`         | **Alles löschen** und neu starten  |
+| Befehl               | Beschreibung                     |
+| :------------------- | :------------------------------- |
+| `just init`          | Initialisieren (ohne Dev-Server) |
+| `just init-env`      | `.env` erstellen                 |
+| `just zitadel-setup` | Auth konfigurieren               |
+| `just minio-setup`   | Storage Buckets                  |
 
 ### Backend
 
-| Befehl            | Beschreibung         |
-| ----------------- | -------------------- |
-| `just check`      | Cargo check          |
-| `just lint`       | Clippy Linter        |
-| `just fmt`        | Code formatieren     |
-| `just test`       | Tests ausführen      |
-| `just ci`         | fmt + lint + test    |
-| `just db-migrate` | Migrations ausführen |
+| Befehl       | Beschreibung      |
+| :----------- | :---------------- |
+| `just check` | Cargo check       |
+| `just lint`  | Clippy            |
+| `just fmt`   | Formatieren       |
+| `just test`  | Tests             |
+| `just ci`    | CI-Pipeline lokal |
 
-Alle Befehle: `just --list`
+<details>
+<summary><strong>📋 Alle Befehle</strong></summary>
+
+```bash
+just --list
+```
+
+</details>
 
 ---
 
 ## 🐛 Troubleshooting
 
-### Services starten nicht
+### Häufige Probleme
 
-```bash
-just reset
-just dev
-```
-
-### Port bereits belegt
-
-```bash
-just stop
-lsof -i :3000  # oder :3001, :8080
-```
+| Problem                    | Lösung                       |
+| :------------------------- | :--------------------------- |
+| Services starten nicht     | `just reset && just dev`     |
+| Port belegt                | `just stop && lsof -i :PORT` |
+| Nix: experimental-features | Siehe unten                  |
+| Docker: Permission denied  | Docker Desktop starten       |
+| direnv: .envrc blocked     | `direnv allow`               |
 
 ### Nix: "experimental-features" Fehler
 
@@ -324,45 +378,66 @@ mkdir -p ~/.config/nix
 echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
 ```
 
-### Docker: Permission Denied
-
-Docker Desktop muss gestartet sein. Überprüfen mit:
-
-```bash
-docker ps
-```
-
 ### direnv: ".envrc is blocked"
 
-Beim ersten Öffnen des Projekts erscheint diese Fehlermeldung:
-
-```
-direnv: error .envrc is blocked. Run `direnv allow` to approve its content
-```
-
-**Lösung:**
-
 ```bash
-# Im Projektverzeichnis ausführen:
 cd /path/to/erynoa
 direnv allow
-```
-
-Danach die Shell neu laden:
-
-```bash
 exec zsh  # oder exec bash
 ```
 
+### Docker: Permission Denied
+
+```bash
+# Prüfen ob Docker läuft
+docker ps
+
+# Falls "permission denied":
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+### Services starten nicht
+
+```bash
+# Komplett zurücksetzen
+just reset
+
+# Neu starten
+just dev
+
+# Logs prüfen
+just logs
+```
+
 ---
 
-## 📚 Weitere Dokumentation
+## 📚 Nächste Schritte
 
-- [Getting Started](../guides/getting-started.md) - Schnellstart
-- [ZITADEL Setup](../guides/zitadel.md) - Authentifizierung konfigurieren
-- [Configuration](../reference/config.md) - Service-Konfiguration
-- [Architecture](../reference/architecture.md) - System-Architektur
+| Dokument                                        | Beschreibung              |
+| :---------------------------------------------- | :------------------------ |
+| [Getting Started](../guides/getting-started.md) | Schnellstart (3 Schritte) |
+| [Essential Guide](../essential_guide.md)        | Alles auf einen Blick     |
+| [ZITADEL Guide](../guides/zitadel.md)           | Auth konfigurieren        |
+| [Architecture](../reference/architecture.md)    | System-Architektur        |
+| [Style Guide](../development/style-guide.md)    | Code Standards            |
 
 ---
 
-**Fertig!** Die Entwicklungsumgebung ist eingerichtet. 🎉
+<div align="center">
+
+```
+┌─────────────────────────────────────────────┐
+│                                             │
+│   ✅ Setup abgeschlossen!                   │
+│                                             │
+│   nix develop                               │
+│   just dev                                  │
+│   → http://localhost:3001                   │
+│                                             │
+└─────────────────────────────────────────────┘
+```
+
+**Viel Erfolg bei der Entwicklung!**
+
+</div>
