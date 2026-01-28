@@ -56,15 +56,31 @@ nix --version
 
 ### macOS
 
-Download von: https://www.docker.com/products/docker-desktop/
+**Option 1: Via Nix (empfohlen, wenn Nix bereits installiert)**
 
-Oder via Homebrew:
+```bash
+nix profile install nixpkgs#docker
+```
+
+**Option 2: Via Homebrew**
 
 ```bash
 brew install --cask docker
 ```
 
+**Option 3: Manuell**
+
+Download von: https://www.docker.com/products/docker-desktop/
+
 ### Ubuntu/Debian
+
+**Option 1: Via Nix (empfohlen, wenn Nix bereits installiert)**
+
+```bash
+nix profile install nixpkgs#docker
+```
+
+**Option 2: Via Installationsskript**
 
 ```bash
 # Docker installieren
@@ -82,6 +98,37 @@ Nach der Installation Docker Desktop starten und warten bis es läuft.
 ## 🔑 Git & SSH Setup (Optional)
 
 > **Hinweis:** Nur nötig, wenn du das Repository über SSH klonen oder Commits signieren möchtest.
+
+### Git installieren
+
+**macOS:**
+
+```bash
+# Option 1: Via Nix
+nix profile install nixpkgs#git
+
+# Option 2: Via Homebrew
+brew install git
+
+# Option 3: Via Xcode Command Line Tools (oft bereits installiert)
+xcode-select --install
+```
+
+**Ubuntu/Debian:**
+
+```bash
+# Option 1: Via Nix
+nix profile install nixpkgs#git
+
+# Option 2: Via apt
+sudo apt update && sudo apt install git
+```
+
+Verifizieren:
+
+```bash
+git --version
+```
 
 ### SSH-Key erstellen
 
