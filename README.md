@@ -20,7 +20,7 @@
 └─────────────────────────────────────────────────────────────────┘
 </pre>
 
-[Schnellstart](#-schnellstart) · [Konzept](#-was-ist-erynoa) · [Roadmap](#-roadmap) · [Dokumentation](#-dokumentation) · [Befehle](#-befehle)
+[Schnellstart](#-schnellstart) · [Konzept](#-was-ist-erynoa) · [Dokumentation](#-dokumentation) · [Befehle](#-befehle)
 
 </div>
 
@@ -64,47 +64,7 @@ Erynoa ist ein **dezentrales Protokoll**, das autonomen Agenten ermöglicht, ver
 | **ECHO** | Agenten, Verhandlung, P2P  | WASM, libp2p, XMTP    |
 | **NOA**  | Finalität, Settlement      | MoveVM, Starfish BFT  |
 
-> 📖 **Mehr erfahren:** [Fachkonzept](documentation/concept/fachkonzept.md) · [Kernkonzept](documentation/concept/kernkonzept.md)
-
----
-
-## 🗺️ Roadmap
-
-Die Entwicklung von Erynoa ist in **4 Phasen** über **3-4 Jahre** strukturiert:
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│   PHASE 1        PHASE 2          PHASE 3           PHASE 4                │
-│   FOUNDATION     PROTOCOL         NETWORK           ECOSYSTEM              │
-│   ──────────     ────────         ───────           ─────────              │
-│   6-9 Monate     9-12 Monate      12-18 Monate      Ongoing                │
-│                                                                             │
-│   ┌─────────┐    ┌─────────┐      ┌─────────┐       ┌─────────┐           │
-│   │ 🏗️      │───▶│ 🔮🤖⚡  │─────▶│ 🌐      │──────▶│ 🚀      │           │
-│   │ Core    │    │ 3-Sphere│      │ Testnet │       │ Mainnet │           │
-│   │ Platform│    │ Protocol│      │ Launch  │       │ & Scale │           │
-│   └─────────┘    └─────────┘      └─────────┘       └─────────┘           │
-│                                                                             │
-│   Q1-Q3 2026     Q3 2026-Q2 2027  Q2 2027-Q4 2028   2028+                  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-| Phase       | Zeitraum        | Fokus      | Key Milestones                              |
-| ----------- | --------------- | ---------- | ------------------------------------------- |
-| **Phase 1** | Q1-Q3 2026      | Foundation | ✅ Core Platform, 🔄 Identity Layer, SDKs   |
-| **Phase 2** | Q3 2026-Q2 2027 | Protocol   | ERY (Semantic), ECHO (Agents), NOA (Ledger) |
-| **Phase 3** | Q2 2027-Q4 2028 | Network    | Testnet, Pilot Use Cases, Pre-Mainnet       |
-| **Phase 4** | 2028+           | Ecosystem  | Mainnet Launch, Skalierung, Governance      |
-
-### Aktuelle Prioritäten (Q1 2026)
-
-- 🔄 **DID:erynoa** – Decentralized Identity Spezifikation
-- 📋 **Verifiable Credentials** – Infrastruktur für Agenten & Assets
-- 📋 **Developer SDKs** – Rust & TypeScript
-
-> 📖 **Vollständige Roadmap:** [documentation/ROADMAP.md](documentation/ROADMAP.md)
+> 📖 **Mehr erfahren:** [Fachkonzept](documentation/concept/fachkonzept.md) · [Kernkonzept](documentation/concept/kernkonzept.md) · [Roadmap](documentation/ROADMAP.md)
 
 ---
 
@@ -157,14 +117,16 @@ Die Dokumentation ist in zwei Bereiche unterteilt:
 ```
 documentation/
 ├── ROADMAP.md        # 🗺️ Strategische Roadmap
-├── concept/          # 🧠 Protokoll & Konzept
+├── concept/          # 🧠 Protokoll & Konzept (ECL v2.1)
 │   ├── fachkonzept.md           # ⭐ Master-Dokument (Start hier)
 │   ├── kernkonzept.md           # High-Level Überblick
-│   ├── dacs-identity.md         # 🔐 DACS Multi-Chain Identity (NEU)
+│   ├── erynoa-configuration-language.md  # ECL v2.1 Spezifikation
+│   ├── dacs-identity.md         # 🔐 DACS Multi-Chain Identity
+│   ├── search-environments.md   # Object Placement & Chain-Anchoring
 │   ├── system-architecture-overview.md
 │   ├── liquides-datenmodell.md
 │   ├── trust-and-reputation.md
-│   ├── cybernetic-loop.md
+│   ├── cybernetic-loop.md       # 9-Phasen Loop
 │   ├── agents-and-adl.md
 │   ├── use-cases.md
 │   └── glossary.md
@@ -186,18 +148,20 @@ documentation/
 
 ### 🧠 Konzept-Dokumentation
 
-| Dokument                                                                   | Beschreibung                                     |
-| -------------------------------------------------------------------------- | ------------------------------------------------ |
-| **[📋 Fachkonzept](documentation/concept/fachkonzept.md)**                 | **⭐ Hier starten** – Vollständige Spezifikation |
-| [Kernkonzept](documentation/concept/kernkonzept.md)                        | Kompakter High-Level-Überblick                   |
-| **[🔐 DACS Identity](documentation/concept/dacs-identity.md)**             | **Dezentrales Multi-Chain Identity System**      |
-| [Systemarchitektur](documentation/concept/system-architecture-overview.md) | Technische Architektur-Details                   |
-| [Liquides Datenmodell](documentation/concept/liquides-datenmodell.md)      | Blueprints, AMOs, Fluid Extensions               |
-| [Trust & Reputation](documentation/concept/trust-and-reputation.md)        | Karmic Engine, Trust Vectors                     |
-| [Cybernetic Loop](documentation/concept/cybernetic-loop.md)                | Der 6-Phasen-Workflow                            |
-| [Agents & ADL](documentation/concept/agents-and-adl.md)                    | Agentenmodell und Intent-Sprache                 |
-| [Use Cases](documentation/concept/use-cases.md)                            | EV-Charging, Industrie, Prosumer                 |
-| [Glossar](documentation/concept/glossary.md)                               | Begriffsdefinitionen                             |
+| Dokument                                                                           | Beschreibung                                          |
+| ---------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| **[📋 Fachkonzept](documentation/concept/fachkonzept.md)**                         | **⭐ Hier starten** – Vollständige Spezifikation v2.1 |
+| [Kernkonzept](documentation/concept/kernkonzept.md)                                | Kompakter High-Level-Überblick                        |
+| **[📝 ECL Spezifikation](documentation/concept/erynoa-configuration-language.md)** | **ECL v2.1** – Erynoa Configuration Language          |
+| **[🔐 DACS Identity](documentation/concept/dacs-identity.md)**                     | Multi-Chain DIDs, 16 Sub-Identity-Typen               |
+| **[🌍 Search Environments](documentation/concept/search-environments.md)**         | Object Placement, Chain-Anchoring, Fallback           |
+| [Systemarchitektur](documentation/concept/system-architecture-overview.md)         | Technische Architektur inkl. ECLVM                    |
+| [Liquides Datenmodell](documentation/concept/liquides-datenmodell.md)              | Blueprints, AMOs, Environment Placement               |
+| [Trust & Reputation](documentation/concept/trust-and-reputation.md)                | Karmic Engine, Karma Tiers, 1.5× Asymmetrie           |
+| [Cybernetic Loop](documentation/concept/cybernetic-loop.md)                        | Der 9-Phasen-Workflow inkl. ECLVM                     |
+| [Agents & ADL](documentation/concept/agents-and-adl.md)                            | Agentenmodell und Intent-Sprache                      |
+| [Use Cases](documentation/concept/use-cases.md)                                    | EV-Charging, Industrie, Prosumer                      |
+| [Glossar](documentation/concept/glossary.md)                                       | Begriffsdefinitionen                                  |
 
 ### 🛠️ System-Dokumentation
 
