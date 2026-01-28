@@ -22,16 +22,17 @@
 
 Erynoa basiert auf einem **performanten, typsicheren und skalierbaren** Fundament:
 
-| Schicht      | Technologie            | Beschreibung             |
-| ------------ | ---------------------- | ------------------------ |
-| **Frontend** | SvelteKit, TypeScript  | 3 Apps im Monorepo       |
-| **Backend**  | Rust, Axum             | High-Performance API     |
-| **API**      | Connect-RPC (Protobuf) | End-to-End Typsicherheit |
-| **Auth**     | ZITADEL                | OIDC/JWT Authentication  |
-| **Database** | PostgreSQL (OrioleDB)  | Persistenz               |
-| **Cache**    | DragonflyDB            | Redis-kompatibel         |
-| **Storage**  | MinIO                  | S3-kompatibel            |
-| **Proxy**    | Caddy                  | Reverse Proxy, Auto-SSL  |
+| Schicht      | Technologie            | Beschreibung               |
+| ------------ | ---------------------- | -------------------------- |
+| **Frontend** | SvelteKit, TypeScript  | 3 Apps im Monorepo         |
+| **Backend**  | Rust, Axum             | High-Performance API       |
+| **API**      | Connect-RPC (Protobuf) | End-to-End Typsicherheit   |
+| **Workflows**| Restate                | Durable Orchestrierung     |
+| **Auth**     | ZITADEL                | OIDC/JWT Authentication    |
+| **Database** | PostgreSQL (OrioleDB)  | Persistenz                 |
+| **Cache**    | DragonflyDB            | Redis-kompatibel           |
+| **Storage**  | MinIO                  | S3-kompatibel              |
+| **Proxy**    | Caddy                  | Reverse Proxy, Auto-SSL    |
 
 ---
 
@@ -124,6 +125,46 @@ frontend/
 | **Connect-RPC** | -       | gRPC-Web API               |
 | **Jemalloc**    | -       | Memory Allocator           |
 
+### E-Mail & Templating (Lettre + Rinja)
+
+Für transaktionale E-Mails nutzt Erynoa:
+
+- **Lettre (tokio‑1 kompatibel)** als asynchronen SMTP‑Client:
+  - Versand von Mails aus Rust‑Handlern (z. B. Bestätigungen, Benachrichtigungen)
+  - Integration in bestehende Tokio‑Runtime (kein separater Mail‑Prozess nötig)
+- **Rinja** als Template‑Engine für E-Mail‑Inhalte:
+  - Trennung von Layout (HTML/Text‑Templates) und Logik
+  - Wiederverwendbare Templates im Repository (z. B. `templates/emails/*.html.rinja`)
+  - Lokalisierung und Branding über gemeinsame Basis‑Layouts
+
+Typischer Ablauf:
+
+1. Backend füllt ein Rinja‑Template mit Daten (z. B. Benutzername, Links).
+2. Gerendertes HTML/Text wird über Lettre über einen konfigurierten SMTP‑Server versendet.
+3. Fehler und Retries können bei Bedarf über Restate‑Workflows robust orchestriert werden.
+
+### Dokument-/PDF-Generierung mit Typst
+
+Für serverseitige Dokument‑ und PDF‑Generierung wird **Typst** eingesetzt:
+
+- **Deklarative Dokumente**: Layout und Inhalt werden in einer typst‑basierten DSL beschrieben.
+- **Reproduzierbare PDFs**: Templates im Repository sorgen für konsistente, versionierte PDF‑Ausgaben (z. B. Reports, Exporte).
+- **Backend‑Integration**: Das Rust‑Backend rendert PDFs automatisiert über Typst‑Aufrufe (z. B. für Download‑Endpunkte).
+
+### Workflows & Orchestrierung mit Restate
+
+Für langlebige, fehlertolerante Abläufe setzt Erynoa auf **Restate** als dedizierte Orchestrierungsschicht:
+
+- **Durable Execution**: Handler werden so ausgeführt, dass jeder abgeschlossene Schritt persistent gespeichert wird und bei Fehlern nahtlos wiederaufgenommen werden kann.
+- **Genau-einmal Semantik**: Externe Aufrufe (z. B. ans Rust‑Backend oder andere Services) werden zuverlässig und idempotent koordiniert.
+- **Stateful Workflows**: Komplexe Business-Prozesse (Sagas, mehrstufige Provisioning-Flows, Reminder) besitzen eigenen, stark konsistenten Zustand.
+- **Zeitbasierte Events**: Timer, Delays und Deadlines sind first‑class (z. B. „warte 24h auf Bestätigung, sonst storniere Auftrag“).
+
+Restate ergänzt das Rust‑Backend:
+
+- Rust/Axum implementiert die **fachliche Logik** und APIs.
+- Restate orchestriert **Ablauf, Retries, State und Wiederaufnahmen** über Service‑ und Prozessgrenzen hinweg.
+
 ### Optimierungen
 
 ```toml
@@ -170,6 +211,7 @@ backend/src/api/
 | ------------ | --------- | ----------- | ---------------------- |
 | **Proxy**    | 3001      | Caddy       | Reverse Proxy, Routing |
 | **Backend**  | 3000      | Rust/Axum   | API Server             |
+| **Workflows**| –         | Restate     | Orchestrierungs-Engine |
 | **Console**  | 5173      | SvelteKit   | Admin UI               |
 | **Platform** | 5174      | SvelteKit   | Main App               |
 | **Docs**     | 5175      | SvelteKit   | Documentation          |

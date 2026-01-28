@@ -105,13 +105,34 @@ Das startet alles:
 
 | Komponente | Technologie |
 |------------|-------------|
-| Backend | Rust, Axum, Tokio, SQLx |
+| Backend | Rust, Axum, Tokio, SQLx, Lettre, Rinja |
 | Console | SvelteKit, Tailwind |
 | API | Connect-RPC/gRPC-Web (Protobuf) |
+| Orchestrierung | Restate (durable workflows & state) |
+| Dokumente/PDF | Typst (PDF-Generierung) |
 | Auth | ZITADEL (OIDC/JWT) |
 | Database | PostgreSQL (OrioleDB) |
 | Cache | DragonflyDB (Redis) |
 | Storage | MinIO (S3) |
+
+---
+
+## 🧠 Workflows & Orchestrierung mit Restate
+
+Erynoa nutzt **Restate** als leichtgewichtige, event-getriebene Orchestrierungsplattform für langlebige, fehlertolerante Abläufe.
+
+- **Durable Execution**: Jeder Schritt in einem Workflow wird persistent gespeichert; bei Fehlern wird ab dem letzten erfolgreichen Schritt fortgesetzt.
+- **Integrierter State**: Workflows können eigenen, stark konsistenten Zustand halten (z. B. für Sagas, Approval-Flows, langlaufende Prozesse).
+- **Zuverlässige Kommunikation**: Service-Aufrufe (HTTP / RPC) werden mit automatischen Retries und genau-einmal-Ausführung koordiniert.
+- **Zeitbasierte Koordination**: Langlebige Timer (z. B. Reminder, Delays, Deadlines) sind direkt im Orchestrierungsmodell eingebaut.
+
+Typische Einsatzszenarien in Erynoa:
+
+- Orchestrierung mehrstufiger Backend-Operationen (z. B. User‑Provisioning, Storage‑Workflows)
+- Robuste Hintergrundprozesse, die Fehler und Neustarts automatisch überleben
+- Integration externer Services mit klaren Zustandsübergängen (z. B. Webhooks, Approval‑Flows)
+
+Weitere Infos zu Restate: `https://docs.restate.dev`
 
 ---
 

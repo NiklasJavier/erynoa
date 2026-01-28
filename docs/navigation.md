@@ -20,7 +20,8 @@ docs/
 ├── guides/                      # Schritt-für-Schritt Anleitungen
 │   ├── getting-started.md       # Schnellstart für neue Entwickler
 │   ├── setup.md                 # Setup-Übersicht (verweist auf setup/)
-│   └── zitadel.md               # ZITADEL Authentifizierung (automatisch)
+│   ├── zitadel.md               # ZITADEL Authentifizierung (automatisch)
+│   └── unified-deployment.md    # Single Binary Deployment (Backend + Frontends)
 │
 ├── setup/                       # Setup-Anleitungen
 │   ├── setup.md                 # Vollständige macOS Setup-Anleitung
@@ -29,6 +30,7 @@ docs/
 │
 ├── reference/                   # Technische Referenz
 │   ├── architecture.md          # Systemarchitektur & Design-Entscheidungen
+│   ├── platform-architecture.md # 🆕 Gesamtarchitektur & Roadmap (mit Diagrammen)
 │   ├── config.md                # Service-Konfiguration & Verbindungen
 │   └── connections.md          # API-Verbindungen & Harmonisierung
 │
