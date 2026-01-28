@@ -64,7 +64,7 @@ Erynoa ist ein **dezentrales Protokoll**, das autonomen Agenten ermöglicht, ver
 | **ECHO** | Agenten, Verhandlung, P2P  | WASM, libp2p, XMTP    |
 | **NOA**  | Finalität, Settlement      | MoveVM, Starfish BFT  |
 
-> 📖 **Mehr erfahren:** [Fachkonzept](documentation/concept/fachkonzept.md) · [Kernkonzept](documentation/concept/kernkonzept.md) · [Roadmap](documentation/ROADMAP.md)
+> 📖 **Mehr erfahren:** [Navigator](documentation/concept-v2/00-navigator.md) · [Roadmap](documentation/ROADMAP.md)
 
 ---
 
@@ -116,28 +116,69 @@ Die Dokumentation ist in zwei Bereiche unterteilt:
 
 ```
 documentation/
-├── ROADMAP.md        # 🗺️ Strategische Roadmap
-├── concept/          # 🧠 Protokoll & Konzept (ECL v2.1)
-│   ├── fachkonzept.md           # ⭐ Master-Dokument (Start hier)
-│   ├── kernkonzept.md           # High-Level Überblick
-│   ├── erynoa-configuration-language.md  # ECL v2.1 Spezifikation
-│   ├── dacs-identity.md         # 🔐 DACS Multi-Chain Identity
-│   ├── search-environments.md   # Object Placement & Chain-Anchoring
-│   ├── system-architecture-overview.md
-│   ├── liquides-datenmodell.md
-│   ├── trust-and-reputation.md
-│   ├── cybernetic-loop.md       # 9-Phasen Loop
-│   ├── agents-and-adl.md
-│   ├── use-cases.md
-│   └── glossary.md
+├── ROADMAP.md            # 🗺️ Strategische Roadmap
 │
-└── system/           # 🛠️ Plattform & Entwicklung
-    ├── readme.md                # System-Übersicht
-    ├── essential_guide.md       # Alles auf einen Blick
-    ├── guides/                  # Getting Started, ZITADEL
-    ├── setup/                   # Entwicklungsumgebung
-    ├── reference/               # Architektur, Config
-    └── development/             # Style Guide, Testing, TODOs
+├── concept-v2/           # 🧠 Protokoll & Konzept (v2.1)
+│   ├── 00-navigator.md   # ⭐ Start hier – 7-Schichten-Navigator
+│   │
+│   ├── anker/            # Schicht 1: Identität (ERY)
+│   │   ├── identity-first.md
+│   │   ├── did-erynoa.md
+│   │   ├── sub-identities.md
+│   │   ├── credentials.md
+│   │   └── dacs.md
+│   │
+│   ├── schema/           # Schicht 2: Wissen (ERY)
+│   │   ├── semantic-index.md
+│   │   ├── blueprints.md
+│   │   ├── standards.md
+│   │   └── ontologie.md
+│   │
+│   ├── metrik/           # Schicht 3: Vertrauen (ERY)
+│   │   ├── trust-vectors.md
+│   │   ├── karma-engine.md
+│   │   ├── attestations.md
+│   │   └── reputation.md
+│   │
+│   ├── sphaere/          # Schicht 4: Räume (ERY+ECHO)
+│   │   ├── environments.md
+│   │   ├── governance.md
+│   │   ├── discovery.md
+│   │   └── constraints.md
+│   │
+│   ├── impuls/           # Schicht 5: Handlung (ECHO)
+│   │   ├── agent-modell.md
+│   │   ├── intent.md
+│   │   ├── policy.md
+│   │   ├── negotiation.md
+│   │   ├── wallet.md
+│   │   ├── eclvm.md
+│   │   └── cybernetic-loop.md
+│   │
+│   ├── chronik/          # Schicht 6: Beweis (NOA)
+│   │   ├── noa-ledger.md
+│   │   ├── amo.md
+│   │   ├── logic-guards.md
+│   │   ├── streaming.md
+│   │   └── finality.md
+│   │
+│   ├── nexus/            # Schicht 7: Netzwerk (NOA)
+│   │   ├── multi-chain.md
+│   │   ├── bridges.md
+│   │   └── routing.md
+│   │
+│   └── appendix/         # Referenz
+│       ├── glossar.md
+│       ├── ecl-referenz.md
+│       └── anwendungen.md
+│
+└── system/               # 🛠️ Plattform & Entwicklung
+    ├── readme.md
+    ├── essential_guide.md
+    ├── guides/
+    ├── setup/
+    ├── reference/
+    └── development/
 ```
 
 ### 🗺️ Roadmap
@@ -146,22 +187,19 @@ documentation/
 | ------------------------------------------ | -------------------------------------------------------- |
 | **[🗺️ Roadmap](documentation/ROADMAP.md)** | **Strategischer Entwicklungsplan** – 4 Phasen, 3-4 Jahre |
 
-### 🧠 Konzept-Dokumentation
+### 🧠 Konzept-Dokumentation (v2)
 
-| Dokument                                                                           | Beschreibung                                          |
-| ---------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| **[📋 Fachkonzept](documentation/concept/fachkonzept.md)**                         | **⭐ Hier starten** – Vollständige Spezifikation v2.1 |
-| [Kernkonzept](documentation/concept/kernkonzept.md)                                | Kompakter High-Level-Überblick                        |
-| **[📝 ECL Spezifikation](documentation/concept/erynoa-configuration-language.md)** | **ECL v2.1** – Erynoa Configuration Language          |
-| **[🔐 DACS Identity](documentation/concept/dacs-identity.md)**                     | Multi-Chain DIDs, 16 Sub-Identity-Typen               |
-| **[🌍 Search Environments](documentation/concept/search-environments.md)**         | Object Placement, Chain-Anchoring, Fallback           |
-| [Systemarchitektur](documentation/concept/system-architecture-overview.md)         | Technische Architektur inkl. ECLVM                    |
-| [Liquides Datenmodell](documentation/concept/liquides-datenmodell.md)              | Blueprints, AMOs, Environment Placement               |
-| [Trust & Reputation](documentation/concept/trust-and-reputation.md)                | Karmic Engine, Karma Tiers, 1.5× Asymmetrie           |
-| [Cybernetic Loop](documentation/concept/cybernetic-loop.md)                        | Der 9-Phasen-Workflow inkl. ECLVM                     |
-| [Agents & ADL](documentation/concept/agents-and-adl.md)                            | Agentenmodell und Intent-Sprache                      |
-| [Use Cases](documentation/concept/use-cases.md)                                    | EV-Charging, Industrie, Prosumer                      |
-| [Glossar](documentation/concept/glossary.md)                                       | Begriffsdefinitionen                                  |
+| Schicht                                                      | Dokumente                                                                                                                                                                                                                                    | Beschreibung                             |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| **[⭐ Navigator](documentation/concept-v2/00-navigator.md)** | —                                                                                                                                                                                                                                            | **Hier starten** – 7-Schichten-Übersicht |
+| **ANKER**                                                    | [identity-first](documentation/concept-v2/anker/identity-first.md), [did-erynoa](documentation/concept-v2/anker/did-erynoa.md), [credentials](documentation/concept-v2/anker/credentials.md), [dacs](documentation/concept-v2/anker/dacs.md) | Identität, DIDs, Credentials             |
+| **SCHEMA**                                                   | [blueprints](documentation/concept-v2/schema/blueprints.md), [semantic-index](documentation/concept-v2/schema/semantic-index.md), [standards](documentation/concept-v2/schema/standards.md)                                                  | Wissen, Semantik, Standards              |
+| **METRIK**                                                   | [trust-vectors](documentation/concept-v2/metrik/trust-vectors.md), [karma-engine](documentation/concept-v2/metrik/karma-engine.md), [attestations](documentation/concept-v2/metrik/attestations.md)                                          | Vertrauen, Reputation                    |
+| **SPHÄRE**                                                   | [environments](documentation/concept-v2/sphaere/environments.md), [governance](documentation/concept-v2/sphaere/governance.md), [discovery](documentation/concept-v2/sphaere/discovery.md)                                                   | Räume, Governance                        |
+| **IMPULS**                                                   | [agent-modell](documentation/concept-v2/impuls/agent-modell.md), [intent](documentation/concept-v2/impuls/intent.md), [policy](documentation/concept-v2/impuls/policy.md), [eclvm](documentation/concept-v2/impuls/eclvm.md)                 | Agenten, Verhandlung                     |
+| **CHRONIK**                                                  | [noa-ledger](documentation/concept-v2/chronik/noa-ledger.md), [amo](documentation/concept-v2/chronik/amo.md), [streaming](documentation/concept-v2/chronik/streaming.md), [finality](documentation/concept-v2/chronik/finality.md)           | Ledger, Settlement                       |
+| **NEXUS**                                                    | [multi-chain](documentation/concept-v2/nexus/multi-chain.md), [bridges](documentation/concept-v2/nexus/bridges.md), [routing](documentation/concept-v2/nexus/routing.md)                                                                     | Netzwerk, Anchoring                      |
+| **Appendix**                                                 | [glossar](documentation/concept-v2/appendix/glossar.md), [ecl-referenz](documentation/concept-v2/appendix/ecl-referenz.md), [anwendungen](documentation/concept-v2/appendix/anwendungen.md)                                                  | Referenz                                 |
 
 ### 🛠️ System-Dokumentation
 
@@ -243,7 +281,7 @@ erynoa/
 │   └── docs/             # Documentation Site
 │
 ├── documentation/        # 📖 Dokumentation
-│   ├── concept/          # 🧠 Protokoll & Konzept
+│   ├── concept-v2/       # 🧠 Protokoll & Konzept (7 Schichten)
 │   └── system/           # 🛠️ Plattform & Entwicklung
 │
 ├── infra/                # 🏗 Infrastructure
