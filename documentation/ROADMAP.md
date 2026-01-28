@@ -138,59 +138,113 @@ Diese Roadmap beschreibt den vollständigen Implementierungsplan für **Erynoa**
 
 > **Ziel:** Produktionsreife Basisinfrastruktur für alle drei Sphären
 
-### 1.1 Decentralized Identity Layer
+### 1.1 🔐 DACS – Decentralized Anchor Control System
+
+> **Siehe auch:** [DACS Spezifikation](./concept/dacs-identity.md)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│                    ERYNOA IDENTITY STACK                                    │
+│            DACS – DEZENTRALES MULTI-CHAIN IDENTITY ANCHORING                │
 │                                                                             │
 │   ┌─────────────────────────────────────────────────────────────────────┐  │
 │   │                                                                     │  │
-│   │   ┌─────────────────┐                                               │  │
-│   │   │ DID:erynoa      │ ──▶ Decentralized Identifiers                 │  │
-│   │   │ Method          │     für Agenten, Assets, Organisationen       │  │
-│   │   └────────┬────────┘                                               │  │
-│   │            │                                                        │  │
-│   │            ▼                                                        │  │
-│   │   ┌─────────────────┐                                               │  │
-│   │   │ DID Registry    │ ──▶ On-Chain Registry auf NOA (MoveVM)        │  │
-│   │   │ (NOA)           │     Unveränderliche DID-Dokumente             │  │
-│   │   └────────┬────────┘                                               │  │
-│   │            │                                                        │  │
-│   │            ▼                                                        │  │
-│   │   ┌─────────────────┐                                               │  │
-│   │   │ DID Resolver    │ ──▶ Universal Resolver Integration            │  │
-│   │   │ Service         │     did:erynoa:* → DID Document               │  │
-│   │   └────────┬────────┘                                               │  │
-│   │            │                                                        │  │
-│   │            ▼                                                        │  │
-│   │   ┌─────────────────┐                                               │  │
-│   │   │ Verifiable      │ ──▶ W3C VC für Credentials                    │  │
-│   │   │ Credentials     │     KYC, Zertifikate, Attestations            │  │
-│   │   └────────┬────────┘                                               │  │
-│   │            │                                                        │  │
-│   │            ▼                                                        │  │
-│   │   ┌─────────────────┐                                               │  │
-│   │   │ DNS Attestation │ ──▶ DID ↔ Domain Ownership Nachweis           │  │
-│   │   │ System          │     TXT-Record Verification                   │  │
-│   │   └─────────────────┘                                               │  │
+│   │                         CLIENTS                                     │  │
+│   │   ┌─────────┐   ┌─────────┐   ┌─────────┐   ┌─────────┐           │  │
+│   │   │ Agent   │   │ Wallet  │   │ dApp    │   │ Service │           │  │
+│   │   └────┬────┘   └────┬────┘   └────┬────┘   └────┬────┘           │  │
+│   │        └─────────────┴──────┬──────┴─────────────┘                 │  │
+│   │                             ▼                                      │  │
+│   │   ┌─────────────────────────────────────────────────────────────┐ │  │
+│   │   │                    DACS NODE NETWORK                        │ │  │
+│   │   │                                                             │ │  │
+│   │   │   ┌─────────┐   ┌─────────┐   ┌─────────┐   ┌─────────┐   │ │  │
+│   │   │   │ Node 1  │◀─▶│ Node 2  │◀─▶│ Node 3  │◀─▶│ Node N  │   │ │  │
+│   │   │   │ (EU)    │   │ (US)    │   │ (ASIA)  │   │ (...)   │   │ │  │
+│   │   │   └────┬────┘   └────┬────┘   └────┬────┘   └────┬────┘   │ │  │
+│   │   │        └─────────────┴──────┬──────┴─────────────┘         │ │  │
+│   │   │                             ▼                               │ │  │
+│   │   │              ┌──────────────────────────────┐              │ │  │
+│   │   │              │      BFT KONSENS LAYER       │              │ │  │
+│   │   │              │   (PBFT / HotStuff)          │              │ │  │
+│   │   │              └──────────────────────────────┘              │ │  │
+│   │   │                             │                               │ │  │
+│   │   └─────────────────────────────┼───────────────────────────────┘ │  │
+│   │          ┌──────────────────────┼──────────────────────┐          │  │
+│   │          ▼                      ▼                      ▼          │  │
+│   │   ┌───────────┐          ┌───────────┐          ┌───────────┐    │  │
+│   │   │   IOTA    │          │ Ethereum  │          │  Solana   │    │  │
+│   │   │  Rebased  │          │   (L2)    │          │           │    │  │
+│   │   │ (PRIMARY) │          │(SECONDARY)│          │(SECONDARY)│    │  │
+│   │   └───────────┘          └───────────┘          └───────────┘    │  │
+│   │                                                                     │  │
+│   │   ✅ Multi-Chain Anchoring: Eine DID, N Chains                     │  │
+│   │   ✅ Dezentrale Validatoren: BFT-Konsens zwischen Nodes            │  │
+│   │   ✅ Self-Anchoring: DACS Registry verankert sich selbst           │  │
+│   │   ✅ Threshold Signatures: BLS für effiziente Multi-Sigs           │  │
 │   │                                                                     │  │
 │   └─────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-| ID       | Milestone           | Beschreibung                                   | Prio | Status |
-| -------- | ------------------- | ---------------------------------------------- | ---- | ------ |
-| **I1.1** | DID:erynoa Spec     | W3C DID Method Specification                   | 🔴   | 📋     |
-| **I1.2** | DID Registry Move   | On-Chain DID Registry in MoveVM                | 🔴   | 📋     |
-| **I1.3** | DID Resolver        | Universal Resolver Plugin                      | 🔴   | 📋     |
-| **I1.4** | DID Registrar       | API für DID Create/Update/Deactivate           | 🔴   | 📋     |
-| **I1.5** | VC Infrastructure   | Verifiable Credentials Issuance & Verification | 🔴   | 📋     |
-| **I1.6** | DNS Attestation     | Domain ↔ DID Binding via TXT Records           | 🟡   | 📋     |
-| **I1.7** | Wallet SDK          | Key Management, Signing, DID Operations        | 🟡   | 📋     |
-| **I1.8** | Recovery Mechanisms | Social Recovery, Key Rotation                  | 🟢   | 📋     |
+#### DACS Core Infrastructure
+
+| ID       | Milestone            | Beschreibung                                  | Prio | Status |
+| -------- | -------------------- | --------------------------------------------- | ---- | ------ |
+| **D1.1** | DACS Node Core       | Rust Service: API, Consensus, Storage         | 🔴   | 📋     |
+| **D1.2** | BFT Consensus Engine | PBFT/HotStuff Implementation für Node-Konsens | 🔴   | 📋     |
+| **D1.3** | Threshold Signatures | BLS Signature Aggregation (t-of-n)            | 🔴   | 📋     |
+| **D1.4** | P2P Node Network     | libp2p für Inter-Node Kommunikation           | 🔴   | 📋     |
+| **D1.5** | DACS Registry (Self) | Self-Anchoring Registry für Node-Verwaltung   | 🔴   | 📋     |
+| **D1.6** | Genesis Bootstrap    | Initial Node Setup, Genesis Registry          | 🔴   | 📋     |
+
+#### Chain Adapters
+
+| ID       | Milestone              | Beschreibung                               | Prio | Status |
+| -------- | ---------------------- | ------------------------------------------ | ---- | ------ |
+| **D2.1** | IOTA Adapter (Primary) | Move Module: dacs_registry, Anchor Storage | 🔴   | 📋     |
+| **D2.2** | Ethereum L2 Adapter    | Solidity Contract: DACSAnchor              | 🟡   | 📋     |
+| **D2.3** | Solana Adapter         | Anchor Program für DID Anchoring           | 🟢   | 📋     |
+| **D2.4** | Chain Abstraction      | Unified Interface für alle Chain Adapters  | 🔴   | 📋     |
+
+#### DID Operations
+
+| ID       | Milestone          | Beschreibung                                  | Prio | Status |
+| -------- | ------------------ | --------------------------------------------- | ---- | ------ |
+| **D3.1** | did:erynoa Spec    | W3C DID Method Specification                  | 🔴   | 📋     |
+| **D3.2** | DID Create         | Multi-Chain Anchored DID Creation             | 🔴   | 📋     |
+| **D3.3** | DID Update         | Controller-signed Updates mit Re-Anchoring    | 🔴   | 📋     |
+| **D3.4** | DID Deactivate     | Deactivation mit Multi-Chain Proof            | 🔴   | 📋     |
+| **D3.5** | DID Resolve        | Cross-Chain Verification, Conflict Resolution | 🔴   | 📋     |
+| **D3.6** | Universal Resolver | Plugin für DIF Universal Resolver             | 🟡   | 📋     |
+
+#### Verifiable Credentials
+
+| ID       | Milestone       | Beschreibung                                      | Prio | Status |
+| -------- | --------------- | ------------------------------------------------- | ---- | ------ |
+| **D4.1** | VC Issuance     | W3C VC via DACS Nodes                             | 🔴   | 📋     |
+| **D4.2** | VC Verification | Multi-Chain Anchor Verification                   | 🔴   | 📋     |
+| **D4.3** | VC Revocation   | Revocation mit Anchor Proof                       | 🟡   | 📋     |
+| **D4.4** | VC Schemas      | Erynoa-spezifische VC Types (KYC, Operator, etc.) | 🟡   | 📋     |
+
+#### Security & Operations
+
+| ID       | Milestone             | Beschreibung                    | Prio | Status |
+| -------- | --------------------- | ------------------------------- | ---- | ------ |
+| **D5.1** | Key Management        | Secure Key Storage, HSM Support | 🔴   | 📋     |
+| **D5.2** | Rate Limiting         | DoS Protection für DACS API     | 🟡   | 📋     |
+| **D5.3** | Monitoring & Alerting | Node Health, Consensus Metrics  | 🟡   | 📋     |
+| **D5.4** | Disaster Recovery     | Node Failover, State Recovery   | 🟢   | 📋     |
+
+#### Progressive Decentralization
+
+| ID       | Milestone           | Beschreibung                             | Prio | Status |
+| -------- | ------------------- | ---------------------------------------- | ---- | ------ |
+| **D6.1** | Genesis (3-5 Nodes) | Team-betriebene initiale Nodes           | 🔴   | 📋     |
+| **D6.2** | Early Validators    | Partner können Nodes betreiben (10-20)   | 🟡   | 📋     |
+| **D6.3** | Open Validator Set  | Permissionless mit Stake (50+)           | 🟢   | 📋     |
+| **D6.4** | DAO Governance      | On-Chain Governance für Registry Updates | 🟢   | 📋     |
 
 ### 1.2 🔮 ERY Foundation – Semantic Lattice Basis
 

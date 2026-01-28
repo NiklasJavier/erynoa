@@ -1,10 +1,11 @@
 # Erynoa – Fachkonzept
 
 > **Dokumenttyp:** Fachkonzept (Comprehensive Technical Specification)
-> **Version:** 1.0
+> **Version:** 2.0 – ECL v2.1 Aligned
 > **Status:** Draft
 > **Zielgruppe:** Technische Entscheider, Architekt:innen, Investoren, Partner
 > **Lesezeit:** ca. 25 Minuten
+> **Verwandte Dokumente:** [ECL Spezifikation](./erynoa-configuration-language.md) · [Kernkonzept](./kernkonzept.md) · [Glossar](./glossary.md)
 
 ---
 
@@ -21,18 +22,25 @@
 │    zu verhandeln und voneinander zu lernen – mit mathematisch              │
 │    fundiertem Vertrauen statt zentraler Autoritäten."                      │
 │                                                                             │
+│   Neu in v2.0: ECLVM für dynamische Programmierung, Sub-Identities         │
+│   für granulare Kontrolle, Environment Governance für Selbstverwaltung.    │
+│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Kernmerkmale
 
-| Merkmal | Beschreibung |
-|---------|--------------|
-| **Drei-Sphären-Architektur** | ERY (Semantik), ECHO (Agenten), NOA (Ledger) |
-| **Liquides Datenmodell** | Blueprints + AMOs mit evolutionärer Ontologie |
-| **Karmic Engine** | Mathematisches Trust-System ohne zentrale Ratings |
-| **Cybernetic Loop** | Selbstlernender Kreislauf: Intent → Transaktion → Feedback |
-| **Agent Definition Language** | Deklarative Sprache für autonome Intents |
+| Merkmal                           | Beschreibung                                             |
+| --------------------------------- | -------------------------------------------------------- |
+| **Drei-Sphären-Architektur**      | ERY (Semantik & Identität), ECHO (Agenten), NOA (Ledger) |
+| **Identity-First Paradigma**      | Jede Entität hat DID + 16 Sub-Identity-Typen             |
+| **ECLVM (NEU)**                   | Layer 0.5 Execution Engine für dynamische ECL-Ausführung |
+| **Erynoa Configuration Language** | ECL v2.1 – einheitliche modulare Sprache                 |
+| **DACS als ERY-Modul**            | Multi-Chain Identity mit Sub-Identities                  |
+| **Liquides Datenmodell**          | Blueprints + AMOs mit evolutionärer Ontologie            |
+| **Karmic Engine**                 | Karma Tiers, Asymmetrie (1.5× negativ), Trust Decay      |
+| **Environment Governance (NEU)**  | Legislative + Executive für dezentrale Selbstverwaltung  |
+| **Cybernetic Loop**               | 9-Phasen-Kreislauf inkl. ECLVM-Phase                     |
 
 ---
 
@@ -115,6 +123,16 @@ Die kommende Maschinenökonomie steht vor fundamentalen Herausforderungen:
 │   • Migration = neuer Contract                                             │
 │   • State Bloat durch permanente Speicherung                               │
 │                                                                             │
+│   ─────────────────────────────────────────────────────────────────────    │
+│                                                                             │
+│   PROBLEM 5: Chain Lock-in                                                 │
+│   ════════════════════════                                                  │
+│                                                                             │
+│   Identitäten sind an einzelne Chains gebunden:                            │
+│   • Keine Interoperabilität zwischen Chains                                │
+│   • Bei Chain-Kollaps: Identitätsverlust                                   │
+│   • Vendor Lock-in durch Chain-Wahl                                         │
+│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -125,17 +143,18 @@ Erynoa löst diese Probleme durch konsequente Trennung von Zuständigkeiten:
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│                         ERYNOA = ERY + NOA                                 │
+│                          ERYNOA = ERY + ECHO + NOA                         │
 │                                                                             │
 │   ┌─────────────────────────────────────────────────────────────────────┐  │
 │   │                                                                     │  │
-│   │   Problem              │  Lösung           │  Sphäre               │  │
+│   │   Problem              │  Lösung              │  Sphäre/Modul       │  │
 │   │   ══════════════════════════════════════════════════════════════   │  │
-│   │   Fehlende Semantik    │  Semantic Lattice │  ERY                  │  │
-│   │   Zentrale Vermittler  │  P2P-Agenten      │  ECHO                 │  │
-│   │   Kein Trust-Modell    │  Karmic Engine    │  ERY                  │  │
-│   │   Starre Verträge      │  Logic Guards     │  NOA (MoveVM)         │  │
-│   │   State Bloat          │  Fluid Extensions │  ERY (TTL)            │  │
+│   │   Chain Lock-in        │  Multi-Chain DIDs    │  ERY (DACS-Modul)   │  │
+│   │   Fehlende Semantik    │  Semantic Lattice    │  ERY                │  │
+│   │   Zentrale Vermittler  │  P2P-Agenten         │  ECHO               │  │
+│   │   Kein Trust-Modell    │  Karmic Engine       │  ERY                │  │
+│   │   Starre Verträge      │  Logic Guards        │  NOA (MoveVM)       │  │
+│   │   State Bloat          │  Fluid Extensions    │  ERY (TTL)          │  │
 │   │                                                                     │  │
 │   └─────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
@@ -151,72 +170,148 @@ Erynoa ist keine monolithische Blockchain, sondern ein **Protokoll aus drei koor
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│                        DIE DREI SPHÄREN                                    │
+│                         DIE DREI SPHÄREN                                   │
 │                                                                             │
 │   ┌─────────────────────────────────────────────────────────────────────┐  │
 │   │                                                                     │  │
-│   │                         ┌─────────┐                                 │  │
-│   │                         │  ECHO   │                                 │  │
-│   │                         │ Emergent│                                 │  │
-│   │                         │  Swarm  │                                 │  │
-│   │                         └────┬────┘                                 │  │
-│   │                              │                                      │  │
-│   │                        Agenten, P2P                                 │  │
-│   │                       Intents, Deals                                │  │
-│   │                              │                                      │  │
-│   │              ┌───────────────┼───────────────┐                      │  │
-│   │              │               │               │                      │  │
-│   │              ▼               │               ▼                      │  │
-│   │       ┌─────────┐            │         ┌─────────┐                  │  │
-│   │       │   ERY   │◀───────────┴────────▶│   NOA   │                  │  │
-│   │       │Semantic │    Kontext liefern   │ Causal  │                  │  │
-│   │       │ Lattice │◀─────────────────────│ Ledger  │                  │  │
-│   │       └─────────┘    Events spiegeln   └─────────┘                  │  │
+│   │   ┌─────────────────────────────────────┐       ┌─────────┐        │  │
+│   │   │            🔮 ERY                   │◀─────▶│  ECHO   │        │  │
+│   │   │    Semantic & Identity Lattice      │       │ Emergent│        │  │
+│   │   │                                     │       │  Swarm  │        │  │
+│   │   │   ┌──────────────────────────────┐ │       └────┬────┘        │  │
+│   │   │   │          MODULES             │ │            │             │  │
+│   │   │   │  ┌────────┐  ┌────────────┐  │ │       Agenten, P2P       │  │
+│   │   │   │  │🔐 DACS │  │📚 Semantic │  │ │      Intents, Deals      │  │
+│   │   │   │  │Identity│  │   Index    │  │ │            │             │  │
+│   │   │   │  └────────┘  └────────────┘  │ │            │             │  │
+│   │   │   │  ┌────────┐  ┌────────────┐  │ │            │             │  │
+│   │   │   │  │⚖️Karmic│  │🌍Discovery │  │ │            │             │  │
+│   │   │   │  │ Engine │  │ DHT/Geo    │  │ │            │             │  │
+│   │   │   │  └────────┘  └────────────┘  │ │            │             │  │
+│   │   │   └──────────────────────────────┘ │            │             │  │
+│   │   └────────────────────┬────────────────┘            │             │  │
+│   │                        │                             │             │  │
+│   │     Semantik, Trust    │                             │             │  │
+│   │     Identity, Kontext  │                             │             │  │
+│   │                        │                             │             │  │
+│   │                        └─────────────────────────────┼─────────┐   │  │
+│   │                                                      │         │   │  │
+│   │                                                      ▼         ▼   │  │
+│   │                                                ┌─────────────────┐ │  │
+│   │                                                │     ⚡ NOA      │ │  │
+│   │                                                │  Causal Ledger  │ │  │
+│   │                                                └─────────────────┘ │  │
+│   │                                                Finalität, Wahrheit │  │
+│   │                                                Transaktionen       │  │
 │   │                                                                     │  │
-│   │   Semantik, Trust        ◀─────────▶        Finalität, Wahrheit    │  │
-│   │   Kontext, Wissen                           Transaktionen          │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│   ERY/DACS verankert Identitäten auf: IOTA (primär) | Ethereum L2 | Solana │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 2.0 ERY – Semantic & Identity Lattice (inkl. DACS)
+
+> _Das Gehirn und die Identität: Wissen, Kontext, Vertrauen, Multi-Chain DIDs_
+
+ERY ist das zentrale Gedächtnis des Netzwerks mit integriertem DACS-Modul für dezentrale Identitäten:
+
+| Modul                 | Technologie      | Funktion                                    |
+| --------------------- | ---------------- | ------------------------------------------- |
+| **🔐 DACS**           | BFT, BLS, libp2p | Multi-Chain DIDs, VCs, Self-Anchoring       |
+| **📚 Semantic Index** | Qdrant           | Blueprints, Normen, Wissen (Vektor-basiert) |
+| **⚖️ Karmic Engine**  | Custom           | Trust-Berechnung aus Events                 |
+| **🌍 Discovery**      | DHT, Geohashing  | Dezentrale Suche, Lokalisierung             |
+
+#### DACS-Modul im Detail
+
+| Komponente               | Technologie  | Funktion                                 |
+| ------------------------ | ------------ | ---------------------------------------- |
+| **DACS Node**            | Rust, libp2p | Validatoren im BFT-Netzwerk              |
+| **Threshold Signatures** | BLS t-of-n   | Kollektive Signatur-Autorisierung        |
+| **Chain Adapters**       | Multi        | Schnittstellen zu IOTA, Ethereum, Solana |
+| **DID Registry**         | On-Chain     | Self-Anchoring auf allen Chains          |
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                            DACS ARCHITECTURE                               │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   IDENTITY REQUEST (Create/Update/Revoke DID)                      │  │
+│   │              │                                                      │  │
+│   │              ▼                                                      │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │                    DACS NODE NETWORK                       │    │  │
+│   │   │              (BFT Consensus: PBFT/HotStuff)               │    │  │
+│   │   └─────────────────────────┬─────────────────────────────────┘    │  │
+│   │                             │                                       │  │
+│   │              ┌──────────────┼──────────────┐                       │  │
+│   │              ▼              ▼              ▼                        │  │
+│   │   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐            │  │
+│   │   │ IOTA Adapter │  │  ETH Adapter │  │  SOL Adapter │            │  │
+│   │   │   (Primary)  │  │ (Secondary)  │  │ (Secondary)  │            │  │
+│   │   └──────────────┘  └──────────────┘  └──────────────┘            │  │
+│   │          │                 │                 │                      │  │
+│   │          ▼                 ▼                 ▼                      │  │
+│   │   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐            │  │
+│   │   │ Full DID Doc │  │  Hash Anchor │  │  Hash Anchor │            │  │
+│   │   │ + State      │  │  + Timestamp │  │  + Timestamp │            │  │
+│   │   └──────────────┘  └──────────────┘  └──────────────┘            │  │
+│   │                                                                     │  │
+│   │   Self-Anchoring: did:erynoa:dacs-registry verankert sich selbst   │  │
 │   │                                                                     │  │
 │   └─────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 2.1 ERY – Semantic Lattice
+**DID-Syntax:** `did:erynoa:<namespace>:<unique-identifier>`
 
-> *Das Gehirn: Wissen, Kontext, Vertrauen*
+| Beispiel                            | Bedeutung               |
+| ----------------------------------- | ----------------------- |
+| `did:erynoa:vehicle:vin-1234567890` | Fahrzeug-DID            |
+| `did:erynoa:charger:loc-munich-001` | Ladesäulen-DID          |
+| `did:erynoa:org:erynoa-gmbh`        | Organisations-DID       |
+| `did:erynoa:dacs-registry`          | Self-Anchoring Registry |
 
-| Komponente | Technologie | Funktion |
-|------------|-------------|----------|
-| **Semantic Index** | Qdrant | Vektor-Datenbank für Blueprints, AMOs, Trust |
-| **Karmic Engine** | Custom | Trust-Berechnung aus Events |
-| **DHT** | libp2p Kademlia | Dezentrale Discovery |
-| **Geohashing** | Standard | Privacy-schonende Lokalisierung |
+#### ERY Layer-Architektur
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│                            ERY LAYERS                                      │
+│                     ERY: SEMANTIC & IDENTITY LATTICE                       │
 │                                                                             │
 │   ┌─────────────────────────────────────────────────────────────────────┐  │
 │   │                                                                     │  │
-│   │   STATIC KNOWLEDGE LAYER                                           │  │
-│   │   ══════════════════════                                            │  │
+│   │   🔐 DACS MODULE (Identity Layer)                                   │  │
+│   │   ═══════════════════════════════                                    │  │
+│   │   • Multi-Chain DID Anchoring (IOTA, ETH, SOL)                     │  │
+│   │   • Verifiable Credentials (W3C-konform)                           │  │
+│   │   • BFT Consensus zwischen DACS Nodes                              │  │
+│   │   • Self-Anchoring Registry                                         │  │
+│   │                                                                     │  │
+│   │   ─────────────────────────────────────────────────────────────    │  │
+│   │                                                                     │  │
+│   │   📚 STATIC KNOWLEDGE LAYER                                        │  │
+│   │   ═════════════════════════                                         │  │
 │   │   • Normative Standards (ISO, eCl@ss, OCPP)                        │  │
 │   │   • Domain Blueprints (EV-Charging, Maintenance, Energy)           │  │
 │   │   • MoveScript References                                          │  │
 │   │   • Attestation Schemas                                             │  │
-│   │                                                                     │  │
 │   │   → Immutabel, versioniert, ontologisch verankert                  │  │
 │   │                                                                     │  │
 │   │   ─────────────────────────────────────────────────────────────    │  │
 │   │                                                                     │  │
-│   │   DYNAMIC STATE LAYER                                              │  │
-│   │   ═══════════════════                                               │  │
-│   │   • Trust Vectors (hochdimensionale Embeddings)                    │  │
+│   │   ⚖️ DYNAMIC STATE LAYER                                           │  │
+│   │   ══════════════════════                                            │  │
+│   │   • Trust Vectors (via Karmic Engine)                              │  │
 │   │   • Fluid Extensions (TTL-gesteuert: Preise, Verfügbarkeit)       │  │
-│   │   • Agent Discovery Cache                                          │  │
+│   │   • Agent Discovery Cache (DHT + Geohashing)                       │  │
+│   │   • Search Environments (hierarchische Suchordnungen)              │  │
 │   │   • Real-Time Context                                              │  │
-│   │                                                                     │  │
 │   │   → Flüchtig, auto-expiring, kein State Bloat                      │  │
 │   │                                                                     │  │
 │   └─────────────────────────────────────────────────────────────────────┘  │
@@ -224,16 +319,84 @@ Erynoa ist keine monolithische Blockchain, sondern ein **Protokoll aus drei koor
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 2.2 ECHO – Emergent Swarm
+#### Discovery Module: Hierarchische Suchumgebungen
 
-> *Die Hände: Agenten, Verhandlung, Koordination*
+Das Discovery-Modul unterstützt **Search Environments** – hierarchisch verschachtelte Abstraktionsebenen mit eigenen Ordnungsprinzipien:
 
-| Komponente | Technologie | Funktion |
-|------------|-------------|----------|
-| **WASM Runtime** | Wasmtime/Wasmer | Isolierte Agent-Ausführung |
-| **XMTP** | Messaging Protocol | Verschlüsselte Consensus Bubbles |
-| **libp2p** | Networking | P2P-Verbindungen |
-| **ADL Parser** | Custom | Intent-Verarbeitung |
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                  SEARCH ENVIRONMENT HIERARCHY                              │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                    🌍 REALE WELT (ROOT)                             │  │
+│   │         Geohashing · Haversine-Distanz · Uninformierte Suche       │  │
+│   │                                                                     │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │  🏭 INDUSTRY        🔋 ENERGY         🚗 MOBILITY         │    │  │
+│   │   │  eCl@ss, ISO       Grid Codes        MaaS, GTFS          │    │  │
+│   │   │                                                           │    │  │
+│   │   │   ┌───────────┐    ┌───────────┐    ┌───────────┐        │    │  │
+│   │   │   │ EV-Charg. │    │ Prosumer  │    │ Fleet Mgmt│        │    │  │
+│   │   │   │ OCPP 2.0  │    │ P2P Trade │    │           │        │    │  │
+│   │   │   │ ISO 15118 │    │           │    │           │        │    │  │
+│   │   │   └─────┬─────┘    └───────────┘    └───────────┘        │    │  │
+│   │   │         │                                                 │    │  │
+│   │   │   ┌─────┴─────┐  ┌───────────┐  ┌───────────┐            │    │  │
+│   │   │   │  Hubject  │  │  Girö-E   │  │ Plugsurf. │            │    │  │
+│   │   │   │  Roaming  │  │  Roaming  │  │  Roaming  │            │    │  │
+│   │   │   └───────────┘  └───────────┘  └───────────┘            │    │  │
+│   │   │                                                           │    │  │
+│   │   │              ...∞ weitere Verschachtelungen...            │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│   Jede Umgebung definiert:                                                 │
+│   • Ordnungsrelation (spatial, topological, semantic)                      │
+│   • Suchstrategie (informiert: A*, Greedy | uninformiert: BFS, DFS)       │
+│   • Custom Heuristik (env-spezifische Bewertungsfunktion)                 │
+│   • Standard-Verknüpfungen (Blueprints, ISO, Zertifikate)                 │
+│   • Hard/Soft Constraints (Filterregeln, Präferenzen)                     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Suchstrategien:**
+
+| Strategie         | Typ          | Beschreibung                                 |
+| ----------------- | ------------ | -------------------------------------------- |
+| BFS, DFS          | Uninformiert | Systematische Exploration ohne Domänenwissen |
+| A\*, Greedy, Beam | Informiert   | Heuristik-gesteuertes Traversieren           |
+| Cross-Environment | Kombiniert   | Intersection/Exclusion mehrerer Umgebungen   |
+
+**ADL Intent mit Environment-Kontext:**
+
+```yaml
+intent:
+  type: "ev-charging"
+  environments:
+    primary: "env:erynoa:ev-charging:germany"
+    intersect: ["env:erynoa:roaming:hubject", "env:erynoa:energy:renewable"]
+    exclude: ["env:erynoa:operator:blacklisted"]
+  search:
+    strategy: "informed"
+    heuristic: "ev_charging_score"
+```
+
+> 📖 **Detaillierte Spezifikation:** [Search Environments](./search-environments.md)
+
+### 2.1 ECHO – Emergent Swarm
+
+> _Die Hände: Agenten, Verhandlung, Koordination, Multi-Chain Operations_
+
+| Komponente             | Technologie        | Funktion                         |
+| ---------------------- | ------------------ | -------------------------------- |
+| **WASM Runtime**       | Wasmtime/Wasmer    | Isolierte Agent-Ausführung       |
+| **XMTP**               | Messaging Protocol | Verschlüsselte Consensus Bubbles |
+| **libp2p**             | Networking         | P2P-Verbindungen                 |
+| **ADL Parser**         | Custom             | Intent-Verarbeitung              |
+| **Multi-Chain Wallet** | Custom             | Guthaben auf mehreren Chains     |
+| **Network Selector**   | Custom             | Automatische Netzwerkwahl        |
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -257,13 +420,41 @@ Erynoa ist keine monolithische Blockchain, sondern ein **Protokoll aus drei koor
 │   │   │         ▼                                         │            │  │
 │   │   │   HOST APIS                                       │            │  │
 │   │   │   ─────────                                       │            │  │
-│   │   │   ery_query()  →  Semantic Index                  │            │  │
-│   │   │   ery_trust()  →  Karmic Engine                   │            │  │
-│   │   │   p2p_connect() →  libp2p                         │            │  │
-│   │   │   xmtp_tunnel() →  Consensus Bubble               │            │  │
-│   │   │   noa_tx()     →  Transaktion konstruieren        │            │  │
+│   │   │   ery_query()     →  Semantic Index               │            │  │
+│   │   │   ery_trust()     →  Karmic Engine                │            │  │
+│   │   │   p2p_connect()   →  libp2p                       │            │  │
+│   │   │   xmtp_tunnel()   →  Consensus Bubble             │            │  │
+│   │   │   noa_tx()        →  Transaktion konstruieren     │            │  │
+│   │   │   ─────────────────────────────────────────────   │            │  │
+│   │   │   wallet_balance()   →  Multi-Chain Guthaben      │            │  │
+│   │   │   wallet_transfer()  →  Cross-Chain Transfer      │            │  │
+│   │   │   network_select()   →  Optimales Netzwerk        │            │  │
+│   │   │   dacs_resolve()     →  DID auflösen              │            │  │
 │   │   │                                                   │            │  │
 │   │   └───────────────────────────────────────────────────┘            │  │
+│   │                                                                     │  │
+│   │   ─────────────────────────────────────────────────────────────    │  │
+│   │                                                                     │  │
+│   │   MULTI-CHAIN WALLET ENGINE                                        │  │
+│   │   ═════════════════════════                                         │  │
+│   │                                                                     │  │
+│   │   ┌─────────────┐   ┌─────────────┐   ┌─────────────┐              │  │
+│   │   │ IOTA Wallet │   │ ETH Wallet  │   │ SOL Wallet  │              │  │
+│   │   │  (Primary)  │   │    (L2)     │   │             │              │  │
+│   │   │  ────────── │   │  ────────── │   │  ────────── │              │  │
+│   │   │  1500 IOTA  │   │   0.5 ETH   │   │   25 SOL    │              │  │
+│   │   │   500 ERY   │   │  200 USDC   │   │  100 USDC   │              │  │
+│   │   └──────┬──────┘   └──────┬──────┘   └──────┬──────┘              │  │
+│   │          │                 │                 │                      │  │
+│   │          └─────────────────┼─────────────────┘                      │  │
+│   │                            ▼                                        │  │
+│   │   ┌─────────────────────────────────────────────────────────────┐  │  │
+│   │   │              NETWORK SELECTION ENGINE                       │  │  │
+│   │   │   • Gebührenanalyse (welche Chain ist am günstigsten?)     │  │  │
+│   │   │   • Latenzanalyse (welche Chain ist am schnellsten?)       │  │  │
+│   │   │   • Counterparty-Match (wo hat der Partner Guthaben?)      │  │  │
+│   │   │   • Liquiditätsanalyse (wo ist genug Guthaben?)            │  │  │
+│   │   └─────────────────────────────────────────────────────────────┘  │  │
 │   │                                                                     │  │
 │   └─────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
@@ -272,14 +463,14 @@ Erynoa ist keine monolithische Blockchain, sondern ein **Protokoll aus drei koor
 
 ### 2.3 NOA – Causal Ledger
 
-> *Das Herz: Wahrheit, Finalität, Settlement*
+> _Das Herz: Wahrheit, Finalität, Settlement_
 
-| Komponente | Technologie | Funktion |
-|------------|-------------|----------|
-| **MoveVM** | IOTA Rebased | Smart Contract Execution |
-| **Starfish BFT** | Leaderless Consensus | Sub-2s Finalität |
-| **AMO Registry** | On-Chain | Asset-Verwaltung |
-| **Event Emitter** | Bridge | Feedback an ERY |
+| Komponente        | Technologie          | Funktion                 |
+| ----------------- | -------------------- | ------------------------ |
+| **MoveVM**        | IOTA Rebased         | Smart Contract Execution |
+| **Starfish BFT**  | Leaderless Consensus | Sub-2s Finalität         |
+| **AMO Registry**  | On-Chain             | Asset-Verwaltung         |
+| **Event Emitter** | Bridge               | Feedback an ERY          |
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -394,11 +585,11 @@ Erynoa ist keine monolithische Blockchain, sondern ein **Protokoll aus drei koor
 
 ### 3.3 Die drei AMO-Archetypen
 
-| Typ | Symbol | Transfer | Lebensdauer | Beispiele |
-|-----|--------|----------|-------------|-----------|
-| **Material** | 🏭 | ✅ Ja | Permanent | Ladesäule, Sensor, Maschine |
-| **Credential** | 🎫 | ❌ Soulbound | Permanent | KYC, Zertifikat, Lizenz |
-| **Service** | ⏱️ | ❌ Nein | TTL-gesteuert | Ladevorgang, API-Call, Stream |
+| Typ            | Symbol | Transfer     | Lebensdauer   | Beispiele                     |
+| -------------- | ------ | ------------ | ------------- | ----------------------------- |
+| **Material**   | 🏭     | ✅ Ja        | Permanent     | Ladesäule, Sensor, Maschine   |
+| **Credential** | 🎫     | ❌ Soulbound | Permanent     | KYC, Zertifikat, Lizenz       |
+| **Service**    | ⏱️     | ❌ Nein      | TTL-gesteuert | Ladevorgang, API-Call, Stream |
 
 ### 3.4 Fluid Extensions
 
@@ -556,31 +747,33 @@ Erynoa ist keine monolithische Blockchain, sondern ein **Protokoll aus drei koor
 
 ### 5.2 Phasen im Detail
 
-| # | Phase | Sphäre | Input | Output |
-|---|-------|--------|-------|--------|
-| 1 | **Sensing & Intent** | ECHO | Nutzerwunsch | ADL-Dokument |
-| 2 | **Discovery & Context** | ECHO ↔ ERY | ADL-Dokument | Kandidatenliste |
-| 3 | **Validation & Trust-Gating** | ERY | Kandidaten | Bereinigte Liste |
-| 4 | **Negotiation** | ECHO | Bereinigte Liste | Vertrag |
-| 5 | **Execution & Logic Guards** | NOA | Vertrag | Finalisierte Transaktion |
-| 6 | **Feedback & Ripple Effect** | NOA → ERY | Events | Aktualisierter Trust |
+| #   | Phase                        | Sphäre/Modul       | Input            | Output                   |
+| --- | ---------------------------- | ------------------ | ---------------- | ------------------------ |
+| 1   | **Sensing & Intent**         | ECHO               | Nutzerwunsch     | ADL-Dokument             |
+| 2   | **Discovery & Context**      | ECHO ↔ ERY         | ADL-Dokument     | Kandidatenliste          |
+| 3   | **Identity & Trust-Gating**  | ERY (DACS+Karmic)  | Kandidaten       | Bereinigte Liste         |
+| 4   | **Negotiation**              | ECHO               | Bereinigte Liste | Vertrag                  |
+| 5   | **Execution & Logic Guards** | NOA                | Vertrag          | Finalisierte Transaktion |
+| 6   | **Feedback & Ripple Effect** | NOA → ERY (Karmic) | Events           | Aktualisierter Trust     |
 
 ### 5.3 Sphären-Zuständigkeiten
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│   ECHO                      ERY                       NOA                   │
-│   ════                      ═══                       ═══                   │
+│   ECHO                      ERY                        NOA                  │
+│   ════                      ═══                        ═══                  │
 │                                                                             │
-│   • Intent definieren       • Discovery               • Logic Guards        │
-│   • Verhandeln              • Trust-Gating            • Atomic Settlement   │
-│   • Consensus Bubbles       • Kontext liefern         • Event-Emission      │
-│   • Ephemere Koordination   • Feedback integrieren    • Finale Wahrheit     │
+│   • Intent definieren       • Discovery (Discovery)    • Logic Guards       │
+│   • Verhandeln              • DID-Auflösung (DACS)     • Atomic Settlement  │
+│   • Consensus Bubbles       • Trust-Gating (Karmic)    • Event-Emission     │
+│   • Ephemere Koordination   • Kontext liefern          • Finale Wahrheit    │
+│                             • VC-Validierung (DACS)                         │
+│                             • Feedback integrieren                          │
 │                                                                             │
 │   ────────────────────────────────────────────────────────────────────────  │
 │                                                                             │
-│   Phasen 1, 4               Phasen 2, 3, 6            Phase 5               │
+│   Phasen 1, 4               Phasen 2, 3, 6             Phase 5              │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -591,12 +784,12 @@ Erynoa ist keine monolithische Blockchain, sondern ein **Protokoll aus drei koor
 
 ### 6.1 Design-Prinzipien
 
-| Prinzip | Bedeutung |
-|---------|-----------|
-| **Deklarativ** | Beschreibt WAS, nicht WIE |
-| **Erweiterbar** | Domänen können eigene Constraints definieren |
-| **Maschinenlesbar** | Automatisch validierbar und ausführbar |
-| **Trust-Aware** | Vertrauensanforderungen sind First-Class-Citizen |
+| Prinzip             | Bedeutung                                        |
+| ------------------- | ------------------------------------------------ |
+| **Deklarativ**      | Beschreibt WAS, nicht WIE                        |
+| **Erweiterbar**     | Domänen können eigene Constraints definieren     |
+| **Maschinenlesbar** | Automatisch validierbar und ausführbar           |
+| **Trust-Aware**     | Vertrauensanforderungen sind First-Class-Citizen |
 
 ### 6.2 ADL-Struktur
 
@@ -613,7 +806,7 @@ objective:
   blueprint: "erynoa:bp:ev-charging-station:v1.2"
 
 functional:
-  power_min: 50          # kW
+  power_min: 50 # kW
   energy_source: renewable
   connector: [CCS, Type2]
 
@@ -631,11 +824,11 @@ trust:
     - iso_27001
 
 geospatial:
-  geohash: "u281z"       # München
+  geohash: "u281z" # München
   radius_km: 5
 
 economic:
-  max_price_kwh: 0.40    # EUR
+  max_price_kwh: 0.40 # EUR
   payment_models: [streaming, prepaid]
 
 policy:
@@ -675,13 +868,13 @@ policy:
 
 ### 7.2 Anwendungsfälle
 
-| Use Case | Streaming-Einheit | Takt |
-|----------|-------------------|------|
-| EV-Laden | €/kWh | Pro kWh |
-| API-Nutzung | €/Request | Pro Request |
-| Datenstream | €/MB | Pro MB |
-| Maschinenzeit | €/Sekunde | Pro Sekunde |
-| Energiehandel | €/kWh | Kontinuierlich |
+| Use Case      | Streaming-Einheit | Takt           |
+| ------------- | ----------------- | -------------- |
+| EV-Laden      | €/kWh             | Pro kWh        |
+| API-Nutzung   | €/Request         | Pro Request    |
+| Datenstream   | €/MB              | Pro MB         |
+| Maschinenzeit | €/Sekunde         | Pro Sekunde    |
+| Energiehandel | €/kWh             | Kontinuierlich |
 
 ---
 
@@ -702,10 +895,10 @@ policy:
 │   │   Execution       │  MoveVM                │  Logic Guards, AMOs   │  │
 │   │   BFT             │  Starfish              │  Leaderless Consensus │  │
 │   │   Semantik        │  Qdrant                │  Vektor-Suche, Index  │  │
+│   │   Identity (DACS) │  DIDs + Multi-Chain    │  DID-Auflösung, VCs   │  │
 │   │   Discovery       │  libp2p Kademlia       │  DHT, P2P-Routing     │  │
 │   │   Messaging       │  XMTP                  │  E2E-verschlüsselt    │  │
 │   │   Agent Runtime   │  WASM (Wasmtime)       │  Isolierte Ausführung │  │
-│   │   Identity        │  DIDs                  │  Dezentrale IDs       │  │
 │   │   Geo             │  Geohashing            │  Privacy-schonend     │  │
 │   │                                                                     │  │
 │   └─────────────────────────────────────────────────────────────────────┘  │
@@ -715,15 +908,15 @@ policy:
 
 ### 8.2 Warum diese Technologien?
 
-| Technologie | Warum gewählt |
-|-------------|---------------|
-| **IOTA Rebased** | Feeless, DAG-basiert, Object-Centric |
-| **MoveVM** | Resource Safety, linear types, formal verifizierbar |
-| **Starfish BFT** | Leaderless, schnell, kein Single Point of Failure |
-| **Qdrant** | Hochperformante Vektor-Suche, Open Source |
-| **WASM** | Sprachagnostisch, sicher, portabel |
-| **XMTP** | Dezentrales Messaging, E2E-Verschlüsselung |
-| **Geohashing** | Keine exakten Koordinaten nötig, privacy-schonend |
+| Technologie      | Warum gewählt                                       |
+| ---------------- | --------------------------------------------------- |
+| **IOTA Rebased** | Feeless, DAG-basiert, Object-Centric                |
+| **MoveVM**       | Resource Safety, linear types, formal verifizierbar |
+| **Starfish BFT** | Leaderless, schnell, kein Single Point of Failure   |
+| **Qdrant**       | Hochperformante Vektor-Suche, Open Source           |
+| **WASM**         | Sprachagnostisch, sicher, portabel                  |
+| **XMTP**         | Dezentrales Messaging, E2E-Verschlüsselung          |
+| **Geohashing**   | Keine exakten Koordinaten nötig, privacy-schonend   |
 
 ---
 
@@ -769,25 +962,25 @@ policy:
 
 ### 9.2 Angriffsvektoren und Gegenmaßnahmen
 
-| Angriff | Beschreibung | Gegenmaßnahme |
-|---------|--------------|---------------|
-| **Sybil-Attacke** | Fake-Identitäten | DNS-Attestation, Stake |
-| **Rating-Betrug** | Gefälschte Events | On-Chain-Finalität |
-| **Collusion** | Abgesprochene Bewertungen | Anomalie-Erkennung |
-| **DoS** | Ressourcen-Erschöpfung | Rate-Limiting, Quotas |
-| **Privacy-Leak** | Datenexfiltration | WASM-Isolation, minimale APIs |
+| Angriff           | Beschreibung              | Gegenmaßnahme                 |
+| ----------------- | ------------------------- | ----------------------------- |
+| **Sybil-Attacke** | Fake-Identitäten          | DNS-Attestation, Stake        |
+| **Rating-Betrug** | Gefälschte Events         | On-Chain-Finalität            |
+| **Collusion**     | Abgesprochene Bewertungen | Anomalie-Erkennung            |
+| **DoS**           | Ressourcen-Erschöpfung    | Rate-Limiting, Quotas         |
+| **Privacy-Leak**  | Datenexfiltration         | WASM-Isolation, minimale APIs |
 
 ---
 
 ## 10. Use Cases (Zusammenfassung)
 
-| Use Case | Seeker | Provider | Erynoa-Vorteile |
-|----------|--------|----------|-----------------|
-| **EV-Laden** | Fahrzeug-Agent | Betreiber-Agent | Beste Säule automatisch, Streaming-Payment |
+| Use Case              | Seeker           | Provider              | Erynoa-Vorteile                                   |
+| --------------------- | ---------------- | --------------------- | ------------------------------------------------- |
+| **EV-Laden**          | Fahrzeug-Agent   | Betreiber-Agent       | Beste Säule automatisch, Streaming-Payment        |
 | **Industrie-Wartung** | Anlagenbetreiber | Wartungsdienstleister | Soulbound Credentials, automatische Verifizierung |
-| **Prosumer Energy** | Haushalt mit PV | Nachbar / Grid | P2P-Handel in 15-min-Intervallen |
-| **Supply Chain** | Hersteller | Lieferanten | Nachverfolgbare Credentials, Trust-Ketten |
-| **API-Marktplätze** | Entwickler | API-Provider | Pay-per-Use Streaming |
+| **Prosumer Energy**   | Haushalt mit PV  | Nachbar / Grid        | P2P-Handel in 15-min-Intervallen                  |
+| **Supply Chain**      | Hersteller       | Lieferanten           | Nachverfolgbare Credentials, Trust-Ketten         |
+| **API-Marktplätze**   | Entwickler       | API-Provider          | Pay-per-Use Streaming                             |
 
 ---
 
@@ -851,12 +1044,12 @@ policy:
 
 ## 12. Roadmap (High-Level)
 
-| Phase | Zeitraum | Meilensteine |
-|-------|----------|--------------|
-| **Foundation** | Q1-Q2 2026 | ERY-Core, Basis-Blueprints, WASM-Runtime |
+| Phase           | Zeitraum   | Meilensteine                                     |
+| --------------- | ---------- | ------------------------------------------------ |
+| **Foundation**  | Q1-Q2 2026 | ERY-Core, Basis-Blueprints, WASM-Runtime         |
 | **Integration** | Q3-Q4 2026 | NOA-Integration (IOTA Rebased), Karmic Engine v1 |
-| **Pilot** | Q1-Q2 2027 | EV-Charging Pilot, Partner-Onboarding |
-| **Scale** | Q3+ 2027 | Weitere Domänen, Public Network |
+| **Pilot**       | Q1-Q2 2027 | EV-Charging Pilot, Partner-Onboarding            |
+| **Scale**       | Q3+ 2027   | Weitere Domänen, Public Network                  |
 
 ---
 
@@ -884,9 +1077,9 @@ policy:
 │   │                                                                     │  │
 │   └─────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
-│                        ERY + NOA = ERYNOA                                  │
-│                    Semantic Lattice + Causal Ledger                        │
-│                    Wissen + Wahrheit = Vertrauen                           │
+│                        ERY + ECHO + NOA = ERYNOA                           │
+│               Semantic & Identity + Swarm + Causal Ledger                  │
+│               Wissen + Koordination + Wahrheit = Vertrauen                 │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -895,13 +1088,13 @@ policy:
 
 ## Weiterführende Dokumente
 
-| Dokument | Fokus |
-|----------|-------|
-| [Kernkonzept](./kernkonzept.md) | Kompakter High-Level-Überblick |
-| [System Architecture](./system-architecture-overview.md) | Technische Architektur-Details |
-| [Liquides Datenmodell](./liquides-datenmodell.md) | Blueprints, AMOs, Fluid Extensions |
-| [Trust & Reputation](./trust-and-reputation.md) | Karmic Engine, Trust Vectors |
-| [Cybernetic Loop](./cybernetic-loop.md) | Der 6-Phasen-Workflow |
-| [Agents & ADL](./agents-and-adl.md) | Agentenmodell und Intent-Sprache |
-| [Use Cases](./use-cases.md) | Konkrete Anwendungsszenarien |
-| [Glossar](./glossary.md) | Begriffsdefinitionen |
+| Dokument                                                 | Fokus                              |
+| -------------------------------------------------------- | ---------------------------------- |
+| [Kernkonzept](./kernkonzept.md)                          | Kompakter High-Level-Überblick     |
+| [System Architecture](./system-architecture-overview.md) | Technische Architektur-Details     |
+| [Liquides Datenmodell](./liquides-datenmodell.md)        | Blueprints, AMOs, Fluid Extensions |
+| [Trust & Reputation](./trust-and-reputation.md)          | Karmic Engine, Trust Vectors       |
+| [Cybernetic Loop](./cybernetic-loop.md)                  | Der 6-Phasen-Workflow              |
+| [Agents & ADL](./agents-and-adl.md)                      | Agentenmodell und Intent-Sprache   |
+| [Use Cases](./use-cases.md)                              | Konkrete Anwendungsszenarien       |
+| [Glossar](./glossary.md)                                 | Begriffsdefinitionen               |

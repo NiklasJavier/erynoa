@@ -2,28 +2,36 @@
 
 > **Zielgruppe:** Protokoll- und Datenarchitekt:innen, Domain-Expert:innen
 > **Lesezeit:** ca. 10 Minuten
+> **Version:** ECL v2.1 – Identity-First Architecture
 > **Voraussetzung:** [Kernkonzept](./kernkonzept.md) gelesen
-> **Verwandte Dokumente:** [Trust & Reputation](./trust-and-reputation.md) · [Glossar](./glossary.md)
+> **Verwandte Dokumente:** [DACS Identity](./dacs-identity.md) · [Trust & Reputation](./trust-and-reputation.md) · [ECL Spezifikation](./erynoa-configuration-language.md) · [Glossar](./glossary.md)
 
 ---
 
 ## Das Konzept auf einen Blick
 
-Das **Liquide Datenmodell** trennt _was etwas bedeutet_ von _was konkret existiert_:
+Das **Liquide Datenmodell** trennt _was etwas bedeutet_ von _was konkret existiert_.
+
+**Identity-First Paradigma (v2.1):** Jedes Objekt beginnt mit einer Identität. Identität ist die Voraussetzung für alle weiteren Eigenschaften, nicht ein Attribut davon. Jedes Objekt ist durch eine **did:erynoa** Identität mit **Sub-Identities** für spezialisierte Capabilities ausgestattet.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│   📐 DEFINITION (ERY)              →        📦 INSTANZ (NOA)                │
-│   ─────────────────────                     ────────────────                │
+│   🔐 IDENTITÄT (FIRST)    📐 DEFINITION (ERY)      📦 INSTANZ (NOA)         │
+│   (ERY/DACS Modul)        ─────────────────────    ────────────────         │
+│   ───────────────────                                                       │
+│   "Wer/Was bin ich?"      "Wie soll eine Ladesäule "Diese konkrete Ladesäule│
+│   did:erynoa:charger:*    beschaffen sein?"        in München, Betreiber X" │
 │                                                                             │
-│   "Wie soll eine Ladesäule         →        "Diese konkrete Ladesäule       │
-│    beschaffen sein?"                         in München, Betreiber X"       │
-│                                                                             │
-│   ┌─────────────────┐              →        ┌─────────────────┐             │
-│   │    Blueprint    │                       │      AMO        │             │
-│   │   (Schablone)   │                       │   (Objekt)      │             │
-│   └─────────────────┘                       └─────────────────┘             │
+│   ┌─────────────────┐     ┌─────────────────┐      ┌─────────────────┐      │
+│   │     DID Doc     │────▶│    Blueprint    │◀─────│      AMO        │      │
+│   │   (Multi-Chain) │     │   (Schablone)   │      │   (Objekt)      │      │
+│   │                 │     │                 │      │                 │      │
+│   │ Sub-Identities: │     │ Definiert via   │      │ Instanziiert    │      │
+│   │ · Trading       │     │ ECLVM Template  │      │ durch ECLVM     │      │
+│   │ · Device        │     │                 │      │                 │      │
+│   │ · Service       │     │                 │      │                 │      │
+│   └─────────────────┘     └─────────────────┘      └─────────────────┘      │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -357,6 +365,147 @@ Digitale Container auf NOA, deren Verhalten durch ihren Blueprint und die MoveVM
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## AMO Environment Placement (v2.1)
+
+> _Wo leben Objekte? Default in der realen Welt, mit Anchoring für virtuelle Umgebungen_
+
+### Object Lifecycle mit Environment-Bindung
+
+Jedes AMO hat eine **definierte Position** in der Environment-Hierarchie:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   AMO ENVIRONMENT PLACEMENT                     │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   DEFAULT: REAL WORLD (ROOT)                                    │
+│   ══════════════════════════                                    │
+│                                                                 │
+│   Jedes AMO befindet sich bei Erstellung in:                   │
+│   env:erynoa:real_world                                         │
+│                                                                 │
+│   • Keine spezielle Chain erforderlich                          │
+│   • Geospatiale Ordnung gilt                                   │
+│   • Basis-Scoring sofort aktiv                                 │
+│                                                                 │
+│   ─────────────────────────────────────────────────────────────│
+│                                                                 │
+│   MOVEMENT TO VIRTUAL ENVIRONMENTS                              │
+│   ════════════════════════════════                              │
+│                                                                 │
+│   Objekte können in virtuelle Umgebungen "verschoben" werden:  │
+│                                                                 │
+│   ┌─────────────┐        ┌─────────────┐        ┌─────────────┐│
+│   │   PLANNED   │───────▶│  ANCHORED   │───────▶│   ACTIVE    ││
+│   │             │        │             │        │  (Scoring)  ││
+│   └─────────────┘        └─────────────┘        └─────────────┘│
+│                                                                 │
+│   1. PLANNED: Objekt ist für Umgebung geplant                  │
+│   2. ANCHORED: Objekt auf Environment-Chain geankert           │
+│   3. ACTIVE: Scoring und Discovery aktiv                       │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Anchoring-Pflicht für virtuelle Umgebungen
+
+**Kritische Regel**: Bevor Scoring in einer virtuellen Umgebung aktiviert wird, **MUSS** das Objekt auf der Environment-spezifischen Chain geankert werden:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     ANCHORING WORKFLOW                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   1. Objekt plant Bewegung                                      │
+│      object.plan_move_to("env:erynoa:ev-charging:germany")     │
+│                                                                 │
+│   2. ERY ermittelt Chain-Branch                                 │
+│      → Environment definiert: branch:iota:chrysalis             │
+│                                                                 │
+│   3. Anchoring-Transaktion                                      │
+│      chain.anchor({                                             │
+│        did: object.did,                                         │
+│        target_env: env_id,                                      │
+│        proof: object.state_hash                                 │
+│      })                                                         │
+│                                                                 │
+│   4. Nach Confirmation: Scoring aktiviert                       │
+│      → Karmic Engine beginnt Trust-Bewertung                   │
+│      → Objekt erscheint in Discovery                           │
+│                                                                 │
+│   ⚠️  OHNE ANCHORING: Kein Scoring, keine Discovery!            │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### AMO mit Placement-Attributen
+
+```yaml
+# AMO Erweitert mit Environment-Placement
+amo:
+  id: "did:erynoa:charger:munich-001"
+  blueprint: "erynoa:blueprint:ev-charging-station:v1.2"
+
+  # Klassische State-Daten
+  state:
+    power_output: 150
+    connector_type: "CCS"
+    location: "u281z"
+
+  # NEU: Environment Placement (v2.1)
+  placement:
+    current_environment: "env:erynoa:ev-charging:germany"
+    status: "ACTIVE" # CREATED | PLANNED | ANCHORED | ACTIVE
+    anchoring:
+      chain_branch: "branch:iota:chrysalis"
+      anchor_tx: "iota:0x1234...abcd"
+      anchored_at: "2024-03-15T10:30:00Z"
+    scoring:
+      active: true
+      activated_at: "2024-03-15T10:31:00Z"
+    fallback_chain:
+      - "env:erynoa:ev-charging:germany"
+      - "env:erynoa:real_world"
+```
+
+### Environment-Deaktivierung: Fallback-Mechanismus
+
+Wenn eine virtuelle Umgebung deaktiviert wird, fallen Objekte automatisch zur Parent-Umgebung zurück:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   ENVIRONMENT FALLBACK                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   env:erynoa:ev-charging:munich ⛔ DEAKTIVIERT                  │
+│                    │                                            │
+│                    │ Fallback                                   │
+│                    ▼                                            │
+│   env:erynoa:ev-charging:bavaria ✅                             │
+│                    │                                            │
+│                    │ (falls auch deaktiviert)                   │
+│                    ▼                                            │
+│   env:erynoa:ev-charging:germany ✅                             │
+│                    │                                            │
+│                    │ Ultimativer Fallback                       │
+│                    ▼                                            │
+│   env:erynoa:real_world (ROOT) ✅ ← Immer verfügbar            │
+│                                                                 │
+│   ─────────────────────────────────────────────────────────────│
+│                                                                 │
+│   Fallback-Regeln:                                              │
+│   • Objekt wird zur nächsten aktiven Parent-Umgebung verschoben│
+│   • Scoring wird in neuer Umgebung fortgesetzt                 │
+│   • Re-Anchoring falls Chain-Branch unterschiedlich            │
+│   • Anchoring-History bleibt erhalten                          │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+→ **Vollständige Dokumentation:** [Search Environments](./search-environments.md#6-object-placement--chain-anchoring-v21)
 
 ---
 

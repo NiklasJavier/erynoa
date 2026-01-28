@@ -1,60 +1,77 @@
 # Erynoa – Cybernetic Loop
 
 > **Zielgruppe:** Architekt:innen, Protocol/Backend-Engineers, Product Owner
-> **Lesezeit:** ca. 12 Minuten
+> **Lesezeit:** ca. 15 Minuten
+> **Version:** ECL v2.1 – mit ECLVM-Phase & Governance-Feedback
 > **Voraussetzung:** [Kernkonzept](./kernkonzept.md) gelesen
-> **Verwandte Dokumente:** [Agents & ADL](./agents-and-adl.md) · [Trust & Reputation](./trust-and-reputation.md) · [Glossar](./glossary.md)
+> **Verwandte Dokumente:** [DACS Identity](./dacs-identity.md) · [Agents & ADL](./agents-and-adl.md) · [Trust & Reputation](./trust-and-reputation.md) · [ECL Spezifikation](./erynoa-configuration-language.md) · [Glossar](./glossary.md)
 
 ---
 
 ## Das Konzept auf einen Blick
 
-Der **Cybernetic Loop** ist der universelle Workflow, der einen subjektiven _Intent_ in eine objektiv finalisierte _Transaktion_ verwandelt – und aus jeder Interaktion lernt.
+Der **Cybernetic Loop** ist der universelle Workflow, der einen subjektiven _Intent_ in eine objektiv finalisierte _Transaktion_ verwandelt – und aus jeder Interaktion lernt. Die dezentrale Identität über DACS ist dabei das Fundament jeder Interaktion.
+
+**Neu in v2.1:**
+
+- **ECLVM-Phase:** Dynamische ECL-Ausführung zwischen Verhandlung und Netzwerkwahl
+- **Karma Tiers:** Trust-Gating berücksichtigt gestaffelte Vertrauensstufen
+- **Governance-Feedback:** Ergebnisse fließen in Environment-spezifische Regeln ein
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│                          DER CYBERNETIC LOOP                                │
+│                      DER CYBERNETIC LOOP (v2.1)                             │
 │                                                                             │
 │                              ┌─────────┐                                    │
-│                        ┌────▶│ SENSING │─────┐                              │
+│                        ┌────▶│1 SENSING│─────┐                              │
 │                        │     │& INTENT │     │                              │
 │                        │     └─────────┘     │                              │
 │                        │          │          ▼                              │
 │                  ┌─────────┐      │     ┌─────────┐                         │
-│                  │FEEDBACK │      │     │DISCOVERY│                         │
-│                  │& RIPPLE │      │     │& CONTEXT│                         │
+│                  │9 FEED-  │      │     │2 DISCO- │                         │
+│                  │  BACK   │      │     │  VERY   │                         │
 │                  └─────────┘      │     └─────────┘                         │
 │                        ▲          │          │                              │
 │                        │          │          ▼                              │
 │                  ┌─────────┐      │     ┌─────────┐                         │
-│                  │EXECUTION│      │     │VALIDATION                         │
-│                  │& GUARDS │◀─────┴────▶│& TRUST  │                         │
+│                  │8 EXECU- │      │     │3 IDEN-  │                         │
+│                  │  TION   │◀─────┴────▶│  TITY   │                         │
+│                  └─────────┘            └─────────┘                         │
+│                        ▲                     │                              │
+│                        │                     ▼                              │
+│                  ┌─────────┐            ┌─────────┐                         │
+│                  │7 NETWORK│            │4 TRUST  │                         │
+│                  │SELECTION│            │ GATING  │                         │
 │                  └─────────┘            └─────────┘                         │
 │                        ▲                     │                              │
 │                        │     ┌─────────┐     │                              │
-│                        └─────│NEGOTIA- │◀────┘                              │
-│                              │  TION   │                                    │
-│                              └─────────┘                                    │
+│                  ┌─────────┐ │5 NEGOTI-│◀────┘                              │
+│                  │6 ECLVM  │◀│  ATION  │                                    │
+│                  │EXECUTION│ └─────────┘                                    │
+│                  └─────────┘                                                │
 │                                                                             │
-│   „Ich will laden" ──▶ Suche ──▶ Prüfung ──▶ Verhandlung ──▶ Ausführung    │
-│                  ──▶ Feedback ──▶ Lernen ──▶ Nächste Entscheidung besser   │
+│   „Ich will laden" ──▶ Suche ──▶ Identität ──▶ Trust ──▶ Verhandlung       │
+│              ──▶ ECLVM ──▶ Network Selection ──▶ Ausführung ──▶ Feedback   │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Die sechs Phasen im Überblick
+## Die neun Phasen im Überblick
 
-| Phase | Name                          | Sphäre     | Kernfrage                      |
-| ----- | ----------------------------- | ---------- | ------------------------------ |
-| 1️⃣    | **Sensing & Intent**          | ECHO       | _„Was will ich erreichen?"_    |
-| 2️⃣    | **Discovery & Context**       | ECHO ↔ ERY | _„Wer kann mir helfen?"_       |
-| 3️⃣    | **Validation & Trust-Gating** | ERY        | _„Kann ich ihnen vertrauen?"_  |
-| 4️⃣    | **Negotiation**               | ECHO       | _„Zu welchen Konditionen?"_    |
-| 5️⃣    | **Execution & Logic Guards**  | NOA        | _„Ist der Deal rechtsgültig?"_ |
-| 6️⃣    | **Feedback & Ripple Effect**  | NOA → ERY  | _„Wie hat es funktioniert?"_   |
+| Phase | Name                          | Sphäre/Modul       | Kernfrage                                  |
+| ----- | ----------------------------- | ------------------ | ------------------------------------------ |
+| 1️⃣    | **Sensing & Intent**          | ECHO               | _„Was will ich erreichen?"_                |
+| 2️⃣    | **Discovery & Context**       | ECHO ↔ ERY         | _„Wer kann mir helfen?"_                   |
+| 3️⃣    | **Identity Resolution**       | ERY (DACS)         | _„Wer sind die Kandidaten wirklich?"_      |
+| 4️⃣    | **Validation & Trust-Gating** | ERY (Karmic)       | _„Kann ich ihnen vertrauen?"_ (Karma Tier) |
+| 5️⃣    | **Negotiation**               | ECHO               | _„Zu welchen Konditionen?"_                |
+| 6️⃣    | **ECLVM Execution**           | ECHO (VM)          | _„Dynamische Logik ausführen?"_ (NEU)      |
+| 7️⃣    | **Network Selection**         | ECHO               | _„Auf welcher Chain zahlen?"_              |
+| 8️⃣    | **Execution & Logic Guards**  | NOA                | _„Ist der Deal rechtsgültig?"_             |
+| 9️⃣    | **Feedback & Ripple Effect**  | NOA → ERY (Karmic) | _„Wie hat es funktioniert?"_ (±Asymmetrie) |
 
 ---
 
@@ -129,42 +146,89 @@ Der **Cybernetic Loop** ist der universelle Workflow, der einen subjektiven _Int
 │   │                                                                     │  │
 │   │   SEEKER-AGENT                                                      │  │
 │   │        │                                                            │  │
-│   │        │  Intent-Parameter                                          │  │
+│   │        │  Intent-Parameter (inkl. Environment-Kontext)              │  │
 │   │        ▼                                                            │  │
 │   │   ┌───────────────────────────────────────────────────────────┐    │  │
-│   │   │               SEMANTIC INDEX (ERY)                        │    │  │
+│   │   │               DISCOVERY MODULE (ERY)                       │    │  │
 │   │   ├───────────────────────────────────────────────────────────┤    │  │
 │   │   │                                                           │    │  │
-│   │   │   🔍 Vektor-Suche                                         │    │  │
+│   │   │   🌍 Environment Resolution                                │    │  │
+│   │   │      → Laden der referenzierten Suchumgebungen            │    │  │
+│   │   │      → Constraint-Aggregation aus Hierarchie              │    │  │
+│   │   │                                                           │    │  │
+│   │   │   🔍 Vektor-Suche (Semantic Index)                        │    │  │
 │   │   │      → Semantische Ähnlichkeit zu Intent                  │    │  │
 │   │   │                                                           │    │  │
 │   │   │   📋 Blueprint-Filter                                      │    │  │
 │   │   │      → Nur ev-charging-station:v1 kompatible              │    │  │
 │   │   │                                                           │    │  │
-│   │   │   🌍 Geo-Filter (DHT + Geohash)                           │    │  │
-│   │   │      → Nur in 5km um "u281z"                              │    │  │
+│   │   │   🗺️ Geo-Filter (DHT + Geohash)                           │    │  │
+│   │   │      → Nur in 5km um "u281z" (Real World Environment)     │    │  │
+│   │   │                                                           │    │  │
+│   │   │   🌐 Environment Membership Filter                        │    │  │
+│   │   │      → Nur Mitglieder von env:erynoa:roaming:hubject      │    │  │
 │   │   │                                                           │    │  │
 │   │   │   ⚡ Fluid Extensions                                      │    │  │
 │   │   │      → Aktuelle Verfügbarkeit, Spot-Preise                │    │  │
+│   │   │                                                           │    │  │
+│   │   │   🎯 Heuristic Ranking                                    │    │  │
+│   │   │      → A* mit env-spezifischer ev_charging_score          │    │  │
 │   │   │                                                           │    │  │
 │   │   └───────────────────────────────────────────────────────────┘    │  │
 │   │        │                                                            │  │
 │   │        ▼                                                            │  │
 │   │   ┌───────────────────────────────────────────────────────────┐    │  │
-│   │   │  KANDIDATENLISTE                                          │    │  │
-│   │   │  ─────────────────                                        │    │  │
-│   │   │  • Provider A (did:erynoa:op-123) – 150kW, 0.35€/kWh     │    │  │
-│   │   │  • Provider B (did:erynoa:op-456) – 50kW, 0.38€/kWh      │    │  │
-│   │   │  • Provider C (did:erynoa:op-789) – 350kW, 0.32€/kWh     │    │  │
-│   │   │  • Provider D (did:erynoa:op-012) – 75kW, 0.40€/kWh      │    │  │
+│   │   │  KANDIDATENLISTE (heuristisch gerankt)                    │    │  │
+│   │   │  ─────────────────────────────────────                    │    │  │
+│   │   │  #1 Provider A (did:erynoa:op-123) – Score: 0.94         │    │  │
+│   │   │  #2 Provider B (did:erynoa:op-456) – Score: 0.91         │    │  │
+│   │   │  #3 Provider C (did:erynoa:op-789) – Score: 0.88         │    │  │
+│   │   │  #4 Provider D (did:erynoa:op-012) – Score: 0.82         │    │  │
 │   │   └───────────────────────────────────────────────────────────┘    │  │
 │   │                                                                     │  │
 │   └─────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
-│   OUTPUT: Kandidatenliste (technisch & kontextuell passend)                │
+│   OUTPUT: Kandidatenliste (nach env-spezifischer Heuristik sortiert)       │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+### Search Environment Integration
+
+Die Discovery-Phase nutzt **hierarchische Suchumgebungen** für kontextbewusste Suchen:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   MULTI-ENVIRONMENT QUERY FLOW                                             │
+│                                                                             │
+│   Intent-Parameter:                                                         │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │   environments:                                                     │  │
+│   │     primary: "env:erynoa:ev-charging:germany"                      │  │
+│   │     intersect: ["env:erynoa:roaming:hubject", "env:erynoa:green"]  │  │
+│   │     exclude: ["env:erynoa:operator:blacklisted"]                   │  │
+│   │     fallback: ["env:erynoa:real_world"]                            │  │
+│   │   search:                                                           │  │
+│   │     strategy: "informed"                                            │  │
+│   │     heuristic: "ev_charging_score"                                 │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│   Execution Pipeline:                                                       │
+│   ───────────────────                                                       │
+│   1. [ENV_RESOLVE] Primary-Umgebung laden, Parent-Constraints erben        │
+│   2. [SPATIAL_SEARCH] BFS/DFS in Real World (Geohash-Radius)               │
+│   3. [ENV_FILTER] Intersection mit Hubject, Green Energy                   │
+│   4. [EXCLUSION] Blacklist-Mitglieder entfernen                            │
+│   5. [CONSTRAINTS] Hard/Soft Constraints validieren                        │
+│   6. [HEURISTIC] A* mit ev_charging_score ranken                           │
+│   7. [ENRICH] Fluid Extensions hinzufügen                                  │
+│   8. [RESULT] Top-N Kandidaten zurückgeben                                 │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+> 📖 Detaillierte Spezifikation: [Search Environments](./search-environments.md)
 
 ### Skalierung der Discovery
 
@@ -187,18 +251,110 @@ Der **Cybernetic Loop** ist der universelle Workflow, der einen subjektiven _Int
 
 ---
 
-## Phase 3: Validation & Trust-Gating
+## Phase 3: Identity Resolution
+
+> _„Wer sind die Kandidaten wirklich?"_
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   PHASE 3: IDENTITY RESOLUTION (ERY – DACS Module)                         │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   KANDIDATENLISTE (aus Discovery)                                   │  │
+│   │        │                                                            │  │
+│   │        ▼                                                            │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │              DACS DID RESOLUTION                          │    │  │
+│   │   ├───────────────────────────────────────────────────────────┤    │  │
+│   │   │                                                           │    │  │
+│   │   │   🔍 Für jeden Kandidaten:                                │    │  │
+│   │   │      1. DID Document von IOTA (Primary Chain) abrufen    │    │  │
+│   │   │      2. Multi-Chain-Anker verifizieren (ETH, SOL)        │    │  │
+│   │   │      3. Verifiable Credentials laden                      │    │  │
+│   │   │                                                           │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   │        │                                                            │  │
+│   │        ▼                                                            │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │                                                           │    │  │
+│   │   │  DID RESOLUTION ERGEBNIS                                  │    │  │
+│   │   │  ═══════════════════════                                  │    │  │
+│   │   │                                                           │    │  │
+│   │   │  Provider A │ did:erynoa:charger:loc-munich-001          │    │  │
+│   │   │             │ IOTA: ✅ │ ETH: ✅ │ SOL: ✅                │    │  │
+│   │   │             │ VCs: operator-license, energy-cert          │    │  │
+│   │   │                                                           │    │  │
+│   │   │  Provider B │ did:erynoa:charger:loc-munich-002          │    │  │
+│   │   │             │ IOTA: ✅ │ ETH: ✅ │ SOL: ❌ (nicht anchor) │    │  │
+│   │   │             │ VCs: operator-license                       │    │  │
+│   │   │                                                           │    │  │
+│   │   │  Provider C │ did:erynoa:charger:loc-munich-003          │    │  │
+│   │   │             │ IOTA: ✅ │ ETH: ✅ │ SOL: ✅                │    │  │
+│   │   │             │ VCs: operator-license, iso-27001            │    │  │
+│   │   │                                                           │    │  │
+│   │   │  Provider D │ did:erynoa:charger:loc-munich-004          │    │  │
+│   │   │             │ IOTA: ✅ │ ETH: ❌ │ SOL: ✅                │    │  │
+│   │   │             │ VCs: operator-license, energy-cert          │    │  │
+│   │   │                                                           │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│   OUTPUT: Verifizierte Identitäten mit Credentials, bereit für Trust-Check │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### DACS Resolution im Detail (ERY Identity Module)
+
+| Schritt                 | Technologie        | Beschreibung                                         |
+| ----------------------- | ------------------ | ---------------------------------------------------- |
+| **1. DID Lookup**       | ERY (DACS), libp2p | DID wird im DACS-Modul aufgelöst                     |
+| **2. Primary Chain**    | IOTA Rebased       | Vollständiges DID Document wird geladen              |
+| **3. Secondary Verify** | ETH L2, Solana     | Hash-Anker werden auf Übereinstimmung geprüft        |
+| **4. VC Collection**    | W3C VCs            | Alle zum DID gehörenden Credentials werden gesammelt |
+| **5. Signature Verify** | BLS Threshold      | Signaturen der DACS Nodes werden verifiziert         |
+
+### Warum Multi-Chain Verification?
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   SECURITY DURCH REDUNDANZ                                                  │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   Szenario: Angreifer will DID manipulieren                        │  │
+│   │                                                                     │  │
+│   │   Mit Single-Chain:                                                 │  │
+│   │   → Nur EINE Chain kompromittieren = Erfolg                        │  │
+│   │                                                                     │  │
+│   │   Mit Multi-Chain Anchoring:                                        │  │
+│   │   → Muss ALLE Chains gleichzeitig kompromittieren                  │  │
+│   │   → UND DACS BFT Konsens überwinden (67% Threshold)                │  │
+│   │   → Praktisch unmöglich                                             │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Phase 4: Validation & Trust-Gating
 
 > _„Kann ich ihnen vertrauen?"_
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│   PHASE 3: VALIDATION & TRUST-GATING (ERY)                                 │
+│   PHASE 4: VALIDATION & TRUST-GATING (ERY – Karmic Module)                 │
 │                                                                             │
 │   ┌─────────────────────────────────────────────────────────────────────┐  │
 │   │                                                                     │  │
-│   │   KANDIDATENLISTE                                                   │  │
+│   │   VERIFIZIERTE KANDIDATENLISTE (aus DACS)                          │  │
 │   │        │                                                            │  │
 │   │        ▼                                                            │  │
 │   │   ┌───────────────────────────────────────────────────────────┐    │  │
@@ -222,8 +378,8 @@ Der **Cybernetic Loop** ist der universelle Workflow, der einen subjektiven _Int
 │   │   ┌───────────────────────────────────────────────────────────┐    │  │
 │   │   │  BEREINIGTE LISTE                                         │    │  │
 │   │   │  ────────────────                                         │    │  │
-│   │   │  • Provider A (did:erynoa:op-123) – Trust 0.92           │    │  │
-│   │   │  • Provider D (did:erynoa:op-012) – Trust 0.85           │    │  │
+│   │   │  • Provider A (did:erynoa:charger:loc-munich-001) – 0.92 │    │  │
+│   │   │  • Provider D (did:erynoa:charger:loc-munich-004) – 0.85 │    │  │
 │   │   └───────────────────────────────────────────────────────────┘    │  │
 │   │                                                                     │  │
 │   └─────────────────────────────────────────────────────────────────────┘  │
@@ -244,14 +400,14 @@ Der **Cybernetic Loop** ist der universelle Workflow, der einen subjektiven _Int
 
 ---
 
-## Phase 4: Negotiation
+## Phase 5: Negotiation
 
 > _„Zu welchen Konditionen?"_
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│   PHASE 4: NEGOTIATION (ECHO)                                              │
+│   PHASE 5: NEGOTIATION (ECHO)                                              │
 │                                                                             │
 │   ┌─────────────────────────────────────────────────────────────────────┐  │
 │   │                                                                     │  │
@@ -306,18 +462,204 @@ Der **Cybernetic Loop** ist der universelle Workflow, der einen subjektiven _Int
 
 ---
 
-## Phase 5: Execution & Logic Guards
+## Phase 6: ECLVM Execution (NEU in v2.1)
+
+> _„Dynamische Logik zur Laufzeit ausführen?"_
+
+Nach der Verhandlung und vor der Netzwerkwahl können Agenten dynamische ECL-Logik ausführen – z.B. für Preisberechnung, Conditional Logic oder Template-Instantiierung.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   PHASE 6: ECLVM EXECUTION (ECHO - VM Module)                              │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   VERHANDLUNGSERGEBNIS                                              │  │
+│   │   ├─ Provider: did:erynoa:charger:loc-munich-001                   │  │
+│   │   ├─ Preis: 0.35 €/kWh (Basis)                                     │  │
+│   │   └─ Bedingungen: Dynamic Pricing aktiv                            │  │
+│   │                                                                     │  │
+│   │                          ▼                                          │  │
+│   │   ┌─────────────────────────────────────────────────────────────┐  │  │
+│   │   │                   ECLVM SANDBOX                             │  │  │
+│   │   ├─────────────────────────────────────────────────────────────┤  │  │
+│   │   │                                                             │  │  │
+│   │   │   // Dynamische Preisberechnung zur Laufzeit               │  │  │
+│   │   │   fn calculate_final_price(base, context) {                 │  │  │
+│   │   │     let grid_load = vm_call_external("grid_api", "load")   │  │  │
+│   │   │     let time_factor = if context.time.is_peak { 1.2 }      │  │  │
+│   │   │                       else { 0.9 }                          │  │  │
+│   │   │     let karma_discount = get_karma_tier_discount(           │  │  │
+│   │   │       context.seeker.karma_tier                             │  │  │
+│   │   │     )                                                       │  │  │
+│   │   │     base * time_factor * (1.0 - karma_discount)            │  │  │
+│   │   │   }                                                         │  │  │
+│   │   │                                                             │  │  │
+│   │   │   // Template instantiieren                                 │  │  │
+│   │   │   let service_amo = instantiate_template(                  │  │  │
+│   │   │     "ChargingService",                                      │  │  │
+│   │   │     { power: 50, price: final_price, duration: 30min }     │  │  │
+│   │   │   )                                                         │  │  │
+│   │   │                                                             │  │  │
+│   │   └─────────────────────────────────────────────────────────────┘  │  │
+│   │                          │                                          │  │
+│   │   Resource Limits:       │                                          │  │
+│   │   ├─ CPU: 1M cycles ✓    │                                          │  │
+│   │   ├─ Memory: 10MB ✓      │                                          │  │
+│   │   └─ I/O: 100 ops ✓      │                                          │  │
+│   │                          ▼                                          │  │
+│   │   ERGEBNIS: Finaler Preis 0.32 €/kWh (Veteran-Rabatt: 5%)          │  │
+│   │             + Service-AMO Template bereit                           │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### ECLVM-Capabilities in dieser Phase
+
+| Capability                 | Beschreibung                                 |
+| -------------------------- | -------------------------------------------- |
+| **Dynamic Pricing**        | Preise basierend auf Echtzeitdaten berechnen |
+| **Template Instantiation** | Service-AMOs aus Templates erstellen         |
+| **Conditional Logic**      | Komplexe Entscheidungslogik ausführen        |
+| **External Calls**         | APIs für Echtzeitdaten (Grid, Weather, etc.) |
+| **Karma Integration**      | Trust-Tier-abhängige Rabatte/Limits          |
+
+---
+
+## Phase 7: Network Selection
+
+> _„Auf welcher Chain zahlen?"_
+
+Nach erfolgreicher ECLVM-Ausführung wählt der Agent automatisch das optimale Netzwerk für die Transaktion aus.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   PHASE 7: NETWORK SELECTION (ECHO)                                        │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   TRANSAKTIONALES PAKET (aus ECLVM)                                │  │
+│   │   Betrag: 15.75 €    Gegenseite: did:erynoa:charger:loc-munich-001 │  │
+│   │        │                                                            │  │
+│   │        ▼                                                            │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │            MULTI-CHAIN WALLET ABFRAGE                     │    │  │
+│   │   ├───────────────────────────────────────────────────────────┤    │  │
+│   │   │                                                           │    │  │
+│   │   │   Seeker (Fahrzeug):                                      │    │  │
+│   │   │   ├── IOTA:   1500 IOTA (≈45€) ✅                         │    │  │
+│   │   │   ├── ETH L2: 0.5 ETH (≈850€)  ✅                         │    │  │
+│   │   │   └── SOL:    25 SOL (≈750€)   ✅                         │    │  │
+│   │   │                                                           │    │  │
+│   │   │   Provider (Ladesäule) – via dacs_resolve():              │    │  │
+│   │   │   ├── IOTA:   ✅ (akzeptiert)                             │    │  │
+│   │   │   ├── ETH L2: ✅ (akzeptiert)                             │    │  │
+│   │   │   └── SOL:    ❌ (nicht konfiguriert)                     │    │  │
+│   │   │                                                           │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   │        │                                                            │  │
+│   │        ▼                                                            │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │          NETWORK SELECTION ENGINE                         │    │  │
+│   │   ├───────────────────────────────────────────────────────────┤    │  │
+│   │   │                                                           │    │  │
+│   │   │   1. Gemeinsame Chains: [IOTA, ETH L2]                    │    │  │
+│   │   │                                                           │    │  │
+│   │   │   2. Gebührenvergleich (via network_fees()):              │    │  │
+│   │   │      • IOTA:   ~0.001€                                    │    │  │
+│   │   │      • ETH L2: ~0.15€                                     │    │  │
+│   │   │                                                           │    │  │
+│   │   │   3. Latenz & Finalität:                                  │    │  │
+│   │   │      • IOTA:   < 2s Finalität (Starfish BFT)              │    │  │
+│   │   │      • ETH L2: ~12s Finalität                             │    │  │
+│   │   │                                                           │    │  │
+│   │   │   4. Agent-Präferenzen (aus ADL wallet section):          │    │  │
+│   │   │      • chain_priority: [iota, ethereum_l2, solana]        │    │  │
+│   │   │      • max_fee_eur: 0.50€                                 │    │  │
+│   │   │      • prefer_counterparty_chain: true                    │    │  │
+│   │   │                                                           │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   │        │                                                            │  │
+│   │        ▼                                                            │  │
+│   │   ┌───────────────────────────────────────────────────────────┐    │  │
+│   │   │   🏆 ENTSCHEIDUNG: IOTA                                   │    │  │
+│   │   │   ─────────────────────────────                           │    │  │
+│   │   │   • Niedrigste Gebühren (0.001€)                          │    │  │
+│   │   │   • Schnellste Finalität (< 2s)                           │    │  │
+│   │   │   • Höchste Priorität in chain_priority                   │    │  │
+│   │   │   • Beide Parteien haben IOTA-Wallet ✅                   │    │  │
+│   │   └───────────────────────────────────────────────────────────┘    │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│   OUTPUT: Chain-Auswahl + Transaktionsdetails → weiter zu Execution        │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Fallback: Cross-Chain Bridge
+
+Falls keine gemeinsame Chain existiert oder Guthaben nicht ausreicht:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   CROSS-CHAIN BRIDGE (via ERY DACS Module)                                 │
+│                                                                             │
+│   Szenario: Seeker hat nur SOL, Provider akzeptiert nur IOTA               │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   Seeker (SOL)           ERY (DACS Bridge)        Provider (IOTA)  │  │
+│   │        │                          │                       │         │  │
+│   │        │ 1. Lock 25 SOL           │                       │         │  │
+│   │        │─────────────────────────▶│                       │         │  │
+│   │        │                          │                       │         │  │
+│   │        │                          │ 2. Verify via BFT    │         │  │
+│   │        │                          │ (67% Threshold)       │         │  │
+│   │        │                          │                       │         │  │
+│   │        │                          │ 3. Mint equiv. IOTA  │         │  │
+│   │        │                          │──────────────────────▶│         │  │
+│   │        │                          │                       │         │  │
+│   │        │                  4. Atomare Finalisierung        │         │  │
+│   │        │◀═════════════════════════════════════════════════│         │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│   Bridge-Gebühr: max_bridge_fee_eur aus ADL (z.B. 0.50€)                   │
+│   Nur wenn Betrag > min_amount_for_bridge (z.B. 10€)                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Host APIs für Network Selection
+
+| API                 | Funktion                                      |
+| ------------------- | --------------------------------------------- |
+| `wallet_balance()`  | Guthaben auf einer Chain abfragen             |
+| `wallet_transfer()` | Transfer initiieren (inkl. optionalem Bridge) |
+| `network_select()`  | Optimale Chain automatisch ermitteln          |
+| `network_fees()`    | Aktuelle Gebühren aller Chains abfragen       |
+| `dacs_resolve()`    | DID auflösen inkl. Wallet-Chains des Partners |
+
+---
+
+## Phase 7: Execution & Logic Guards
 
 > _„Ist der Deal rechtsgültig?"_
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│   PHASE 5: EXECUTION & LOGIC GUARDS (NOA)                                  │
+│   PHASE 7: EXECUTION & LOGIC GUARDS (NOA)                                  │
 │                                                                             │
 │   ┌─────────────────────────────────────────────────────────────────────┐  │
 │   │                                                                     │  │
-│   │   TRANSAKTIONALES PAKET                                             │  │
+│   │   TRANSAKTIONALES PAKET + CHAIN-AUSWAHL (aus Network Selection)    │  │
 │   │        │                                                            │  │
 │   │        ▼                                                            │  │
 │   │   ┌───────────────────────────────────────────────────────────┐    │  │
@@ -404,14 +746,14 @@ public entry fun start_charging_session(
 
 ---
 
-## Phase 6: Feedback & Ripple Effect
+## Phase 8: Feedback & Ripple Effect
 
 > _„Wie hat es funktioniert?"_
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│   PHASE 6: FEEDBACK & RIPPLE EFFECT (NOA → ERY)                            │
+│   PHASE 8: FEEDBACK & RIPPLE EFFECT (NOA → ERY)                            │
 │                                                                             │
 │   ┌─────────────────────────────────────────────────────────────────────┐  │
 │   │                                                                     │  │
@@ -511,15 +853,18 @@ public entry fun start_charging_session(
 │   │   • Agent-zu-Agent-Kommunikation                                    │  │
 │   │   • Verhandlung in Consensus Bubbles                                │  │
 │   │   • Ephemere Koordination                                           │  │
+│   │   • Network Selection                                               │  │
 │   │                                                                     │  │
 │   │   ─────────────────────────────────────────────────────────────    │  │
 │   │                                                                     │  │
-│   │   ERY (Semantic Lattice)                                           │  │
-│   │   ══════════════════════                                            │  │
-│   │   • Semantische Discovery                                           │  │
+│   │   ERY (Semantic & Identity Lattice)                                │  │
+│   │   ═════════════════════════════════                                 │  │
+│   │   • Identity Resolution (DACS Module)                              │  │
+│   │   • Semantische Discovery (Semantic Index)                          │  │
 │   │   • Trust-Gating (Karmic Engine)                                   │  │
 │   │   • Blueprint-Kontext                                               │  │
 │   │   • Feedback-Integration                                            │  │
+│   │   • Multi-Chain Anchoring (DACS)                                   │  │
 │   │                                                                     │  │
 │   │   ─────────────────────────────────────────────────────────────    │  │
 │   │                                                                     │  │
@@ -547,11 +892,13 @@ public entry fun start_charging_session(
 │   ┌─────────────────────────────────────────────────────────────────────┐  │
 │   │                                                                     │  │
 │   │   1️⃣ Sensing & Intent      →  „Was will ich?" (ADL in ECHO)        │  │
-│   │   2️⃣ Discovery & Context   →  „Wer kann helfen?" (ERY)             │  │
-│   │   3️⃣ Validation & Trust    →  „Kann ich vertrauen?" (Karmic)       │  │
-│   │   4️⃣ Negotiation           →  „Zu welchen Konditionen?" (XMTP)     │  │
-│   │   5️⃣ Execution & Guards    →  „Rechtsgültig?" (MoveVM)             │  │
-│   │   6️⃣ Feedback & Ripple     →  „Wie hat es geklappt?" (Learning)    │  │
+│   │   2️⃣ Discovery & Context   →  „Wer kann helfen?" (ERY Semantic)    │  │
+│   │   3️⃣ Identity Resolution   →  „Wer sind sie wirklich?" (ERY/DACS) │  │
+│   │   4️⃣ Validation & Trust    →  „Kann ich vertrauen?" (ERY/Karmic)   │  │
+│   │   5️⃣ Negotiation           →  „Zu welchen Konditionen?" (XMTP)     │  │
+│   │   6️⃣ Network Selection     →  „Auf welcher Chain?" (ECHO)          │  │
+│   │   7️⃣ Execution & Guards    →  „Rechtsgültig?" (MoveVM/NOA)         │  │
+│   │   8️⃣ Feedback & Ripple     →  „Wie hat es geklappt?" (ERY/Karmic)  │  │
 │   │                                                                     │  │
 │   └─────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
@@ -567,7 +914,8 @@ public entry fun start_charging_session(
 
 | Dokument                                          | Fokus                                         |
 | ------------------------------------------------- | --------------------------------------------- |
+| [DACS Identity](./dacs-identity.md)               | Identity Resolution in Phase 3                |
 | [Agents & ADL](./agents-and-adl.md)               | Intent-Spezifikation in Phase 1               |
-| [Trust & Reputation](./trust-and-reputation.md)   | Trust-Gating in Phase 3 & Feedback in Phase 6 |
+| [Trust & Reputation](./trust-and-reputation.md)   | Trust-Gating in Phase 4 & Feedback in Phase 7 |
 | [Liquides Datenmodell](./liquides-datenmodell.md) | AMOs und Blueprints in allen Phasen           |
 | [Use Cases](./use-cases.md)                       | Der Loop in konkreten Szenarien               |

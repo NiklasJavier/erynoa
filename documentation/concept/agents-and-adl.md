@@ -1,15 +1,25 @@
-# Erynoa – Agents & ADL
+# Erynoa – Agents & ADL (ecl/agent)
 
 > **Zielgruppe:** Agenten-Entwickler:innen, Protocol Engineers, Policy-Architekt:innen
 > **Lesezeit:** ca. 12 Minuten
+> **Version:** ECL v2.1 – Identity-First + ECLVM
 > **Voraussetzung:** [Kernkonzept](./kernkonzept.md) gelesen
-> **Verwandte Dokumente:** [Cybernetic Loop](./cybernetic-loop.md) · [Trust & Reputation](./trust-and-reputation.md) · [Glossar](./glossary.md)
+> **Verwandte Dokumente:** [ECL Spezifikation](./erynoa-configuration-language.md) · [DACS Identity](./dacs-identity.md) · [Cybernetic Loop](./cybernetic-loop.md) · [Trust & Reputation](./trust-and-reputation.md) · [Glossar](./glossary.md)
 
 ---
 
 ## Das Konzept auf einen Blick
 
-**Agenten** sind die handelnden Akteure in Erynoa. Sie setzen Absichten (Intents) in Handlungen um – autonom, sicher und vertrauensbewusst.
+**Agenten** sind die handelnden Akteure in Erynoa. Sie setzen Absichten (Intents) in Handlungen um – autonom, sicher und vertrauensbewusst. Jeder Agent besitzt eine **did:erynoa** Identität mit **Sub-Identities** für verschiedene Capabilities, verankert über das DACS-Modul in ERY.
+
+**ADL** (Agent Definition Language) ist das **ecl/agent**-Modul der [Erynoa Configuration Language (ECL)](./erynoa-configuration-language.md) – die deklarative Sprache für Intents und Policies.
+
+**Neu in v2.1 – ECLVM Integration:**
+
+- **Dynamische Programmierung:** Agenten schreiben und führen ECL-Code zur Laufzeit aus
+- **Template-Instantiierung:** Agenten nutzen vordefinierte Templates für Objekte
+- **Hot-Code-Reload:** Agenten-Funktionen werden live aktualisiert ohne Neustart
+- **Sandboxed Execution:** Sichere, ressourcenlimitierte Ausführung
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -22,18 +32,34 @@
 │   │   🚗 IoT    │                                     │   📦 Ressource│     │
 │   └──────┬──────┘                                     └──────┬──────┘      │
 │          │                                                   │              │
+│          │  did:erynoa:user:*              did:erynoa:asset:*│              │
 │          ▼                                                   ▼              │
 │   ┌─────────────┐         ECHO (P2P)          ┌─────────────┐              │
 │   │   SEEKER    │◀═══════════════════════════▶│  PROVIDER   │              │
 │   │   AGENT     │      Verhandlung            │   AGENT     │              │
+│   │did:erynoa:  │                             │did:erynoa:  │              │
+│   │agent:seeker │                             │agent:provid │              │
+│   │             │                             │             │              │
+│   │ 💰 Multi-   │                             │ 💰 Multi-   │              │
+│   │ Chain Wallet│                             │ Chain Wallet│              │
 │   └──────┬──────┘                             └──────┬──────┘              │
 │          │                                           │                      │
 │          │    ┌───────────────────────────┐         │                      │
-│          └───▶│         ERY & NOA         │◀────────┘                      │
-│               │   (Kontext & Finalität)   │                                │
-│               └───────────────────────────┘                                │
+│          └───▶│        ERY & NOA          │◀────────┘                      │
+│               │ (Identity via DACS-Modul, │                                │
+│               │  Kontext, Finalität)      │                                │
+│               └─────────────┬─────────────┘                                │
+│                             │                                              │
+│          ┌──────────────────┼──────────────────┐                           │
+│          ▼                  ▼                  ▼                           │
+│   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐                   │
+│   │    IOTA     │    │  Ethereum   │    │   Solana    │                   │
+│   │  (Primary)  │    │    (L2)     │    │             │                   │
+│   └─────────────┘    └─────────────┘    └─────────────┘                   │
 │                                                                             │
 │   Agenten sind die „Übersetzer" zwischen Absicht und Protokoll.            │
+│   Jeder Agent hat eine Multi-Chain-verankerte DID (via ERY/DACS)           │
+│   + Multi-Chain Wallet. Agent wählt autonom das optimale Netzwerk.         │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -60,6 +86,20 @@
 │   │   State liegt in:       Lebt nur für die       Nur definierte      │  │
 │   │   • ERY (Kontext)       Dauer des Intents      APIs verfügbar      │  │
 │   │   • NOA (Fakten)                                                    │  │
+│   │   • DACS (Identity)                                                 │  │
+│   │                                                                     │  │
+│   │   ─────────────────────────────────────────────────────────────    │  │
+│   │                                                                     │  │
+│   │   💰 Multi-Chain Wallet    🌐 Network Selection   🔗 Chain Bridge  │  │
+│   │   ═══════════════════      ═════════════════════  ═══════════════  │  │
+│   │                                                                     │  │
+│   │   Guthaben auf mehreren    Agent entscheidet      Nahtlose Cross-  │  │
+│   │   Chains gleichzeitig:     selbst über beste      Chain Transfers   │  │
+│   │   • IOTA (Primary)         Route basierend auf:   via DACS-        │  │
+│   │   • ETH L2                 • Gebühren             koordinierte     │  │
+│   │   • Solana                 • Latenz               Bridges          │  │
+│   │   • weitere                • Liquidität                            │  │
+│   │                            • Counterparty Chain                    │  │
 │   │                                                                     │  │
 │   └─────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
@@ -108,25 +148,31 @@
 
 ---
 
-## Die WASM-Sandbox
+## Die ECLVM-Sandbox
 
-> _Sichere, isolierte Ausführungsumgebung_
+> _Sichere, isolierte Ausführungsumgebung mit dynamischer Programmierung (v2.1)_
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│                         WASM EXECUTION ENVIRONMENT                          │
+│                       ECLVM EXECUTION ENVIRONMENT                           │
 │                                                                             │
 │   ┌─────────────────────────────────────────────────────────────────────┐  │
 │   │                                                                     │  │
 │   │                        HOST SYSTEM                                  │  │
 │   │   ┌─────────────────────────────────────────────────────────────┐  │  │
 │   │   │                                                             │  │  │
-│   │   │                    WASM SANDBOX                             │  │  │
+│   │   │                    ECLVM SANDBOX                            │  │  │
 │   │   │   ┌─────────────────────────────────────────────────────┐  │  │  │
 │   │   │   │                                                     │  │  │  │
 │   │   │   │                 AGENT CODE                          │  │  │  │
-│   │   │   │          (Rust, Go, TypeScript, ...)               │  │  │  │
+│   │   │   │       (ECL + WASM: Rust, Go, TypeScript, ...)       │  │  │  │
+│   │   │   │                                                     │  │  │  │
+│   │   │   │   ┌───────────────────────────────────────────┐    │  │  │  │
+│   │   │   │   │  ECLVM Bytecode Interpreter (~100 ops)    │    │  │  │  │
+│   │   │   │   │  Template Engine (Blueprint/Env/Agent)    │    │  │  │  │
+│   │   │   │   │  Hot-Code-Reload & Live-Patching          │    │  │  │  │
+│   │   │   │   └───────────────────────────────────────────┘    │  │  │  │
 │   │   │   │                                                     │  │  │  │
 │   │   │   └─────────────────────────────────────────────────────┘  │  │  │
 │   │   │                          │                                  │  │  │
@@ -140,7 +186,22 @@
 │   │   │   │  🌐 p2p_connect()    → libp2p Verbindung            │  │  │  │
 │   │   │   │  💬 xmtp_tunnel()    → Consensus Bubble öffnen      │  │  │  │
 │   │   │   │  📝 noa_tx()         → Transaktion konstruieren     │  │  │  │
+│   │   │   │  ─────────────────────────────────────────────────  │  │  │  │
+│   │   │   │  💰 wallet_balance() → Multi-Chain Guthaben         │  │  │  │
+│   │   │   │  🔗 wallet_transfer()→ Cross-Chain Transfer         │  │  │  │
+│   │   │   │  🌐 network_select() → Optimales Netzwerk wählen    │  │  │  │
+│   │   │   │  📊 network_fees()   → Aktuelle Gebühren abfragen   │  │  │  │
+│   │   │   │  🔐 dacs_resolve()   → DID auflösen                 │  │  │  │
+│   │   │   │  📜 dacs_vc()        → Credentials verifizieren     │  │  │  │
+│   │   │   │  ─────────────────────────────────────────────────  │  │  │  │
+│   │   │   │  🖥️ vm_instantiate() → Template instantiieren      │  │  │  │
+│   │   │   │  🔄 vm_reload()      → Hot-Code-Reload ausführen   │  │  │  │
+│   │   │   │  📦 vm_compile()     → ECL zu Bytecode kompilieren │  │  │  │
 │   │   │   └─────────────────────────────────────────────────────┘  │  │  │
+│   │   │                                                             │  │  │
+│   │   │   Resource Limits (v2.1):                                   │  │  │
+│   │   │   ⏱️ cpu_cycles: 1_000_000    💾 memory: 10 MB             │  │  │
+│   │   │   📡 io_operations: 100       🌐 network_calls: 10         │  │  │
 │   │   │                                                             │  │  │
 │   │   │   ❌ Kein Dateisystem-Zugriff                               │  │  │
 │   │   │   ❌ Kein Netzwerk außer APIs                               │  │  │
@@ -165,25 +226,156 @@
 
 ---
 
-## Agent Definition Language (ADL)
+## Multi-Chain Wallet & Network Selection
 
-> _Die deklarative Sprache für Intents_
+> _Agenten verwalten Guthaben über mehrere Netzwerke und wählen autonom die beste Route_
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                    MULTI-CHAIN WALLET ARCHITEKTUR                          │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │                        AGENT WALLET                                 │  │
+│   │                    (verknüpft mit did:erynoa)                       │  │
+│   │                                                                     │  │
+│   │   ┌─────────────┐   ┌─────────────┐   ┌─────────────┐              │  │
+│   │   │ IOTA Wallet │   │  ETH Wallet │   │  SOL Wallet │              │  │
+│   │   │  (Primary)  │   │    (L2)     │   │             │              │  │
+│   │   ├─────────────┤   ├─────────────┤   ├─────────────┤              │  │
+│   │   │ Balance:    │   │ Balance:    │   │ Balance:    │              │  │
+│   │   │ 1,500 IOTA  │   │ 0.5 ETH     │   │ 25 SOL      │              │  │
+│   │   │ 500 ERY     │   │ 200 USDC    │   │ 100 USDC    │              │  │
+│   │   └──────┬──────┘   └──────┬──────┘   └──────┬──────┘              │  │
+│   │          │                 │                 │                      │  │
+│   │          └─────────────────┼─────────────────┘                      │  │
+│   │                            │                                        │  │
+│   │                            ▼                                        │  │
+│   │   ┌─────────────────────────────────────────────────────────────┐  │  │
+│   │   │                  NETWORK SELECTION ENGINE                   │  │  │
+│   │   ├─────────────────────────────────────────────────────────────┤  │  │
+│   │   │                                                             │  │  │
+│   │   │   Entscheidungskriterien:                                   │  │  │
+│   │   │   ├─ 💸 Transaktionsgebühren (Gas/Fees)                    │  │  │
+│   │   │   ├─ ⚡ Latenz & Finalität                                  │  │  │
+│   │   │   ├─ 💧 Liquidität des gewünschten Assets                  │  │  │
+│   │   │   ├─ 🤝 Counterparty-Chain (wo ist der Partner?)           │  │  │
+│   │   │   ├─ 🔐 Sicherheitsanforderungen                            │  │  │
+│   │   │   └─ 📊 Netzwerkauslastung                                  │  │  │
+│   │   │                                                             │  │  │
+│   │   └─────────────────────────────────────────────────────────────┘  │  │
+│   │                            │                                        │  │
+│   │                            ▼                                        │  │
+│   │                  ┌─────────────────┐                                │  │
+│   │                  │ OPTIMAL ROUTE   │                                │  │
+│   │                  │ → IOTA (0.001€) │                                │  │
+│   │                  └─────────────────┘                                │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Network Selection Algorithmus
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   NETWORK SELECTION – ENTSCHEIDUNGSLOGIK                                   │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   SCHRITT 1: Counterparty-Analyse                                  │  │
+│   │   ════════════════════════════════                                  │  │
+│   │   → Auf welcher Chain hat der Partner sein Wallet?                 │  │
+│   │   → DACS Resolution: did:erynoa:provider:xyz → Chains: [IOTA, ETH]│  │
+│   │                                                                     │  │
+│   │   SCHRITT 2: Gemeinsame Chains finden                              │  │
+│   │   ═══════════════════════════════════                               │  │
+│   │   → Intersection: Seeker-Chains ∩ Provider-Chains                  │  │
+│   │   → Beispiel: [IOTA, ETH, SOL] ∩ [IOTA, ETH] = [IOTA, ETH]        │  │
+│   │                                                                     │  │
+│   │   SCHRITT 3: Kosten-Nutzen-Analyse pro Chain                       │  │
+│   │   ═══════════════════════════════════════════                       │  │
+│   │   ┌──────────┬──────────┬──────────┬──────────┬──────────┐        │  │
+│   │   │ Chain    │ Fee      │ Latenz   │ Liquidität│ Score   │        │  │
+│   │   ├──────────┼──────────┼──────────┼──────────┼──────────┤        │  │
+│   │   │ IOTA     │ 0.001€   │ 1.5s     │ Hoch     │ 95      │        │  │
+│   │   │ ETH L2   │ 0.05€    │ 2s       │ Sehr hoch│ 82      │        │  │
+│   │   └──────────┴──────────┴──────────┴──────────┴──────────┘        │  │
+│   │                                                                     │  │
+│   │   SCHRITT 4: Auswahl & Fallback                                    │  │
+│   │   ═══════════════════════════════                                   │  │
+│   │   → Primär: IOTA (höchster Score)                                  │  │
+│   │   → Fallback: ETH L2 (wenn IOTA-Tx fehlschlägt)                   │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Cross-Chain Transfers (via DACS Bridge)
+
+Wenn Seeker und Provider auf unterschiedlichen Chains sind, koordiniert DACS den Transfer:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   CROSS-CHAIN SETTLEMENT                                                   │
+│                                                                             │
+│   Seeker (ETH)                                    Provider (IOTA)          │
+│   ┌──────────────┐                               ┌──────────────┐          │
+│   │ did:erynoa:  │                               │ did:erynoa:  │          │
+│   │ seeker:abc   │                               │ provider:xyz │          │
+│   │              │                               │              │          │
+│   │ Zahlt: ETH   │                               │ Empfängt:IOTA│          │
+│   └──────┬───────┘                               └──────▲───────┘          │
+│          │                                              │                   │
+│          │  1. Lock ETH                                 │ 4. Release IOTA  │
+│          ▼                                              │                   │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                         DACS BRIDGE                                │  │
+│   │                                                                     │  │
+│   │   2. BFT Konsens: Verifiziere Lock auf ETH                         │  │
+│   │   3. Threshold Signature: Autorisiere Release auf IOTA             │  │
+│   │                                                                     │  │
+│   │   Atomarität garantiert:                                           │  │
+│   │   → Entweder beide Seiten erfolgreich ODER Rollback               │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Wallet-Konfiguration in ECL
+
+Das Multi-Chain Wallet wird im ECL/Agent-Modul konfiguriert:
+
+---
+
+## Agent Definition Language (ADL) – Das ecl/agent Modul
+
+> _Die deklarative Sprache für Intents – Teil der [ECL](./erynoa-configuration-language.md)_
+
+ADL ist das **ecl/agent**-Modul der Erynoa Configuration Language. Es definiert, wie Agenten ihre Absichten (Intents) und Annahmeregeln (Policies) deklarativ formulieren.
 
 ### Design-Prinzipien
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│                            ADL DESIGN                                       │
+│                       ECL/AGENT DESIGN                                      │
 │                                                                             │
 │   ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐          │
-│   │   DEKLARATIV    │   │   ERWEITERBAR   │   │ MASCHINENLESBAR │          │
+│   │   DEKLARATIV    │   │    MODULAR      │   │ MASCHINENLESBAR │          │
 │   │   ════════════   │   │  ═════════════  │   │  ══════════════ │          │
 │   │                 │   │                 │   │                 │          │
-│   │   Beschreibt    │   │   Domänen       │   │   Automatisch   │          │
-│   │   WAS, nicht    │   │   können eigene │   │   validierbar   │          │
-│   │   WIE           │   │   Constraints   │   │   und ausführbar│          │
-│   │                 │   │   hinzufügen    │   │                 │          │
+│   │   Beschreibt    │   │  Nutzt andere   │   │   Automatisch   │          │
+│   │   WAS, nicht    │   │  ECL-Module:    │   │   validierbar   │          │
+│   │   WIE           │   │  ecl/trust,     │   │   und ausführbar│          │
+│   │                 │   │  ecl/environ,   │   │                 │          │
+│   │                 │   │  ecl/economic   │   │                 │          │
 │   └─────────────────┘   └─────────────────┘   └─────────────────┘          │
 │                                                                             │
 │   "Ich will laden" statt "Sende Nachricht an Server X, parse Response..."  │
@@ -191,24 +383,24 @@
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Die 8 Bausteine eines ADL-Dokuments
+### Die 8 Bausteine eines Intent-Dokuments (ECL/Agent)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│                         ADL STRUCTURE                                       │
+│                    ECL/AGENT INTENT STRUCTURE                              │
 │                                                                             │
 │   ┌─────────────────────────────────────────────────────────────────────┐  │
 │   │                                                                     │  │
-│   │   1️⃣ IDENTITY         Wer bin ich?                                  │  │
+│   │   1️⃣ IDENTITY (ecl/identity)   Wer bin ich?                         │  │
 │   │   ─────────────────────────────────────────────────────────────    │  │
 │   │   DID, Organisation, Credentials                                    │  │
 │   │                                                                     │  │
-│   │   2️⃣ OBJECTIVE        Was will ich erreichen?                       │  │
+│   │   2️⃣ OBJECTIVE (ecl/object)    Was will ich erreichen?              │  │
 │   │   ─────────────────────────────────────────────────────────────    │  │
 │   │   Ziel, Blueprint-Referenz, Service-Typ                            │  │
 │   │                                                                     │  │
-│   │   3️⃣ FUNCTIONAL       Welche technischen Anforderungen?            │  │
+│   │   3️⃣ FUNCTIONAL                Welche technischen Anforderungen?   │  │
 │   │   ─────────────────────────────────────────────────────────────    │  │
 │   │   Leistung, Kapazität, Latenz, Verfügbarkeit                       │  │
 │   │                                                                     │  │
@@ -237,39 +429,42 @@
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Vollständiges ADL-Beispiel
+### Vollständiges ECL/Agent Intent-Beispiel
 
 ```yaml
-# ADL: Seeker Intent für EV-Charging
-adl_version: "1.0"
+# ECL: Seeker Intent für EV-Charging
+ecl_version: "1.0"
+use: [ecl/core, ecl/agent, ecl/identity, ecl/trust, ecl/environ, ecl/economic]
 
-# 1️⃣ Identity
-identity:
-  did: "did:erynoa:vehicle-456"
-  organization: "FleetCo GmbH"
-  credentials:
-    - type: "fleet-operator-license"
-      issuer: "did:erynoa:authority-de"
+intent:
+  kind: seeker_intent
 
-# 2️⃣ Objective
-objective:
-  type: "ev-charging-session"
-  blueprint: "erynoa:bp:ev-charging-station:v1.2"
-  description: "Charge electric vehicle with renewable energy"
+  # 1️⃣ Identity (ecl/identity)
+  identity:
+    did: "did:erynoa:vehicle:vin-456"
+    organization: "did:erynoa:org:fleetco-gmbh"
+    credentials:
+      - ref: "vc:erynoa:fleet-license:2025-001"
+        type: fleet_operator_license
 
-# 3️⃣ Functional Constraints
-functional:
-  power_min: 50 # kW
-  power_preferred: 150 # kW
-  energy_source:
-    - renewable
-    - green-certified
-  connector:
-    - CCS
-    - Type2
-  availability: immediate # oder: scheduled
+  # 2️⃣ Objective (ecl/object)
+  objective:
+    type: "ev-charging-session"
+    blueprint: "bp:erynoa:ev-charging-station:v1.2"
+    description: "Charge electric vehicle with renewable energy"
 
-# 4️⃣ Normative Constraints
+  # 3️⃣ Functional Constraints
+  functional:
+    power:
+      min: 50 # kW
+      preferred: 150
+    energy_source:
+      required: [renewable, green_certified]
+    connector:
+      acceptable: [CCS, Type2]
+    availability: immediate
+
+  # 4️⃣ Normative Constraints (ecl/object)
 normative:
   blueprints:
     - "erynoa:bp:ev-charging-station:v1"
@@ -297,6 +492,38 @@ geospatial:
   exclude_geohashes: # Blacklist
     - "u281zx"
 
+# 6️⃣a Search Environments (NEU)
+environments:
+  # Primäre Suchumgebung
+  primary: "env:erynoa:ev-charging:germany"
+
+  # Intersection: NUR Ergebnisse, die in ALLEN diesen Umgebungen sind
+  intersect:
+    - "env:erynoa:roaming:hubject" # Hubject Roaming-Netzwerk
+    - "env:erynoa:energy:renewable" # Grüne Energie zertifiziert
+
+  # Exclusion: Ergebnisse aus diesen Umgebungen ausschließen
+  exclude:
+    - "env:erynoa:operator:blacklisted"
+    - "env:erynoa:network:unreliable"
+
+  # Fallback: Bei leeren Ergebnissen, diese Umgebungen versuchen
+  fallback:
+    - "env:erynoa:ev-charging:europe"
+    - "env:erynoa:real_world"
+
+  # Suchstrategie
+  search:
+    strategy: "informed" # informed | uninformed
+    heuristic: "ev_charging_score" # Umgebungsspezifische Heuristik
+
+    # Uninformierte Strategie (wenn strategy: uninformed)
+    uninformed_method: "bfs" # bfs | dfs | iterative_deepening
+
+    # Suchparameter
+    max_results: 10
+    timeout_ms: 500
+
 # 7️⃣ Economic Constraints
 economic:
   max_price_kwh: 0.40 # EUR
@@ -313,6 +540,46 @@ policy:
     if_no_match: expand_radius # oder: wait | abort
     max_radius_km: 20
   timeout_minutes: 5
+
+# 9️⃣ Multi-Chain Wallet & Network (NEU)
+wallet:
+  # Verfügbare Chains mit Guthaben
+  chains:
+    - chain: "iota"
+      balances:
+        IOTA: 1500
+        ERY: 500
+      priority: 1 # Primäre Chain
+    - chain: "ethereum_l2"
+      balances:
+        ETH: 0.5
+        USDC: 200
+      priority: 2
+    - chain: "solana"
+      balances:
+        SOL: 25
+        USDC: 100
+      priority: 3
+
+  # Netzwerkauswahl-Präferenzen
+  network_selection:
+    strategy: "auto" # auto | manual | lowest_fee | fastest
+    preferences:
+      max_fee_eur: 0.10
+      max_latency_seconds: 5
+      prefer_counterparty_chain: true # Wenn möglich, Partner-Chain nutzen
+
+    # Explizite Prioritäten (wenn strategy: manual)
+    chain_priority:
+      - iota
+      - ethereum_l2
+      - solana
+
+    # Cross-Chain Bridge Einstellungen
+    bridge:
+      enabled: true
+      max_bridge_fee_eur: 0.50
+      min_amount_for_bridge: 10 # EUR-Äquivalent
 ```
 
 ---

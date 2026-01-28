@@ -59,6 +59,7 @@ Erynoa ist ein **dezentrales Protokoll**, das autonomen Agenten ermöglicht, ver
 
 | Sphäre   | Funktion                   | Technologie           |
 | -------- | -------------------------- | --------------------- |
+| **DACS** | Identity, Multi-Chain DID  | BFT, BLS, libp2p      |
 | **ERY**  | Semantik, Trust, Discovery | Qdrant, Karmic Engine |
 | **ECHO** | Agenten, Verhandlung, P2P  | WASM, libp2p, XMTP    |
 | **NOA**  | Finalität, Settlement      | MoveVM, Starfish BFT  |
@@ -155,10 +156,11 @@ Die Dokumentation ist in zwei Bereiche unterteilt:
 
 ```
 documentation/
-├── ROADMAP.md        # 🗺️ Strategische Roadmap (NEU)
+├── ROADMAP.md        # 🗺️ Strategische Roadmap
 ├── concept/          # 🧠 Protokoll & Konzept
 │   ├── fachkonzept.md           # ⭐ Master-Dokument (Start hier)
 │   ├── kernkonzept.md           # High-Level Überblick
+│   ├── dacs-identity.md         # 🔐 DACS Multi-Chain Identity (NEU)
 │   ├── system-architecture-overview.md
 │   ├── liquides-datenmodell.md
 │   ├── trust-and-reputation.md
@@ -188,6 +190,7 @@ documentation/
 | -------------------------------------------------------------------------- | ------------------------------------------------ |
 | **[📋 Fachkonzept](documentation/concept/fachkonzept.md)**                 | **⭐ Hier starten** – Vollständige Spezifikation |
 | [Kernkonzept](documentation/concept/kernkonzept.md)                        | Kompakter High-Level-Überblick                   |
+| **[🔐 DACS Identity](documentation/concept/dacs-identity.md)**             | **Dezentrales Multi-Chain Identity System**      |
 | [Systemarchitektur](documentation/concept/system-architecture-overview.md) | Technische Architektur-Details                   |
 | [Liquides Datenmodell](documentation/concept/liquides-datenmodell.md)      | Blueprints, AMOs, Fluid Extensions               |
 | [Trust & Reputation](documentation/concept/trust-and-reputation.md)        | Karmic Engine, Trust Vectors                     |

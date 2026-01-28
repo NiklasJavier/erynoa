@@ -2,8 +2,9 @@
 
 > **Zielgruppe:** Product/Business, Partner, Marketing, technische Leser:innen
 > **Lesezeit:** ca. 15 Minuten
+> **Version:** ECL v2.1 – Identity-First + ECLVM
 > **Voraussetzung:** [Kernkonzept](./kernkonzept.md) gelesen
-> **Verwandte Dokumente:** [Cybernetic Loop](./cybernetic-loop.md) · [Agents & ADL](./agents-and-adl.md) · [Glossar](./glossary.md)
+> **Verwandte Dokumente:** [DACS Identity](./dacs-identity.md) · [Cybernetic Loop](./cybernetic-loop.md) · [Agents & ADL](./agents-and-adl.md) · [ECL Spezifikation](./erynoa-configuration-language.md) · [Glossar](./glossary.md)
 
 ---
 
@@ -14,14 +15,22 @@ Erynoa wird durch konkrete Geschichten lebendig. Jeder Use Case zeigt:
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│   ❌ PROBLEM HEUTE          →          ✅ LÖSUNG MIT ERYNOA                 │
-│   ════════════════                     ═══════════════════                  │
+│   ❌ PROBLEM HEUTE          →          ✅ LÖSUNG MIT ERYNOA (v2.1)          │
+│   ════════════════                     ═══════════════════════════          │
 │                                                                             │
+│   Chain Lock-in                        Multi-Chain Identity (ERY/DACS)      │
 │   Fragmentierung                       Semantic Index (ERY)                 │
-│   Intransparenz                        Trust & Reputation                   │
+│   Intransparenz                        Trust & Karma Tiers (ERY/Karmic)     │
 │   Zentrale Gatekeeper                  P2P via ECHO                         │
-│   Manuelle Prozesse                    Autonome Agenten                     │
-│   Starre Verträge                      Continuous Value Streaming           │
+│   Manuelle Prozesse                    ECLVM-programmierte Agenten          │
+│   Starre Verträge                      Dynamic Templates & Live-Patching    │
+│   Fehlende Governance                  Environment Governance               │
+│                                                                             │
+│   NEU in v2.1:                                                              │
+│   • Sub-Identities für granulare Kontrolle                                  │
+│   • Karma Tiers (Newcomer → Elder) für Trust-Gating                        │
+│   • ECLVM für dynamische Logik zur Laufzeit                                │
+│   • Environment Governance (Legislative + Executive)                        │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
