@@ -1,159 +1,288 @@
-# 🚀 Getting Started
+# Erynoa – Getting Started
 
-**Schnellstart-Anleitung - In 3 Schritten zum laufenden Projekt**
-
-**Letzte Aktualisierung**: 2026-01-27 (23:40)
+> **Dokumenttyp:** Guide
+> **Zielgruppe:** Neue Entwickler
+> **Dauer:** ca. 10 Minuten
+> **Voraussetzungen:** Nix, Docker
 
 ---
 
-## ⚡ Schnellstart (Keine Installation nötig)
+## Willkommen
 
-**Voraussetzungen:** (siehe [Setup Guide](setup/setup.md))
-- Nix installiert
-- Docker Desktop installiert und gestartet
+Dieser Guide bringt dich in **3 Schritten** zu einem laufenden Erynoa-Entwicklungsumfeld.
 
-**3 Schritte:**
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   🚀 GETTING STARTED                                                        │
+│                                                                             │
+│   ┌─────────┐      ┌─────────┐      ┌─────────┐      ┌─────────┐           │
+│   │    1    │ ───▶ │    2    │ ───▶ │    3    │ ───▶ │   ✅    │           │
+│   │  Clone  │      │   Nix   │      │  Start  │      │  Done!  │           │
+│   └─────────┘      └─────────┘      └─────────┘      └─────────┘           │
+│                                                                             │
+│   ~30 Sek.         ~60 Sek.         ~2 Min.          🎉                     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Voraussetzungen
+
+Bevor du startest, installiere diese beiden Tools:
+
+| Tool       | Zweck                | Installation                                                      |
+| :--------- | :------------------- | :---------------------------------------------------------------- |
+| **Nix**    | Entwicklungsumgebung | Siehe unten                                                       |
+| **Docker** | Container-Services   | [Docker Desktop](https://www.docker.com/products/docker-desktop/) |
+
+### Nix installieren
+
+<details>
+<summary><strong>macOS</strong></summary>
 
 ```bash
-# 1. Repository klonen
+curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+```
+
+Terminal neu starten, dann:
+
+```bash
+nix --version
+```
+
+</details>
+
+<details>
+<summary><strong>Linux (Ubuntu/Debian)</strong></summary>
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+```
+
+Terminal neu starten, dann:
+
+```bash
+nix --version
+```
+
+</details>
+
+---
+
+## 🚀 3 Schritte zum Start
+
+### Schritt 1: Repository klonen
+
+```bash
 git clone git@github.com:NiklasJavier/erynoa.git
 cd erynoa
+```
 
-# 2. Nix Dev-Shell betreten (lädt alle Tools automatisch)
+### Schritt 2: Nix Dev-Shell betreten
+
+```bash
 nix develop
+```
 
-# 3. Projekt starten
+> ⏳ Beim ersten Mal dauert das 1-2 Minuten. Nix lädt alle Tools automatisch.
+
+### Schritt 3: Projekt starten
+
+```bash
 just dev
 ```
 
-**4. Warte 2 Minuten** ⏳
+<div align="center">
 
-Die Services starten und ZITADEL wird automatisch konfiguriert. Nach ca. 2 Minuten kannst du im Browser öffnen:
+⏳ **~2 Minuten warten** → 🌐 **http://localhost:3001** öffnen
 
-```
-http://localhost:3001
-```
-
-**Fertig!** 🎉
-
-Das startet alles:
-- **Proxy** auf http://localhost:3001 (Caddy Reverse Proxy)
-  - **Console** auf http://localhost:3001/console
-  - **Platform** auf http://localhost:3001/platform
-  - **Docs** auf http://localhost:3001/docs
-  - **Backend API** auf http://localhost:3001/api
-- **Backend** direkt auf http://localhost:3000 (für Tests)
-- **ZITADEL** auf http://localhost:8080 (Auth) - automatisch konfiguriert
-- **MinIO** auf http://localhost:9001 (S3 Storage Console)
-- **PostgreSQL** (OrioleDB) und **DragonflyDB** (Redis) im Hintergrund
-
-**Test Login:**
-- User: `testuser` / `Test123!`
-- Admin: `zitadel-admin` / `Password1!`
+</div>
 
 ---
 
-## 📦 Nix installieren
+## 🎉 Fertig!
 
-Nix ist der einzige Package Manager, den du installieren musst. Alle anderen Tools (Rust, Node.js, pnpm, buf, just, etc.) werden automatisch von Nix bereitgestellt.
+Nach dem Start sind folgende Services verfügbar:
 
-### macOS
-
-```bash
-curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   🌐 http://localhost:3001                                                 │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                                                                     │  │
+│   │   /console   ───▶  📊 Admin Console                                │  │
+│   │   /platform  ───▶  🖥️ Hauptplattform                               │  │
+│   │   /docs      ───▶  📖 Dokumentation                                │  │
+│   │   /api       ───▶  🔌 Backend API                                  │  │
+│   │                                                                     │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Terminal neu starten, dann verifizieren:
-```bash
-nix --version
-```
+### Alle Services
 
-### Ubuntu/Debian
+| Service      | URL                            | Beschreibung        |
+| :----------- | :----------------------------- | :------------------ |
+| 🌐 **Proxy** | http://localhost:3001          | Hauptzugang (Caddy) |
+| 📊 Console   | http://localhost:3001/console  | Admin-Bereich       |
+| 🖥️ Platform  | http://localhost:3001/platform | Hauptplattform      |
+| 📖 Docs      | http://localhost:3001/docs     | Dokumentation       |
+| 🔌 API       | http://localhost:3001/api      | Backend API         |
+| 🦀 Backend   | http://localhost:3000          | Direkt (für Tests)  |
+| 🔐 ZITADEL   | http://localhost:8080          | Auth Server         |
+| 📦 MinIO     | http://localhost:9001          | Storage Console     |
 
-```bash
-curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
-```
+### Test-Login
 
-Terminal neu starten, dann verifizieren:
-```bash
-nix --version
-```
-
-**Hinweis:** Für Ubuntu/Debian wird `systemd` benötigt. Falls nicht vorhanden, siehe [Nix Installation Guide](https://nixos.org/download).
+| Rolle | User            | Passwort     |
+| :---- | :-------------- | :----------- |
+| User  | `testuser`      | `Test123!`   |
+| Admin | `zitadel-admin` | `Password1!` |
 
 ---
 
-## 🛠️ Was wird automatisch installiert?
+## 🛠️ Was Nix automatisch bereitstellt
 
-Wenn du `nix develop` ausführst, werden folgende Tools automatisch bereitgestellt:
+Wenn du `nix develop` ausführst, werden alle Tools geladen – ohne manuelle Installation:
 
-- ✅ **Rust Toolchain** (inkl. rust-analyzer, clippy, cargo-nextest)
-- ✅ **Node.js & pnpm** (für Frontend-Entwicklung)
-- ✅ **buf** (Protobuf Code-Generierung)
-- ✅ **just** (Task Runner - alle `just` Befehle)
-- ✅ **sqlx CLI** (Datenbank-Migrationen)
-- ✅ **Alle Build-Tools** (mold linker, etc.)
-
-**Hinweis:** Die Protobuf-Konfigurationsdateien (`buf.gen.yaml` und `buf.yaml`) befinden sich im Projekt-Root und werden automatisch von `buf generate` verwendet.
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   ✅ AUTOMATISCH INSTALLIERT                                               │
+│                                                                             │
+│   🦀 Rust Toolchain        rust-analyzer · clippy · cargo-nextest          │
+│   📦 Node.js & pnpm        Frontend-Entwicklung                            │
+│   📋 buf                   Protobuf Code-Generierung                       │
+│   ⚙️ just                  Task Runner                                     │
+│   🗄️ sqlx CLI              Datenbank-Migrationen                           │
+│   🔗 mold                  Schneller Linker                                │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 **Vorteile:**
-- ⚡ **Schnell**: Keine manuelle Tool-Installation nötig
-- 🔒 **Reproduzierbar**: Gleiche Tools für alle Entwickler
-- 🧹 **Sauber**: Keine System-Installationen (außer Nix selbst)
 
----
-
-## 📋 Vollständige Setup-Anleitung
-
-Falls du mehr Details benötigst oder Probleme hast, siehe:
-
-- **[Setup Guide (macOS)](../setup/setup.md)** - Detaillierte Anleitung für macOS
-- **[Setup Guide (Ubuntu)](../setup/setup.md#ubuntu)** - Detaillierte Anleitung für Ubuntu
-- **[Dev Setup](../setup/dev_setup.md)** - Container-in-Container Entwicklung
+- ⚡ **Schnell** – Keine manuelle Installation
+- 🔒 **Reproduzierbar** – Gleiche Tools für alle
+- 🧹 **Sauber** – Keine System-Verschmutzung
 
 ---
 
 ## 🔧 Wichtige Befehle
 
-| Befehl | Beschreibung |
-|--------|--------------|
-| `just dev` | **Startet alles** (Console + Platform + Docs + Backend) |
-| `just dev [frontend]` | Startet spezifisches Frontend (console, platform, docs) |
-| `just status` | Zeigt Status aller Services |
-| `just logs [service]` | Logs anzeigen (alle oder spezifischer Service) |
-| `just stop` | Stoppt alle Container |
-| `just restart` | Schneller Neustart aller Dev-Services |
-| `just reset` | Alles löschen und neu starten |
+### Entwicklung
 
-Alle Befehle: `just --list`
+| Befehl             | Beschreibung          |
+| :----------------- | :-------------------- |
+| `just dev`         | 🚀 **Startet alles**  |
+| `just dev console` | Nur Console           |
+| `just status`      | Service-Status        |
+| `just logs`        | Alle Logs             |
+| `just stop`        | Container stoppen     |
+| `just restart`     | Neustart              |
+| `just reset`       | Komplett zurücksetzen |
+
+### Code Quality
+
+| Befehl       | Beschreibung |
+| :----------- | :----------- |
+| `just check` | Cargo check  |
+| `just lint`  | Clippy       |
+| `just test`  | Tests        |
+
+<details>
+<summary><strong>📋 Alle Befehle</strong></summary>
+
+```bash
+just --list
+```
+
+</details>
 
 ---
 
 ## 🐛 Troubleshooting
 
 ### Services starten nicht
+
 ```bash
 just reset
 just dev
 ```
 
 ### Port bereits belegt
+
 ```bash
 just stop
-lsof -i :3000  # oder :3001, :8080
+lsof -i :3001
 ```
 
 ### Nix: "experimental-features" Fehler
+
 ```bash
 mkdir -p ~/.config/nix
 echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
 ```
 
-### Weitere Hilfe
-- [Setup Guide](../setup/setup.md) - Detaillierte Setup-Anleitung
-- [Configuration](../reference/config.md) - Service-Konfiguration
-- [Architecture](../reference/architecture.md) - System-Architektur
+### Docker-Probleme
+
+```bash
+# Docker Desktop neustarten, dann:
+just reset
+just dev
+```
+
+### Häufige Probleme
+
+| Problem                | Lösung                   |
+| :--------------------- | :----------------------- |
+| Services starten nicht | `just reset && just dev` |
+| Auth-Fehler            | `just zitadel-reset`     |
+| Port belegt            | `just stop`              |
+| Nix-Fehler             | Terminal neu starten     |
 
 ---
 
-**Fertig!** Du kannst jetzt mit der Entwicklung beginnen. 🎉
+## 📖 Nächste Schritte
+
+| Was                   | Dokument                                     |
+| :-------------------- | :------------------------------------------- |
+| Alles auf einen Blick | [Essential Guide](../essential_guide.md)     |
+| System-Architektur    | [Architecture](../reference/architecture.md) |
+| Code Standards        | [Style Guide](../development/style-guide.md) |
+| Offene Aufgaben       | [TODOs](../development/todos.md)             |
+| Auth konfigurieren    | [ZITADEL Guide](./zitadel.md)                |
+
+---
+
+## 🧠 Protokoll-Konzepte
+
+Für das Protokoll-Design (ERY, ECHO, NOA) siehe:
+
+| Dokument                                       | Inhalt                     |
+| :--------------------------------------------- | :------------------------- |
+| [📋 Fachkonzept](../../concept/fachkonzept.md) | Vollständige Spezifikation |
+| [🎯 Kernkonzept](../../concept/kernkonzept.md) | High-Level Überblick       |
+| [📖 Glossar](../../concept/glossary.md)        | Begriffsdefinitionen       |
+
+---
+
+<div align="center">
+
+```
+┌─────────────────────────────────────────────┐
+│                                             │
+│   🎉 Du bist startklar!                     │
+│                                             │
+│   http://localhost:3001                     │
+│                                             │
+└─────────────────────────────────────────────┘
+```
+
+**Viel Erfolg bei der Entwicklung!**
+
+</div>
