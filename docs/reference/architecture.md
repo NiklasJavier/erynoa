@@ -1,202 +1,309 @@
 # 🏗️ System-Architektur
 
-## Übersicht
+**Technische Architektur-Dokumentation für das Erynoa-Projekt**
 
-Architektur-Dokumentation für das Erynoa-Projekt.
-
----
-
-## 🎯 Aktueller Stack-Status (Enterprise-Grade Fundament)
-
-**Letzte Aktualisierung**: 2026-01-27
-
-**Status**: Aktuell und vollständig dokumentiert ✅
-
-Das Erynoa-Projekt basiert auf einem extrem performanten, typsicheren und skalierbaren Fundament. Die Komplexität von Python-Microservices und Observability-Tools (Prometheus) wurde bewusst zunächst weggelassen, um sich auf die Kernarchitektur zu konzentrieren.
-
-### 1. Frontend: Monorepo & "Shared Core" Strategie
-
-Die redundanten Frontend-Apps (console, platform, docs) wurden in einen effizienten **pnpm Workspace** umgewandelt.
-
-#### Struktur
-- **pnpm Workspace**: Alle Frontend-Apps (console, platform, docs) sind im selben Workspace
-  - Dependencies werden zwischen Apps gehardlinkt (Platz- und Zeitersparnis)
-- **Geteilte Protobuf-Types**: Alle Apps nutzen die gleichen generierten TypeScript-Types aus `src/gen/`
-  - Single Source of Truth für API-Definitionen
-- **Konsistente Struktur**: Alle Apps haben die gleiche Verzeichnisstruktur (`src/lib/api/`, `src/lib/components/`, etc.)
-  - Einfacheres Wartung und Code-Sharing durch Copy-Paste (später kann eine `@erynoa/shared` Library hinzugefügt werden)
-- **Build-System**: Nutzung von **Turborepo (turbo)**, um Builds und Lints parallel und gecached auszuführen
-  - Drastische Reduzierung der CI-Zeiten
-  - Parallele Frontend-Builds (console, platform, docs)
-  - Optimiertes Caching für schnellere Builds
-
-#### Vorteile
-- Keine Code-Duplikation zwischen Frontend-Apps
-- Konsistente UI/UX über alle Apps hinweg
-- Schnellere Build-Zeiten durch Caching
-- Einfacheres Wartung und Updates
-
-### 2. Backend: High-Performance Rust
-
-Das Backend wurde auf maximale Effizienz und Typsicherheit getrimmt.
-
-#### Modernster Stack
-- **Axum 0.8**: Webserver-Framework
-- **SQLx 0.8**: Datenbank-Abstraktion mit Compile-Time Query Checking
-- **Connect-RPC**: End-to-End Typsicherheit
-  - API wird über `.proto` Dateien definiert
-  - TypeScript-Clients für das Frontend werden automatisch generiert
-  - Frontend und Backend können sich so nicht "missverstehen"
-
-#### Memory Management
-- **Jemalloc**: Integration von `tikv-jemallocator` im Code
-  - Verhindert Speicherfragmentierung bei Langzeitbetrieb
-  - Optimiert für Server-Workloads
-
-#### Release-Optimierung
-- **Extrem kleine und schnelle Binaries**:
-  - `strip = true`: Entfernt Debug-Symbole
-  - `lto = "fat"`: Aggressive Link-Time Optimization
-  - Minimale Binary-Größe bei maximaler Performance
-
-#### Vorteile
-- Höchste Performance durch Rust
-- Compile-Time Typsicherheit
-- Automatische API-Synchronisation zwischen Frontend und Backend
-- Optimierte Memory-Nutzung
-
-### 3. Developer Experience (DX) & Infrastruktur
-
-Die Entwicklungsumgebung wurde professionalisiert, um "Works on my machine"-Probleme zu eliminieren.
-
-#### Nix-Integration
-- **flake.nix**: Hermetische Abriegelung der gesamten Toolchain
-  - Rust, Node, Protobuf-Tools werden reproduzierbar bereitgestellt
-  - Garantiert identische Entwicklungsumgebung für alle Entwickler
-  - Keine Versionskonflikte mehr
-
-#### DevContainer
-- **Container-Setup**: Bündelt die gesamte Infrastruktur
-  - Datenbank (PostgreSQL)
-  - Cache (Redis)
-  - Auth (Zitadel)
-  - Alle notwendigen Tools
-- **Sofort startklar**: Neue Entwickler können sofort mit der Entwicklung beginnen
-- **Konsistente Umgebung**: Gleiche Bedingungen für alle
-
-#### Proxy-Server
-- **Caddy**: Reverse Proxy für alle Services
-  - Bündelt alle Frontend-Apps und das Backend unter einem Port
-  - Übernimmt Routing und SSL automatisch
-  - Einfache Konfiguration durch Caddyfile
-
-#### Vorteile
-- Reproduzierbare Entwicklungsumgebung
-- Schneller Onboarding für neue Entwickler
-- Einfaches Routing und SSL-Management
-- Keine lokalen Konfigurationsprobleme mehr
-
-### Fazit: Enterprise-Grade Fundament
-
-Das System ist:
-
-- **Modular**: Durch das Monorepo und die Shared-Core-Strategie
-- **Schnell**: Durch Rust & Svelte
-- **Robust**: Durch Typsicherheit und Nix
-- **Skalierbar**: Durch klare Architektur und moderne Patterns
-
-**Bewusst weggelassen** (können später bei Bedarf hinzugefügt werden):
-- Python-Microservices
-- Prometheus (Observability)
-- RAM-Datenbanken
-
-Diese "Add-ons" können später problemlos hinzugefügt werden, ohne die Architektur umwerfen zu müssen.
+**Letzte Aktualisierung**: 2026-01-28
 
 ---
 
-## Backend API-Struktur
+## 📋 Inhaltsverzeichnis
 
-### Feature-basierte Organisation
+- [Übersicht](#-übersicht)
+- [System-Diagramm](#-system-diagramm)
+- [Frontend-Architektur](#-frontend-architektur)
+- [Backend-Architektur](#-backend-architektur)
+- [Infrastruktur](#-infrastruktur)
+- [API-Kommunikation](#-api-kommunikation)
+- [Verzeichnisstruktur](#-verzeichnisstruktur)
+
+---
+
+## 🎯 Übersicht
+
+Erynoa basiert auf einem **performanten, typsicheren und skalierbaren** Fundament:
+
+| Schicht      | Technologie            | Beschreibung             |
+| ------------ | ---------------------- | ------------------------ |
+| **Frontend** | SvelteKit, TypeScript  | 3 Apps im Monorepo       |
+| **Backend**  | Rust, Axum             | High-Performance API     |
+| **API**      | Connect-RPC (Protobuf) | End-to-End Typsicherheit |
+| **Auth**     | ZITADEL                | OIDC/JWT Authentication  |
+| **Database** | PostgreSQL (OrioleDB)  | Persistenz               |
+| **Cache**    | DragonflyDB            | Redis-kompatibel         |
+| **Storage**  | MinIO                  | S3-kompatibel            |
+| **Proxy**    | Caddy                  | Reverse Proxy, Auto-SSL  |
+
+---
+
+## 🖼 System-Diagramm
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         Browser                                  │
+└─────────────────────────────┬───────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Caddy Reverse Proxy                          │
+│                      (Port 3001)                                 │
+│  ┌──────────┬──────────┬──────────┬──────────┐                  │
+│  │ /console │ /platform│  /docs   │   /api   │                  │
+│  └────┬─────┴────┬─────┴────┬─────┴────┬─────┘                  │
+└───────┼──────────┼──────────┼──────────┼────────────────────────┘
+        │          │          │          │
+        ▼          ▼          ▼          ▼
+┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────────────────┐
+│  Console  │ │ Platform  │ │   Docs    │ │    Backend (Rust)     │
+│   :5173   │ │   :5174   │ │   :5175   │ │        :3000          │
+│ SvelteKit │ │ SvelteKit │ │ SvelteKit │ │    Axum + SQLx        │
+└───────────┘ └───────────┘ └───────────┘ └───────────┬───────────┘
+                                                      │
+                    ┌─────────────────────────────────┼─────────────┐
+                    │                                 │             │
+                    ▼                                 ▼             ▼
+           ┌───────────────┐               ┌──────────────┐ ┌─────────────┐
+           │   ZITADEL     │               │  PostgreSQL  │ │ DragonflyDB │
+           │    :8080      │               │    :5432     │ │    :6379    │
+           │   (Auth)      │               │  (OrioleDB)  │ │   (Cache)   │
+           └───────────────┘               └──────────────┘ └─────────────┘
+                                                      │
+                                                      ▼
+                                           ┌──────────────┐
+                                           │    MinIO     │
+                                           │  :9000/9001  │
+                                           │  (Storage)   │
+                                           └──────────────┘
+```
+
+---
+
+## 🎨 Frontend-Architektur
+
+### Monorepo-Strategie
+
+Das Frontend nutzt einen **pnpm Workspace** mit **Turborepo** für optimierte Builds:
+
+```
+frontend/
+├── console/      # Admin Console
+├── platform/     # Main Platform
+└── docs/         # Documentation
+```
+
+### Vorteile
+
+| Feature                  | Beschreibung                                 |
+| ------------------------ | -------------------------------------------- |
+| **Shared Dependencies**  | Hardlinked via pnpm (Platz- & Zeitersparnis) |
+| **Shared Types**         | Generierte Protobuf-Types in `src/gen/`      |
+| **Parallele Builds**     | Turborepo mit Caching                        |
+| **Konsistente Struktur** | Gleiche Verzeichnisstruktur in allen Apps    |
+
+### Tech Stack
+
+| Komponente       | Version | Beschreibung         |
+| ---------------- | ------- | -------------------- |
+| **SvelteKit**    | 2.x     | Meta-Framework       |
+| **Svelte**       | 5.x     | UI Framework (Runes) |
+| **TypeScript**   | 5.x     | Type Safety          |
+| **Tailwind CSS** | 3.x     | Styling              |
+| **Vite**         | 5.x     | Build Tool           |
+| **Biome**        | 1.x     | Linting & Formatting |
+
+---
+
+## 🦀 Backend-Architektur
+
+### High-Performance Rust Stack
+
+| Komponente      | Version | Beschreibung               |
+| --------------- | ------- | -------------------------- |
+| **Axum**        | 0.8     | Web Framework              |
+| **Tokio**       | 1.x     | Async Runtime              |
+| **SQLx**        | 0.8     | DB mit Compile-Time Checks |
+| **Connect-RPC** | -       | gRPC-Web API               |
+| **Jemalloc**    | -       | Memory Allocator           |
+
+### Optimierungen
+
+```toml
+# Cargo.toml [profile.release]
+strip = true      # Debug-Symbole entfernen
+lto = "fat"       # Aggressive Link-Time Optimization
+```
+
+**Ergebnis:** Kleine Binaries, maximale Performance
+
+### API-Struktur
 
 ```
 backend/src/api/
-├── v1/                       # API Version 1
-│   ├── health/               # Health Check
-│   ├── info/                 # Info & Status
-│   ├── users/                # User Management
-│   └── storage/              # Storage Operations
-├── middleware/               # Middleware Layer
-│   ├── auth.rs
-│   ├── cors.rs
-│   ├── logging.rs
-│   └── error_handler.rs
-└── shared/                   # Shared Utilities
+├── v1/                    # API Version 1
+│   ├── health/            # Health Check
+│   ├── info/              # Info & Status
+│   ├── users/             # User Management
+│   └── storage/           # Storage Operations
+├── middleware/            # Middleware Layer
+│   ├── auth.rs            # JWT Validation
+│   ├── cors.rs            # CORS Config
+│   └── logging.rs         # Request Logging
+└── shared/                # Shared Utilities
     └── pagination.rs
 ```
 
-**Vorteile:**
-- Klare Feature-Trennung
-- Einfacheres Testing
-- Bessere Skalierbarkeit
-- API-Versionierung vorbereitet
-
 ---
 
-## Console API-Struktur
+## 🏗 Infrastruktur
 
-### Feature-basierte Organisation (Phase 2)
+### Development Environment
+
+| Tool               | Beschreibung                                      |
+| ------------------ | ------------------------------------------------- |
+| **Nix Flakes**     | Reproduzierbare Toolchain (Rust, Node, buf, etc.) |
+| **DevContainer**   | VS Code Container-Entwicklung                     |
+| **Docker Compose** | Service-Orchestrierung                            |
+| **just**           | Task Runner                                       |
+
+### Services
+
+| Service      | Port      | Technologie | Beschreibung           |
+| ------------ | --------- | ----------- | ---------------------- |
+| **Proxy**    | 3001      | Caddy       | Reverse Proxy, Routing |
+| **Backend**  | 3000      | Rust/Axum   | API Server             |
+| **Console**  | 5173      | SvelteKit   | Admin UI               |
+| **Platform** | 5174      | SvelteKit   | Main App               |
+| **Docs**     | 5175      | SvelteKit   | Documentation          |
+| **Database** | 5432      | PostgreSQL  | OrioleDB Engine        |
+| **Cache**    | 6379      | DragonflyDB | Redis-kompatibel       |
+| **Storage**  | 9000/9001 | MinIO       | S3-kompatibel          |
+| **Auth**     | 8080      | ZITADEL     | OIDC/JWT               |
+
+### Caddy Proxy Routing
 
 ```
-frontend/console/src/api/
-├── health/                   # Health Service
-│   ├── types.ts              # Protobuf types + helpers
-│   └── index.ts              # Public API
-├── info/                     # Info Service
-│   ├── types.ts
-│   └── index.ts
-├── users/                    # User Service
-│   ├── connect-client.ts     # Connect-RPC client
-│   ├── types.ts              # Protobuf types + helpers
-│   └── index.ts
-├── storage/                   # Storage Service
-│   ├── connect-client.ts
-│   ├── types.ts
-│   └── index.ts
-├── connect/                  # Connect-RPC Transport
-│   ├── transport.ts          # Transport configuration
-│   └── services.ts           # Service clients
-└── rest/                     # REST Client (deprecated)
-    ├── client.ts
-    └── endpoints.ts
+localhost:3001/
+├── /console   → localhost:5173
+├── /platform  → localhost:5174
+├── /docs      → localhost:5175
+└── /api       → localhost:3000
 ```
 
-**Vorteile:**
-- Konsistente Struktur mit Backend
-- Protobuf-Types als Single Source of Truth
-- Klare Feature-Trennung
-- Einfacheres Testing
+---
+
+## 🔌 API-Kommunikation
+
+### Connect-RPC (Protobuf)
+
+**End-to-End Typsicherheit** zwischen Frontend und Backend:
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   .proto    │ ──▶ │  buf gen    │ ──▶ │ TypeScript  │
+│ Definitionen│     │             │     │   Types     │
+└─────────────┘     └─────────────┘     └─────────────┘
+       │
+       ▼
+┌─────────────┐
+│    Rust     │
+│   Server    │
+└─────────────┘
+```
+
+### Vorteile
+
+| Feature                    | Beschreibung                               |
+| -------------------------- | ------------------------------------------ |
+| **Single Source of Truth** | `.proto` Dateien definieren API            |
+| **Auto-Generated Types**   | TypeScript-Clients automatisch generiert   |
+| **Compile-Time Safety**    | Keine Runtime-Fehler durch Type-Mismatches |
+| **gRPC-Web**               | Browser-kompatibel                         |
+
+### Frontend API-Struktur
+
+```
+frontend/*/src/lib/api/
+├── health/               # Health Service
+│   ├── types.ts          # Protobuf types
+│   └── index.ts          # Public API
+├── users/                # User Service
+│   ├── connect-client.ts # Connect-RPC client
+│   ├── types.ts
+│   └── index.ts
+└── connect/              # Transport Layer
+    ├── transport.ts      # Transport config
+    └── services.ts       # Service clients
+```
 
 ---
 
-## 🔌 Connect-RPC/gRPC-Web
+## 📁 Verzeichnisstruktur
 
-Das Projekt verwendet Connect-RPC für die Console-Backend-Kommunikation:
-
-- **Protobuf** für Type-Safe Serialisierung
-- **gRPC-Web** für Browser-Kompatibilität
-- **Feature-basierte** Service-Organisation
-- **Automatische** Code-Generierung
-
-Siehe [Connect-RPC Guide](CONNECT_RPC_GUIDE.md) für Details.
+```
+erynoa/
+│
+├── backend/                 # 🦀 Rust Backend
+│   ├── src/
+│   │   ├── api/             # API Layer
+│   │   ├── auth/            # Auth Logic
+│   │   ├── cache/           # Cache Layer
+│   │   ├── config/          # Configuration
+│   │   ├── db/              # Database Layer
+│   │   ├── gen/             # Generated Protobuf
+│   │   └── storage/         # Storage Layer
+│   ├── config/              # TOML Config Files
+│   ├── migrations/          # SQL Migrations
+│   └── proto/               # Protobuf Definitions
+│
+├── frontend/                # 🎨 SvelteKit Apps
+│   ├── console/             # Admin Console
+│   ├── platform/            # Main Platform
+│   └── docs/                # Documentation
+│
+├── infra/                   # 🏗 Infrastructure
+│   ├── docker/              # Docker Compose & Dockerfiles
+│   ├── proxy/               # Caddy Configuration
+│   ├── auth/                # ZITADEL Config
+│   └── static/              # Static Files
+│
+├── docs/                    # 📚 Documentation
+├── scripts/                 # 🔧 Build & Dev Scripts
+│
+├── flake.nix                # Nix Dev Environment
+├── justfile                 # Task Runner
+├── buf.yaml                 # Protobuf Config
+├── turbo.json               # Turborepo Config
+└── pnpm-workspace.yaml      # pnpm Workspace
+```
 
 ---
 
-## 📚 Weitere Informationen
+## 🔮 Design-Entscheidungen
 
-- [API Restrukturierung](../changelog/API_RESTRUCTURE_COMPLETE.md)
-- [Console API Konsolidierung](../changelog/CONSOLE_API_RESTRUCTURE_COMPLETE.md)
-- [Connect-RPC Guide](CONNECT_RPC_GUIDE.md)
-- [Style Guide](STYLE_GUIDE.md)
-- [Testing Guide](testing.md)
-- [Harmonization Roadmap](HARMONIZATION_ROADMAP.md)
-- [TODO Management](../development/todos.md)
+### Was wurde bewusst weggelassen
+
+Diese Features können bei Bedarf später hinzugefügt werden:
+
+| Feature              | Grund                |
+| -------------------- | -------------------- |
+| Python Microservices | Fokus auf Rust-Kern  |
+| Prometheus           | Observability später |
+| RAM-Datenbanken      | PostgreSQL reicht    |
+
+### Prinzipien
+
+- **Modular**: Monorepo + Shared-Core
+- **Schnell**: Rust + Svelte
+- **Robust**: Typsicherheit + Nix
+- **Skalierbar**: Klare Architektur
+
+---
+
+## 📚 Weiterführende Dokumentation
+
+| Dokument                                     | Beschreibung          |
+| -------------------------------------------- | --------------------- |
+| [Configuration](config.md)                   | Service-Konfiguration |
+| [Connections](connections.md)                | API-Verbindungen      |
+| [Style Guide](../development/style-guide.md) | Code-Standards        |
+| [Testing](../development/testing.md)         | Test-Strategien       |
+| [TODOs](../development/todos.md)             | Offene Aufgaben       |
