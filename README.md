@@ -10,7 +10,7 @@
 [![Nix](https://img.shields.io/badge/Nix-Flakes-5277C3?style=flat-square&logo=nixos)](https://nixos.org/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
-```
+<pre>
 ┌─────────────────────────────────────────────────────────────────┐
 │                                                                 │
 │   "Ein Protokoll, das Maschinen befähigt, eigenständig zu       │
@@ -18,7 +18,7 @@
 │    mit mathematisch fundiertem Vertrauen."                      │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
-```
+</pre>
 
 [Schnellstart](#-schnellstart) · [Konzept](#-was-ist-erynoa) · [Dokumentation](#-dokumentation) · [Befehle](#-befehle)
 
