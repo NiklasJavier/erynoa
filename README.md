@@ -1,4 +1,4 @@
-# 🌿 Erynoa EU inc
+# Erynoa EU inc
 
 **Full-Stack Application mit Rust Backend und SvelteKit Frontends**
 
