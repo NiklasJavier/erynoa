@@ -1,1355 +1,257 @@
-# Erynoa – Fachkonzept
+# Erynoa Fachkonzept
 
-> **Dokumenttyp:** Fachkonzept (Business Requirements Specification)
-> **Version:** 2.0
-> **Status:** Konsolidiert
-> **Datum:** Januar 2026
-> **Zielgruppe:** Produktmanagement, Stakeholder, Investoren, Business Analysten
-> **Referenz:** [Konzept-Navigator](./concept-v2/00-navigator.md) | [Roadmap](./ROADMAP.md)
+## Ein kybernetisches Protokoll für dezentrale Wertschöpfung
 
 ---
 
-## Inhaltsverzeichnis
+### Zusammenfassung
 
-1. [Zusammenfassung](#1-zusammenfassung)
-2. [Problemstellung](#2-problemstellung)
-3. [Lösungsansatz](#3-lösungsansatz)
-4. [Systemarchitektur](#4-systemarchitektur)
-5. [Fachliche Domänen](#5-fachliche-domänen)
-6. [Geschäftsobjekte](#6-geschäftsobjekte)
-7. [Prozesse und Abläufe](#7-prozesse-und-abläufe)
-8. [Anwendungsfälle](#8-anwendungsfälle)
-9. [Nicht-funktionale Anforderungen](#9-nicht-funktionale-anforderungen)
-10. [Governance und Compliance](#10-governance-und-compliance)
-11. [Wirtschaftsmodell](#11-wirtschaftsmodell)
-12. [Risiken und Mitigationen](#12-risiken-und-mitigationen)
-13. [Glossar](#13-glossar)
+Das Erynoa-Protokoll definiert eine universelle Infrastruktur für die Interaktion autonomer Entitäten in einer dezentralen digitalen Wirtschaft. Im Zentrum steht die Weltformel **𝔼 = 𝕀 · 𝕋 · ℂ**, die den Systemzustand als Produkt aus Identität, Vertrauen und Kausalität beschreibt. Das Protokoll ermöglicht Maschinen, Menschen und Organisationen, ohne zentrale Vermittler Werte auszutauschen, Verträge zu schließen und Transaktionen abzuwickeln. Dieser Text erläutert die theoretischen Grundlagen, die mathematischen Prinzipien und die praktischen Implikationen des Erynoa-Protokolls.
 
 ---
 
-## 1. Zusammenfassung
+### 1. Einleitung: Das Problem der dezentralen Koordination
 
-### 1.1 Vision
+Die digitale Wirtschaft steht vor einem fundamentalen Koordinationsproblem. Wenn autonome Akteure – seien es Menschen, Unternehmen oder Maschinen – miteinander interagieren möchten, benötigen sie Mechanismen zur Identifikation, zur Vertrauensbildung und zur Dokumentation ihrer Interaktionen. Traditionell übernehmen zentrale Intermediäre diese Funktionen: Banken verifizieren Zahlungen, Plattformen vermitteln Transaktionen, und Behörden beglaubigen Identitäten. Diese Zentralisierung erzeugt jedoch Abhängigkeiten, Kosten und Single Points of Failure.
 
-**Erynoa** ist ein kybernetisches Protokoll für die Maschinenökonomie – ein System, das Maschinen befähigt, eigenständig zu handeln, zu verhandeln und voneinander zu lernen, mit mathematisch fundiertem Vertrauen statt zentraler Autoritäten.
-
-### 1.2 Kernaussage
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│   "Erynoa ermöglicht autonome Machine-to-Machine-Transaktionen             │
-│    durch dezentrale Identität, semantische Interoperabilität               │
-│    und kybernetische Feedbackschleifen."                                   │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 1.3 Wertversprechen
-
-| Stakeholder     | Nutzen                                                      |
-| --------------- | ----------------------------------------------------------- |
-| **Unternehmen** | Automatisierung komplexer B2B-Prozesse, Kostensenkung       |
-| **Entwickler**  | Standardisierte APIs und Protokolle für M2M-Kommunikation   |
-| **Endanwender** | Nahtlose, autonome Services ohne manuelle Intervention      |
-| **Regulatoren** | Auditierbare, compliance-fähige Transaktionen               |
-| **Investoren**  | Skalierbare Plattform für die aufkommende Maschinenökonomie |
-
-### 1.4 Differenzierung
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│   VERGLEICH: TRADITIONELL vs. ERYNOA                                       │
-│                                                                             │
-│   ┌─────────────────────────────────┬─────────────────────────────────────┐│
-│   │        TRADITIONELL             │           ERYNOA                    ││
-│   ├─────────────────────────────────┼─────────────────────────────────────┤│
-│   │ Zentralisierte Identität        │ Dezentrale DIDs (Self-Sovereign)    ││
-│   │ Silobasierte Daten              │ Semantisch vernetzte Ontologie      ││
-│   │ Manuelles Vertrauen             │ Mathematisch berechnete Trust-Werte ││
-│   │ Statische Verträge              │ Dynamische Smart Policies           ││
-│   │ Batch-Transaktionen             │ Streaming-Zahlungen                 ││
-│   │ Nachträgliche Audits            │ Echtzeitbeweis (Causal Ledger)      ││
-│   │ Monolinguale Systeme            │ Multi-Chain-Interoperabilität       ││
-│   └─────────────────────────────────┴─────────────────────────────────────┘│
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+Das Erynoa-Protokoll adressiert dieses Problem durch einen mathematisch fundierten Ansatz. Anstatt Vertrauen vorauszusetzen oder durch Dritte garantieren zu lassen, macht Erynoa Vertrauen berechenbar. Anstatt Identitäten an Plattformen zu binden, verankert Erynoa sie kryptographisch. Anstatt Transaktionshistorien in zentralen Datenbanken zu speichern, schreibt Erynoa sie in eine unveränderliche kausale Struktur. Das Ergebnis ist ein Protokoll, das dezentrale Koordination ohne zentrale Autorität ermöglicht.
 
 ---
 
-## 2. Problemstellung
+### 2. Die Weltformel: Mathematische Grundlagen
 
-### 2.1 Marktsituation
+#### 2.1 Die Kerngleichung
 
-Die Maschinenökonomie (Machine Economy) wächst exponentiell. IoT-Geräte, autonome Fahrzeuge, intelligente Infrastruktur und KI-Agenten erzeugen zunehmend wirtschaftliche Transaktionen ohne menschliche Intervention.
+Die theoretische Basis des Erynoa-Protokolls lässt sich in einer einzigen Formel verdichten:
 
-**Aktuelle Marktgrößen:**
+**𝔼 = 𝕀 · 𝕋 · ℂ**
 
-| Segment              | 2024      | 2030 (progn.) | CAGR  |
-| -------------------- | --------- | ------------- | ----- |
-| IoT-Markt            | $714 Mrd. | $1.5 Bio.     | 13.5% |
-| Autonome Fahrzeuge   | $54 Mrd.  | $556 Mrd.     | 39.1% |
-| Smart Infrastructure | $89 Mrd.  | $265 Mrd.     | 19.5% |
-| M2M-Payments         | $12 Mrd.  | $89 Mrd.      | 39.8% |
+Diese Gleichung besagt, dass der Existenzwert einer Entität im System (𝔼) das Produkt aus ihrer Identität (𝕀), ihrem Vertrauen (𝕋) und ihrer kausalen Geschichte (ℂ) ist. Die multiplikative Verknüpfung impliziert, dass das Fehlen einer Komponente den Gesamtwert auf null reduziert: Ohne Identität existiert die Entität nicht im System, ohne Vertrauen ist sie wertlos, und ohne Geschichte ist sie nicht nachweisbar.
 
-### 2.2 Kernprobleme
+#### 2.2 Die erweiterte Formel
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│   PROBLEM 1: FRAGMENTIERTE IDENTITÄT                                       │
-│   ═══════════════════════════════════                                       │
-│                                                                             │
-│   • Maschinen haben keine souveräne digitale Identität                     │
-│   • Jedes System verwendet eigene ID-Schemata (keine Interoperabilität)    │
-│   • Keine kryptografische Verifikation von Maschinen-Identitäten           │
-│   • Identitäts-Silos verhindern Cross-Platform-Transaktionen               │
-│                                                                             │
-│   Konsequenz: Maschinen können nicht vertrauenswürdig miteinander          │
-│               interagieren.                                                 │
-│                                                                             │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│   PROBLEM 2: FEHLENDES MASCHINENVERTRAUEN                                  │
-│   ════════════════════════════════════════                                  │
-│                                                                             │
-│   • Kein Mechanismus für Trust zwischen unbekannten Maschinen              │
-│   • Reputation ist nicht portabel (gilt nur in einem System)               │
-│   • Keine Abstraktion für "Zuverlässigkeit", "Ehrlichkeit", "Fähigkeit"   │
-│   • Vertrauen basiert auf zentralen Autoritäten (Single Point of Failure)  │
-│                                                                             │
-│   Konsequenz: Autonome Transaktionen erfordern immer noch menschliche      │
-│               Aufsicht oder zentrale Intermediäre.                         │
-│                                                                             │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│   PROBLEM 3: SEMANTISCHE INKOMPATIBILITÄT                                  │
-│   ═══════════════════════════════════════                                   │
-│                                                                             │
-│   • Verschiedene Systeme verstehen Objekte unterschiedlich                 │
-│   • Keine gemeinsame Ontologie für "Ladesäule", "Fahrzeug", "Service"     │
-│   • Standards (ISO, OCPP, etc.) sind nicht maschinenlesbar verknüpft       │
-│   • Semantik geht bei Systemübergängen verloren                            │
-│                                                                             │
-│   Konsequenz: Jede Integration erfordert Custom-Mappings und Adapter.      │
-│                                                                             │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│   PROBLEM 4: TRANSAKTIONSINEFFIZIENZ                                       │
-│   ══════════════════════════════════                                        │
-│                                                                             │
-│   • Zahlungen sind batch-basiert, nicht streaming-fähig                    │
-│   • Hohe Transaktionskosten für Mikrotransaktionen                         │
-│   • Keine echtzeitfähige Wertstromverrechnung                              │
-│   • Settlement dauert Tage (nicht Sekunden)                                │
-│                                                                             │
-│   Konsequenz: Viele M2M-Geschäftsmodelle sind wirtschaftlich nicht tragbar.│
-│                                                                             │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│   PROBLEM 5: MANGELNDE NACHWEISBARKEIT                                     │
-│   ════════════════════════════════════                                      │
-│                                                                             │
-│   • Keine unveränderliche Protokollierung von M2M-Transaktionen            │
-│   • Kausalität von Events ist nicht nachvollziehbar                        │
-│   • Compliance-Audits erfordern manuelle Rekonstruktion                    │
-│   • Streitfälle haben keine objektive Beweisgrundlage                      │
-│                                                                             │
-│   Konsequenz: Regulatoren und Versicherer können M2M nicht bewerten.       │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+Für die praktische Anwendung erweitert sich die Kerngleichung zur optimierten Weltformel:
 
-### 2.3 Betroffene Branchen
+**𝔼* = Σ 𝕀ₑ · σ(𝕋ₑ · ln|ℂₑ|)**
 
-| Branche           | Spezifisches Problem                      |
-| ----------------- | ----------------------------------------- |
-| **E-Mobilität**   | Fragmentierte Lade-Roaming-Netze          |
-| **Energie**       | Keine P2P-Energiehandels-Infrastruktur    |
-| **Logistik**      | Autonome Flotten ohne Trust-Framework     |
-| **Smart City**    | Keine interoperable IoT-Governance        |
-| **Finanzwesen**   | KYC nicht portabel zwischen Institutionen |
-| **Industrie 4.0** | Keine M2M-Vertragsautomatisierung         |
+Diese Formulierung aggregiert über alle Entitäten e im System. Die Sigmoid-Funktion σ normalisiert den Beitrag jeder Entität auf das Intervall (0,1), wodurch extreme Werte gedämpft werden. Der Logarithmus der Kausaltiefe ln|ℂ| sorgt dafür, dass frühe Aktivitäten stärker gewichtet werden als späte, was einen First-Mover-Vorteil erzeugt und kontinuierliche Aktivität belohnt.
+
+#### 2.3 Physikalische und informationstheoretische Fundierung
+
+Die Weltformel steht nicht isoliert, sondern lässt sich auf etablierte wissenschaftliche Prinzipien zurückführen. Die Identitätskomponente 𝕀 entspricht konzeptionell der Masse in Einsteins E=mc²: Sie ist der invariante Kern, der einer Entität ihre Existenz verleiht. Die Vertrauenskomponente 𝕋 verhält sich wie negative Entropie im Sinne Shannons: Hoher Trust bedeutet geringe Unsicherheit und damit hohen Informationsgehalt. Die Kausalkomponente ℂ folgt dem zweiten Hauptsatz der Thermodynamik: Die kausale Ordnung ist irreversibel, Ereignisse können nicht rückgängig gemacht werden.
 
 ---
 
-## 3. Lösungsansatz
+### 3. Identität: Das Fundament der Existenz
 
-### 3.1 Grundprinzipien
+#### 3.1 Das Prinzip der dezentralen Identität
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│   ERYNOA DESIGN PRINCIPLES                                                 │
-│                                                                             │
-│   1️⃣ IDENTITY-FIRST                                                         │
-│      "Alles existiert, weil es identifizierbar ist."                       │
-│      → Jede Entität (Agent, Objekt, Regel) hat eine eindeutige DID.        │
-│                                                                             │
-│   2️⃣ KAUSALITÄT                                                             │
-│      "Etwas kann nur handeln, wenn es existiert."                          │
-│      → Schichten bauen aufeinander auf (keine Shortcuts).                  │
-│                                                                             │
-│   3️⃣ KYBERNETISCHE REGELKREISE                                              │
-│      "Das System lernt aus seinen Ergebnissen."                            │
-│      → Feedback-Loops aktualisieren Trust und Wissen kontinuierlich.       │
-│                                                                             │
-│   4️⃣ DEZENTRALE AUTONOMIE                                                   │
-│      "Keine zentrale Autorität kontrolliert das System."                   │
-│      → Self-Anchoring, Self-Governance, Self-Sovereignty.                  │
-│                                                                             │
-│   5️⃣ PROGRESSIVE DEZENTRALISIERUNG                                          │
-│      "Vom einfachen Start zur vollständigen Dezentralität."                │
-│      → System kann graduell dezentralisiert werden.                        │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+Im Erynoa-Protokoll beginnt jede Interaktion mit der Identität. Eine Entität, die nicht identifizierbar ist, kann weder Vertrauen aufbauen noch Transaktionen durchführen noch eine Geschichte entwickeln. Mathematisch ausgedrückt: Wenn 𝕀 = 0, dann ist 𝔼 = 0, unabhängig von den Werten der anderen Komponenten.
 
-### 3.2 Die Kybernetische Triade
+Erynoa implementiert Identität durch Decentralized Identifiers (DIDs) nach dem W3C-Standard. Ein DID ist ein global eindeutiger Bezeichner der Form did:erynoa:namespace:identifier, der kryptographisch mit einem Schlüsselpaar verknüpft ist. Der wesentliche Unterschied zu herkömmlichen Identitätssystemen besteht darin, dass der DID-Inhaber die volle Kontrolle über seine Identität behält. Keine zentrale Instanz kann einen DID widerrufen, löschen oder manipulieren.
 
-Erynoa besteht aus drei komplementären Sphären:
+#### 3.2 Die Identitätshierarchie
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│   DIE KYBERNETISCHE TRIADE: ERY · ECHO · NOA                               │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │                           ╔═══════════╗                            │  │
-│   │                           ║    ERY    ║                            │  │
-│   │                           ║ ═════════ ║                            │  │
-│   │                           ║  Wissen   ║                            │  │
-│   │                           ║ Identität ║                            │  │
-│   │                           ║ Vertrauen ║                            │  │
-│   │                           ╚═════╤═════╝                            │  │
-│   │                                 │                                   │  │
-│   │                          KONTEXT                                   │  │
-│   │                                 │                                   │  │
-│   │              ┌──────────────────┴──────────────────┐               │  │
-│   │              │                                     │               │  │
-│   │              ▼                                     ▼               │  │
-│   │       ╔═══════════╗                         ╔═══════════╗         │  │
-│   │       ║   ECHO    ║                         ║    NOA    ║         │  │
-│   │       ║ ═════════ ║                         ║ ═════════ ║         │  │
-│   │       ║  Agenten  ║                         ║  Ledger   ║         │  │
-│   │       ║   Schwarm ║                         ║  Beweis   ║         │  │
-│   │       ║  Emergenz ║                         ║  Kausal   ║         │  │
-│   │       ╚═════╤═════╝                         ╚═════╤═════╝         │  │
-│   │             │                                     │               │  │
-│   │        HANDLUNG                              FINALITÄT             │  │
-│   │             │                                     │               │  │
-│   │             └──────────────────┬──────────────────┘               │  │
-│   │                                │                                   │  │
-│   │                           FEEDBACK                                 │  │
-│   │                                │                                   │  │
-│   │                                ▼                                   │  │
-│   │                    ┌───────────────────────┐                      │  │
-│   │                    │   Trust-Update        │                      │  │
-│   │                    │   Karma-Update        │                      │  │
-│   │                    │   Wissens-Update      │                      │  │
-│   │                    └───────────────────────┘                      │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-│   ERY = Semantisches Gitter (Identität, Wissen, Vertrauen, Räume)         │
-│   ECHO = Emergenter Schwarm (Agenten, Intents, Verhandlung)               │
-│   NOA = Kausales Hauptbuch (Objekte, Transaktionen, Beweis)               │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+Das Protokoll unterscheidet verschiedene Identitätstypen, die in einer hierarchischen Struktur organisiert sind. Auf der obersten Ebene stehen Personenidentitäten, die natürliche Personen repräsentieren. Diese können Organisationsidentitäten halten, die Unternehmen, Vereine oder andere juristische Personen darstellen. Organisationen wiederum können Agentenidentitäten erstellen, die autonome Softwarekomponenten repräsentieren, sowie Geräteidentitäten für physische Hardware wie Ladestationen oder Fahrzeuge.
 
-### 3.3 Die Sieben Schichten
+Die hierarchische Struktur ermöglicht eine granulare Delegation von Rechten. Ein Unternehmen kann beispielsweise einem Agenten die Berechtigung erteilen, Ladevorgänge bis zu einem bestimmten Wert abzuwickeln, während höherwertige Transaktionen eine explizite Freigabe erfordern. Diese Delegation ist kryptographisch abgesichert und jederzeit widerrufbar.
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│                    E R Y N O A   S C H I C H T E N                         │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   SCHICHT │ SYMBOL │ NAME    │ FRAGE          │ SPHÄRE │ FUNKTION  │  │
-│   │   ════════════════════════════════════════════════════════════════  │  │
-│   │                                                                     │  │
-│   │      0    │   ◉    │ ANKER   │ "Wer existiert?"│  ERY  │ Identität │  │
-│   │           │        │         │                 │       │           │  │
-│   │      1    │   ◈    │ SCHEMA  │ "Was ist das?"  │  ERY  │ Wissen    │  │
-│   │           │        │         │                 │       │           │  │
-│   │      2    │   ◊    │ METRIK  │ "Wie gut?"      │  ERY  │ Vertrauen │  │
-│   │           │        │         │                 │       │           │  │
-│   │      3    │   ▣    │ SPHÄRE  │ "Wo gilt was?"  │  ERY  │ Räume     │  │
-│   │           │        │         │                 │       │           │  │
-│   │      4    │   ◐    │ IMPULS  │ "Was geschieht?"│ ECHO  │ Handlung  │  │
-│   │           │        │         │                 │       │           │  │
-│   │      5    │   ◆    │ CHRONIK │ "Was ist wahr?" │  NOA  │ Beweis    │  │
-│   │           │        │         │                 │       │           │  │
-│   │      6    │   ◇    │ NEXUS   │ "Wie verbunden?"│  NOA  │ Vernetzung│  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-│   Kausalitätsprinzip:                                                       │
-│   ◉ ANKER → ◈ SCHEMA → ◊ METRIK → ▣ SPHÄRE → ◐ IMPULS → ◆ CHRONIK → ◇ NEXUS│
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+#### 3.3 Verifiable Credentials
+
+Neben dem DID selbst können Entitäten Verifiable Credentials (VCs) erwerben, die bestimmte Eigenschaften oder Berechtigungen attestieren. Ein Fahrzeug könnte beispielsweise ein Credential besitzen, das seine Zulassung bestätigt, ein Ladepunktbetreiber ein Credential, das seine Betreiberlizenz nachweist. VCs werden von vertrauenswürdigen Ausstellern signiert und können von Verifiern ohne Kontakt zum Aussteller geprüft werden.
+
+Die Kombination aus DIDs und VCs schafft eine flexible Identitätsinfrastruktur, die sowohl anonyme als auch vollständig verifizierte Interaktionen ermöglicht. Eine Entität kann wählen, welche Credentials sie in einer bestimmten Interaktion offenlegt, und behält damit die Kontrolle über ihre Datensouveränität.
 
 ---
 
-## 4. Systemarchitektur
+### 4. Vertrauen: Die Währung der Interaktion
 
-### 4.1 Schicht 0: ◉ ANKER – Identität
+#### 4.1 Das vierdimensionale Vertrauensmodell
 
-**Kernfrage:** _„Wer existiert?"_
+Vertrauen ist in traditionellen Systemen eine binäre oder ordinale Größe: Man vertraut jemandem oder nicht, eventuell auf einer Skala von eins bis fünf Sternen. Das Erynoa-Protokoll ersetzt dieses primitive Modell durch einen vierdimensionalen Vertrauensvektor:
 
-**Fachlicher Zweck:**
-Die ANKER-Schicht etabliert die fundamentale Identitätsgrundlage des Systems. Jede Entität – ob Maschine, Organisation, Objekt oder Regelwerk – erhält eine kryptografisch verifizierbare, dezentrale Identität (DID).
+**𝕋(e, ε, t) = (R, I, C, P) ∈ [0,1]⁴**
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│   IDENTITY-FIRST PARADIGMA                                                 │
-│                                                                             │
-│   AXIOM: "Existenz durch Identifizierbarkeit"                              │
-│                                                                             │
-│   1. Eine Entität EXISTIERT, weil sie eine Identität HAT                   │
-│   2. Ohne Identität ist keine Interaktion möglich                          │
-│   3. Identität ist nicht optional – sie ist konstitutiv                    │
-│   4. Alle Beziehungen sind Identitäts-Beziehungen                          │
-│                                                                             │
-│   ENTITÄTS-TYPEN MIT DID                                                   │
-│   ════════════════════════                                                  │
-│                                                                             │
-│   👤 Agent (Seeker)           →  did:erynoa:agent:seeker:...               │
-│   👤 Agent (Provider)         →  did:erynoa:agent:provider:...             │
-│   🏢 Organisation             →  did:erynoa:org:...                        │
-│   🚗 Fahrzeug                 →  did:erynoa:vehicle:...                    │
-│   📦 AMO (Objekt-Instanz)     →  did:erynoa:amo:...                        │
-│   📋 Blueprint                →  did:erynoa:blueprint:...                  │
-│   🌍 Environment              →  did:erynoa:env:...                        │
-│   📜 Standard/Norm            →  did:erynoa:standard:...                   │
-│   🎫 Credential               →  did:erynoa:vc:...                         │
-│   💳 Wallet                   →  did:erynoa:wallet:...                     │
-│   🗳️ Governance Proposal      →  did:erynoa:proposal:...                   │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+Die Komponente R (Reliability) misst die Zuverlässigkeit einer Entität, also die Konsistenz zwischen angekündigtem und tatsächlichem Verhalten. I (Integrity) erfasst die Integrität, also die Einhaltung von Regeln und die Abwesenheit von Manipulation. C (Capability) quantifiziert die Leistungsfähigkeit, also die technische oder fachliche Kompetenz. P (Reputation) aggregiert das allgemeine Ansehen, basierend auf Bewertungen und externen Attestationen.
 
-**Kernkomponenten:**
+Diese vier Dimensionen sind weitgehend orthogonal. Eine Ladestation kann hohe Zuverlässigkeit aufweisen, weil sie selten ausfällt, aber niedrige Capability, weil sie nur langsam lädt. Ein neuer Marktteilnehmer kann hohe Integrität haben, aber niedrige Reputation, weil er noch unbekannt ist. Die multidimensionale Darstellung ermöglicht differenzierte Entscheidungen statt pauschaler Urteile.
 
-| Komponente           | Beschreibung                            |
-| -------------------- | --------------------------------------- |
-| **DID-Resolver**     | Auflösung von DIDs zu DID-Dokumenten    |
-| **Credential-Store** | Verwaltung von Verifiable Credentials   |
-| **DACS-Modul**       | Multi-Chain-Verankerung von Identitäten |
-| **Key-Management**   | Ed25519-Schlüsselverwaltung             |
+#### 4.2 Die Karma-Engine
 
-**Fachliche Anforderungen:**
+Der Vertrauensvektor ist keine statische Größe, sondern wird kontinuierlich durch die Karma-Engine aktualisiert. Die Karma-Engine ist ein deterministischer Algorithmus, der jedes Ereignis im System analysiert und die Vertrauenswerte der beteiligten Entitäten entsprechend anpasst.
 
-| ID       | Anforderung                                             | Priorität |
-| -------- | ------------------------------------------------------- | --------- |
-| FA-A-001 | Jede Entität MUSS eine eindeutige DID erhalten          | MUSS      |
-| FA-A-002 | DIDs MÜSSEN kryptografisch verifizierbar sein           | MUSS      |
-| FA-A-003 | DIDs MÜSSEN auf mehreren Chains verankert werden        | SOLL      |
-| FA-A-004 | Sub-Identities MÜSSEN hierarchisch ableitbar sein       | SOLL      |
-| FA-A-005 | Credentials MÜSSEN nach W3C-VC-Standard formatiert sein | MUSS      |
+Die Aktualisierung folgt dem Bayes'schen Prinzip: Jedes Ereignis liefert neue Evidenz, die den Prior-Trust zum Posterior-Trust transformiert. Positive Ereignisse wie erfolgreiche Transaktionen erhöhen den Trust, negative Ereignisse wie Vertragsverletzungen reduzieren ihn. Dabei gilt das Prinzip der asymmetrischen Gewichtung: Negatives wiegt schwerer als Positives. Der Grund ist spieltheoretischer Natur: In einem System, in dem positive Aktionen leichter zu faken sind als negative zu verbergen, muss die Bestrafung stärker sein als die Belohnung, um Betrug zu verhindern.
+
+#### 4.3 Trust-Decay und Karma-Tiers
+
+Vertrauen ist nicht nur asymmetrisch, sondern auch zeitabhängig. Ein Vertrauenswert, der vor Jahren erworben wurde, ist weniger aussagekräftig als ein kürzlich bestätigter. Daher implementiert Erynoa einen Decay-Mechanismus: Mit jedem Zeitintervall sinkt der Trust geringfügig, es sei denn, er wird durch neue positive Ereignisse aufgefrischt.
+
+Der Decay folgt einer exponentiellen Kurve mit einem konfigurierbaren Faktor, typischerweise 0.999 pro Tag. Das bedeutet, dass der Trust ohne Aktivität langsam, aber stetig abnimmt. Allerdings existiert ein Floor-Wert von 0.3, unter den der Trust nicht fallen kann. Dieser Floor stellt sicher, dass inaktive Entitäten nicht vollständig aus dem System verschwinden und bei Reaktivierung eine Chance zur Erholung haben.
+
+Basierend auf dem aktuellen Trust-Wert ordnet das System Entitäten in Karma-Tiers ein: Newcomer (Trust < 0.4), Established (0.4 ≤ Trust < 0.6), Veteran (0.6 ≤ Trust < 0.8) und Elder (Trust ≥ 0.8). Diese Tiers beeinflussen die verfügbaren Handlungsspielräume: Newcomer können nur kleine Transaktionen durchführen, Elder hingegen genießen weitreichende Privilegien.
 
 ---
 
-### 4.2 Schicht 1: ◈ SCHEMA – Wissen
+### 5. Kausalität: Die Architektur der Wahrheit
 
-**Kernfrage:** _„Was ist das?"_
+#### 5.1 Das NOA-Ledger
 
-**Fachlicher Zweck:**
-Die SCHEMA-Schicht definiert die semantische Grundlage des Systems. Sie legt fest, welche Objekttypen existieren, welche Attribute sie haben und wie sie sich zueinander verhalten.
+Die dritte Komponente der Weltformel, ℂ, repräsentiert die kausale Geschichte einer Entität. In Erynoa wird diese Geschichte durch das NOA-Ledger (Nexus of Actions) realisiert, ein verteiltes Ereignissystem, das alle Transaktionen und Zustandsänderungen unveränderlich dokumentiert.
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│   WISSENSPYRAMIDE                                                          │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   Normative Standards (Ebene 1)                                     │  │
-│   │   ─────────────────────────────                                     │  │
-│   │   ISO 19112 · eCl@ss · OCPP · DIN · ETSI                           │  │
-│   │   (Externe, akkreditierte Normen)                                   │  │
-│   │        │                                                            │  │
-│   │        │ referenziert von                                           │  │
-│   │        ▼                                                            │  │
-│   │   Generische Blueprints (Ebene 2a)                                  │  │
-│   │   ────────────────────────────────                                  │  │
-│   │   ev-charging-station:v1 (abstrakt)                                │  │
-│   │   (Plattformweite Schablonen)                                       │  │
-│   │        │                                                            │  │
-│   │        │ spezialisiert zu                                           │  │
-│   │        ▼                                                            │  │
-│   │   Domain Blueprints (Ebene 2b)                                      │  │
-│   │   ────────────────────────────                                      │  │
-│   │   ev-charging-station-de:v1                                        │  │
-│   │   + Eichrecht-Anforderungen                                        │  │
-│   │   + PTB-Zertifizierung                                             │  │
-│   │   (Markt-/regulierungsspezifisch)                                   │  │
-│   │        │                                                            │  │
-│   │        │ instanziiert zu                                            │  │
-│   │        ▼                                                            │  │
-│   │   AMO-Instanzen (Ebene 3)                                           │  │
-│   │   ───────────────────────                                           │  │
-│   │   station-munich-001                                               │  │
-│   │   (Konkrete Objekte)                                                │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+Im Gegensatz zu traditionellen Blockchains, die Ereignisse in sequentielle Blöcke ordnen, verwendet das NOA-Ledger einen Directed Acyclic Graph (DAG). Jedes Ereignis referenziert ein oder mehrere Vorgängerereignisse und wird dadurch in die kausale Struktur eingebettet. Diese DAG-Struktur ermöglicht parallele Verarbeitung und höhere Durchsatzraten, ohne die Kausalitätsgarantien aufzugeben.
 
-**Kernkomponenten:**
+#### 5.2 Kausale Ordnung und Irreversibilität
 
-| Komponente             | Beschreibung                              |
-| ---------------------- | ----------------------------------------- |
-| **Blueprint-Engine**   | Verwaltung und Validierung von Blueprints |
-| **Semantic Index**     | Vektorbasierte semantische Suche (Qdrant) |
-| **Standards-Registry** | Mapping zu externen Normen (ISO, OCPP)    |
-| **Version Manager**    | Versionierung ohne Breaking Changes       |
+Die kausale Ordnung im NOA-Ledger ist streng: Wenn Ereignis A kausal vor Ereignis B liegt, dann kann B nur existieren, wenn A bereits existiert. Diese Ordnung ist irreflexiv (kein Ereignis kann vor sich selbst liegen), antisymmetrisch (wenn A vor B, dann nicht B vor A) und transitiv (wenn A vor B und B vor C, dann A vor C).
 
-**Fachliche Anforderungen:**
+Die mathematische Formulierung dieser Eigenschaften stellt sicher, dass die Geschichte deterministisch rekonstruierbar ist. Gegeben die Menge aller Ereignisse und ihre Referenzen, existiert genau eine kausale Ordnung. Diese Eindeutigkeit ist fundamental für die Vertrauensberechnung: Verschiedene Knoten im Netzwerk, die dieselben Ereignisse sehen, kommen zu identischen Trust-Werten.
 
-| ID       | Anforderung                                             | Priorität |
-| -------- | ------------------------------------------------------- | --------- |
-| FA-S-001 | Blueprints MÜSSEN auf normative Standards referenzieren | SOLL      |
-| FA-S-002 | Blueprints MÜSSEN versioniert und immutabel sein        | MUSS      |
-| FA-S-003 | Attribute MÜSSEN typisiert und validierbar sein         | MUSS      |
-| FA-S-004 | Semantic Search MUSS Blueprints nach Bedeutung finden   | SOLL      |
-| FA-S-005 | Blueprint-Evolution MUSS Migration unterstützen         | SOLL      |
+#### 5.3 Finality und Multi-Chain-Anchoring
+
+Ein Ereignis im NOA-Ledger durchläuft mehrere Finality-Stufen. Nach der initialen Erfassung ist es PENDING und kann theoretisch noch verworfen werden. Nach der Bestätigung durch das lokale Netzwerk wird es CONFIRMED und ist mit hoher Wahrscheinlichkeit permanent. Erst nach dem Anchoring auf externen Chains erreicht es den Status FINAL und ist praktisch irreversibel.
+
+Das Multi-Chain-Anchoring nutzt mehrere unabhängige Blockchains als Integritätsanker. IOTA dient als primäre Chain für kostengünstige, schnelle Verankerung. Ethereum, Solana und Polygon fungieren als sekundäre Chains für zusätzliche Redundanz. Die Sicherheit des Gesamtsystems entspricht dem Produkt der Überlebenswahrscheinlichkeiten: Selbst wenn eine Chain kompromittiert wird, bleiben die Anker auf den anderen Chains intakt.
 
 ---
 
-### 4.3 Schicht 2: ◊ METRIK – Vertrauen
+### 6. Die Sigmoid-Funktion: Mathematik der Fairness
 
-**Kernfrage:** _„Wie vertrauenswürdig?"_
+#### 6.1 Die Attention-Transformation
 
-**Fachlicher Zweck:**
-Die METRIK-Schicht quantifiziert Vertrauen maschinenlesbar. Sie ermöglicht automatisiertes Trust-Gating – die Filterung von Interaktionspartnern basierend auf mathematisch berechneten Vertrauenswerten.
+Die optimierte Weltformel enthält die Sigmoid-Funktion σ, die eine zentrale Rolle für die Fairness des Systems spielt. Die Sigmoid-Funktion transformiert jeden reellen Input in einen Wert zwischen 0 und 1:
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│   TRUST VECTOR – 4 DIMENSIONEN                                             │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   DIMENSION       │ SYMBOL │ BESCHREIBUNG                          │  │
-│   │   ════════════════════════════════════════════════════════════════  │  │
-│   │                                                                     │  │
-│   │   Reliability     │   🎯   │ Liefert pünktlich, wie vereinbart     │  │
-│   │                   │        │ (Uptime, Termintreue)                  │  │
-│   │                                                                     │  │
-│   │   Integrity       │   🛡️   │ Macht keine Falschangaben             │  │
-│   │                   │        │ (Ehrlichkeit, Datenqualität)           │  │
-│   │                                                                     │  │
-│   │   Capability      │   ⚡   │ Technisch in der Lage                  │  │
-│   │                   │        │ (Leistungsfähigkeit, Kapazität)        │  │
-│   │                                                                     │  │
-│   │   Reputation      │   🌟   │ Von anderen positiv bewertet          │  │
-│   │                   │        │ (Attestations, Endorsements)           │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-│   BEISPIEL TRUST VECTOR                                                    │
-│   ═════════════════════                                                     │
-│                                                                             │
-│   did:erynoa:agent:provider:swm-charging                                   │
-│   Trust: [Reliability: 0.92, Integrity: 0.87, Capability: 0.78, Rep: 0.95]│
-│   Aggregate: 0.88                                                          │
-│                                                                             │
-│   TRUST-GATING                                                             │
-│   ════════════                                                              │
-│                                                                             │
-│   Intent verlangt: min_trust = 0.7, min_reliability = 0.8                  │
-│                                                                             │
-│   Provider A: [0.92, 0.87, 0.78, 0.95] → ✅ PASS                           │
-│   Provider B: [0.65, 0.90, 0.70, 0.80] → ❌ FAIL (Reliability < 0.8)       │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+**σ(x) = 1 / (1 + e^(-x))**
 
-**Kernkomponenten:**
+Angewendet auf das Produkt aus Trust und logarithmischer Kausaltiefe ergibt sich der Attention-Wert einer Entität. Dieser Wert bestimmt, wie stark die Entität in Discovery-Algorithmen gewichtet wird, also wie wahrscheinlich sie bei Suchanfragen gefunden wird.
 
-| Komponente              | Beschreibung                                    |
-| ----------------------- | ----------------------------------------------- |
-| **Trust Engine**        | Berechnung und Aktualisierung von Trust Vectors |
-| **Karma Engine**        | Tier-System und asymmetrische Updates           |
-| **Attestation Service** | Externe Trust-Bestätigungen                     |
-| **Decay Service**       | Zeitbasierter Verfall alter Events              |
+#### 6.2 Eigenschaften der Sigmoid-Transformation
 
-**Karma-Tiers:**
+Die Sigmoid-Funktion hat drei wesentliche Eigenschaften, die sie für diesen Zweck qualifizieren. Erstens ist sie beschränkt: Kein Attention-Wert kann über 1 hinausgehen, egal wie hoch Trust und Kausaltiefe sind. Das verhindert die Dominanz einzelner Akteure. Zweitens ist sie stetig und differenzierbar, was stabile Übergänge ohne Sprünge garantiert. Drittens ist sie symmetrisch um den Neutralpunkt: Bei einem Input von 0 ergibt sich ein Attention-Wert von 0.5, also exakt die Mitte.
 
-| Tier            | Karma-Punkte | Privilegien                          |
-| --------------- | ------------ | ------------------------------------ |
-| **Newcomer**    | 0 - 99       | Basis-Funktionen, eingeschränkte API |
-| **Established** | 100 - 499    | Erweiterte Funktionen, höhere Limits |
-| **Veteran**     | 500 - 999    | Volle Funktionen, Governance-Rechte  |
-| **Elder**       | 1000+        | Validator-Berechtigung, DAO-Council  |
+Für das Erynoa-System bedeutet dies: Neue Teilnehmer mit Trust 0.5 und minimaler Geschichte starten bei etwa 50% Attention. Sie sind weder bevorzugt noch benachteiligt. Mit wachsendem Trust und Geschichte steigt ihre Attention asymptotisch gegen 1, erreicht sie aber nie ganz. Umgekehrt können Entitäten mit negativer Entwicklung unter 50% fallen, erreichen aber nie 0% – sie bleiben immer sichtbar, wenn auch mit geringerer Priorität.
 
-**Fachliche Anforderungen:**
+#### 6.3 Anti-Monopol-Effekt
 
-| ID       | Anforderung                                                    | Priorität |
-| -------- | -------------------------------------------------------------- | --------- |
-| FA-M-001 | Trust Vectors MÜSSEN aus verifizierten Events berechnet werden | MUSS      |
-| FA-M-002 | Trust MUSS Environment-spezifisch sein                         | SOLL      |
-| FA-M-003 | Negatives Verhalten MUSS asymmetrisch stärker wirken           | SOLL      |
-| FA-M-004 | Trust-Updates MÜSSEN in Echtzeit erfolgen                      | SOLL      |
-| FA-M-005 | Attestations MÜSSEN signiert und verifizierbar sein            | MUSS      |
+Die Beschränktheit der Sigmoid-Funktion erzeugt einen natürlichen Anti-Monopol-Effekt. In traditionellen Systemen kann ein Akteur durch Akkumulation von Ressourcen eine dominierende Position erreichen, die andere Marktteilnehmer verdrängt. Im Erynoa-System ist dies mathematisch unmöglich: Egal wie viel Trust eine Entität aufbaut, ihr Attention-Wert kann 1 nicht überschreiten. Die marginalen Erträge zusätzlicher Reputation sinken mit steigendem Trust, während kleine Akteure überproportional von Verbesserungen profitieren.
 
 ---
 
-### 4.4 Schicht 3: ▣ SPHÄRE – Räume
+### 7. Transaktionen: Der Wertfluss im System
 
-**Kernfrage:** _„Wo gilt was?"_
+#### 7.1 Der Transaktionszyklus
 
-**Fachlicher Zweck:**
-Die SPHÄRE-Schicht definiert abgegrenzte Kontextblasen (Environments), in denen spezifische Regeln, Standards und Governance gelten. Sie ist das "Spielfeld" für Agenten-Interaktionen.
+Wertschöpfung in Erynoa folgt einem standardisierten Zyklus: Intent, Discovery, Negotiation, Agreement, Execution, Settlement. Im ersten Schritt formuliert eine Entität eine Absicht, beispielsweise ein Fahrzeug, das eine Lademöglichkeit sucht. Die Discovery-Phase nutzt den semantischen Index und die Trust-gewichteten Attention-Werte, um passende Angebote zu finden. In der Negotiation-Phase werden Konditionen ausgehandelt, entweder direkt zwischen zwei Parteien oder über Auktionsmechanismen. Das resultierende Agreement wird kryptographisch signiert und im NOA-Ledger verankert.
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│   ENVIRONMENT-HIERARCHIE                                                   │
-│                                                                             │
-│   env:global (Erynoa Protocol)                                             │
-│   ║                                                                        │
-│   ╠══ env:geo:europe                                                       │
-│   ║   ║                                                                    │
-│   ║   ╠══ env:domain:ev-charging-eu                                       │
-│   ║   ║   ║                                                                │
-│   ║   ║   ╠══ env:domain:ev-charging-de                                   │
-│   ║   ║   ║   └── + Eichrecht                                             │
-│   ║   ║   ║   └── + PTB-Zertifizierung                                    │
-│   ║   ║   ║                                                                │
-│   ║   ║   ╠══ env:domain:ev-charging-fr                                   │
-│   ║   ║   ║   └── + AFIR-FR                                               │
-│   ║   ║   ║                                                                │
-│   ║   ║   └══ env:domain:ev-charging-nl                                   │
-│   ║   ║                                                                    │
-│   ║   └══ env:domain:energy-trading-eu                                    │
-│   ║       └── + MiFID II, REMIT                                           │
-│   ║                                                                        │
-│   ╠══ env:geo:north-america                                               │
-│   ║   └══ ...                                                              │
-│   ║                                                                        │
-│   └══ env:private:stadtwerke-munich                                       │
-│       └══ env:private:swm-internal-fleet                                  │
-│                                                                             │
-│   Regeln vererben sich nach unten, können aber überschrieben werden.       │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+Die Execution-Phase umfasst die tatsächliche Leistungserbringung, beispielsweise den physischen Ladevorgang. Während dieser Phase können Streaming-Payments erfolgen, also kontinuierliche Mikrozahlungen, die den Wertfluss an die tatsächliche Leistung koppeln. In der Settlement-Phase werden alle offenen Positionen beglichen, die Transaktion wird finalisiert, und die Karma-Engine aktualisiert die Trust-Werte aller Beteiligten.
 
-**Environment-Typen:**
+#### 7.2 Atomic Managed Objects
 
-| Typ         | Scope             | Beispiel                    | Governance      |
-| ----------- | ----------------- | --------------------------- | --------------- |
-| **Domain**  | Branche/Industrie | `env:domain:ev-charging-de` | Branchenverband |
-| **Geo**     | Geographisch      | `env:geo:europe`            | Regulatoren     |
-| **Private** | Unternehmen       | `env:private:swm`           | Eigentümer      |
-| **Testnet** | Entwicklung       | `env:test:dev-staging`      | Entwickler      |
+Alle Werte im Erynoa-System werden durch Atomic Managed Objects (AMOs) repräsentiert. Ein AMO ist ein digitales Objekt mit einer eindeutigen DID, einem definierten Lifecycle und einem Set von Logic Guards, die gültige Zustandsübergänge definieren. AMOs können fungible Tokens (wie Zahlungsmittel), non-fungible Assets (wie Fahrzeuge oder Immobilien), Credentials, Verträge oder beliebige andere Wertobjekte repräsentieren.
 
-**Fachliche Anforderungen:**
+Logic Guards sind Programme in der Erynoa Configuration Language (ECL), die von der ECLVM (ECL Virtual Machine) ausgeführt werden. Sie definieren Bedingungen, unter denen ein AMO transferiert, gesplittet, gemerged oder vernichtet werden kann. Die deterministische Ausführung der ECLVM garantiert, dass alle Knoten im Netzwerk zu identischen Ergebnissen kommen.
 
-| ID       | Anforderung                                            | Priorität |
-| -------- | ------------------------------------------------------ | --------- |
-| FA-P-001 | Environments MÜSSEN hierarchisch verschachtelbar sein  | MUSS      |
-| FA-P-002 | Regeln MÜSSEN sich von Parent-Environments vererben    | SOLL      |
-| FA-P-003 | Membership MUSS durch Credentials gesteuert werden     | SOLL      |
-| FA-P-004 | Cross-Environment-Operationen MÜSSEN möglich sein      | SOLL      |
-| FA-P-005 | Governance MUSS durch DAO-ähnliche Strukturen erfolgen | KANN      |
+#### 7.3 Streaming-Payments
+
+Ein innovatives Element des Erynoa-Transaktionsmodells sind Streaming-Payments. Traditionelle Zahlungen erfolgen diskret: Eine Summe wird zu einem Zeitpunkt übertragen. Streaming-Payments hingegen übertragen Wert kontinuierlich über einen Zeitraum hinweg. Ein Ladevorgang beispielsweise könnte so abgerechnet werden, dass pro geladener Kilowattstunde automatisch der entsprechende Betrag fließt.
+
+Technisch werden Streaming-Payments durch Time-Locked Contracts realisiert. Der Zahlende hinterlegt zu Beginn eine Summe in einem Smart Contract, der kontinuierlich Anteile an den Empfänger freigibt. Bei vorzeitigem Abbruch erhält jede Partei den anteiligen Betrag entsprechend der bereits erbrachten Leistung. Dieses Modell eliminiert das Risiko von Nicht-Zahlung nach Leistungserbringung und von Nicht-Leistung nach Vorauszahlung.
 
 ---
 
-### 4.5 Schicht 4: ◐ IMPULS – Handlung
+### 8. Environments: Kontextuelle Regelräume
 
-**Kernfrage:** _„Was geschieht?"_
+#### 8.1 Das Konzept der Sphären
 
-**Fachlicher Zweck:**
-Die IMPULS-Schicht ermöglicht autonome Handlungen. Agenten definieren Intents (Absichten), Policies (Entscheidungsregeln) und führen Verhandlungen durch. Die ECLVM (Erynoa Configuration Language VM) ist die Runtime für deterministische Policy-Evaluation.
+Das Erynoa-Protokoll operiert nicht in einem homogenen Regelraum, sondern in einer Hierarchie von Environments (Sphären). Ein Environment ist ein abgegrenzter Kontext mit spezifischen Regeln, Standards und Governance-Strukturen. Beispiele sind das globale Charging-Environment für Elektromobilität, ein nationales Environment mit länderspezifischen Regulierungen oder ein unternehmensinternes Environment für die Flottenverwaltung.
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│   AGENT-MODELL                                                             │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │      🤖                                                             │  │
-│   │      AGENT                                                          │  │
-│   │      did:erynoa:agent:*                                            │  │
-│   │                                                                     │  │
-│   │      ┌────────────────────────────────────────────────────────┐    │  │
-│   │      │                                                        │    │  │
-│   │      │  • Eigene DID (Identität)                              │    │  │
-│   │      │  • Eigener Trust Vector (Reputation)                   │    │  │
-│   │      │  • Eigene Credentials (Berechtigungen)                 │    │  │
-│   │      │  • Eigener Wallet (Vermögen)                           │    │  │
-│   │      │  • Eigene Policies (Entscheidungsregeln)               │    │  │
-│   │      │  • Eigene Intents (Ziele)                              │    │  │
-│   │      │                                                        │    │  │
-│   │      └────────────────────────────────────────────────────────┘    │  │
-│   │                                                                     │  │
-│   │   Agent handelt autonom innerhalb seiner Policy-Grenzen.           │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-│   AGENT-TYPEN                                                              │
-│   ═══════════                                                               │
-│                                                                             │
-│   Seeker     │ Sucht Ressourcen/Dienste    │ Fahrzeug sucht Ladestation   │
-│   Provider   │ Bietet Ressourcen/Dienste   │ Ladesäulen-Betreiber         │
-│   Broker     │ Vermittelt zwischen Parteien│ Roaming-Plattform            │
-│   Oracle     │ Liefert externe Daten       │ Wetter-Service, Preisfeed    │
-│   Validator  │ Prüft und bestätigt         │ Eichamt, Zertifizierer       │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+Environments können hierarchisch verschachtelt sein. Ein Sub-Environment erbt die Regeln seines Parent-Environments und kann zusätzliche, strengere Regeln definieren. Die Vererbung folgt dem Monotonie-Prinzip: Ein Kind kann nicht lockerer sein als sein Elternteil. Wenn das Parent-Environment eine Mindest-Trust-Schwelle von 0.4 fordert, kann das Kind diese auf 0.5 erhöhen, aber nicht auf 0.3 senken.
 
-**Der Cybernetic Loop:**
+#### 8.2 Constraints und Policies
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│   CYBERNETIC LOOP – DAS HERZSTÜCK VON ERYNOA                               │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   1. PERCEPTION (ERY)                                               │  │
-│   │      Agent nimmt Umgebung wahr                                      │  │
-│   │      → Discovery, Trust-Check, Constraints                          │  │
-│   │           │                                                         │  │
-│   │           ▼                                                         │  │
-│   │   2. DECISION (ECHO)                                                │  │
-│   │      Agent entscheidet                                              │  │
-│   │      → Policy-Evaluation, Offer-Ranking, Selection                  │  │
-│   │           │                                                         │  │
-│   │           ▼                                                         │  │
-│   │   3. ACTION (ECHO → NOA)                                            │  │
-│   │      Agent handelt                                                  │  │
-│   │      → Transaction, State Change, Commitment                        │  │
-│   │           │                                                         │  │
-│   │           ▼                                                         │  │
-│   │   4. OBSERVATION (NOA)                                              │  │
-│   │      System beobachtet                                              │  │
-│   │      → Success/Failure, Metrics, Evidence                           │  │
-│   │           │                                                         │  │
-│   │           ▼                                                         │  │
-│   │   5. FEEDBACK (NOA → ERY)                                           │  │
-│   │      System lernt                                                   │  │
-│   │      → Trust Update, Karma Update, Knowledge Update                 │  │
-│   │           │                                                         │  │
-│   │           └──────────────────▶ zurück zu 1. PERCEPTION              │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+Die Regeln eines Environments werden durch Constraints und Policies formalisiert. Constraints sind harte Bedingungen, die erfüllt sein müssen, damit eine Aktion erlaubt ist. Eine Constraint könnte beispielsweise fordern, dass nur Entitäten mit verifiziertem Betreiber-Credential eine Ladestation im Environment registrieren dürfen. Policies sind weichere Richtlinien, die Präferenzen ausdrücken, aber nicht strikt erzwungen werden.
 
-**Fachliche Anforderungen:**
+Die Formulierung von Constraints und Policies erfolgt in ECL, der domänenspezifischen Sprache des Protokolls. ECL ist eine deklarative, pure Sprache ohne Seiteneffekte, was die formale Verifikation von Regeln ermöglicht. Die ECLVM führt diese Regeln deterministisch aus und stellt sicher, dass alle Netzwerkteilnehmer zu identischen Entscheidungen kommen.
 
-| ID       | Anforderung                                                   | Priorität |
-| -------- | ------------------------------------------------------------- | --------- |
-| FA-I-001 | Intents MÜSSEN Constraints und Budget enthalten               | MUSS      |
-| FA-I-002 | Policies MÜSSEN auto_accept/auto_reject/escalate definieren   | SOLL      |
-| FA-I-003 | Negotiation MUSS Direct, Auction und Multi-Round unterstützen | SOLL      |
-| FA-I-004 | ECLVM MUSS deterministisch und sandboxed sein                 | MUSS      |
-| FA-I-005 | Agent-Lifecycle MUSS vollständig definiert sein               | MUSS      |
+#### 8.3 Governance-Modelle
+
+Environments können verschiedene Governance-Modelle implementieren. Im Single-Owner-Modell kontrolliert eine einzelne Entität alle Regeln, was für unternehmenseigene Environments typisch ist. Im Council-Modell entscheidet ein gewähltes Gremium, beispielsweise ein Industriekonsortium. Im DAO-Modell stimmen alle Mitglieder des Environments über Regeländerungen ab, wobei die Stimmgewichte Karma-gewichtet sind: Entitäten mit höherem Trust haben mehr Einfluss.
+
+Die progressive Dezentralisierung ist ein Kernprinzip von Erynoa. Neue Environments starten typischerweise mit zentralisierter Governance, um schnelle Iterationen zu ermöglichen. Mit wachsender Reife und Teilnehmerzahl verschiebt sich die Kontrolle graduell zur Community, bis schließlich das Protokoll selbst die einzige Autorität ist.
 
 ---
 
-### 4.6 Schicht 5: ◆ CHRONIK – Beweis
+### 9. Das Netzwerk: Technische Infrastruktur
 
-**Kernfrage:** _„Was ist wahr?"_
+#### 9.1 Peer-to-Peer-Kommunikation
 
-**Fachlicher Zweck:**
-Die CHRONIK-Schicht speichert nicht nur _was_ passiert ist, sondern _warum_ und _in welcher Reihenfolge_. Der NOA Ledger ist ein kausales Beweissystem mit DAG-Struktur.
+Das Erynoa-Netzwerk basiert auf einer Peer-to-Peer-Architektur ohne zentrale Server. Alle Knoten sind grundsätzlich gleichberechtigt und kommunizieren direkt miteinander. Als technische Grundlage dient libp2p, ein modulares Netzwerk-Stack, das Transport, Routing, Discovery und Multiplexing abstrahiert.
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│   AMO (ATOMIC MANAGED OBJECT)                                              │
-│                                                                             │
-│   AMO = Universelle Repräsentation von Assets, Services, Credentials       │
-│                                                                             │
-│   AMO-TYPEN                                                                │
-│   ═════════                                                                 │
-│                                                                             │
-│   Material   │ amo:material:*   │ Ladesäule, Fahrzeug, Sensor              │
-│   Service    │ amo:service:*    │ Ladevorgang, Wartung, Transport          │
-│   Credential │ amo:credential:* │ Zertifikat, Lizenz, KYC                  │
-│   Data       │ amo:data:*       │ Messwert, Report, Log                    │
-│   Contract   │ amo:contract:*   │ Vertrag, SLA, Agreement                  │
-│                                                                             │
-│   AMO LIFECYCLE                                                            │
-│   ═════════════                                                             │
-│                                                                             │
-│   PENDING → ACTIVE → SUSPENDED → ACTIVE → DECOMMISSIONED                   │
-│                                                                             │
-│   • activate()      → PENDING → ACTIVE (requires credentials)              │
-│   • suspend()       → ACTIVE → SUSPENDED                                   │
-│   • resume()        → SUSPENDED → ACTIVE                                   │
-│   • decommission()  → * → DECOMMISSIONED (permanent)                       │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+Die Nachrichtenverteilung erfolgt über das GossipSub-Protokoll, eine effiziente Implementierung von Publish-Subscribe für P2P-Netzwerke. Knoten abonnieren Topics, die sie interessieren, und empfangen alle Nachrichten, die in diesen Topics publiziert werden. Die Weiterleitung erfolgt epidemisch: Jeder Knoten gibt empfangene Nachrichten an eine Auswahl seiner Peers weiter, bis die Information das gesamte Netzwerk durchdrungen hat.
 
-**Finality-Levels:**
+#### 9.2 Das DACS-Konsortium
 
-| Level       | Status      | Beschreibung                                |
-| ----------- | ----------- | ------------------------------------------- |
-| **Level 0** | PENDING     | Erstellt, noch nicht verteilt               |
-| **Level 1** | DISTRIBUTED | An Netzwerk verteilt, wird validiert        |
-| **Level 2** | ANCHORED    | Auf IOTA/Ethereum verankert                 |
-| **Level 3** | FINAL       | Genug Confirmations, praktisch irreversibel |
+Während reguläre Knoten nur Nachrichten weiterleiten, übernehmen DACS-Knoten (Decentralized Anchor Control System) zusätzliche Validierungs- und Anchoring-Aufgaben. Das DACS-Konsortium besteht aus ausgewählten Knoten mit erhöhten Anforderungen an Verfügbarkeit, Sicherheit und Stake. Diese Knoten validieren Transaktionen, führen das BFT-Konsensprotokoll durch und signieren die Anker für externe Chains.
 
-**Fachliche Anforderungen:**
+Die Aufnahme ins DACS-Konsortium erfordert einen substanziellen Stake und einen hohen Trust-Wert. Die Anzahl der DACS-Knoten ist dynamisch und passt sich der Netzwerkgröße an, wobei ein Minimum für die BFT-Sicherheit gewährleistet bleibt. Fehlverhalten von DACS-Knoten wird durch Slashing bestraft: Der gestakte Wert wird anteilig oder vollständig eingezogen.
 
-| ID       | Anforderung                                                      | Priorität |
-| -------- | ---------------------------------------------------------------- | --------- |
-| FA-C-001 | Events MÜSSEN kausale Referenzen (causes) enthalten              | MUSS      |
-| FA-C-002 | AMOs MÜSSEN gegen ihr Blueprint validiert werden                 | MUSS      |
-| FA-C-003 | Logic Guards MÜSSEN in ECLVM ausführbar sein                     | SOLL      |
-| FA-C-004 | Streaming Payments MÜSSEN während laufender Dienste möglich sein | SOLL      |
-| FA-C-005 | Finality MUSS durch Multi-Chain-Anchoring erreicht werden        | SOLL      |
+#### 9.3 Bridges zu externen Systemen
+
+Erynoa ist kein geschlossenes System, sondern interagiert über Bridges mit der Außenwelt. Chain-Bridges verbinden Erynoa mit anderen Blockchains und ermöglichen den Transfer von Assets. Oracle-Bridges bringen externe Daten ins System, beispielsweise Wechselkurse oder Wetterdaten. API-Bridges integrieren existierende Protokolle wie OCPP für die Ladekommunikation.
+
+Alle Bridges unterliegen denselben Trust-Mechanismen wie interne Entitäten. Ein Oracle, das wiederholt falsche Daten liefert, verliert an Reputation und wird schließlich aus dem Discovery ausgeschlossen. Dieses Prinzip erstreckt die Vertrauensökonomie über die Grenzen des Protokolls hinaus.
 
 ---
 
-### 4.7 Schicht 6: ◇ NEXUS – Vernetzung
+### 10. Anwendungsfall: Elektromobilität
 
-**Kernfrage:** _„Wie verbunden?"_
+#### 10.1 Das Charging-Szenario
 
-**Fachlicher Zweck:**
-Die NEXUS-Schicht verbindet Erynoa mit externen Systemen und Blockchains. Sie implementiert Multi-Chain-Anchoring für Redundanz und Interoperabilität.
+Die Elektromobilität bietet einen paradigmatischen Anwendungsfall für Erynoa. Ein Fahrzeug (DID:erynoa:vehicle:...) benötigt Strom und formuliert einen Intent. Die Discovery-Engine durchsucht den semantischen Index nach verfügbaren Ladestationen (DID:erynoa:cpo:...), gewichtet nach Entfernung, Preis und Trust. Das Fahrzeug wählt eine Station und initiiert eine Negotiation.
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│   MULTI-CHAIN STRATEGIE                                                    │
-│                                                                             │
-│   PRIMARY CHAIN: IOTA                                                      │
-│   ═══════════════════════                                                   │
-│   • Feeless Transactions (ideal für Mikrotransaktionen)                    │
-│   • DAG-basiert (Tangle)                                                   │
-│   • Schnelle Finality (~10s)                                               │
-│   • MoveVM-Integration (IOTA Rebased)                                      │
-│                                                                             │
-│   SECONDARY CHAINS (optional, für spezifische Use Cases)                   │
-│   ════════════════════════════════════════════════════════                  │
-│                                                                             │
-│   Ethereum   │ High-Value Anchoring, DeFi-Bridge │ $1-50 pro Tx           │
-│   Solana     │ High-Frequency Trading            │ $0.01 pro Tx           │
-│   Polygon    │ Volume Scaling                    │ $0.001 pro Tx          │
-│                                                                             │
-│   CHAIN-SELECTION LOGIC                                                    │
-│   ═════════════════════                                                     │
-│                                                                             │
-│   if transaction.value > 10000 EUR  → IOTA + Ethereum                      │
-│   if transaction.type == streaming  → IOTA only (feeless)                  │
-│   if transaction.defi_enabled       → IOTA + Ethereum                      │
-│   default                           → IOTA only                            │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+Die Station prüft die Credentials des Fahrzeugs: Ist es zugelassen? Hat der Halter eine gültige Zahlungsmethode? Erfüllt das Fahrzeug die technischen Anforderungen? Parallel prüft das Fahrzeug die Credentials der Station: Ist sie eichrechtskonform? Hat der Betreiber eine Lizenz? Welchen Trust-Score hat die Station?
 
-**Fachliche Anforderungen:**
+Nach erfolgreicher Prüfung wird ein Agreement geschlossen, das Preis, maximale Ladedauer und Stornierungsbedingungen festlegt. Der Ladevorgang beginnt, und ein Streaming-Payment transferiert kontinuierlich den Gegenwert des geflossenen Stroms. Nach Abschluss werden die Daten finalisiert, und beide Parteien erhalten oder verlieren Trust basierend auf dem Verlauf der Transaktion.
 
-| ID       | Anforderung                                         | Priorität |
-| -------- | --------------------------------------------------- | --------- |
-| FA-N-001 | IOTA MUSS als Primary Chain verwendet werden        | MUSS      |
-| FA-N-002 | High-Value-Transaktionen SOLLEN multi-anchored sein | SOLL      |
-| FA-N-003 | Bridges zu externen Systemen MÜSSEN definiert sein  | SOLL      |
-| FA-N-004 | P2P-Kommunikation MUSS über libp2p erfolgen         | SOLL      |
-| FA-N-005 | Cross-Chain-Verification MUSS möglich sein          | SOLL      |
+#### 10.2 Der Mehrwert von Erynoa
+
+Im Vergleich zu traditionellen Roaming-Netzwerken bietet Erynoa mehrere Vorteile. Die Identitäten sind interoperabel: Ein Fahrzeug muss sich nicht bei jedem Netzwerk separat registrieren. Das Vertrauen ist transparent: Statt auf Markenreputation angewiesen zu sein, kann ein Nutzer den tatsächlichen Track Record einer Station einsehen. Die Abrechnung ist effizient: Streaming-Payments eliminieren die Verzögerung zwischen Leistung und Zahlung sowie das Risiko von Zahlungsausfällen.
+
+Langfristig ermöglicht Erynoa neue Geschäftsmodelle wie dynamische Preisgestaltung basierend auf Angebot und Nachfrage, Peer-to-Peer-Ladung zwischen Privatfahrzeugen, und automatisierte Energiemärkte, in denen Fahrzeuge als mobile Speicher agieren.
 
 ---
 
-## 5. Fachliche Domänen
+### 11. Schlussfolgerung: Eine neue Ordnung
 
-### 5.1 Domain: E-Mobilität
+Das Erynoa-Protokoll definiert eine mathematisch fundierte Ordnung für dezentrale digitale Interaktionen. Die Weltformel 𝔼 = 𝕀 · 𝕋 · ℂ kondensiert diese Ordnung in eine elegante Gleichung: Existenz ist das Produkt aus Identität, Vertrauen und Geschichte.
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│   E-MOBILITÄT – FACHLICHE OBJEKTE                                          │
-│                                                                             │
-│   ENTITÄTEN                                                                │
-│   ══════════                                                                │
-│   • Elektrofahrzeug (did:erynoa:vehicle:vin-*)                             │
-│   • Ladesäule (did:erynoa:amo:material:charger-*)                          │
-│   • Ladepunkt-Betreiber (did:erynoa:org:cpo-*)                             │
-│   • E-Mobility-Provider (did:erynoa:org:emp-*)                             │
-│   • Roaming-Hub (did:erynoa:org:hub-*)                                     │
-│                                                                             │
-│   BLUEPRINTS                                                               │
-│   ══════════                                                                │
-│   • ev-charging-station (ISO 15118, OCPP 2.0.1)                            │
-│   • ev-charging-station-de (+Eichrecht, +PTB)                              │
-│   • charging-session (Ladevorgang)                                         │
-│   • roaming-contract (Roaming-Vertrag)                                     │
-│                                                                             │
-│   ENVIRONMENTS                                                             │
-│   ════════════                                                              │
-│   • env:domain:ev-charging-eu (AFIR, EU-Regulierung)                       │
-│   • env:domain:ev-charging-de (Eichrecht, LSV)                             │
-│   • env:network:hubject (Intercharge)                                      │
-│   • env:network:gireve (französisches Roaming)                             │
-│                                                                             │
-│   STANDARDS                                                                │
-│   ═════════                                                                 │
-│   • ISO 15118 (Vehicle-to-Grid-Kommunikation)                              │
-│   • OCPP 2.0.1 (Open Charge Point Protocol)                                │
-│   • OCPI 2.2.1 (Open Charge Point Interface)                               │
-│   • Eichrecht (Mess- und Eichverordnung)                                   │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+Diese Formel ist nicht nur deskriptiv, sondern normativ. Sie gibt vor, was im System zählt und was nicht. Sie belohnt kontinuierliche, integre Aktivität und bestraft sporadisches oder betrügerisches Verhalten. Sie garantiert Fairness durch mathematische Beschränkungen und ermöglicht Erholung durch den Trust-Floor.
 
-### 5.2 Domain: Energiehandel
+Die Implikationen reichen über die Elektromobilität hinaus. Jeder Markt, in dem autonome Akteure Werte austauschen, kann von den Prinzipien profitieren: Supply-Chain-Management, Energiehandel, Immobilientransaktionen, Finanzdienstleistungen. Überall dort, wo Vertrauen knapp und Intermediäre teuer sind, bietet Erynoa eine Alternative.
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│   ENERGIEHANDEL – FACHLICHE OBJEKTE                                        │
-│                                                                             │
-│   ENTITÄTEN                                                                │
-│   ══════════                                                                │
-│   • Prosumer (did:erynoa:agent:provider:prosumer-*)                        │
-│   • Consumer (did:erynoa:agent:seeker:consumer-*)                          │
-│   • Grid Operator (did:erynoa:agent:validator:grid-*)                      │
-│   • Smart Meter (did:erynoa:amo:material:meter-*)                          │
-│   • Battery Storage (did:erynoa:amo:material:battery-*)                    │
-│                                                                             │
-│   BLUEPRINTS                                                               │
-│   ══════════                                                                │
-│   • energy-certificate (Herkunftsnachweis)                                 │
-│   • power-purchase-agreement (PPA)                                         │
-│   • grid-feed-in (Einspeisung)                                             │
-│   • demand-response (Lastmanagement)                                       │
-│                                                                             │
-│   ENVIRONMENTS                                                             │
-│   ════════════                                                              │
-│   • env:domain:energy-trading-eu (MiFID II, REMIT)                         │
-│   • env:domain:p2p-energy-de (EEG, EnWG)                                   │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 5.3 Domain: Fleet Management
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│   FLEET MANAGEMENT – FACHLICHE OBJEKTE                                     │
-│                                                                             │
-│   ENTITÄTEN                                                                │
-│   ══════════                                                                │
-│   • Fleet Owner (did:erynoa:org:fleet-*)                                   │
-│   • Fleet Manager Agent (did:erynoa:agent:broker:fleet-mgr-*)              │
-│   • Vehicle Agent (did:erynoa:agent:seeker:vehicle-*)                      │
-│   • Maintenance Provider (did:erynoa:agent:provider:maintenance-*)         │
-│                                                                             │
-│   HIERARCHIE                                                               │
-│   ══════════                                                                │
-│   Fleet Owner                                                              │
-│   └── Fleet Manager Agent (koordiniert)                                    │
-│       ├── Vehicle Agent 001 → AMO: EV-001                                  │
-│       ├── Vehicle Agent 002 → AMO: EV-002                                  │
-│       └── ... (N Fahrzeuge)                                                │
-│                                                                             │
-│   FEATURES                                                                 │
-│   ════════                                                                  │
-│   • Zentrale Fleet-Policy für alle Fahrzeuge                               │
-│   • Aggregiertes Budget-Management                                         │
-│   • Trust-Aggregation über Fleet-Durchschnitt                              │
-│   • Zentrales Reporting aller Events                                       │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+Die Entwicklung steht am Anfang. Die theoretischen Grundlagen sind gelegt, die Architektur ist definiert, die ersten Implementierungen entstehen. Was bleibt, ist die harte Arbeit der Realisierung: Code schreiben, Netzwerke aufbauen, Partner gewinnen, Nutzer überzeugen. Die Weltformel zeigt den Weg. Nun gilt es, ihn zu gehen.
 
 ---
 
-## 6. Geschäftsobjekte
+### Anhang: Glossar der Symbole
 
-### 6.1 Objekt-Übersicht
-
-| Objekt           | Typ         | Beschreibung                     | Schicht   |
-| ---------------- | ----------- | -------------------------------- | --------- |
-| **DID**          | Identifier  | Dezentraler Identifier           | ◉ ANKER   |
-| **Credential**   | Nachweis    | Verifiable Credential            | ◉ ANKER   |
-| **Blueprint**    | Schablone   | Objektdefinition                 | ◈ SCHEMA  |
-| **Standard**     | Norm        | Externe Normreferenz             | ◈ SCHEMA  |
-| **Trust Vector** | Metrik      | Mehrdimensionaler Vertrauenswert | ◊ METRIK  |
-| **Attestation**  | Bestätigung | Externe Trust-Bestätigung        | ◊ METRIK  |
-| **Environment**  | Kontext     | Abgegrenzter Regelraum           | ▣ SPHÄRE  |
-| **Agent**        | Akteur      | Handelnde Einheit                | ◐ IMPULS  |
-| **Intent**       | Absicht     | Formalisiertes Ziel              | ◐ IMPULS  |
-| **Policy**       | Regel       | Entscheidungslogik               | ◐ IMPULS  |
-| **AMO**          | Objekt      | Atomic Managed Object            | ◆ CHRONIK |
-| **Event**        | Ereignis    | Kausales Event auf NOA           | ◆ CHRONIK |
-| **Anchor**       | Verankerung | Chain-Proof                      | ◇ NEXUS   |
-
-### 6.2 Objekt-Beziehungen
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│   OBJEKT-BEZIEHUNGEN                                                       │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │        DID ─────────┐                                               │  │
-│   │         │           │                                               │  │
-│   │    identifies    has                                                │  │
-│   │         │           │                                               │  │
-│   │         ▼           ▼                                               │  │
-│   │      Agent ───── Credential                                         │  │
-│   │         │           │                                               │  │
-│   │    has │           │ verifies                                       │  │
-│   │         │           │                                               │  │
-│   │         ▼           ▼                                               │  │
-│   │      Policy     Trust Vector ──────┐                                │  │
-│   │         │           │              │                                │  │
-│   │    defines     affects        context-of                            │  │
-│   │         │           │              │                                │  │
-│   │         ▼           ▼              ▼                                │  │
-│   │      Intent ───▶ AMO ◀──────── Environment                         │  │
-│   │         │           │              │                                │  │
-│   │    creates     based-on      governed-by                            │  │
-│   │         │           │              │                                │  │
-│   │         ▼           ▼              ▼                                │  │
-│   │      Event     Blueprint      Governance                            │  │
-│   │         │           │                                               │  │
-│   │    anchored  references                                             │  │
-│   │         │           │                                               │  │
-│   │         ▼           ▼                                               │  │
-│   │      Anchor     Standard                                            │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+| Symbol | Bedeutung |
+|--------|-----------|
+| 𝔼 | Existenzwert einer Entität oder des Systems |
+| 𝕀 | Identitätskomponente (binär: existiert oder nicht) |
+| 𝕋 | Vertrauensvektor in [0,1]⁴ |
+| ℂ | Kausale Geschichte (DAG der Ereignisse) |
+| σ | Sigmoid-Funktion zur Attention-Transformation |
+| ln | Natürlicher Logarithmus |
+| e | Euler'sche Zahl (≈ 2.718) |
+| DID | Decentralized Identifier |
+| VC | Verifiable Credential |
+| AMO | Atomic Managed Object |
+| ECL | Erynoa Configuration Language |
+| ECLVM | ECL Virtual Machine |
+| NOA | Nexus of Actions (Ledger) |
+| DACS | Decentralized Anchor Control System |
+| R, I, C, P | Reliability, Integrity, Capability, Reputation |
 
 ---
 
-## 7. Prozesse und Abläufe
-
-### 7.1 Prozess: Agent-Registrierung
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│   PROZESS: AGENT-REGISTRIERUNG                                             │
-│                                                                             │
-│   1. DID-ERSTELLUNG                                                        │
-│      Owner generiert Schlüsselpaar (Ed25519)                               │
-│      System erstellt DID: did:erynoa:agent:seeker:<id>                     │
-│                                                                             │
-│   2. DID-DOKUMENT                                                          │
-│      Erstellung des DID-Dokuments mit:                                     │
-│      • Public Key                                                          │
-│      • Authentication Methods                                              │
-│      • Service Endpoints                                                   │
-│                                                                             │
-│   3. INITIAL TRUST                                                         │
-│      Agent erhält Initial Trust = Owner Trust × 0.5                        │
-│      Karma-Tier = Newcomer                                                 │
-│                                                                             │
-│   4. ANCHORING                                                             │
-│      DID wird auf IOTA verankert                                           │
-│      (Optional: Ethereum für High-Value-Agents)                            │
-│                                                                             │
-│   5. ENVIRONMENT-REGISTRIERUNG                                             │
-│      Agent tritt Environments bei                                          │
-│      Membership-Credentials werden geprüft                                 │
-│                                                                             │
-│   6. CONFIGURATION                                                         │
-│      Policy zuweisen                                                       │
-│      Wallet konfigurieren                                                  │
-│      Credentials delegieren                                                │
-│                                                                             │
-│   7. ACTIVATION                                                            │
-│      Agent ist operativ                                                    │
-│      Kann Intents erstellen und verhandeln                                 │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 7.2 Prozess: Transaktion (EV-Charging)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│   PROZESS: EV-LADEVORGANG (VOLLSTÄNDIG)                                    │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   PHASE 1: PERCEPTION (ERY)                                         │  │
-│   │   ════════════════════════════                                      │  │
-│   │   • Fahrzeug-Agent erkennt: Batterie bei 20%                       │  │
-│   │   • Agent startet Discovery im Environment                          │  │
-│   │   • Query: 50kW+, CCS, 5km Radius, Trust > 0.7                     │  │
-│   │   • Ergebnis: 5 Stationen gefunden                                  │  │
-│   │                                                                     │  │
-│   │   PHASE 2: DECISION (ECHO)                                          │  │
-│   │   ═══════════════════════════                                       │  │
-│   │   • Agent erstellt Intent:                                          │  │
-│   │     - type: charge_vehicle                                          │  │
-│   │     - constraints: power_min: 50kW, connector: CCS                  │  │
-│   │     - budget: max 30€                                               │  │
-│   │   • Policy evaluiert Angebote:                                      │  │
-│   │     - Station A: 0.42€/kWh, Trust 0.92, 1.2km → Score: 0.94        │  │
-│   │     - Station B: 0.38€/kWh, Trust 0.71, 3.5km → Score: 0.81        │  │
-│   │   • Auto-Accept: Station A (unter 0.50€, Trust > 0.7)              │  │
-│   │                                                                     │  │
-│   │   PHASE 3: ACTION (ECHO → NOA)                                      │  │
-│   │   ══════════════════════════════                                    │  │
-│   │   • Agreement wird erstellt                                         │  │
-│   │   • Beide Parteien signieren                                        │  │
-│   │   • Ladevorgang startet                                             │  │
-│   │   • Streaming Payment beginnt: 0.42€ pro kWh                       │  │
-│   │                                                                     │  │
-│   │   PHASE 4: OBSERVATION (NOA)                                        │  │
-│   │   ═════════════════════════════                                     │  │
-│   │   • Ladevorgang abgeschlossen                                       │  │
-│   │   • Messwerte: 45 kWh in 28 Minuten                                │  │
-│   │   • Zahlung: 18.90€                                                │  │
-│   │   • Event wird finalisiert (Level 3: FINAL)                        │  │
-│   │                                                                     │  │
-│   │   PHASE 5: FEEDBACK (NOA → ERY)                                     │  │
-│   │   ════════════════════════════════                                  │  │
-│   │   • Station A: Reliability +0.02                                    │  │
-│   │   • Fahrzeug: Integrity +0.02 (korrekte Zahlung)                   │  │
-│   │   • Beide: Karma-Punkte akkumuliert                                │  │
-│   │   • Feedback fließt in nächste Perception                          │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 7.3 Prozess: Trust-Update
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│   PROZESS: TRUST-UPDATE                                                    │
-│                                                                             │
-│   TRIGGER                                                                  │
-│   ═══════                                                                   │
-│   Transaktion wird auf NOA finalisiert                                     │
-│                                                                             │
-│   BERECHNUNG                                                               │
-│   ══════════                                                                │
-│                                                                             │
-│   trust[dim] = Σ(event_weight × event_value × decay(age)) / normalization  │
-│                                                                             │
-│   Faktoren:                                                                │
-│   • event_weight: Gewicht des Event-Typs (0.0 - 1.0)                       │
-│   • event_value: Positiv (+) oder Negativ (-)                              │
-│   • decay(age): Zeitlicher Verfall (ältere Events zählen weniger)          │
-│   • normalization: Normierung auf [0, 1]                                   │
-│                                                                             │
-│   ASYMMETRIE                                                               │
-│   ══════════                                                                │
-│   Positiv:  +0.02 pro erfolgreichem Event                                  │
-│   Negativ:  -0.10 pro fehlgeschlagenem Event (5× stärker)                  │
-│                                                                             │
-│   PERSISTIERUNG                                                            │
-│   ══════════════                                                            │
-│   • Trust Vector wird aktualisiert                                         │
-│   • Karma-Punkte werden akkumuliert                                        │
-│   • Bei Tier-Wechsel: Benachrichtigung                                     │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 8. Anwendungsfälle
-
-### 8.1 Use Case: Autonomes EV-Charging
-
-| Attribut          | Wert                                                  |
-| ----------------- | ----------------------------------------------------- |
-| **ID**            | UC-001                                                |
-| **Name**          | Autonomes EV-Charging                                 |
-| **Akteure**       | Fahrzeug-Agent, Ladesäulen-Agent, Betreiber           |
-| **Vorbedingung**  | Fahrzeug hat Agent mit Wallet und Credentials         |
-| **Trigger**       | Batterie unter Schwellwert                            |
-| **Hauptszenario** | Siehe Prozess 7.2                                     |
-| **Nachbedingung** | Fahrzeug geladen, Zahlung erfolgt, Trust aktualisiert |
-
-### 8.2 Use Case: P2P Energy Trading
-
-| Attribut          | Wert                                                                                                                                   |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| **ID**            | UC-002                                                                                                                                 |
-| **Name**          | Peer-to-Peer Energiehandel                                                                                                             |
-| **Akteure**       | Prosumer-Agent, Consumer-Agent, Grid Validator                                                                                         |
-| **Vorbedingung**  | Beide haben Agenten im env:domain:energy-trading                                                                                       |
-| **Trigger**       | Prosumer hat Überschuss, Consumer hat Bedarf                                                                                           |
-| **Hauptszenario** | 1. Prosumer erstellt Angebot<br>2. Consumer akzeptiert<br>3. Physische Lieferung<br>4. Smart Meter verifiziert<br>5. Streaming Payment |
-| **Nachbedingung** | Energie übertragen, Zahlung erfolgt, HKN ausgestellt                                                                                   |
-
-### 8.3 Use Case: Fleet Management
-
-| Attribut          | Wert                                                                                                                         |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| **ID**            | UC-003                                                                                                                       |
-| **Name**          | Autonomes Fleet Management                                                                                                   |
-| **Akteure**       | Fleet Manager, Vehicle Agents, Maintenance Provider                                                                          |
-| **Vorbedingung**  | Fleet Owner hat Fleet Manager Agent deployed                                                                                 |
-| **Trigger**       | Fahrzeug benötigt Ladung/Wartung                                                                                             |
-| **Hauptszenario** | 1. Vehicle Agent meldet Bedarf<br>2. Fleet Manager koordiniert<br>3. Budget wird allokiert<br>4. Transaktion erfolgt autonom |
-| **Nachbedingung** | Service erfolgt, Budget aktualisiert, Reporting                                                                              |
-
-### 8.4 Use Case: KYC Credential Sharing
-
-| Attribut          | Wert                                                                                                                                        |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| **ID**            | UC-004                                                                                                                                      |
-| **Name**          | Portabler KYC-Nachweis                                                                                                                      |
-| **Akteure**       | Nutzer, Bank (Issuer), Service (Verifier)                                                                                                   |
-| **Vorbedingung**  | Bank hat KYC durchgeführt                                                                                                                   |
-| **Trigger**       | Nutzer will Service nutzen, der KYC erfordert                                                                                               |
-| **Hauptszenario** | 1. Bank issued Credential<br>2. Nutzer präsentiert Credential<br>3. Service verifiziert Signatur<br>4. Selective Disclosure (nur "über 18") |
-| **Nachbedingung** | Service verifiziert ohne vollständige Daten                                                                                                 |
-
----
-
-## 9. Nicht-funktionale Anforderungen
-
-### 9.1 Performance
-
-| ID        | Anforderung                | Zielwert |
-| --------- | -------------------------- | -------- |
-| NFA-P-001 | Discovery-Latenz           | < 500ms  |
-| NFA-P-002 | Intent-to-Agreement-Zeit   | < 2s     |
-| NFA-P-003 | Trust-Update-Latenz        | < 100ms  |
-| NFA-P-004 | Event-Finality auf IOTA    | < 15s    |
-| NFA-P-005 | Streaming-Payment-Interval | ≥ 1/s    |
-
-### 9.2 Skalierbarkeit
-
-| ID        | Anforderung               | Zielwert     |
-| --------- | ------------------------- | ------------ |
-| NFA-S-001 | Gleichzeitige Agenten     | > 1 Million  |
-| NFA-S-002 | Transaktionen pro Sekunde | > 10.000 TPS |
-| NFA-S-003 | Events pro Tag            | > 100 Mio.   |
-| NFA-S-004 | Environments pro Netzwerk | > 10.000     |
-
-### 9.3 Sicherheit
-
-| ID        | Anforderung                           | Priorität |
-| --------- | ------------------------------------- | --------- |
-| NFA-X-001 | Alle Signaturen Ed25519               | MUSS      |
-| NFA-X-002 | Transport über TLS 1.3                | MUSS      |
-| NFA-X-003 | ECLVM vollständig sandboxed           | MUSS      |
-| NFA-X-004 | Key Rotation unterstützt              | SOLL      |
-| NFA-X-005 | Zero-Knowledge-Proofs für Credentials | KANN      |
-
-### 9.4 Verfügbarkeit
-
-| ID        | Anforderung                          | Zielwert |
-| --------- | ------------------------------------ | -------- |
-| NFA-V-001 | System-Uptime                        | 99.9%    |
-| NFA-V-002 | Graceful Degradation bei Partitionen | MUSS     |
-| NFA-V-003 | Multi-Region-Deployment              | SOLL     |
-
----
-
-## 10. Governance und Compliance
-
-### 10.1 Governance-Struktur
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│   ERYNOA GOVERNANCE                                                        │
-│                                                                             │
-│   GLOBAL LEVEL                                                             │
-│   ════════════                                                              │
-│   Erynoa Foundation                                                        │
-│   ├── Technical Council (Protokoll-Entwicklung)                            │
-│   ├── Standards Committee (EIP-Prozess)                                    │
-│   └── Community DAO (Abstimmungen)                                         │
-│                                                                             │
-│   ENVIRONMENT LEVEL                                                        │
-│   ═════════════════                                                         │
-│   Environment-spezifische Governance                                       │
-│   ├── Legislative (Regelwerk definieren)                                   │
-│   ├── Executive (Regeln durchsetzen)                                       │
-│   └── Judicial (Streitfälle entscheiden)                                   │
-│                                                                             │
-│   PROPOSAL-PROZESS                                                         │
-│   ════════════════                                                          │
-│   1. Draft → 2. Review → 3. Vote → 4. Implementation                       │
-│                                                                             │
-│   Voting-Power basiert auf Karma-Tier:                                     │
-│   • Newcomer: 0 Votes                                                      │
-│   • Established: 1 Vote                                                    │
-│   • Veteran: 2 Votes                                                       │
-│   • Elder: 3 Votes                                                         │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 10.2 Compliance-Anforderungen
-
-| Regulierung   | Bereich           | Erynoa-Lösung                             |
-| ------------- | ----------------- | ----------------------------------------- |
-| **GDPR**      | Datenschutz       | DIDs sind pseudonym, Selective Disclosure |
-| **eIDAS**     | Elektronische ID  | W3C-konforme Verifiable Credentials       |
-| **MiFID II**  | Finanzinstrumente | Auditierbare Transaktionen auf NOA        |
-| **Eichrecht** | Messwesen (DE)    | Eichrechts-konforme Blueprints            |
-| **AFIR**      | E-Mobilität (EU)  | OCPI/OCPP-kompatible Blueprints           |
-
----
-
-## 11. Wirtschaftsmodell
-
-### 11.1 Wertschöpfungsströme
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│   ERYNOA WIRTSCHAFTSMODELL                                                 │
-│                                                                             │
-│   WERTSTRÖME                                                               │
-│   ══════════                                                                │
-│                                                                             │
-│   1. TRANSAKTIONSGEBÜHREN (minimal)                                        │
-│      • Basis: Feeless auf IOTA                                             │
-│      • Premium: 0.01% für High-Value-Anchoring auf Ethereum                │
-│                                                                             │
-│   2. ENVIRONMENT-GEBÜHREN                                                  │
-│      • Environment-Betreiber erheben Membership-Fees                       │
-│      • Typisch: 10-100 EUR/Monat pro Agent                                 │
-│                                                                             │
-│   3. PREMIUM-SERVICES                                                      │
-│      • Advanced Analytics                                                  │
-│      • Priority Matching                                                   │
-│      • Enterprise SLAs                                                     │
-│                                                                             │
-│   4. VALIDATOR-REWARDS                                                     │
-│      • Validatoren erhalten Anteile an Transaktionsgebühren                │
-│      • Requires: Elder Karma-Tier                                          │
-│                                                                             │
-│   KARMA-ÖKONOMIE                                                           │
-│   ═══════════════                                                           │
-│   • Karma ist NICHT handelbar (Sybil-Schutz)                               │
-│   • Karma beeinflusst Privilegien, nicht Zahlungen                         │
-│   • Positives Verhalten wird intrinsisch belohnt                           │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 11.2 Marktpotenzial
-
-| Segment            | TAM (2030)    | SAM (realistisch) | SOM (Jahr 3)  |
-| ------------------ | ------------- | ----------------- | ------------- |
-| M2M-Payments       | $89 Mrd.      | $5 Mrd.           | $50 Mio.      |
-| E-Mobility Roaming | $12 Mrd.      | $2 Mrd.           | $20 Mio.      |
-| P2P Energy Trading | $8 Mrd.       | $1 Mrd.           | $10 Mio.      |
-| Fleet Management   | $25 Mrd.      | $3 Mrd.           | $30 Mio.      |
-| **Gesamt**         | **$134 Mrd.** | **$11 Mrd.**      | **$110 Mio.** |
-
----
-
-## 12. Risiken und Mitigationen
-
-### 12.1 Technische Risiken
-
-| Risiko                     | Wahrscheinlichkeit | Impact | Mitigation                    |
-| -------------------------- | ------------------ | ------ | ----------------------------- |
-| IOTA-Netzwerk-Instabilität | Mittel             | Hoch   | Multi-Chain-Fallback          |
-| ECLVM-Sicherheitslücken    | Niedrig            | Hoch   | Formale Verifikation, Audits  |
-| Skalierungsprobleme        | Mittel             | Mittel | Sharding, Layer-2-Lösungen    |
-| Key-Compromise             | Niedrig            | Hoch   | Key Rotation, HSM-Integration |
-
-### 12.2 Marktrisiken
-
-| Risiko                   | Wahrscheinlichkeit | Impact | Mitigation                    |
-| ------------------------ | ------------------ | ------ | ----------------------------- |
-| Langsame Adoption        | Mittel             | Hoch   | Fokus auf einzelne Domains    |
-| Regulatorische Hürden    | Mittel             | Mittel | Proaktive Compliance-Arbeit   |
-| Konkurrierende Standards | Hoch               | Mittel | Interoperabilität als Feature |
-| Lock-in-Befürchtungen    | Mittel             | Mittel | Open-Source, offene Standards |
-
-### 12.3 Operationelle Risiken
-
-| Risiko               | Wahrscheinlichkeit | Impact | Mitigation                       |
-| -------------------- | ------------------ | ------ | -------------------------------- |
-| Team-Abhängigkeit    | Mittel             | Mittel | Dokumentation, Knowledge Sharing |
-| Finanzierungslücke   | Mittel             | Hoch   | Diversifizierte Funding-Quellen  |
-| Governance-Konflikte | Niedrig            | Mittel | Klare Governance-Strukturen      |
-
----
-
-## 13. Glossar
-
-### Kernbegriffe
-
-| Begriff          | Definition                                                  |
-| ---------------- | ----------------------------------------------------------- |
-| **AMO**          | Atomic Managed Object – Universelle Objektrepräsentation    |
-| **Blueprint**    | Schablone für AMO-Struktur und Validierung                  |
-| **DACS**         | Decentralized Anchor Control System – Multi-Chain-Anchoring |
-| **DID**          | Decentralized Identifier – Dezentrale Identität             |
-| **ECLVM**        | Erynoa Configuration Language VM – Deterministische Runtime |
-| **Environment**  | Abgegrenzter Kontext mit spezifischen Regeln                |
-| **Intent**       | Formalisierte Absichtserklärung eines Agenten               |
-| **Karma**        | Akkumuliertes Vertrauenskapital (nicht handelbar)           |
-| **NOA**          | Causal Ledger – Kausales Beweissystem                       |
-| **Policy**       | Entscheidungsregeln für autonome Agent-Aktionen             |
-| **Trust Vector** | Mehrdimensionaler Vertrauenswert [Rel, Int, Cap, Rep]       |
-
-### Akronyme
-
-| Kürzel | Bedeutung                           |
-| ------ | ----------------------------------- |
-| DID    | Decentralized Identifier            |
-| VC     | Verifiable Credential               |
-| AMO    | Atomic Managed Object               |
-| ECL    | Erynoa Configuration Language       |
-| DACS   | Decentralized Anchor Control System |
-| DAG    | Directed Acyclic Graph              |
-| DHT    | Distributed Hash Table              |
-| OCPP   | Open Charge Point Protocol          |
-| OCPI   | Open Charge Point Interface         |
-| EIP    | Erynoa Improvement Proposal         |
-
----
-
-## Dokumentenhistorie
-
-| Version | Datum   | Autor       | Änderungen                                                               |
-| ------- | ------- | ----------- | ------------------------------------------------------------------------ |
-| 1.0     | 2024-06 | Erynoa Team | Initiale Version                                                         |
-| 2.0     | 2026-01 | Erynoa Team | Vollständige Überarbeitung auf Basis concept-v2, 7-Schichten-Architektur |
-
----
-
-## Referenzen
-
-| Dokument          | Pfad                                                                           |
-| ----------------- | ------------------------------------------------------------------------------ |
-| Konzept-Navigator | [concept-v2/00-navigator.md](./concept-v2/00-navigator.md)                     |
-| Roadmap           | [ROADMAP.md](./ROADMAP.md)                                                     |
-| Identity-First    | [concept-v2/anker/identity-first.md](./concept-v2/anker/identity-first.md)     |
-| Blueprints        | [concept-v2/schema/blueprints.md](./concept-v2/schema/blueprints.md)           |
-| Trust Vectors     | [concept-v2/metrik/trust-vectors.md](./concept-v2/metrik/trust-vectors.md)     |
-| Environments      | [concept-v2/sphaere/environments.md](./concept-v2/sphaere/environments.md)     |
-| Agent-Modell      | [concept-v2/impuls/agent-modell.md](./concept-v2/impuls/agent-modell.md)       |
-| Cybernetic Loop   | [concept-v2/impuls/cybernetic-loop.md](./concept-v2/impuls/cybernetic-loop.md) |
-| AMO               | [concept-v2/chronik/amo.md](./concept-v2/chronik/amo.md)                       |
-| NOA Ledger        | [concept-v2/chronik/noa-ledger.md](./concept-v2/chronik/noa-ledger.md)         |
-| Multi-Chain       | [concept-v2/nexus/multi-chain.md](./concept-v2/nexus/multi-chain.md)           |
-| Glossar           | [concept-v2/appendix/glossar.md](./concept-v2/appendix/glossar.md)             |
-| Anwendungen       | [concept-v2/appendix/anwendungen.md](./concept-v2/appendix/anwendungen.md)     |
+*Erynoa – Die kybernetische Ordnung für dezentrale Wertschöpfung.*

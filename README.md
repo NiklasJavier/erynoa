@@ -191,7 +191,7 @@ documentation/
 
 | Dokument                                                                               | Beschreibung                                          |
 | -------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| **[📐 Fachkonzept](documentation/concept-v2/FACHKONZEPT-WELTFORMEL.md)**               | **Hier starten** – Vollständiges Fachkonzept in Fließtext |
+| **[📐 Fachkonzept](documentation/FACHKONZEPT.md)**               | **Hier starten** – Vollständiges Fachkonzept in Fließtext |
 | [Weltformel](documentation/concept-v2/WORLD-FORMULA.md)                                | Die mathematische Kerngleichung: 𝔼 = 𝕀 · 𝕋 · ℂ       |
 | [Weltformel-Optimum](documentation/concept-v2/WORLD-FORMULA-OPTIMUM.md)                | Optimierte Formel mit Sigmoid-Attention               |
 | [Beweis](documentation/concept-v2/WORLD-FORMULA-PROOF.md)                              | Formaler mathematischer Beweis                        |

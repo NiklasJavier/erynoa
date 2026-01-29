@@ -582,12 +582,3 @@ Sie leben in Taten.
 ```
 
 ---
-
-*Dieses Manifest wurde geschrieben für alle, die glauben,*
-*dass eine bessere Ordnung möglich ist.*
-*Nicht durch Gesetze. Nicht durch Macht.*
-*Sondern durch Mathematik, Kryptographie und Wahrheit.*
-
-*Erynoa.*
-*Die kybernetische Ordnung.*
-*Der Beginn.*
