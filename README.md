@@ -187,6 +187,19 @@ documentation/
 | ------------------------------------------ | -------------------------------------------------------- |
 | **[🗺️ Roadmap](documentation/ROADMAP.md)** | **Strategischer Entwicklungsplan** – 4 Phasen, 3-4 Jahre |
 
+### 📐 Fachkonzept & Weltformel
+
+| Dokument                                                                               | Beschreibung                                          |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| **[📐 Fachkonzept](documentation/concept-v2/FACHKONZEPT-WELTFORMEL.md)**               | **Hier starten** – Vollständiges Fachkonzept in Fließtext |
+| [Weltformel](documentation/concept-v2/WORLD-FORMULA.md)                                | Die mathematische Kerngleichung: 𝔼 = 𝕀 · 𝕋 · ℂ       |
+| [Weltformel-Optimum](documentation/concept-v2/WORLD-FORMULA-OPTIMUM.md)                | Optimierte Formel mit Sigmoid-Attention               |
+| [Beweis](documentation/concept-v2/WORLD-FORMULA-PROOF.md)                              | Formaler mathematischer Beweis                        |
+| [Fundamente](documentation/concept-v2/WORLD-FORMULA-FOUNDATIONS.md)                    | Physikalische & informationstheoretische Grundlagen   |
+| [Systemarchitektur](documentation/concept-v2/SYSTEM-ARCHITECTURE.md)                   | Detaillierte technische Architektur                   |
+| [Strategische Empfehlungen](documentation/concept-v2/STRATEGIC-RECOMMENDATIONS.md)     | Handlungsempfehlungen aus der Formel                  |
+| [Manifest](documentation/concept-v2/MANIFEST.md)                                       | Poetische Vision & Versprechen                        |
+
 ### 🧠 Konzept-Dokumentation (v2)
 
 | Schicht                                                      | Dokumente                                                                                                                                                                                                                                    | Beschreibung                             |
