@@ -1956,8 +1956,10 @@ t=120s: IOTA block 110 (depth=10)         → Final
 - [Erynoa Fachkonzept V6.1](../FACHKONZEPT.md)
 - [EIP-001: DID:erynoa](./EIP-001-did-erynoa.md)
 - [EIP-002: Trust Vector 6D](./EIP-002-trust-vector-6d.md)
+- [EIP-004: Bayesian Trust Update](./EIP-004-bayesian-trust-update.md)
 - [IOTA Tangle Specification](https://wiki.iota.org/)
 - [Merkle Tree (RFC 6962)](https://tools.ietf.org/html/rfc6962)
+- [Merkle Mountain Range](https://github.com/opentimestamps/opentimestamps-server/blob/master/doc/merkle-mountain-range.md)
 - [CBOR (RFC 8949)](https://tools.ietf.org/html/rfc8949)
 
 ---

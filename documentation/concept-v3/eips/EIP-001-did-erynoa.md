@@ -3,12 +3,12 @@
 > **EIP:** 001
 > **Titel:** DID:erynoa Method Specification
 > **Status:** Draft
-> **Version:** 0.2
+> **Version:** 0.3
 > **Typ:** Standard
 > **Ebene:** E1 (Fundament)
 > **Erstellt:** Januar 2026
 > **Aktualisiert:** Januar 2026
-> **Abhängigkeiten:** W3C DID Core Specification v1.0, DIDComm v2
+> **Abhängigkeiten:** W3C DID Core Specification v1.0, DIDComm v2, EIP-004 (Bayesian Trust)
 
 ---
 
@@ -151,7 +151,7 @@ Die 10 Namespaces kategorisieren Entitäten semantisch. Der Namespace beeinfluss
 
 Das DID-Dokument enthält die kryptographischen Materialien und Metadaten zur DID.
 
-#### 3.1 Struktur (V0.2 – mit Recovery und Privacy)
+#### 3.1 Struktur (V0.3 – mit Staked Guardianship)
 
 ```json
 {
@@ -222,16 +222,58 @@ Das DID-Dokument enthält die kryptographischen Materialien und Metadaten zur DI
     "updated": "2026-01-20T14:22:00Z",
     "status": "active",
     "recovery": {
-      "method": "social",
-      "threshold": 3,
+      "method": "social-staked",
+      "threshold": 2,
       "guardians": [
-        "did:erynoa:self:bob-guardian-1",
-        "did:erynoa:self:carol-guardian-2",
-        "did:erynoa:self:dave-guardian-3",
-        "did:erynoa:guild:trusted-bank-ag",
-        "did:erynoa:guild:notar-office-muc"
+        {
+          "did": "did:erynoa:guild:sparkasse-berlin",
+          "role": "institutional",
+          "endorsement": {
+            "level": "kyc-level-3",
+            "stake": {
+              "type": "tokens",
+              "amount": 500
+            },
+            "liability": "full",
+            "signature": "z4GdRnI..."
+          }
+        },
+        {
+          "did": "did:erynoa:self:bob-friend",
+          "role": "personal",
+          "endorsement": null
+        },
+        {
+          "did": "did:erynoa:guild:notar-office-muc",
+          "role": "institutional",
+          "endorsement": {
+            "level": "notarized",
+            "stake": {
+              "type": "reputation",
+              "percentage": 0.1
+            },
+            "liability": "partial",
+            "signature": "z5HeSnJ..."
+          }
+        }
       ],
       "timelock": "7d"
+    },
+    "trustDerived": {
+      "sources": [
+        {
+          "guardian": "did:erynoa:guild:sparkasse-berlin",
+          "boost": 0.135,
+          "since": "2026-01-15T10:30:00Z"
+        },
+        {
+          "guardian": "did:erynoa:guild:notar-office-muc",
+          "boost": 0.027,
+          "since": "2026-01-15T10:32:00Z"
+        }
+      ],
+      "totalBoost": 0.162,
+      "effectiveLevel": "Verified"
     },
     "privacy": {
       "pairwiseEnabled": true,
@@ -280,14 +322,53 @@ Das DID-Dokument enthält die kryptographischen Materialien und Metadaten zur DI
 | `erynoa.controllerChain` | Detaillierte Controller-Info | Ja |
 | `erynoa.controllerChain[].capabilities` | Berechtigungen | Ja |
 
-#### 3.4 Recovery-Felder (V0.2)
+#### 3.4 Recovery-Felder mit Staked Guardianship (V0.3)
 
 | Feld | Beschreibung | Pflicht für self |
 |------|--------------|------------------|
-| `erynoa.recovery.method` | social/institutional/multi-sig | Empfohlen |
-| `erynoa.recovery.threshold` | k von n Guardians | Ja, wenn method=social |
-| `erynoa.recovery.guardians` | Array von Guardian-DIDs | Ja, wenn method=social |
+| `erynoa.recovery.method` | social/social-staked/institutional/multi-sig | Empfohlen |
+| `erynoa.recovery.threshold` | k von n Guardians | Ja, wenn method=social* |
+| `erynoa.recovery.guardians` | Array von Guardian-Objekten (erweitert) | Ja, wenn method=social* |
 | `erynoa.recovery.timelock` | Wartezeit für Recovery | Optional (default: 7d) |
+
+**Guardian-Objekt (V0.3 – erweitert):**
+
+```json
+{
+  "did": "did:erynoa:guild:sparkasse-berlin",
+  "role": "institutional",
+  "endorsement": {
+    "level": "kyc-level-3",
+    "stake": {
+      "type": "tokens",
+      "amount": 500
+    },
+    "liability": "full",
+    "signature": "z4GdRnI..."
+  }
+}
+```
+
+| Feld | Beschreibung | Pflicht |
+|------|--------------|---------|
+| `did` | DID des Guardians | Ja |
+| `role` | "personal" oder "institutional" | Ja |
+| `endorsement` | Staking-Details (nur für institutional) | Nein |
+| `endorsement.level` | KYC-Level (kyc-level-1/2/3, notarized) | Ja wenn endorsement |
+| `endorsement.stake` | Token- oder Reputations-Stake | Ja wenn endorsement |
+| `endorsement.liability` | none/partial/full | Ja wenn endorsement |
+| `endorsement.signature` | Guardian-Signatur über Endorsement | Ja wenn endorsement |
+
+**trustDerived-Feld (V0.3):**
+
+| Feld | Beschreibung |
+|------|--------------|
+| `erynoa.trustDerived.sources` | Array der Trust-Quellen |
+| `erynoa.trustDerived.sources[].guardian` | DID des bürgenden Guardians |
+| `erynoa.trustDerived.sources[].boost` | Trust-Boost (0-1) |
+| `erynoa.trustDerived.sources[].since` | Zeitpunkt des Stakings |
+| `erynoa.trustDerived.totalBoost` | Summe aller Boosts |
+| `erynoa.trustDerived.effectiveLevel` | Resultierendes Trust-Level |
 
 #### 3.5 Privacy-Felder (V0.2)
 
@@ -1147,10 +1228,11 @@ did:erynoa:self:alice-test-1
 |---------|-------|----------|
 | 0.1 | 2026-01-29 | Initial Draft |
 | 0.2 | 2026-01-29 | Social Recovery, Privacy (Pairwise DIDs), Service Endpoint Security (DIDComm), Concurrent Update Handling, Two-Step Key Rotation, Multi-Chain Conflict Resolution |
+| 0.3 | 2026-01-29 | **Staked Guardianship**: Institutional Guardians mit Token/Reputation-Staking, Trust-Vererbung (Cold-Start-Lösung), Slashing-Mechanik, trustDerived-Feld |
 
 ---
 
 *EIP-001: DID:erynoa Method Specification*
-*Version: 0.2*
+*Version: 0.3*
 *Status: Draft*
 *Ebene: E1 (Fundament)*

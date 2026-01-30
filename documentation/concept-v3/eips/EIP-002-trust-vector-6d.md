@@ -3,10 +3,12 @@
 > **EIP:** 002
 > **Titel:** Trust Vector 6D Specification (R, I, C, P, V, Ω)
 > **Status:** Draft
+> **Version:** 0.2
 > **Typ:** Standard
 > **Ebene:** E1 (Fundament) / E2 (Emergenz)
 > **Erstellt:** Januar 2026
-> **Abhängigkeiten:** EIP-001 (DID:erynoa)
+> **Aktualisiert:** Januar 2026
+> **Abhängigkeiten:** EIP-001 (DID:erynoa), EIP-004 (Bayesian Trust Update)
 
 ---
 
@@ -1077,12 +1079,67 @@ erynoa trust did:erynoa:spirit:trading-bot-7 --explain
 }
 ```
 
+### TV-4: Staked Guardian Trust-Boost (V0.2)
+
+**Input:**
+- Neuer Agent (alle Dimensionen = 0.5)
+- Guardian: did:erynoa:guild:sparkasse (T = 0.9)
+- Stake: 500 ERY (stake_factor ≈ 0.3)
+
+**Berechnung:**
+
+```
+boost = β × T_guardian × stake_factor
+      = 0.3 × 0.9 × 0.3
+      = 0.081
+
+T_effective = T_base + boost
+            = 0.5 + 0.081
+            = 0.581
+```
+
+**Expected:**
+
+```json
+{
+  "base_trust": 0.5,
+  "guardian_boost": 0.081,
+  "effective_trust": 0.581,
+  "level": "Neutral → Verified"
+}
+```
+
+### TV-5: Guardian Slashing (V0.2)
+
+**Input:**
+- Guardian bürgt für Scammer (Full Liability, 500 ERY)
+- Scammer begeht Major Fraud (severity = 0.8)
+
+**Berechnung:**
+
+```
+Δ_guardian_I = -liability × severity × stake_factor × 0.1
+             = -1.0 × 0.8 × 0.3 × 0.1
+             = -0.024
+```
+
+**Expected:**
+
+```json
+{
+  "guardian_integrity_before": 0.9,
+  "guardian_integrity_after": 0.876,
+  "delta": -0.024
+}
+```
+
 ---
 
 ## Referenzen
 
 - [Erynoa Fachkonzept V6.1](../FACHKONZEPT.md)
 - [EIP-001: DID:erynoa](./EIP-001-did-erynoa.md)
+- [EIP-004: Bayesian Trust Update](./EIP-004-bayesian-trust-update.md)
 - [EigenTrust Paper](https://nlp.stanford.edu/pubs/eigentrust.pdf)
 - [Bayesian Trust Models](https://www.cs.ox.ac.uk/people/audun.josang/trust/)
 
@@ -1093,9 +1150,11 @@ erynoa trust did:erynoa:spirit:trading-bot-7 --explain
 | Version | Datum | Änderung |
 |---------|-------|----------|
 | 0.1 | 2026-01-29 | Initial Draft |
+| 0.2 | 2026-01-29 | **Staked Guardianship Integration**: Trust-Vererbung durch institutionelle Guardians, Slashing-Test-Vektoren, Referenz auf EIP-004 |
 
 ---
 
 *EIP-002: Trust Vector 6D Specification*
+*Version: 0.2*
 *Status: Draft*
 *Ebene: E1/E2 (Fundament/Emergenz)*
