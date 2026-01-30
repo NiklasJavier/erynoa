@@ -3,12 +3,12 @@
 > **EIP:** 001
 > **Titel:** DID:erynoa Method Specification
 > **Status:** Draft
-> **Version:** 0.3
+> **Version:** 0.4
 > **Typ:** Standard
 > **Ebene:** E1 (Fundament)
 > **Erstellt:** Januar 2026
-> **Aktualisiert:** Januar 2026
-> **Abhängigkeiten:** W3C DID Core Specification v1.0, DIDComm v2, EIP-004 (Bayesian Trust)
+> **Aktualisiert:** Februar 2026
+> **Abhängigkeiten:** W3C DID Core Specification v1.0, DIDComm v2, EIP-004 (Bayesian Trust), EIP-005 (Virt-Envs)
 
 ---
 
@@ -19,7 +19,10 @@ Diese Spezifikation definiert die `did:erynoa` DID-Methode für das Erynoa-Proto
 Die Methode ist W3C DID Core v1.0 konform und erweitert den Standard um:
 - 10 semantische Namespaces für verschiedene Entitätstypen
 - Controller-Chain für Haftungszuordnung bei autonomen Agenten
-- Social Recovery für selbstsouveräne Identitäten
+- **Unified Identity (V0.4)**: Ein Master-Secret → alle Keys → eine Identität
+- **Multi-Chain Wallets (V0.4)**: Deterministisch abgeleitete Wallets auf allen Chains
+- **Optional Recovery (V0.4)**: Recovery deaktiviert bis explizit aktiviert
+- Social Recovery und Staked Guardianship
 - Privacy-preserving Pairwise-DIDs
 - Multi-Chain-Anchoring mit deterministischer Konfliktauflösung
 - Integration mit dem Erynoa Trust-System
@@ -38,6 +41,127 @@ Erynoa benötigt ein Identitätssystem, das:
 6. **Wiederherstellbar** ist – Schlüsselverlust führt nicht zu Identitätsverlust
 7. **Privat** ist – pseudonyme Interaktionen sind möglich
 8. **Persistent** ist – Identitäten können deaktiviert, aber nicht gelöscht werden
+
+---
+
+## V0.4: Unified Identity Architecture
+
+### Einmalige Anmeldung
+
+Nutzer melden sich beim Erynoa-Peer mit **einem** Master-Secret an:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    UNIFIED IDENTITY FLOW                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   MASTER SECRET                                                             │
+│   ─────────────                                                             │
+│   Option A: BIP39 Mnemonic (24 Wörter)                                     │
+│   Option B: WebAuthn Passkey (Biometrie/Hardware-Key)                      │
+│                                                                             │
+│                          │                                                  │
+│                          ▼                                                  │
+│              ┌───────────────────────┐                                     │
+│              │ DETERMINISTIC KDF     │                                     │
+│              │ (HD-Derivation)       │                                     │
+│              └───────────────────────┘                                     │
+│                          │                                                  │
+│          ┌───────────────┼───────────────┐                                 │
+│          │               │               │                                 │
+│          ▼               ▼               ▼                                 │
+│   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐                         │
+│   │ Ed25519     │ │ secp256k1   │ │ Ed25519     │                         │
+│   │ m/44'/9999' │ │ m/44'/60'   │ │ m/44'/4218' │                         │
+│   └──────┬──────┘ └──────┬──────┘ └──────┬──────┘                         │
+│          │               │               │                                 │
+│          ▼               ▼               ▼                                 │
+│   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐                         │
+│   │ did:erynoa: │ │ 0x...       │ │ iota1q...   │                         │
+│   │ self:alice  │ │ (Ethereum)  │ │ (IOTA)      │                         │
+│   └─────────────┘ └─────────────┘ └─────────────┘                         │
+│          │               │               │                                 │
+│          └───────────────┼───────────────┘                                 │
+│                          │                                                  │
+│                          ▼                                                  │
+│              ┌───────────────────────┐                                     │
+│              │    DID-DOCUMENT       │                                     │
+│              │  (multiChainWallets)  │                                     │
+│              └───────────────────────┘                                     │
+│                                                                             │
+│   RESULTAT:                                                                 │
+│   • Eine Anmeldung → Alle Wallets                                          │
+│   • Initiale Kontrolle: 100% beim User (normale EOAs)                      │
+│   • Recovery: DEAKTIVIERT (bis User aktiviert)                             │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Derivation Paths
+
+| Chain | Key-Typ | Derivation Path |
+|-------|---------|-----------------|
+| Erynoa (Primary) | Ed25519 | m/44'/9999'/0'/0/0 |
+| Ethereum/EVM | secp256k1 | m/44'/60'/0'/0/0 |
+| Solana | Ed25519 | m/44'/501'/0'/0' |
+| IOTA/MoveVM | Ed25519 | m/44'/4218'/0'/0/0 |
+| Sui | Ed25519 | m/44'/784'/0'/0/0 |
+
+### DID-Document mit Multi-Chain Wallets
+
+```json
+{
+  "id": "did:erynoa:self:alice-2026-xyz",
+  "erynoa": {
+    "multiChainWallets": [
+      {
+        "chain": "erynoa-root",
+        "address": "did:erynoa:self:alice-2026-xyz",
+        "keyType": "Ed25519",
+        "derivationPath": "m/44'/9999'/0'/0/0"
+      },
+      {
+        "chain": "ethereum-mainnet",
+        "chainId": 1,
+        "address": "0x1234...abcd",
+        "keyType": "secp256k1"
+      },
+      {
+        "chain": "iota-mainnet",
+        "address": "iota1qr...xyz",
+        "keyType": "Ed25519"
+      }
+    ],
+    "recovery": {
+      "status": "none"
+    }
+  }
+}
+```
+
+### Optional Recovery
+
+Recovery ist **initial deaktiviert**. Der User hat volle Kontrolle ohne externe Abhängigkeiten.
+
+**Aktivierung (später):**
+
+```bash
+erynoa recovery setup \
+  --method social-staked \
+  --threshold 3 \
+  --guardian did:erynoa:guild:sparkasse-berlin \
+  --guardian did:erynoa:self:bob \
+  --guardian did:erynoa:self:carol \
+  --timelock 7d
+```
+
+**Recovery-Prozess:**
+
+1. **Threshold erreichen**: k von n Guardians bestätigen
+2. **Timelock warten**: 7 Tage Wartezeit
+3. **Key-Rotation**: Neue Keys aus neuem Master-Secret
+4. **RightsTransfer-Event**: Alte DIDs zeigen auf neue
+5. **Asset-Transfer**: Guthaben auf neue Wallets transferieren
 
 ---
 
@@ -1229,10 +1353,11 @@ did:erynoa:self:alice-test-1
 | 0.1 | 2026-01-29 | Initial Draft |
 | 0.2 | 2026-01-29 | Social Recovery, Privacy (Pairwise DIDs), Service Endpoint Security (DIDComm), Concurrent Update Handling, Two-Step Key Rotation, Multi-Chain Conflict Resolution |
 | 0.3 | 2026-01-29 | **Staked Guardianship**: Institutional Guardians mit Token/Reputation-Staking, Trust-Vererbung (Cold-Start-Lösung), Slashing-Mechanik, trustDerived-Feld |
+| 0.4 | 2026-02-01 | **Unified Identity**: BIP39/Passkey Master-Secret, deterministische Multi-Chain Key-Derivation, multiChainWallets-Feld im DID-Document, Optional Recovery (initial deaktiviert), RightsTransfer-Event |
 
 ---
 
 *EIP-001: DID:erynoa Method Specification*
-*Version: 0.3*
+*Version: 0.4*
 *Status: Draft*
 *Ebene: E1 (Fundament)*

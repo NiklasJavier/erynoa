@@ -3,13 +3,13 @@
 > **EIP:** 005
 > **Titel:** Virtualized Environment Architecture (Root-Env / Virt-Env / Shards)
 > **Status:** Draft
-> **Version:** 0.2
+> **Version:** 0.3 (Refined)
 > **Typ:** Standard
 > **Ebene:** E2 (Emergenz) / E5 (Schutz) / E6 (Kybernetik)
 > **Erstellt:** Januar 2026
-> **Aktualisiert:** Januar 2026
+> **Aktualisiert:** Februar 2026
 > **Abhängigkeiten:** EIP-001 (DID), EIP-002 (Trust), EIP-003 (Event-DAG), EIP-004 (Bayesian Trust)
-> **Axiom-Referenz:** A18-A22 (Realms), Q6-Q8 (Kategorientheorie), E4 (Shards)
+> **Axiom-Referenz:** A18-A22 (Realms), Q6-Q8 (Kategorientheorie), E4 (Shards), **L1-L3 (Logic Guards)**
 
 ---
 
@@ -47,6 +47,102 @@ ROOT-ENV (𝒞_Root)
 5. **Funktoren**: Strukturerhaltende Abbildungen zwischen Kategorien (Axiom Q7)
 
 Dieses Modell erlaubt es **souveränen Entitäten** (Staaten, Unionen, Konzernen), eigene Governance-Strukturen und Währungssysteme zu betreiben, während sie vom gemeinsamen Erynoa-Identitätssystem und Vertrauensprotokoll profitieren.
+
+---
+
+## V0.3 Refinements
+
+### A. Unified Identity & Multi-Chain Onboarding
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    UNIFIED IDENTITY ARCHITECTURE                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   EINMALIGE ANMELDUNG (Seed/Passkey)                                       │
+│   ══════════════════════════════════                                       │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                    MASTER SECRET                                     │  │
+│   │         BIP39 Mnemonic (24 Wörter) ODER WebAuthn Passkey            │  │
+│   └────────────────────────────┬────────────────────────────────────────┘  │
+│                                │                                            │
+│                    ┌───────────┴───────────┐                               │
+│                    │  DETERMINISTIC KDF    │                               │
+│                    │  (HD-Derivation)      │                               │
+│                    └───────────┬───────────┘                               │
+│                                │                                            │
+│          ┌─────────────────────┼─────────────────────┐                     │
+│          │                     │                     │                     │
+│          ▼                     ▼                     ▼                     │
+│   ┌─────────────┐       ┌─────────────┐       ┌─────────────┐             │
+│   │ Ed25519 Key │       │ secp256k1   │       │ Ed25519 Key │             │
+│   │ (Primary)   │       │ (EVM-Chains)│       │ (MoveVM)    │             │
+│   └──────┬──────┘       └──────┬──────┘       └──────┬──────┘             │
+│          │                     │                     │                     │
+│          ▼                     ▼                     ▼                     │
+│   ┌─────────────┐       ┌─────────────┐       ┌─────────────┐             │
+│   │ did:erynoa: │       │ 0x...       │       │ 0x...       │             │
+│   │ self:alice  │       │ (Ethereum)  │       │ (IOTA/Sui)  │             │
+│   └─────────────┘       └─────────────┘       └─────────────┘             │
+│          │                     │                     │                     │
+│          └─────────────────────┼─────────────────────┘                     │
+│                                │                                            │
+│                    ┌───────────┴───────────┐                               │
+│                    │    DID-DOCUMENT       │                               │
+│                    │  (Multi-Chain Links)  │                               │
+│                    └───────────────────────┘                               │
+│                                                                             │
+│   PRINZIP: Eine Anmeldung → Alle Wallets → Eine Identität                  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### B. Dynamic Trust Dampening (Kybernetik E6)
+
+In V0.2 war `trust_factor` statisch. Das widerspricht dem kybernetischen Ansatz.
+
+**V0.3: Dynamischer Dämpfungsfaktor basierend auf historischer Entropie:**
+
+```
+β_dynamic(s₁, s₂) = β_base × exp(-λ × failure_rate(s₁, s₂))
+```
+
+- Wenn viele Transaktionen zwischen EU und ASEAN scheitern, sinkt β automatisch
+- Erfolgreiche Transaktionen erhöhen β (bis zum Maximum)
+
+### C. Contextual Trust Rotation (Vektor-Transformation)
+
+Ein hoher "Competence"-Wert im Gaming-Shard bedeutet nicht "Competence" im Medical-Shard.
+
+**V0.3: Trust-Matrix statt skalarer Dämpfung:**
+
+```
+T_target = M × T_source
+
+Wobei M die Transformations-Matrix ist:
+- Gaming→Finance: C wird stark gedämpft (0.1), I bleibt (0.8)
+- Energy→Finance: R wird übertragen (0.9), C neutral (0.5)
+```
+
+### D. Boundary Guards (Logic Guards L1-L3)
+
+Kategorientheorie definiert Struktur, aber **Logic Guards** bewachen die Übergänge.
+
+**V0.3: Jeder Funktor hat einen Boundary Guard (Smart Contract in ECL):**
+
+```ecl
+guard boundary_eu_to_asean {
+  // GDPR-Äquivalenz prüfen
+  require(target_env.has_compliance("GDPR-equivalent"))
+  
+  // Minimaler Trust
+  require(source_trust.scalar() >= 0.6)
+  
+  // Sanktions-Check
+  require(!sanctions_list.contains(user.did))
+}
+```
 
 ---
 
@@ -341,10 +437,10 @@ pub fn identity(agent: &DID, category: &DID) -> Morphism {
 }
 ```
 
-#### 2.4 Funktoren für Cross-Shard/Cross-Env Operationen
+#### 2.4 Funktoren für Cross-Shard/Cross-Env Operationen (V0.3 Refined)
 
 ```rust
-/// Ein Funktor F: 𝒞₁ → 𝒞₂ (Axiom Q7)
+/// Ein Funktor F: 𝒞₁ → 𝒞₂ (Axiom Q7) mit Trust-Matrix (V0.3)
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Functor {
     /// Funktor-ID
@@ -362,14 +458,243 @@ pub struct Functor {
     /// Morphismus-Abbildung: F(f) für jede Transaktion f
     pub morphism_mapping: MorphismMapping,
     
-    /// Trust-Dämpfungsfaktor (wie viel Trust wird übertragen?)
-    pub trust_factor: f64,
+    /// V0.3: Trust-Transformations-Matrix (6x6)
+    /// Definiert, wie R, I, C, P, V, Ω transformiert werden
+    /// Beispiel: Gaming→Finance: C wird stark gedämpft, I bleibt
+    pub trust_matrix: TrustMatrix,
+    
+    /// V0.3: Dynamischer Dämpfungsfaktor basierend auf Erfolgsrate
+    pub dynamic_dampening: DynamicDampening,
     
     /// Wert-Konversionsregel
     pub value_conversion: ValueConversion,
     
+    /// V0.3: Boundary Guard (Logic Guard L1-L3)
+    pub boundary_guard: BoundaryGuard,
+    
     /// Funktor-Eigenschaften (Q7: Identität und Komposition erhalten)
     pub properties: FunctorProperties,
+}
+
+/// Trust-Transformations-Matrix (6x6) für kontextuelle Rotation
+/// T_target = M × T_source
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct TrustMatrix {
+    /// Die 6x6 Matrix [R, I, C, P, V, Ω] → [R', I', C', P', V', Ω']
+    pub matrix: [[f32; 6]; 6],
+}
+
+impl TrustMatrix {
+    /// Identitäts-Matrix (Trust 1:1 übertragen)
+    pub fn identity() -> Self {
+        Self {
+            matrix: [
+                [1.0, 0.0, 0.0, 0.0, 0.0, 0.0], // R
+                [0.0, 1.0, 0.0, 0.0, 0.0, 0.0], // I
+                [0.0, 0.0, 1.0, 0.0, 0.0, 0.0], // C
+                [0.0, 0.0, 0.0, 1.0, 0.0, 0.0], // P
+                [0.0, 0.0, 0.0, 0.0, 1.0, 0.0], // V
+                [0.0, 0.0, 0.0, 0.0, 0.0, 1.0], // Ω
+            ],
+        }
+    }
+    
+    /// Gaming → Finance: Competence gedämpft, Integrity bleibt
+    pub fn gaming_to_finance() -> Self {
+        Self {
+            matrix: [
+                [0.5, 0.0, 0.0, 0.0, 0.0, 0.0], // R: 50%
+                [0.0, 0.8, 0.0, 0.0, 0.0, 0.0], // I: 80% (Ehrlichkeit übertragbar)
+                [0.0, 0.0, 0.1, 0.0, 0.0, 0.0], // C: 10% (Gaming-Skill ≠ Finance-Skill)
+                [0.0, 0.0, 0.0, 0.6, 0.0, 0.0], // P: 60%
+                [0.0, 0.0, 0.0, 0.0, 0.7, 0.0], // V: 70%
+                [0.0, 0.0, 0.0, 0.0, 0.0, 0.9], // Ω: 90%
+            ],
+        }
+    }
+    
+    /// Energy → Finance: Reliability bleibt, Competence neutral
+    pub fn energy_to_finance() -> Self {
+        Self {
+            matrix: [
+                [0.9, 0.0, 0.0, 0.0, 0.0, 0.0], // R: 90%
+                [0.0, 0.8, 0.0, 0.0, 0.0, 0.0], // I: 80%
+                [0.0, 0.0, 0.5, 0.0, 0.0, 0.0], // C: 50%
+                [0.0, 0.0, 0.0, 0.8, 0.0, 0.0], // P: 80%
+                [0.0, 0.0, 0.0, 0.0, 0.6, 0.0], // V: 60%
+                [0.0, 0.0, 0.0, 0.0, 0.0, 0.9], // Ω: 90%
+            ],
+        }
+    }
+    
+    /// Wendet die Matrix auf einen Trust-Vektor an
+    pub fn transform(&self, vector: &TrustVector) -> TrustVector {
+        let components = vector.to_array();
+        let mut result = [0.0f32; 6];
+        
+        for i in 0..6 {
+            for j in 0..6 {
+                result[i] += self.matrix[i][j] * components[j];
+            }
+        }
+        
+        TrustVector::from_array(result).normalize()
+    }
+}
+
+/// Dynamischer Dämpfungsfaktor basierend auf Erfolgsrate (Kybernetik E6)
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DynamicDampening {
+    /// Basis-Dämpfungsfaktor
+    pub base_factor: f64,
+    
+    /// Decay-Rate für Failures (λ)
+    pub failure_decay: f64,
+    
+    /// Aktuelle Statistik
+    pub stats: DampeningStats,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct DampeningStats {
+    pub total_transfers: u64,
+    pub successful_transfers: u64,
+    pub failed_transfers: u64,
+}
+
+impl DynamicDampening {
+    /// Berechnet aktuellen Dämpfungsfaktor
+    /// β_dynamic = β_base × exp(-λ × failure_rate)
+    pub fn current_factor(&self) -> f64 {
+        let failure_rate = if self.stats.total_transfers > 0 {
+            self.stats.failed_transfers as f64 / self.stats.total_transfers as f64
+        } else {
+            0.0
+        };
+        
+        self.base_factor * (-self.failure_decay * failure_rate).exp()
+    }
+    
+    /// Aktualisiert nach Transfer
+    pub fn record_transfer(&mut self, success: bool) {
+        self.stats.total_transfers += 1;
+        if success {
+            self.stats.successful_transfers += 1;
+        } else {
+            self.stats.failed_transfers += 1;
+        }
+    }
+}
+
+/// Boundary Guard (Logic Guard L1-L3) für Funktor-Übergänge
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct BoundaryGuard {
+    /// Guard-ID
+    pub id: LogicGuardId,
+    
+    /// ECL-Code für Validierung
+    pub ecl_code: String,
+    
+    /// Erforderliche Credentials
+    pub required_credentials: Vec<CredentialType>,
+    
+    /// Minimaler Trust-Level
+    pub min_trust: f64,
+    
+    /// Compliance-Anforderungen
+    pub compliance_requirements: Vec<ComplianceRequirement>,
+}
+
+impl BoundaryGuard {
+    /// EU → Drittstaaten: GDPR-Äquivalenz prüfen
+    pub fn eu_external() -> Self {
+        Self {
+            id: "guard_eu_external".into(),
+            ecl_code: r#"
+                // GDPR-Äquivalenz prüfen
+                require(target_env.has_compliance("GDPR-equivalent") ||
+                        target_env.has_compliance("GDPR"))
+                
+                // Minimaler Trust
+                require(source_trust.scalar() >= 0.6)
+                
+                // Sanktions-Check
+                require(!sanctions_list.contains(user.did))
+                
+                // Data Classification
+                require(data.classification != "RESTRICTED" ||
+                        target_env.has_compliance("EU-adequacy"))
+            "#.into(),
+            required_credentials: vec![],
+            min_trust: 0.6,
+            compliance_requirements: vec![
+                ComplianceRequirement::GdprEquivalent,
+            ],
+        }
+    }
+    
+    /// Healthcare-Shard: Medizinische Lizenz erforderlich
+    pub fn healthcare_entry() -> Self {
+        Self {
+            id: "guard_healthcare_entry".into(),
+            ecl_code: r#"
+                // Medizinische Lizenz prüfen
+                require(user.has_credential("medical-license") ||
+                        user.has_credential("healthcare-professional"))
+                
+                // HIPAA/GDPR-Compliance
+                require(user.env.has_compliance("HIPAA") ||
+                        user.env.has_compliance("GDPR"))
+            "#.into(),
+            required_credentials: vec![
+                CredentialType::MedicalLicense,
+            ],
+            min_trust: 0.7,
+            compliance_requirements: vec![
+                ComplianceRequirement::Hipaa,
+                ComplianceRequirement::Gdpr,
+            ],
+        }
+    }
+    
+    /// Validiert einen Übergang
+    pub async fn validate(
+        &self,
+        user: &DID,
+        source_trust: &TrustVector,
+        target_env: &VirtEnv,
+        context: &GuardContext,
+    ) -> Result<(), GuardError> {
+        // 1. Trust-Level prüfen
+        if source_trust.scalar() < self.min_trust {
+            return Err(GuardError::InsufficientTrust {
+                required: self.min_trust,
+                actual: source_trust.scalar(),
+            });
+        }
+        
+        // 2. Credentials prüfen
+        for cred_type in &self.required_credentials {
+            if !context.has_credential(user, cred_type).await? {
+                return Err(GuardError::MissingCredential(cred_type.clone()));
+            }
+        }
+        
+        // 3. Compliance prüfen
+        for req in &self.compliance_requirements {
+            if !target_env.has_compliance(req) {
+                return Err(GuardError::ComplianceMismatch(req.clone()));
+            }
+        }
+        
+        // 4. ECL-Code ausführen
+        let result = execute_ecl(&self.ecl_code, context).await?;
+        if !result.success {
+            return Err(GuardError::EclValidationFailed(result.error));
+        }
+        
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -387,8 +712,121 @@ pub struct FunctorProperties {
     pub surjective: bool,
 }
 
-/// Cross-Shard Transfer mittels Funktor
+/// Cross-Shard Transfer mittels Funktor (V0.3 mit Trust-Matrix & Boundary Guard)
 pub async fn cross_shard_transfer(
+    source_shard: &Category,
+    target_shard: &Category,
+    agent: &DID,
+    asset: &Asset,
+    functor: &mut Functor,
+    context: &GuardContext,
+) -> Result<CrossShardResult, ShardError> {
+    // 0. V0.3: Boundary Guard validieren
+    let source_trust = source_shard.get_trust(agent)?;
+    let target_env = get_virt_env(&target_shard.id)?;
+    
+    functor.boundary_guard.validate(
+        agent,
+        &source_trust,
+        &target_env,
+        context,
+    ).await.map_err(|e| ShardError::BoundaryGuardFailed(e))?;
+    
+    // 1. Validiere Funktor-Eigenschaften (Axiom Q7)
+    if !functor.properties.preserves_identity {
+        return Err(ShardError::FunctorViolation("Identity not preserved"));
+    }
+    if !functor.properties.preserves_composition {
+        return Err(ShardError::FunctorViolation("Composition not preserved"));
+    }
+    
+    // 2. Objekt-Abbildung: Agent in Ziel-Kategorie
+    let target_agent = funktor.object_mapping.map(agent)?;
+    
+    // 3. Asset-Konversion
+    let converted_asset = functor.value_conversion.convert(asset)?;
+    
+    // 4. V0.3: Trust-Transformation mittels Matrix
+    let transformed_trust = functor.trust_matrix.transform(&source_trust);
+    
+    // 5. V0.3: Dynamische Dämpfung anwenden
+    let dampening = functor.dynamic_dampening.current_factor();
+    let propagated_trust = transformed_trust.scale(dampening);
+    
+    // 6. HTLC-basierter Atomic Swap (V0.3: Saga Pattern)
+    let lock_result = atomic_cross_bridge_swap(
+        &source_shard.id,
+        &target_shard.id,
+        agent,
+        asset.amount,
+        converted_asset.amount,
+    ).await;
+    
+    match lock_result {
+        Ok(swap_receipt) => {
+            // Success: Statistik aktualisieren
+            functor.dynamic_dampening.record_transfer(true);
+            
+            // Trust im Ziel-Shard setzen
+            target_shard.update_trust(&target_agent, propagated_trust).await?;
+            
+            Ok(CrossShardResult {
+                event_id: swap_receipt.event_id,
+                source_agent: agent.clone(),
+                target_agent,
+                original_asset: asset.clone(),
+                converted_asset,
+                trust_propagated: propagated_trust,
+                dampening_factor: dampening,
+            })
+        },
+        Err(e) => {
+            // Failure: Statistik aktualisieren (erhöht future dampening)
+            functor.dynamic_dampening.record_transfer(false);
+            Err(ShardError::TransferFailed(e))
+        }
+    }
+}
+
+/// HTLC-basierter Atomic Swap für Cross-Bridge Konsistenz (V0.3)
+pub async fn atomic_cross_bridge_swap(
+    source_bridge: &DID,
+    target_bridge: &DID,
+    user: &DID,
+    amount_source: u128,
+    amount_target: u128,
+) -> Result<SwapReceipt, SwapError> {
+    // 1. Phase: LOCK (Source Env)
+    // Asset wird im Quell-Shard in HTLC gesperrt
+    let lock_proof = lock_asset(source_bridge, user, amount_source).await?;
+    
+    // 2. Phase: MINT/UNLOCK (Target Env)
+    // Mit Lock-Proof wird im Ziel-Shard das Gegen-Asset freigegeben
+    let mint_result = mint_asset(
+        target_bridge,
+        user,
+        amount_target,
+        &lock_proof,
+    ).await;
+    
+    match mint_result {
+        Ok(receipt) => {
+            // 3. Phase: COMMIT (Source Env)
+            // Swap erfolgreich → Assets im Source Shard endgültig verbrannt
+            commit_burn(source_bridge, &lock_proof.id).await?;
+            Ok(receipt)
+        },
+        Err(e) => {
+            // ROLLBACK (Source Env)
+            // Swap fehlgeschlagen → Assets werden entsperrt
+            rollback_lock(source_bridge, &lock_proof.id).await?;
+            Err(e)
+        }
+    }
+}
+
+/// Legacy: Zwei-Phasen-Commit (für intra-Env Transfers)
+pub async fn cross_shard_transfer_legacy(
     source_shard: &Category,
     target_shard: &Category,
     agent: &DID,
@@ -399,19 +837,16 @@ pub async fn cross_shard_transfer(
     if !functor.properties.preserves_identity {
         return Err(ShardError::FunctorViolation("Identity not preserved"));
     }
-    if !functor.properties.preserves_composition {
-        return Err(ShardError::FunctorViolation("Composition not preserved"));
-    }
     
-    // 2. Objekt-Abbildung: Agent in Ziel-Kategorie
+    // 2. Objekt-Abbildung
     let target_agent = functor.object_mapping.map(agent)?;
     
     // 3. Asset-Konversion
     let converted_asset = functor.value_conversion.convert(asset)?;
     
-    // 4. Trust-Propagation
+    // 4. Trust-Transformation
     let source_trust = source_shard.get_trust(agent)?;
-    let propagated_trust = source_trust.scale(functor.trust_factor);
+    let propagated_trust = functor.trust_matrix.transform(&source_trust);
     
     // 5. Zwei-Phasen-Commit (Atomic Cross-Shard)
     let phase1_source = source_shard.prepare_debit(agent, asset).await?;
@@ -456,9 +891,425 @@ pub async fn cross_shard_transfer(
 }
 ```
 
-### 3. Root-Environment (Root-Env) als 𝒞_Root
+### 3. Unified Identity & Multi-Chain Onboarding (V0.3)
 
-#### 3.1 Definition
+#### 3.1 Master-Secret und Key-Derivation
+
+```rust
+/// Master-Secret für deterministische Key-Ableitung
+#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+pub enum MasterSecret {
+    /// BIP39 Mnemonic (24 Wörter)
+    Mnemonic {
+        entropy: [u8; 32],
+        words: [String; 24],
+    },
+    
+    /// WebAuthn Passkey
+    Passkey {
+        credential_id: Vec<u8>,
+        public_key: Vec<u8>,
+        attestation: PasskeyAttestation,
+    },
+}
+
+/// HD-Derivation Pfade für verschiedene Chains
+pub struct DerivationPaths {
+    /// Erynoa Primary: m/44'/9999'/0'/0/0
+    pub erynoa_primary: &'static str,
+    
+    /// Ethereum/EVM: m/44'/60'/0'/0/0 (secp256k1)
+    pub ethereum: &'static str,
+    
+    /// Solana: m/44'/501'/0'/0' (Ed25519)
+    pub solana: &'static str,
+    
+    /// IOTA/MoveVM: m/44'/4218'/0'/0/0 (Ed25519)
+    pub iota: &'static str,
+}
+
+impl Default for DerivationPaths {
+    fn default() -> Self {
+        Self {
+            erynoa_primary: "m/44'/9999'/0'/0/0",
+            ethereum: "m/44'/60'/0'/0/0",
+            solana: "m/44'/501'/0'/0'",
+            iota: "m/44'/4218'/0'/0/0",
+        }
+    }
+}
+
+/// Erzeugt alle Keys aus einem Master-Secret
+pub struct KeyDerivation {
+    master_secret: MasterSecret,
+    paths: DerivationPaths,
+}
+
+impl KeyDerivation {
+    /// Leitet den primären Ed25519-Key für did:erynoa:self ab
+    pub fn derive_erynoa_primary(&self) -> Ed25519Keypair {
+        let seed = self.derive_seed(&self.paths.erynoa_primary);
+        Ed25519Keypair::from_seed(&seed)
+    }
+    
+    /// Leitet secp256k1 Key für EVM-Chains ab
+    pub fn derive_ethereum(&self) -> Secp256k1Keypair {
+        let seed = self.derive_seed(&self.paths.ethereum);
+        Secp256k1Keypair::from_seed(&seed)
+    }
+    
+    /// Leitet Ed25519 Key für Solana ab
+    pub fn derive_solana(&self) -> Ed25519Keypair {
+        let seed = self.derive_seed(&self.paths.solana);
+        Ed25519Keypair::from_seed(&seed)
+    }
+    
+    /// Leitet Ed25519 Key für IOTA/MoveVM ab
+    pub fn derive_iota(&self) -> Ed25519Keypair {
+        let seed = self.derive_seed(&self.paths.iota);
+        Ed25519Keypair::from_seed(&seed)
+    }
+    
+    /// Generiert DID aus primärem Key
+    pub fn generate_did(&self) -> DID {
+        let primary_key = self.derive_erynoa_primary();
+        let public_key_hash = sha256(&primary_key.public_key())[..16];
+        DID::from_str(&format!(
+            "did:erynoa:self:{}",
+            base58_encode(&public_key_hash)
+        )).unwrap()
+    }
+}
+```
+
+#### 3.2 Multi-Chain Wallet Creation
+
+```rust
+/// Multi-Chain Wallet-Set, verknüpft mit einer Erynoa-DID
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct MultiChainWalletSet {
+    /// Die primäre Erynoa DID
+    pub erynoa_did: DID,
+    
+    /// Chain-spezifische Wallet-Adressen
+    pub wallets: HashMap<ChainId, ChainWallet>,
+    
+    /// Aktueller Recovery-Status
+    pub recovery_status: RecoveryStatus,
+    
+    /// Erstellungszeitpunkt
+    pub created_at: u64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ChainWallet {
+    /// Chain-Identifier
+    pub chain: ChainId,
+    
+    /// Wallet-Adresse (native Format)
+    pub address: String,
+    
+    /// Public Key (für Signatur-Verifikation)
+    pub public_key: Vec<u8>,
+    
+    /// Key-Typ
+    pub key_type: KeyType,
+    
+    /// Metadaten-Link zur Erynoa-DID
+    pub did_link: DidLinkMethod,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum ChainId {
+    ErynoaRoot,
+    Ethereum { chain_id: u64 },
+    Polygon,
+    Arbitrum,
+    Solana,
+    Iota { network: String },
+    Sui,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum KeyType {
+    Ed25519,
+    Secp256k1,
+    Dilithium3,  // Post-Quantum
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum DidLinkMethod {
+    /// On-Chain Storage (z.B. Account-Metadaten)
+    OnChainStorage { slot: u64 },
+    
+    /// ENS/Naming System
+    NamingSystem { name: String, resolver: String },
+    
+    /// Signierte Attestation
+    SignedAttestation { attestation: Vec<u8> },
+}
+
+/// Erstellt alle Wallets aus Master-Secret
+pub async fn create_multi_chain_wallets(
+    derivation: &KeyDerivation,
+    chains: &[ChainConfig],
+) -> Result<MultiChainWalletSet, WalletError> {
+    let erynoa_did = derivation.generate_did();
+    let mut wallets = HashMap::new();
+    
+    for chain in chains {
+        let wallet = match chain.chain_id {
+            ChainId::ErynoaRoot => {
+                // Erynoa-internes Wallet (primärer Key)
+                let keypair = derivation.derive_erynoa_primary();
+                ChainWallet {
+                    chain: ChainId::ErynoaRoot,
+                    address: erynoa_did.to_string(),
+                    public_key: keypair.public_key().to_vec(),
+                    key_type: KeyType::Ed25519,
+                    did_link: DidLinkMethod::OnChainStorage { slot: 0 },
+                }
+            },
+            
+            ChainId::Ethereum { chain_id } => {
+                let keypair = derivation.derive_ethereum();
+                let address = ethereum_address_from_pubkey(&keypair.public_key());
+                ChainWallet {
+                    chain: ChainId::Ethereum { chain_id },
+                    address: format!("0x{}", hex::encode(&address)),
+                    public_key: keypair.public_key().to_vec(),
+                    key_type: KeyType::Secp256k1,
+                    did_link: DidLinkMethod::OnChainStorage { slot: 0 },
+                }
+            },
+            
+            ChainId::Iota { ref network } => {
+                let keypair = derivation.derive_iota();
+                let address = iota_address_from_pubkey(&keypair.public_key());
+                ChainWallet {
+                    chain: ChainId::Iota { network: network.clone() },
+                    address,
+                    public_key: keypair.public_key().to_vec(),
+                    key_type: KeyType::Ed25519,
+                    did_link: DidLinkMethod::OnChainStorage { slot: 0 },
+                }
+            },
+            
+            // ... weitere Chains
+            _ => continue,
+        };
+        
+        wallets.insert(chain.chain_id.clone(), wallet);
+    }
+    
+    Ok(MultiChainWalletSet {
+        erynoa_did,
+        wallets,
+        recovery_status: RecoveryStatus::None,
+        created_at: now_ms(),
+    })
+}
+```
+
+#### 3.3 DID-Document mit Multi-Chain Links
+
+```json
+{
+  "id": "did:erynoa:self:alice-2026-xyz",
+  "verificationMethod": [
+    {
+      "id": "did:erynoa:self:alice-2026-xyz#primary",
+      "type": "Ed25519VerificationKey2020",
+      "controller": "did:erynoa:self:alice-2026-xyz",
+      "publicKeyMultibase": "z6Mkf5rGMoatrSj1f..."
+    }
+  ],
+  "erynoa": {
+    "namespace": "self",
+    "multiChainWallets": [
+      {
+        "chain": "erynoa-root",
+        "address": "did:erynoa:self:alice-2026-xyz",
+        "keyType": "Ed25519",
+        "derivationPath": "m/44'/9999'/0'/0/0"
+      },
+      {
+        "chain": "ethereum-mainnet",
+        "chainId": 1,
+        "address": "0x1234...abcd",
+        "keyType": "secp256k1",
+        "derivationPath": "m/44'/60'/0'/0/0"
+      },
+      {
+        "chain": "iota-mainnet",
+        "address": "iota1qr...xyz",
+        "keyType": "Ed25519",
+        "derivationPath": "m/44'/4218'/0'/0/0"
+      },
+      {
+        "chain": "solana-mainnet",
+        "address": "ABC...XYZ",
+        "keyType": "Ed25519",
+        "derivationPath": "m/44'/501'/0'/0'"
+      }
+    ],
+    "recovery": {
+      "status": "none"
+    }
+  }
+}
+```
+
+#### 3.4 Optional Recovery (Aktivierbar)
+
+```rust
+/// Recovery-Status (initial: None)
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum RecoveryStatus {
+    /// Keine Recovery konfiguriert (reine User-Kontrolle)
+    None,
+    
+    /// Recovery konfiguriert
+    Configured {
+        method: RecoveryMethod,
+        guardians: Vec<Guardian>,
+        threshold: usize,
+        timelock: Duration,
+        activated_at: u64,
+    },
+    
+    /// Recovery im Gange
+    InProgress {
+        initiated_by: DID,
+        initiated_at: u64,
+        confirmations: Vec<GuardianConfirmation>,
+        timelock_expires: u64,
+    },
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum RecoveryMethod {
+    /// Social Recovery (Freunde/Familie)
+    Social,
+    
+    /// Staked Guardianship (Institutionen)
+    Staked,
+    
+    /// Multi-Sig (technisch)
+    MultiSig,
+}
+
+/// Aktiviert Recovery nachträglich
+pub async fn activate_recovery(
+    wallet_set: &mut MultiChainWalletSet,
+    config: RecoveryConfig,
+    user_signature: &Signature,
+) -> Result<(), RecoveryError> {
+    // Nur wenn aktuell keine Recovery konfiguriert
+    if !matches!(wallet_set.recovery_status, RecoveryStatus::None) {
+        return Err(RecoveryError::AlreadyConfigured);
+    }
+    
+    // Validiere Guardians
+    for guardian in &config.guardians {
+        validate_guardian(guardian).await?;
+    }
+    
+    // Update-Event erstellen
+    let event = Event {
+        event_type: EventType::RecoveryActivation,
+        actor: wallet_set.erynoa_did.clone(),
+        payload: EventPayload::RecoveryActivation {
+            method: config.method.clone(),
+            guardians: config.guardians.clone(),
+            threshold: config.threshold,
+            timelock: config.timelock,
+        },
+        signature: user_signature.clone(),
+        ..Default::default()
+    };
+    
+    submit_event(event).await?;
+    
+    wallet_set.recovery_status = RecoveryStatus::Configured {
+        method: config.method,
+        guardians: config.guardians,
+        threshold: config.threshold,
+        timelock: config.timelock,
+        activated_at: now_ms(),
+    };
+    
+    Ok(())
+}
+
+/// Recovery-Prozess durchführen
+pub async fn execute_recovery(
+    wallet_set: &MultiChainWalletSet,
+    new_master_secret: &MasterSecret,
+    guardian_confirmations: Vec<GuardianConfirmation>,
+) -> Result<RecoveryResult, RecoveryError> {
+    let config = match &wallet_set.recovery_status {
+        RecoveryStatus::Configured { threshold, timelock, guardians, .. } => {
+            (threshold, timelock, guardians)
+        },
+        _ => return Err(RecoveryError::NotConfigured),
+    };
+    
+    // 1. Threshold prüfen
+    let valid_confirmations = guardian_confirmations.iter()
+        .filter(|c| verify_guardian_confirmation(c, config.2))
+        .count();
+    
+    if valid_confirmations < *config.0 {
+        return Err(RecoveryError::ThresholdNotMet);
+    }
+    
+    // 2. Timelock starten
+    let recovery_event = Event {
+        event_type: EventType::RecoveryInitiated,
+        actor: wallet_set.erynoa_did.clone(),
+        payload: EventPayload::RecoveryInitiated {
+            confirmations: guardian_confirmations.clone(),
+            timelock_expires: now_ms() + config.1.as_millis() as u64,
+        },
+        ..Default::default()
+    };
+    
+    submit_event(recovery_event).await?;
+    
+    // 3. Nach Timelock: Key-Rotation durchführen
+    // (Async: Wird von separatem Job nach Ablauf ausgeführt)
+    
+    // 4. RightsTransfer-Event erstellen (nach Timelock)
+    let new_derivation = KeyDerivation::from_secret(new_master_secret);
+    let new_wallets = create_multi_chain_wallets(&new_derivation, &get_chain_configs()).await?;
+    
+    let transfer_event = Event {
+        event_type: EventType::RightsTransfer,
+        actor: wallet_set.erynoa_did.clone(),
+        payload: EventPayload::RightsTransfer {
+            old_did: wallet_set.erynoa_did.clone(),
+            new_did: new_wallets.erynoa_did.clone(),
+            old_wallets: wallet_set.wallets.values().cloned().collect(),
+            new_wallets: new_wallets.wallets.values().cloned().collect(),
+        },
+        ..Default::default()
+    };
+    
+    submit_event(transfer_event).await?;
+    
+    Ok(RecoveryResult {
+        old_did: wallet_set.erynoa_did.clone(),
+        new_did: new_wallets.erynoa_did,
+        new_wallets,
+        assets_to_transfer: collect_assets(&wallet_set.wallets).await?,
+    })
+}
+```
+
+### 4. Root-Environment (Root-Env) als 𝒞_Root
+
+#### 4.1 Definition
 
 Die **Root-Environment** ist die globale Kategorie 𝒞_Root – das unveränderliche Fundament von Erynoa. Sie enthält:
 
@@ -1861,6 +2712,117 @@ pub async fn create_cross_shard_functor(
 ### 9. CLI-Nutzung
 
 ```bash
+# === V0.3: UNIFIED ONBOARDING ===
+
+# Neue Identität mit Mnemonic erstellen
+erynoa identity create \
+  --method mnemonic \
+  --words 24
+
+# Output:
+# Your Mnemonic (SAVE SECURELY):
+# abandon ability able about above absent absorb abstract absurd abuse access accident
+# ...
+#
+# Created:
+# - Erynoa DID: did:erynoa:self:abc123xyz
+# - Ethereum:   0x1234...abcd
+# - IOTA:       iota1qr...xyz
+# - Solana:     ABC...XYZ
+#
+# Recovery Status: NONE (aktivierbar mit 'erynoa recovery setup')
+
+# Identität mit Passkey erstellen (WebAuthn)
+erynoa identity create \
+  --method passkey \
+  --device "YubiKey 5"
+
+# Multi-Chain Wallets anzeigen
+erynoa identity wallets
+
+# Recovery nachträglich aktivieren
+erynoa recovery setup \
+  --method social-staked \
+  --threshold 3 \
+  --guardian did:erynoa:guild:sparkasse-berlin \
+  --guardian did:erynoa:self:bob-friend \
+  --guardian did:erynoa:self:carol-friend \
+  --guardian did:erynoa:guild:notar-office-muc \
+  --guardian did:erynoa:self:dave-family \
+  --timelock 7d
+
+# Recovery initiieren (bei Verlust)
+erynoa recovery initiate \
+  --old-did did:erynoa:self:alice-2026 \
+  --new-mnemonic \
+  --guardian-confirmations ./confirmations.json
+
+# === V0.3: TRUST MATRIX CONFIGURATION ===
+
+# Trust-Matrix für Funktor konfigurieren
+erynoa functor configure-matrix \
+  --functor f_gaming_finance \
+  --map "R -> R * 0.5" \
+  --map "I -> I * 0.8" \
+  --map "C -> C * 0.1" \
+  --map "P -> P * 0.6" \
+  --map "V -> V * 0.7" \
+  --map "Omega -> Omega * 0.9"
+
+# Vordefinierte Matrix verwenden
+erynoa functor configure-matrix \
+  --functor f_energy_finance \
+  --preset energy-to-finance
+
+# Aktuelle Matrix anzeigen
+erynoa functor show-matrix f_gaming_finance
+
+# === V0.3: BOUNDARY GUARDS ===
+
+# Boundary Guard deployen
+erynoa guard deploy \
+  --env did:erynoa:circle:de-health \
+  --type boundary \
+  --ecl-file ./guards/healthcare-entry.ecl
+
+# Guard-ECL Beispiel (healthcare-entry.ecl):
+# guard healthcare_entry {
+#   require(user.has_credential("medical-license"))
+#   require(user.env.has_compliance("HIPAA") || user.env.has_compliance("GDPR"))
+#   require(source_trust.scalar() >= 0.7)
+# }
+
+# Guard testen (ohne echten Transfer)
+erynoa guard test \
+  --guard guard_healthcare_entry \
+  --user did:erynoa:self:alice \
+  --source-env did:erynoa:circle:eu-2026 \
+  --target-env did:erynoa:circle:de-health
+
+# Guards auflisten
+erynoa guard list --env did:erynoa:circle:de-health
+
+# === V0.3: DYNAMIC DAMPENING ===
+
+# Dämpfungs-Statistik anzeigen
+erynoa functor dampening-stats f_eu_asean
+
+# Output:
+# Functor: f_eu_asean
+# Base Factor: 0.9
+# Current Factor: 0.847 (dynamic)
+# Statistics:
+#   Total Transfers: 15,234
+#   Successful: 14,892 (97.8%)
+#   Failed: 342 (2.2%)
+# Failure Decay (λ): 0.5
+
+# Dämpfung manuell anpassen
+erynoa functor set-dampening \
+  --functor f_eu_asean \
+  --base 0.85 \
+  --decay 0.3
+
 # === VIRT-ENV MANAGEMENT ===
 
 # Neue Virt-Env bootstrappen (als EU-Kommission)
@@ -2220,10 +3182,11 @@ const result = await cbdcExchange.exchange({
 |---------|-------|----------|
 | 0.1 | 2026-01-29 | Initial Draft: Root-Env/Virt-Env Architecture, CBDC Bridges, Bootstrapping, Inter-Env Protocol |
 | 0.2 | 2026-01-29 | **Shard-Integration**: Kategorientheorie (Axiome Q6-Q8), Realm-Axiome (A18-A22), ShardTypes, CBDC-Shards, Cross-Shard Funktoren, Trust-Weights pro Shard, Shard-Bootstrapping, CLI-Erweiterungen |
+| 0.3 | 2026-02-01 | **Refined**: Unified Identity (BIP39/Passkey → Multi-Chain Wallets), Trust-Matrix (6x6 Transformation statt skalarer Dämpfung), Dynamic Dampening (Kybernetik E6), Boundary Guards (Logic Guards L1-L3), HTLC Atomic Swaps, Optional Recovery (nachträglich aktivierbar), RightsTransfer-Event |
 
 ---
 
 *EIP-005: Virtualized Environment Architecture*
-*Version: 0.2*
+*Version: 0.3 (Refined)*
 *Status: Draft*
 *Ebene: E2 (Emergenz) / E5 (Schutz) / E6 (Kybernetik)*
