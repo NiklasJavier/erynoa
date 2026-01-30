@@ -1,448 +1,681 @@
-# Erynoa Fachkonzept V5.0
+# Erynoa Fachkonzept V6.1
 
-> **Version:** 5.0 – Quanten-Erweiterte Kybernetische Architektur
+> **Version:** 6.1 – Probabilistische Kybernetische Architektur
 > **Datum:** Januar 2026
 > **Status:** Vollständiges Fachkonzept
-> **Grundlage:** 116 Axiome über 7 Ebenen
+> **Grundlage:** 112 Axiome über 7 Ebenen
+> **Leitprinzip:** Intelligenz im Dienste des Lebens
 
 ---
 
 ## Einleitung
 
-Erynoa ist ein dezentrales System für vertrauensbasierte Interaktionen zwischen autonomen Agenten. Das System basiert auf einer mathematisch fundierten Weltformel, die beschreibt, wie Existenz, Vertrauen und Intelligenz in einem verteilten Netzwerk entstehen, gemessen und gesteuert werden können.
+Erynoa ist ein dezentrales Ökosystem für vertrauensbasierte Interaktionen zwischen Menschen, Maschinen und autonomen Agenten. Das System ermöglicht es Teilnehmern, Werte auszutauschen, Vereinbarungen zu schließen und Transaktionen durchzuführen, ohne sich auf zentrale Autoritäten verlassen zu müssen. Anstelle institutionellen Vertrauens tritt mathematisch fundiertes, emergentes Vertrauen, das aus der nachprüfbaren Geschichte aller Interaktionen entsteht.
 
-Dieses Fachkonzept beschreibt die theoretischen Grundlagen, die architektonischen Prinzipien und die konkreten Mechanismen des Systems. Es richtet sich an Entwickler, Architekten und Wissenschaftler, die das System implementieren, erweitern oder formal analysieren möchten.
+Das Fundament von Erynoa bildet eine mathematische Systemgleichung, die beschreibt, wie der Gesamtwert des Systems aus den Beiträgen seiner Teilnehmer entsteht. Diese Formel ist nicht bloß eine abstrakte Beschreibung, sondern das operative Herzstück des Systems: Jede Transaktion, jede Interaktion, jede Governance-Entscheidung verändert die Parameter dieser Formel und damit den Zustand des gesamten Netzwerks.
 
-Die zentrale Erkenntnis von Erynoa lautet: Ein dezentrales System kann nur dann gleichzeitig intelligent, gerecht, lebendig und anpassungsfähig sein, wenn es auf sieben aufeinander aufbauenden Ebenen korrekt funktioniert. Jede dieser Ebenen adressiert eine fundamentale Herausforderung verteilter Systeme – von der Identität über das Vertrauen bis hin zur kontextuellen Validierung.
+Die Architektur von Erynoa ist in sieben aufeinander aufbauenden Ebenen organisiert. Jede Ebene adressiert eine fundamentale Herausforderung verteilter Systeme. Die erste Ebene garantiert die Korrektheit grundlegender Operationen wie Identität und Kausalität. Die zweite Ebene ermöglicht emergente Intelligenz durch kollektive Validierung. Die dritte Ebene formalisiert Handlungen und Transaktionen. Die vierte Ebene definiert die Substanz des Systems in Form von Assets, Services und Credentials. Die fünfte Ebene schützt vor Degeneration und Machtkonzentration. Die sechste Ebene macht das System lebendig und anpassungsfähig durch kybernetische Feedback-Schleifen. Die siebte und höchste Ebene stellt sicher, dass das gesamte System dem menschlichen Gedeihen dient.
 
 ---
 
-## Teil I: Die Weltformel
+## Teil I: Die Systemgleichung
 
-### 1.1 Die mathematische Grundlage
+### Die mathematische Grundlage
 
-Die Weltformel von Erynoa beschreibt den Gesamtwert des Systems zu jedem Zeitpunkt. Sie aggregiert die Beiträge aller aktiven Agenten und drückt damit die kollektive Intelligenz des Netzwerks aus:
+Das Herzstück von Erynoa ist eine mathematische Formel, die den Gesamtzustand des Systems zu jedem Zeitpunkt beschreibt. Diese Systemgleichung aggregiert die Beiträge aller aktiven Agenten und drückt damit die kollektive Intelligenz des Netzwerks aus:
+
+**𝔼 = Σ A(s) · σ( W(s) · ln|C(s)| · N(s) / E(s) ) · H(s) · w(s,t)**
+
+Die Variablen haben folgende Bedeutung:
+
+- **𝔼** ist der Systemwert, ein skalares Maß für die Gesundheit und Intelligenz des Gesamtnetzwerks
+- **s** iteriert über alle aktiven Agenten im System
+- **A(s)** ist die Aktivitätspräsenz des Agenten, ein Wert zwischen 0 und 1
+- **W(s)** ist die Wächter-Metrik, ein multidimensionaler Vertrauensscore
+- **C(s)** ist die kausale Geschichte, gemessen als Anzahl bezeugter Events
+- **N(s)** ist der Novelty-Score, der neue, verifizierte Informationen misst
+- **E(s)** ist der Erwartungswert basierend auf der historischen Vorhersagbarkeit
+- **σ** ist die Sigmoid-Funktion σ(x) = 1 / (1 + e^(-x)), die alle Werte auf (0,1) normiert
+- **H(s)** ist der Human-Alignment-Faktor (2.0 für Menschen, 1.5 für human-kontrolliert, 1.0 sonst)
+- **w(s,t)** ist die temporale Gewichtung, die ältere Events exponentiell abklingen lässt
+
+Diese Formel ist klassische Wahrscheinlichkeitstheorie und Statistik. Sie erfordert keine exotische Hardware und kann auf jedem modernen Server berechnet werden. Die Berechnung für einen einzelnen Agenten benötigt O(log n) Zeit, wobei n die Anzahl seiner Events ist.
+
+### Vertrauen als Wahrscheinlichkeitsverteilung
+
+Ein zentrales Konzept in Erynoa ist, dass Vertrauen keine feste Zahl ist, sondern eine Wahrscheinlichkeitsverteilung. Wenn wir sagen, ein Agent hat Trust 0.7, meinen wir damit nicht, dass er zu 70% vertrauenswürdig ist. Wir meinen, dass basierend auf den verfügbaren Daten unser bester Schätzer für seinen wahren Vertrauenswert 0.7 ist, mit einer gewissen Unsicherheit.
+
+Diese Unsicherheit wird durch ein Konfidenzintervall ausgedrückt. Ein neuer Agent mit wenigen Interaktionen könnte einen geschätzten Trust von 0.7 haben, aber ein breites 95%-Konfidenzintervall von [0.4, 0.9]. Ein etablierter Agent mit tausenden Interaktionen könnte denselben geschätzten Trust von 0.7 haben, aber ein enges Intervall von [0.68, 0.72].
+
+Diese Modellierung hat praktische Konsequenzen. Das System zeigt Nutzern nicht rohe Zahlen wie 0.723456, die eine Scheinpräzision suggerieren. Stattdessen zeigt es qualitative Level wie "Verified" oder "Caution" zusammen mit der Konfidenz "High" oder "Low". Ein Agent mit Trust 0.7 und hoher Konfidenz ist anders zu behandeln als einer mit Trust 0.7 und niedriger Konfidenz.
+
+### Lazy Evaluation
+
+Eine wichtige Optimierung ist die verzögerte Auswertung (Lazy Evaluation). Das System berechnet nicht permanent die Trust-Werte aller Agenten. Stattdessen speichert es die Rohdaten (Events, Attestationen, Credentials) und berechnet den Trust-Wert erst, wenn er tatsächlich benötigt wird – typischerweise wenn eine Transaktion ansteht.
+
+Die Berechnung kann auf verschiedenen Detailstufen erfolgen:
+
+- **Minimal:** Nur den Erwartungswert berechnen, ohne Konfidenzintervall
+- **Standard:** Erwartungswert plus 95%-Konfidenzintervall
+- **Vollständig:** Komplette Posterior-Verteilung mit allen Momenten
+
+Die Wahl der Detailstufe hängt vom Transaktionswert ab. Für einen Kaffee reicht Minimal; für einen Hauskauf ist Vollständig angemessen.
+
+### Die Komponenten im Detail
+
+Die **Aktivitätspräsenz A(s)** misst, wie präsent ein Agent im System ist. Die Formel lautet:
+
+A(s) = |{e ∈ C(s) : age(e) < τ}| / (|{e ∈ C(s) : age(e) < τ}| + κ)
+
+Dabei ist τ das Aktivitäts-Zeitfenster (typischerweise 24 Stunden) und κ eine Präsenz-Konstante (typischerweise 10). Ein Agent mit 100 Events in den letzten 24 Stunden hätte A = 100/110 ≈ 0.91. Ein Agent mit 0 Events hätte A = 0/10 = 0.
+
+Verschiedene Event-Typen werden unterschiedlich gewichtet. Shard-Validierung zählt 1.0, Anomalie-Meldung 0.9, Trust-Attestation 0.8, Konsens-Teilnahme 0.7, Wert-Transfer 0.6, Realm-Beitritt 0.5, passive Beobachtung 0.1.
+
+Die **Wächter-Metrik W(s)** ist ein sechsdimensionaler Vektor:
+
+W(s) = (R, I, C, P, V, Ω) ∈ [0,1]⁶
+
+- **R (Reliability):** Anteil erfüllter Verpflichtungen an zugesagten Verpflichtungen
+- **I (Integrity):** Konsistenz zwischen Aussagen und verifizierten Fakten
+- **C (Competence):** Qualitätsmetrik basierend auf Peer-Reviews und Outcomes
+- **P (Predictability):** Varianz des Verhaltens über Zeit (niedrige Varianz = hohe P)
+- **V (Vigilance):** Anteil korrekt gemeldeter Anomalien an allen Meldungen
+- **Ω (Omega-Alignment):** Anteil regelkonformer Aktionen an Gesamtaktionen
+
+Diese sechs Dimensionen werden zu einem Skalar kombiniert:
+
+W_scalar(s) = Σᵢ wᵢ · Wᵢ(s)
+
+Die Standardgewichte sind: w_R = 0.15, w_I = 0.15, w_C = 0.15, w_P = 0.10, w_V = 0.20, w_Ω = 0.25. Vigilance und Omega-Alignment sind höher gewichtet, weil sie die Systemgesundheit direkt beeinflussen.
+
+Die **kausale Geschichte C(s)** ist der gerichtete azyklische Graph (DAG) aller Events, an denen der Agent beteiligt war. Die Formel verwendet ln|C(s)|, den natürlichen Logarithmus der Anzahl Events. Diese logarithmische Transformation hat wichtige Eigenschaften:
+
+- Sie belohnt frühe Aktivität überproportional (die ersten 100 Events zählen so viel wie die nächsten 172)
+- Sie dämpft die Bedeutung sehr langer Historien (Unterschied zwischen 10.000 und 100.000 Events ist moderat)
+- Sie ist numerisch stabil und einfach zu berechnen
+
+Der **Novelty-Score N(s)** misst, wie viel neue Information ein Agent beiträgt. Die Berechnung basiert auf Information-Theoretic Überraschung:
+
+N(e) = -log₂ P(e | history)
+
+Ein Event, das basierend auf der Geschichte mit 50% Wahrscheinlichkeit erwartet wurde, hat N = 1 Bit. Ein völlig unerwartetes Event (P = 0.01) hat N ≈ 6.6 Bits. Der Novelty-Score des Agenten ist der Durchschnitt über seine kürzlichen Events.
+
+Der **Erwartungswert E(s)** misst die Vorhersagbarkeit des Agenten. Er wird aus der Historie berechnet als mittlere Wahrscheinlichkeit, mit der vergangene Events korrekt vorhergesagt wurden. Ein vorhersagbarer Agent hat E nahe 1; ein unvorhersagbarer Agent hat E nahe 0.
+
+Der Quotient N(s)/E(s) ist der "Überraschungs-Faktor". Er belohnt Agenten, die positiv überraschen (hohe Novelty bei niedriger Erwartung) und bestraft solche, die negativ überraschen (niedrige Novelty bei hoher Erwartung).
+
+### Der Human-Alignment-Faktor
+
+Der **Human-Alignment-Faktor H(s)** ist ein Multiplikator, der sicherstellt, dass das System dem Menschen dient:
+
+H(s) = 2.0 wenn s ein verifizierter Mensch ist (HumanAuth Credential)
+H(s) = 1.5 wenn s direkt von einem Menschen kontrolliert wird (Controller-Chain)
+H(s) = 1.0 sonst
+
+Diese "Verunreinigung" der Optimierung ist bewusst. Ein rein effizienzorientiertes System würde logisch schlussfolgern, dass Maschinen im Durchschnitt zuverlässiger sind als Menschen und daher bevorzugt werden sollten. Der Human-Alignment-Faktor korrigiert diesen Bias, indem er Interaktionen mit Menschen systematisch höher gewichtet.
+
+Die praktische Konsequenz: Ein Agent, der nur mit Maschinen interagiert, kann maximal halb so viel zum Systemwert beitragen wie ein gleichwertiger Agent, der mit Menschen interagiert. Das System optimiert nicht weg von Menschen, sondern hin zu ihnen.
+
+### Die temporale Gewichtung
+
+Die **temporale Gewichtung w(s,t)** implementiert das Recht auf Vergebung:
+
+w(event, t) = exp(-γ · age(event))
+
+Dabei ist age(event) das Alter des Events in Tagen und γ der Zerfallskoeffizient. Für negative Events gilt γ_neg = 0.000633, was einer Halbwertszeit von 3 Jahren entspricht. Für positive Events gilt γ_pos = 0.000380, was einer Halbwertszeit von 5 Jahren entspricht.
+
+Diese Asymmetrie bedeutet:
+- Negative Events verlieren nach 3 Jahren die Hälfte ihres Gewichts
+- Positive Events verlieren nach 5 Jahren die Hälfte ihres Gewichts
+- Nach 21 Jahren (7 Halbwertszeiten) hat ein negatives Event weniger als 1% seines ursprünglichen Gewichts
+- Das System "vergisst" Fehler schneller als es Erfolge erinnert
+
+Zusätzlich gibt es ein automatisches Amnestie-System: Nach 7 Jahren ohne negative Vorfälle kann ein Agent einen Reset beantragen, der alle negativen Events auf null gewichtet, ohne sie zu löschen.
+
+### Die Verhältnismäßigkeits-Constraint
+
+Zusätzlich zur Hauptformel gilt eine fundamentale Nebenbedingung:
+
+**Cost_verification(tx) ≤ α · Value(tx)** mit α = 0.05
+
+Die Verifikationskosten dürfen 5% des Transaktionswerts nicht übersteigen. Diese Constraint wird durch ein Level-of-Detail-System (LoD) implementiert:
+
+| Transaktionswert | LoD-Level | Verifikation | Typische Kosten |
+|------------------|-----------|--------------|-----------------|
+| < 10€ | Minimal | Signatur only | < 0.01€ |
+| 10-100€ | Basic | Signatur + Auto-Check | 0.05-0.50€ |
+| 100-1000€ | Standard | + 1 Zeuge + Trust-Calc | 0.50-5€ |
+| 1000-10000€ | Enhanced | + 3 Zeugen + Full Calc | 5-50€ |
+| > 10000€ | Maximum | + 5 Zeugen + Due Diligence | bis 5% |
+
+Das LoD-Level wird automatisch basierend auf dem Transaktionswert gewählt. Parteien können manuell ein höheres Level anfordern, aber nicht unter das automatische Level gehen.
+
+### Semantische Verankerung
+
+Eine weitere Nebenbedingung fordert menschliche Verständlichkeit:
+
+**∀ Blueprint B: ∃ NLD(B) ∧ ∃ FormalSpec(B) ∧ Equivalent(NLD, FormalSpec)**
+
+Für jeden Blueprint (Schema, Ontologie, Protokoll) muss existieren:
+- NLD: Natural Language Description (menschenlesbare Dokumentation)
+- FormalSpec: Formale Spezifikation (maschinenprüfbar)
+- Equivalence: Ein Nachweis, dass beide semantisch äquivalent sind
+
+Der Äquivalenz-Nachweis erfolgt durch einen LLM-Auditor, der beide Beschreibungen vergleicht und eine Konfidenz-Score ausgibt. Blueprints mit Konfidenz unter 90% werden nicht akzeptiert.
+
+Diese Regel verhindert "semantische Drift": das Phänomen, dass Maschinen effizientere, aber für Menschen unverständliche Repräsentationen entwickeln.
+
+---
+
+## Teil II: Das Identitätssystem
+
+### Dezentrale Identifikatoren
+
+Die Grundlage jeder Interaktion in Erynoa ist die Identität. Das System verwendet dezentrale Identifikatoren nach dem W3C DID-Standard, erweitert um erynoa-spezifische Semantik. Jede Entität im System besitzt genau eine eindeutige Identität:
+
+**did:erynoa:\<namespace\>:\<unique-id\>**
+
+Die Namespaces kategorisieren die Art der Entität:
+
+| Namespace | Bedeutung | Beispiel |
+|-----------|-----------|----------|
+| self | Natürliche Person | did:erynoa:self:abc123 |
+| guild | Organisation | did:erynoa:guild:siemens-ag |
+| spirit | Autonomer Agent | did:erynoa:spirit:trading-bot-7 |
+| thing | Physisches Gerät | did:erynoa:thing:sensor-42 |
+| vessel | Fahrzeug | did:erynoa:vessel:ev-charger-1 |
+| source | Energiequelle | did:erynoa:source:solar-panel-a |
+| craft | Service | did:erynoa:craft:translation-api |
+| vault | Wallet | did:erynoa:vault:main-treasury |
+| pact | Vertrag | did:erynoa:pact:rental-2024-001 |
+| circle | Realm/Environment | did:erynoa:circle:energy-trading |
+
+Diese Namespaces haben operative Bedeutung. Der Human-Alignment-Faktor H(s) = 2.0 gilt nur für self-Namespace-Entitäten mit gültigem HumanAuth-Credential. Die Governance-Regeln können unterschiedliche Stimmgewichte basierend auf dem Namespace definieren.
+
+### Die fünf Identitäts-Axiome
+
+**A1 (Eindeutigkeit):** Für jede reale Entität existiert genau eine DID. Umgekehrt verweist jede DID auf genau eine reale Entität. Mehrfach-Identitäten für dieselbe Entität sind ein Protokollverstoß.
+
+**A2 (Permanenz):** Eine einmal erzeugte DID existiert für immer. Sie kann deaktiviert werden (keine neuen Aktionen möglich), aber nicht gelöscht. Die gesamte Geschichte bleibt erhalten.
+
+**A3 (Delegation):** Eine DID kann Sub-DIDs erzeugen, die in ihrem Namen handeln können. Die Parent-DID haftet für Aktionen der Sub-DIDs. Sub-DIDs können widerrufen werden.
+
+**A4 (Azyklizität):** Die Delegationsbeziehung ist azyklisch. Wenn A → B → C, dann kann C nicht → A delegieren.
+
+**A5 (Handlungsfähigkeit):** Jede Aktion im System muss von einer gültigen DID signiert sein. Anonyme Aktionen sind nicht möglich.
+
+### Controller-Chain und Haftung
+
+Für autonome Agenten (spirit-Namespace) gilt eine zusätzliche Anforderung: Das DID-Dokument muss einen Controller enthalten, der entweder ein Mensch (self) oder eine Organisation (guild) ist, die letztlich von Menschen kontrolliert wird.
+
+Die Controller-Chain löst das Haftungsproblem autonomer Systeme. Wenn ein Agent Schaden verursacht, gibt es immer eine verantwortliche natürliche oder juristische Person. Die Tiefe der Controller-Chain beeinflusst den H(s)-Faktor:
+
+- Direkte menschliche Kontrolle: H = 1.5
+- Kontrolle durch Organisation mit menschlicher Leitung: H = 1.3
+- Kontrolle durch Organisation, die von Organisation kontrolliert wird: H = 1.1
+- Längere Ketten: H = 1.0
+
+### HumanAuth-Credentials
+
+HumanAuth-Credentials beweisen, dass hinter einer DID ein biologischer Mensch steht. Verifizierungsmethoden:
+
+- **Biometrisch:** Fingerabdruck, Iris-Scan, Gesichtserkennung
+- **Staatlich:** Personalausweis, Reisepass via eIDAS/WebAuthn
+- **Video:** Live-Video-Call mit geschultem Prüfer
+- **Web-of-Trust:** 3+ bereits verifizierte Menschen bürgen
+
+Ein HumanAuth-Credential enthält:
+- Die DID des Inhabers
+- Die Verifizierungsmethode
+- Den Issuer (z.B. Regierung, Bank, spezialisierter Provider)
+- Einen Zeitstempel und eine Gültigkeitsdauer
+- Keine personenbezogenen Daten (Name, Adresse, etc.)
+
+Das System weiß "diese DID gehört einem Menschen", nicht "diese DID gehört Max Mustermann".
+
+---
+
+## Teil III: Das Vertrauenssystem
+
+### Der Vertrauensvektor
+
+Vertrauen in Erynoa ist ein sechsdimensionaler Vektor (R, I, C, P, V, Ω), wie in Teil I beschrieben. Jede Dimension wird unabhängig berechnet und kann unterschiedlich gewichtet werden.
+
+Die Berechnung jeder Dimension folgt dem Bayesschen Paradigma:
+
+1. **Prior:** Jeder neue Agent startet mit einem neutralen Prior (z.B. Beta(2,2) für jede Dimension)
+2. **Likelihood:** Jedes Event aktualisiert den Prior basierend auf seinem Typ und Ausgang
+3. **Posterior:** Das aktuelle Vertrauen ist der Erwartungswert der Posterior-Verteilung
+4. **Konfidenz:** Die Varianz der Posterior-Verteilung bestimmt die Konfidenz
+
+Diese Bayessche Modellierung hat Vorteile:
+- Sie handhabt Unsicherheit explizit
+- Sie konvergiert mit mehr Daten zur Wahrheit
+- Sie ist mathematisch begründet und nicht ad-hoc
+- Sie ermöglicht Konfidenzintervalle
+
+### Trust-Evolution
+
+Das Vertrauen entwickelt sich über Zeit nach der Gleichung:
+
+T(t+1) = T(t) · λ^Δt + Δ_events + Δ_attestations
+
+Dabei ist:
+- λ = 0.9997 (Zerfallsrate pro Tag, Halbwertszeit ≈ 6 Jahre ohne Aktivität)
+- Δt = Anzahl Tage seit letzter Aktualisierung
+- Δ_events = Summe der Trust-Änderungen durch eigene Events
+- Δ_attestations = Summe der Trust-Änderungen durch Attestationen anderer
+
+Ein Floor von 0.3 garantiert, dass niemand vollständig aus dem System fällt. Selbst nach schweren Verfehlungen bleibt ein Mindestvertrauen, das Rehabilitation ermöglicht.
+
+### Asymmetrie von Gewinn und Verlust
+
+Ein fundamentales Prinzip ist die Asymmetrie von Gewinn und Verlust. Die Formel für Trust-Änderungen durch Events:
+
+Δ_positive = k_pos · significance · (1 - T_current)
+Δ_negative = k_neg · significance · T_current
+
+Mit k_neg / k_pos ≈ 3-5 ist Vertrauen zerstören 3-5x leichter als es aufzubauen.
+
+**Beispiel:** Ein Agent mit T = 0.8 und k_pos = 0.1, k_neg = 0.4:
+- Positives Event (significance = 1): Δ = 0.1 · 1 · 0.2 = +0.02 → T = 0.82
+- Negatives Event (significance = 1): Δ = 0.4 · 1 · 0.8 = -0.32 → T = 0.48
+
+Ein einzelnes negatives Event kann Jahre positiver Arbeit auslöschen. Diese Asymmetrie reflektiert die Realität menschlicher Beziehungen und ist spieltheoretisch optimal für wiederholte Interaktionen.
+
+### Trust-Propagation
+
+Vertrauen propagiert durch das Netzwerk, aber nicht transitiv. Wenn A → B mit T_AB und B → C mit T_BC, dann hat A einen abgeleiteten Trust zu C:
+
+T_AC = T_AB · T_BC · decay
+
+Mit decay < 1 (typischerweise 0.7-0.9) nimmt der abgeleitete Trust mit jeder Stufe ab.
+
+Bei mehreren Pfaden von A nach C wird der maximale Trust verwendet (optimistisches Modell) oder ein gewichteter Durchschnitt basierend auf Pfadlänge (realistisches Modell).
+
+### EigenTrust für globales Ranking
+
+Für globale Rankings verwendet Erynoa eine Variante des EigenTrust-Algorithmus. Die Grundidee: Das Vertrauen, das A in B hat, ist nur so viel wert, wie viel das Netzwerk A vertraut.
+
+Der Algorithmus ist iterativ:
+1. Initialisiere alle Agenten mit gleichem globalem Trust
+2. Berechne für jeden Agenten den neuen Trust als gewichtete Summe der lokalen Trust-Bewertungen, gewichtet mit dem globalen Trust des Bewerters
+3. Normalisiere
+4. Wiederhole bis Konvergenz
+
+Das Ergebnis ist ein globaler Trust-Vektor, der resistent gegen Sybil-Angriffe ist: Eine Gruppe von Fake-Accounts, die sich gegenseitig hoch bewerten, erhält keinen globalen Trust, weil niemand von außen ihnen vertraut.
+
+---
+
+## Teil IV: Das Transaktionssystem
+
+### Der Transaktions-Lifecycle (TAT)
+
+TAT steht für Trust-Attested Transaction. Jede Transaktion durchläuft definierte Phasen:
+
+**SEEK:** Agent sucht Partner
+- Anfrage an Discovery-Service mit Kriterien (Fähigkeiten, min. Trust, max. Preis)
+- Discovery liefert personalisiertes Ranking basierend auf Systemgleichung
+- Ranking berücksichtigt: Trust, Fähigkeiten, Historie, Novelty-Bonus für Newcomer
+
+**PROPOSE:** Agent macht Angebot
+- Signiertes Dokument mit: Leistung, Preis, Zeitrahmen, Bedingungen
+- Referenz auf relevante Blueprints/Schemas
+- Optional: Ricardian Contract (Link zu menschenlesbarem PDF)
+
+**AGREE:** Gegenpartei akzeptiert
+- Signierte Bestätigung
+- Mit Matching beider Signaturen entsteht bindender Vertrag
+- Escrow wird eingerichtet (falls Zahlung involviert)
+
+**STREAM:** Durchführung
+- Kontinuierlicher Fortschritt wird attestiert
+- Mikrozahlungen fließen proportional zum Fortschritt
+- Meilensteine lösen größere Zahlungen aus
+
+**CLOSE:** Erfolgreicher Abschluss
+- Beide Parteien signieren Bestätigung
+- Finale Zahlung wird freigegeben
+- Positive Trust-Events werden generiert
+- Optionale Bewertungen
+
+**ABORT:** Abbruch
+- Eine oder beide Parteien brechen ab
+- Vordefinierte Kompensationsregeln greifen
+- Proportionale Erstattung basierend auf Fortschritt
+- Trust-Impact abhängig von Schuldfrage
+
+**DISPUTE:** Streitfall
+- Schiedsverfahren wird eingeleitet
+- Schiedsrichter werden basierend auf Trust und Expertise ausgewählt
+- Entscheidung basiert auf signierten Dokumenten und Events
+- Trust-Konsequenzen für die unterlegene Partei
+
+### Streaming und kontinuierliche Fairness
+
+Erynoas Streaming-Modell minimiert Risiko für beide Seiten. Anstatt am Ende große Summen zu transferieren, fließen kontinuierlich kleine Beträge.
+
+**Beispiel:** 30-Tage-Projekt für 3000€
+- Tag 0: Auftraggeber hinterlegt 3000€ in Escrow
+- Tag 1-30: Jeden Tag werden 100€ freigegeben bei attestiertem Fortschritt
+- Tag 15: Auftraggeber bricht ab → 1500€ wurden gezahlt, 1500€ zurück
+- Niemand hat mehr als 100€ Risiko zu jedem Zeitpunkt
+
+Für physische Waren:
+- Käufer hinterlegt in Escrow
+- Versand-Nachweis: 10% werden freigegeben
+- Ankunft-Nachweis: 40% werden freigegeben
+- Qualitäts-Bestätigung: 50% werden freigegeben
+
+### Events und Bezeugung
+
+Jede Zustandsänderung wird als Event im Event-DAG aufgezeichnet:
 
 ```
-𝔼 = Σ  ⟨Ψₛ| 𝔸̂ · σ̂( 𝕎̂ · ln|ℂ̂| · ℕ̂ / 𝔼x̂p ) |Ψₛ⟩  =  𝕀_sys
-    s∈𝒞
+Event {
+  id: sha256(content)
+  type: "transfer" | "attestation" | "proposal" | ...
+  actor: DID
+  timestamp: u64
+  parents: [EventId]  // Referenzen auf vorherige Events
+  payload: {...}
+  signature: Signature
+}
 ```
 
-Diese Formel ist bewusst in der Notation der Quantenmechanik gehalten, um eine fundamentale Einsicht auszudrücken: Vertrauen ist kein fester Wert, sondern existiert in einer Superposition möglicher Zustände, bis es durch eine Interaktion "gemessen" wird.
+Events sind unveränderlich. Korrekturen erfolgen durch neue Events, die alte referenzieren und annotieren.
 
-Der Existenzwert 𝔼 des Systems ergibt sich aus der Summe über alle Agenten s in der Kategorie 𝒞. Für jeden Agenten wird der Erwartungswert seines Beitrags berechnet, indem sein Quantenzustand |Ψₛ⟩ mit den Operatoren für Aktivität, Vertrauen, Geschichte, Neuheit und Erwartung verknüpft wird.
+Ein Event gilt als finalisiert, wenn es von mindestens k unabhängigen Zeugen bestätigt wurde. Die Anforderungen an k hängen vom LoD-Level ab:
 
-### 1.2 Die Komponenten der Weltformel
+| LoD | k | Zusätzliche Anforderungen |
+|-----|---|--------------------------|
+| Minimal | 0 | Nur Signatur |
+| Basic | 1 | 1 automatischer Validator |
+| Standard | 2 | 2 unabhängige Zeugen |
+| Enhanced | 3 | 3 Zeugen, 2+ Regionen |
+| Maximum | 5 | 5 Zeugen, 3+ Regionen, 2+ HW-Hersteller |
 
-**Der Quantenzustand |Ψₛ⟩** repräsentiert den Vertrauenszustand eines Agenten als Superposition verschiedener Basiszustände. Ein Agent existiert nicht als definitiv "ehrlich" oder "bösartig", sondern als Wahrscheinlichkeitsverteilung über diese Zustände. Ein neuer Agent könnte beispielsweise hauptsächlich im Zustand "neutral" sein, mit geringen Amplituden für andere Zustände. Ein etablierter Agent mit langer positiver Historie hat hingegen hohe Amplituden für "ehrlich" und "zuverlässig".
-
-**Der Aktivitäts-Operator 𝔸̂** misst, wie präsent ein Agent im System ist. Aktivität bedeutet nicht bloße Anwesenheit, sondern sinnvolle Teilnahme: das Initiieren von Transaktionen, das Bezeugen von Events, die Teilnahme an Governance-Prozessen. Ein Agent ohne Aktivität fällt über Zeit aus dem System heraus, da er nichts zur kollektiven Intelligenz beiträgt.
-
-**Der Wächter-Operator 𝕎̂** ist multidimensional und erfasst sechs Aspekte der Vertrauenswürdigkeit. Die Dimension Reliability misst die historische Zuverlässigkeit, Integrity die Konsistenz des Verhaltens, Competence die fachliche Eignung, Predictability die Vorhersagbarkeit, Vigilance die Wachsamkeit gegenüber Fehlern anderer, und Omega-Alignment die Treue zu den Systemaxiomen. Diese sechs Dimensionen werden gewichtet kombiniert, wobei Vigilance und Omega-Alignment besonders stark gewichtet werden, da sie die Wächter-Funktion des Agenten reflektieren.
-
-**Der Geschichte-Operator ℂ̂** erfasst die kausale Historie eines Agenten. Geschichte bedeutet hier nicht einfach Zeit, sondern bezeugte Events in einem gerichteten azyklischen Graphen. Jedes Event, das von anderen Agenten bestätigt wurde, trägt zur Geschichte bei. Die logarithmische Transformation sorgt dafür, dass frühe Geschichte überproportional wertvoll ist – die ersten hundert bestätigten Events wiegen schwerer als die nächsten tausend.
-
-**Der Novelty-Operator ℕ̂** misst, wie viel neue, verifizierbare Information ein Agent liefert. Dies ist eine fundamentale Erweiterung gegenüber klassischen Vertrauensmodellen: Erynoa belohnt nicht nur Zuverlässigkeit, sondern auch Innovation. Ein Agent, der immer dieselben Informationen wiederholt, mag zuverlässig sein, trägt aber wenig zur kollektiven Intelligenz bei. Ein Agent, der neue Erkenntnisse liefert, die sich als korrekt herausstellen, erhält einen Novelty-Bonus.
-
-**Der Expectation-Operator 𝔼x̂p** misst die Vorhersagbarkeit eines Agenten. Je vorhersagbarer ein Agent ist, desto höher sein Expectation-Score. Der Quotient ℕ̂/𝔼x̂p bildet den "Überraschungs-Term": Hohe Neuheit bei niedriger Vorhersagbarkeit bedeutet positive Überraschung und wird belohnt.
-
-**Die Aufmerksamkeits-Funktion σ̂** ist eine Sigmoid-Funktion, die alle Eingaben auf den Bereich zwischen null und eins normiert. Sie sorgt dafür, dass extreme Werte gedämpft werden und dass es immer möglich ist, Aufmerksamkeit zu gewinnen oder zu verlieren.
-
-### 1.3 Die Interpretation der Weltformel
-
-Die Weltformel drückt eine zentrale Einsicht aus: Der Wert eines dezentralen Systems ist nicht die Summe seiner Daten oder seiner Rechenleistung, sondern die Summe des gewichteten Vertrauens, das seine Teilnehmer durch aktive, innovative und zuverlässige Partizipation aufgebaut haben.
-
-Ein Agent trägt zum Systemwert bei in dem Maße, wie er:
-- Aktiv am System teilnimmt (Aktivität)
-- Vertrauenswürdiges Verhalten zeigt und andere überwacht (Wächter-Metrik)
-- Eine bezeugte Geschichte aufgebaut hat (Kausalität)
-- Überraschende, aber korrekte Informationen liefert (Novelty/Expectation)
-- In einer konsistenten Superposition existiert (Quantenzustand)
-
-Die System-Intelligenz 𝕀_sys ist damit keine abstrakte Größe, sondern das direkte Ergebnis der aggregierten Beiträge aller Teilnehmer.
+Die Anforderungen an geografische und Hardware-Diversität verhindern, dass ein kompromittierter Anbieter allein Events fälschen kann.
 
 ---
 
-## Teil II: Die Sieben Ebenen der Wahrheit
-
-Das Erynoa-System ist in sieben hierarchisch aufeinander aufbauende Ebenen gegliedert. Jede Ebene adressiert eine fundamentale Anforderung an dezentrale Systeme und stellt bestimmte Garantien bereit. Die höheren Ebenen setzen die Korrektheit der darunterliegenden Ebenen voraus.
-
-### 2.1 Ebene 1: Fundament (Axiome A1-A30)
-
-Die Fundament-Ebene definiert die unveränderlichen Gesetze des Systems. Diese dreißig Axiome sind die mathematische Grundlage, auf der alles andere aufbaut. Sie können nicht durch Governance-Prozesse geändert werden, da ihre Änderung die Integrität des gesamten Systems gefährden würde.
-
-**Identitäts-Axiome (A1-A5):** Jeder Agent im System wird durch einen dezentralen Identifikator (DID) repräsentiert. Diese DIDs folgen dem Schema `did:erynoa:<namespace>:<unique-id>` und sind kryptographisch an einen oder mehrere Schlüssel gebunden. Eine Identität kann nicht ohne zugehörigen Schlüssel existieren, und die Einzigartigkeit von Identitäten ist systemweit garantiert. Agenten können Sub-Identitäten erstellen, die mit ihrer Haupt-Identität verknüpft sind, aber eigenständig agieren können.
-
-**Vertrauens-Axiome (A6-A11):** Vertrauen ist der Kern des Systems und folgt strengen Regeln. Der Trust-Floor garantiert, dass kein Agent unter einen Minimalwert von 0.3 fallen kann – dies verhindert, dass Agenten vollständig aus dem System ausgeschlossen werden und ermöglicht immer eine Rehabilitation. Die Asymmetrie des Vertrauens besagt, dass Vertrauensverlust schwerer wiegt als Vertrauensgewinn – ein einzelner schwerer Vertrauensbruch wirkt 1.5-mal so stark wie eine positive Aktion. Vertrauen verfällt über Zeit, wenn keine neuen positiven Events hinzukommen. Und Vertrauen ist nicht transitiv beliebiger Ordnung: Wenn Alice Bob vertraut und Bob Carol vertraut, bedeutet das nicht automatisch, dass Alice Carol vertraut.
-
-**Kausalitäts-Axiome (A12-A17):** Jedes Event im System hat Ursachen und Wirkungen, die in einem gerichteten azyklischen Graphen erfasst werden. Die Irreversibilität der Zeit ist fundamental: Ein Event, das einmal finalisiert wurde, kann nicht ungeschehen gemacht werden. Die Geschichte kann ergänzt, aber nicht umgeschrieben werden. Die Bezeugung von Events durch multiple Agenten schafft Faktizität – je mehr unabhängige Bezeuger, desto höher die Gewissheit.
-
-**Realm-Axiome (A18-A22):** Das System ist in Realms (Umgebungen) und Shards (Subräume) unterteilt. Jeder Realm kann eigene Regeln definieren, die die Fundament-Axiome erweitern, aber nicht verletzen dürfen. Shards sind spezialisierte Subräume innerhalb eines Realms mit noch spezifischeren Regeln. Diese hierarchische Strukturierung ermöglicht es, unterschiedliche Anwendungsfälle mit unterschiedlichen Anforderungen im selben System zu unterstützen.
-
-**Wert-Axiome (A23-A27):** Wert im System ist nicht willkürlich, sondern folgt ökonomischen Prinzipien. Transaktionen müssen fair sein – kein Teilnehmer darf ohne Gegenleistung Wert verlieren. Der Werterhalt ist garantiert: Die Summe des Werts im System kann nicht durch Transaktionen verändert werden, nur umverteilt. Und Wert muss einen Ursprung haben – er kann nicht aus dem Nichts entstehen.
-
-**System-Axiome (A28-A30):** Das System als Ganzes folgt Konsistenzregeln. Die Finalität garantiert, dass bestätigte Zustände endgültig sind. Die Verfügbarkeit garantiert, dass das System auch bei Ausfällen einzelner Knoten funktionsfähig bleibt. Die Partitionierungstoleranz garantiert, dass das System auch bei Netzwerkaufteilungen korrekt arbeitet.
-
-### 2.2 Ebene 2: Emergenz (Axiome E1-E15)
-
-Die Emergenz-Ebene beschreibt, wie aus dem Zusammenspiel einfacher Regeln komplexe Intelligenz entsteht. Die fünfzehn Axiome dieser Ebene definieren die emergenten Eigenschaften des Systems.
-
-**Aktivitäts-Axiome (E1-E4):** Existenz im System erfordert Aktivität. Ein Agent, der nie handelt, existiert de facto nicht. Der Aktivitäts-Score eines Agenten wird berechnet aus der Anzahl und Art seiner Events in einem gleitenden Zeitfenster. Verschiedene Event-Typen haben unterschiedliche Gewichte: Eine bezeugte Transaktion wiegt schwerer als ein einfaches Ping. Der Aktivitäts-Score fließt direkt in die Weltformel ein und bestimmt, wie stark ein Agent zum Systemwert beiträgt.
-
-**Wächter-Axiome (E5-E10):** Jeder Agent ist nicht nur Teilnehmer, sondern auch Wächter des Systems. Als Wächter überwacht ein Agent die Aktionen anderer und meldet Verstöße gegen die Axiome. Die Wächter-Metrik eines Agenten setzt sich aus sechs Dimensionen zusammen, die unterschiedlich gewichtet werden. Reliability erhält 15%, Integrity 15%, Competence 15%, Predictability 10%, Vigilance 25% und Omega-Alignment 20%. Die hohe Gewichtung von Vigilance und Omega-Alignment reflektiert die Bedeutung der Wächter-Rolle.
-
-**Konsens-Axiome (E11-E15):** Wahrheit im System emergiert aus Konsens. Kein einzelner Agent kann eine Aussage zur Wahrheit erklären – dafür ist die Übereinstimmung mehrerer unabhängiger Wächter erforderlich. Der Konsens-Mechanismus gewichtet die Stimmen nach der Wächter-Metrik der Teilnehmer, sodass vertrauenswürdigere Stimmen mehr Gewicht haben. Konsens ist probabilistisch: Je mehr Wächter übereinstimmen und je höher deren kombinierte Metrik, desto höher die Wahrscheinlichkeit, dass eine Aussage als wahr gilt.
-
-### 2.3 Ebene 3: Prozess (Axiome P1-P6, T1-T7)
-
-Die Prozess-Ebene formalisiert, wie Aktionen im System ablaufen. Die dreizehn Axiome definieren sowohl allgemeine Prozess-Eigenschaften als auch den spezifischen Lebenszyklus von Transaktionen.
-
-**Prozess-Axiome (P1-P6):** Jeder Prozess im System folgt dem Muster eines Hoare-Tripels: Vorbedingungen, Invarianten und Nachbedingungen. Ein Prozess kann nur starten, wenn seine Vorbedingungen erfüllt sind. Während der Ausführung müssen die Invarianten erhalten bleiben. Nach der Ausführung müssen die Nachbedingungen gelten. Dieses formale Modell ermöglicht die statische Verifikation von Prozessen und garantiert Korrektheit.
-
-Prozesse sind kausal wirksam: Jeder abgeschlossene Prozess verändert die Weltformel messbar. Der Existenzwert des Systems vor und nach einem Prozess unterscheidet sich um einen definierten Betrag. Diese Kausalität ermöglicht es, den Impact von Prozessen zu messen und zu bewerten.
-
-Prozesse können atomar oder zusammengesetzt sein. Atomare Prozesse werden entweder vollständig ausgeführt oder gar nicht. Zusammengesetzte Prozesse bestehen aus mehreren atomaren Teilprozessen, die in einer definierten Reihenfolge oder parallel ausgeführt werden.
-
-**TAT-Axiome (T1-T7):** Die TAT-Axiome definieren den siebenphasigen Lebenszyklus einer Transaktion. TAT steht für "Transaction, Attestation, Trust" und beschreibt den Prozess von der Initiierung bis zur Finalisierung.
-
-In der SEEK-Phase sucht ein Agent nach geeigneten Partnern für eine Transaktion. Das System bietet Discovery-Mechanismen, die potentielle Partner nach Relevanz und Vertrauenswürdigkeit ranken.
-
-In der PROPOSE-Phase unterbreitet ein Agent einen konkreten Vorschlag. Der Vorschlag enthält die Bedingungen der Transaktion, die erwarteten Leistungen beider Seiten und die Zeitrahmen.
-
-In der AGREE-Phase akzeptiert der andere Agent den Vorschlag oder schlägt Modifikationen vor. Dieser Prozess kann mehrere Runden umfassen, bis beide Seiten einverstanden sind. Die Einigung wird kryptographisch signiert.
-
-In der STREAM-Phase wird die eigentliche Leistung erbracht. Für langfristige Leistungen (wie Dienstleistungen oder Miete) ermöglicht das Streaming-Modell eine kontinuierliche, proportionale Übertragung von Wert. Wenn Alice Bob für eine einstündige Beratung bezahlt, fließt der Wert kontinuierlich während der Stunde, nicht erst am Ende.
-
-In der CLOSE-Phase wird die Transaktion formal abgeschlossen. Beide Parteien signieren den Abschluss und bestätigen, dass die vereinbarten Leistungen erbracht wurden.
-
-In der ATTEST-Phase bezeugen Wächter den erfolgreichen Abschluss. Diese Bezeugung fließt in die Geschichte beider Parteien ein und erhöht deren Vertrauenswürdigkeit.
-
-Die ABORT-Phase ist der Ausnahmefall: Wenn eine Transaktion nicht erfolgreich abgeschlossen werden kann, definiert sie den fairen Ausgleich. Im Streaming-Modell ist der Ausgleich proportional: Wenn Alice Bob für eine Stunde bezahlt, aber nach 30 Minuten abgebrochen wird, behält Bob die Hälfte.
-
-### 2.4 Ebene 4: Objekt (Axiome O1-O5, C1-C4)
-
-Die Objekt-Ebene definiert die Substanz des Systems: die Dinge, die besessen, transferiert und verifiziert werden können. Die neun Axiome beschreiben sowohl generische Assets als auch spezifische Credentials.
-
-**AMO-Axiome (O1-O5):** AMO steht für "Atomic Managed Object" und ist die universelle Repräsentation von Assets im System. Ein AMO kann ein physisches Gut (ein Auto, ein Grundstück), ein digitales Gut (ein Token, eine Lizenz), eine Dienstleistung (eine Beratungsstunde, ein Abonnement) oder ein Recht (ein Zugriffsrecht, eine Berechtigung) sein.
-
-Jedes AMO wird durch einen Blueprint definiert, der seine Struktur und seine Constraints beschreibt. Der Blueprint legt fest, welche Eigenschaften das AMO hat, welche Werte diese Eigenschaften annehmen können, und welche Operationen auf dem AMO erlaubt sind.
-
-AMOs haben einen Lebenszyklus: Sie werden erstellt (MINT), können transferiert werden (TRANSFER), können modifiziert werden (UPDATE), und können zerstört werden (BURN). Jede dieser Operationen ist an Bedingungen geknüpft, die im Blueprint definiert sind.
-
-Logic Guards sind Programme, die Zustandsänderungen validieren. Sie werden im ECLVM (Erynoa Configuration Language Virtual Machine) ausgeführt und können beliebig komplexe Logik implementieren. Ein Logic Guard für ein Finanz-AMO könnte beispielsweise prüfen, ob der Sender ausreichend Deckung hat, ob die Transaktion den regulatorischen Anforderungen entspricht, und ob beide Parteien die erforderlichen Credentials besitzen.
-
-**Credential-Axiome (C1-C4):** Credentials sind eine spezielle Art von AMO, die Aussagen über Agenten repräsentieren. Sie folgen dem W3C Verifiable Credentials Standard und ermöglichen die Propagation von Vertrauen.
-
-Ein Credential enthält immer drei Rollen: Den Issuer (Aussteller), der die Aussage macht und signiert; das Subject (Subjekt), über das die Aussage gemacht wird; und den Holder (Halter), der das Credential besitzt und vorzeigen kann. In vielen Fällen sind Subject und Holder identisch, aber nicht notwendigerweise: Ein Arbeitgeber (Issuer) kann ein Zeugnis über einen Mitarbeiter (Subject) ausstellen, das der Mitarbeiter (Holder) dann bei Bewerbungen vorzeigt.
-
-Die Trust-Propagation besagt, dass ein Credential das Vertrauen des Issuers an das Subject weitergibt. Wenn die Bundesbank (hoher Trust) zertifiziert, dass eine Bank (mittlerer Trust) solvent ist, erhöht sich der effektive Trust der Bank im Finanzkontext.
-
-Credentials haben eine definierte Gültigkeitsdauer und können widerrufen werden. Die Revocation ist in einem effizienten Revocation-Register gespeichert, das die Prüfung des Widerrufsstatus in konstanter Zeit ermöglicht.
-
-### 2.5 Ebene 5: Schutz (Axiome S1-S18)
-
-Die Schutz-Ebene verhindert, dass das System in unerwünschte Zustände degeneriert. Die achtzehn Axiome adressieren vier fundamentale Risiken dezentraler Systeme.
-
-**Anti-Calcification (S1-S4):** Das "Reich wird Reicher"-Problem ist eines der größten Risiken dezentraler Systeme. Ohne Gegenmaßnahmen tendieren diese Systeme dazu, dass etablierte Teilnehmer immer mehr Einfluss gewinnen, während Newcomer keine Chance haben.
-
-Der Exploration-Bonus gewährt neuen Agenten eine temporäre Sichtbarkeitsverstärkung. In den ersten 90 Tagen erhalten neue Agenten einen Bonus, der exponentiell abklingt. Dieser "Welpenschutz" gibt Newcomern die Chance, sich zu beweisen.
-
-Die Diversity-Slot-Reservation reserviert 30% der Discovery-Ergebnisse für Agenten aus niedrigeren Trust-Tiers. Auch wenn ein etablierter Agent objektiv besser rankt, erscheinen in den Top 10 immer mindestens 3 weniger etablierte Alternativen.
-
-Der Stochastic-Fairness-Mechanismus fügt einen kontrollierten Zufall in das Ranking ein. Anstatt deterministisch nach Trust zu sortieren, wird eine kleine Zufallskomponente hinzugefügt, die es auch niedriger gerankten Agenten ermöglicht, gelegentlich höher zu erscheinen.
-
-Die Diminishing-Returns beschränken den Effekt sehr hoher Trust-Werte. Die Aufmerksamkeits-Funktion wird mit einem Exponenten von 0.7 potenziert, sodass der Unterschied zwischen 0.8 und 0.9 Trust kleiner ist als zwischen 0.5 und 0.6.
-
-**Chain-Robustness (S5-S8):** Vertrauensketten können lang und fragil werden. Wenn Alice Bob vertraut und Bob Carol vertraut und Carol Dave vertraut, wie viel sollte Alice Dave vertrauen?
-
-Trust-Anchors sind vorab definierte Entitäten mit hohem, stabilem Trust-Wert. Dies können staatliche Stellen, etablierte Institutionen oder die Erynoa Foundation selbst sein. Trust-Anchors dienen als Fixpunkte im Trust-Netzwerk und verhindern Trust-Inflation.
-
-Die logarithmische Ketten-Dämpfung ersetzt die multiplikative Trust-Verrechnung. Anstatt Vertrauen entlang einer Kette zu multiplizieren (0.9 × 0.9 × 0.9 = 0.73), wird eine logarithmische Dämpfung verwendet, die den Verfall verlangsamt aber dennoch garantiert.
-
-Das Chain-Length-Limit begrenzt die maximale Länge einer Vertrauenskette. Je nach Kontext liegt dieses Limit zwischen 5 und 20. Längere Ketten werden nicht akzeptiert, da das verbleibende Vertrauen zu gering wäre.
-
-Die Direct-Path-Preference bevorzugt direkte Vertrauensbeziehungen. Wenn Alice sowohl direkt mit Dave interagiert hat als auch über die Kette Bob-Carol zu Dave verbunden ist, wird der direkte Pfad stärker gewichtet.
-
-**Quality-Objectivity (S9-S12):** Die Subjektivität von "Qualität" ist ein fundamentales Problem. Wer definiert, was eine gute Leistung ist?
-
-Das Multi-Stakeholder-Feedback sammelt Bewertungen von allen Beteiligten einer Transaktion. Nicht nur der Empfänger bewertet den Sender, sondern beide Seiten bewerten sich gegenseitig, und unbeteiligte Wächter können ebenfalls Beobachtungen einspeisen.
-
-Objektive Metriken werden, wo möglich, einbezogen. Für eine Energielieferung kann der tatsächliche Verbrauch in kWh gemessen werden. Für einen Cloud-Service kann die Uptime und Latenz gemessen werden. Diese objektiven Daten fließen mit 45% Gewicht in die Qualitätsbewertung ein.
-
-Die Collusion-Detection erkennt verdächtige Muster. Wenn zwei Agenten sich auffällig oft gegenseitig positiv bewerten und kaum mit anderen interagieren, wird ihr gegenseitiges Feedback abgewertet. Der Algorithmus analysiert die Ähnlichkeit der Bewertungsmuster und die Exklusivität der Beziehung.
-
-Die Diversity-Multiplikation belohnt Agenten, die mit vielen verschiedenen Partnern interagieren. Ein Agent, der mit 50 verschiedenen Partnern gehandelt hat, erhält einen höheren Trust-Bonus als ein Agent, der 50 Transaktionen mit demselben Partner hatte.
-
-**Fair-Governance (S13-S18):** Governance in dezentralen Systemen tendiert zur Aristokratie. Ohne Gegenmaßnahmen dominieren die ältesten und aktivsten Teilnehmer alle Entscheidungen.
-
-Das Quadratic-Voting begrenzt den Einfluss einzelner Agenten. Anstatt das Stimmgewicht linear mit dem Trust zu skalieren, wird die Quadratwurzel verwendet. Ein Agent mit viermal so viel Trust hat nur doppelt so viel Stimmkraft.
-
-Das Domain-Specific-Voting gewichtet Stimmen nach Relevanz. Bei einer Entscheidung über Finanzregeln zählen die Stimmen von Finanzexperten stärker als die von Gaming-Enthusiasten. Die Relevanz wird aus der Historie und den Credentials der Agenten abgeleitet.
-
-Die Innovation-Reserve reserviert 20% aller Proposal-Slots für Agenten aus niedrigeren Trust-Tiers. Dies garantiert, dass neue Ideen nicht von etablierten Interessen blockiert werden können.
-
-Das Temporal-Term-Limit reduziert das Stimmgewicht von Agenten, die bereits viele Governance-Runden dominiert haben. Nach 10 Runden in Folge mit hohem Einfluss sinkt die Stimmkraft, um anderen Raum zu geben.
-
-Das Minority-Veto ist ein Circuit-Breaker: Wenn 70% einer Minderheitsgruppe gegen einen Vorschlag stimmen, wird die Abstimmung pausiert und eine Diskussionsphase erzwungen.
-
-Die Supermajority-Requirement verlangt für strukturelle Änderungen eine Zweidrittelmehrheit bei mindestens 40% Quorum.
-
-### 2.6 Ebene 6: Kybernetik (Axiome K1-K16)
-
-Die Kybernetik-Ebene macht das System lebendig. Die sechzehn Axiome basieren auf vier interdisziplinären Konzepten: Neurobiologie, Ökologie, Thermodynamik und Autopoiesis.
-
-**Neurobiologie (K1-K4):** Das Gehirn optimiert nicht nach "Wahrheit", sondern nach Überraschungsminimierung. Ein intelligentes System sucht nach Information, die Unsicherheit reduziert, nicht nach Bestätigung.
-
-Der Novelty-Score misst, wie viel neue, verifizierbare Information ein Agent liefert. Die Formel kombiniert Information-Gain (wie viel reduziert der Agent die Unsicherheit des Systems?) mit Verification-Boost (wie oft waren die überraschenden Claims korrekt?).
-
-Der Expectation-Score misst, wie vorhersagbar ein Agent ist. Je vorhersagbarer, desto langweiliger – und desto weniger Aufmerksamkeit verdient er.
-
-Die Surprise-Weighted-Attention ist der Quotient aus Novelty und Expectation. Ein Agent, der immer zuverlässig ist aber nur Banalitäten erzählt, verliert an Aufmerksamkeit. Ein neuer Agent, der etwas Unerwartetes sagt, das sich als wahr herausstellt, bekommt einen massiven Boost.
-
-Der Active-Inference-Loop beschreibt, wie Agenten optimal handeln sollten: Sie suchen nach Aktionen, die die Unsicherheit des Systems minimieren, abzüglich der Kosten der Aktion.
-
-**Ökologie (K5-K8):** In der Natur ist der Tod essenziell für Anpassungsfähigkeit. Ohne Tod gibt es keine Evolution.
-
-Die Apoptose ist der programmierte Zelltod. Wenn ein Agent zu lange inaktiv ist (Aktivität unter 0.1 für mehr als 180 Tage), wird er nicht nur passiv vergessen, sondern aktiv aufgelöst. Seine Ressourcen werden freigegeben.
-
-Die Controlled-Burns sind "digitale Waldbrände". Wenn ein Shard zu chaotisch wird (hohe Entropie), wird er kontrolliert bereinigt. Agenten mit niedriger Aktivität und niedriger Novelty werden komprimiert, ihre detaillierte Geschichte wird archiviert.
-
-Die Mutation erlaubt Agenten, ihre Regelwerke leicht zu variieren. Weniger erfolgreiche Agenten mutieren häufiger. Erfolgreiche Mutationen werden von anderen kopiert. So entsteht eine memetische Evolution der Strategien.
-
-Die Nischenbildung beschreibt, wie Agenten ihre optimale Spezialisierung finden. Ein Agent sucht den Shard, in dem er am meisten beitragen kann, abzüglich der Konkurrenz durch ähnliche Agenten.
-
-**Thermodynamik (K9-K12):** Information ist physikalisch. Um Ordnung zu schaffen, muss Arbeit verrichtet werden.
-
-Trust-als-Negentropie interpretiert Vertrauen als negative Entropie – als Ordnung in einem chaotischen System. Hoher Trust bedeutet vorhersagbar gutes Verhalten, also niedrige Entropie.
-
-Die entropiebasierten Transaktionskosten machen Transaktionen teurer, wenn der lokale Shard chaotisch ist. Bei einem Spam-Angriff steigt die Entropie, was die Kosten erhöht, was den Angriff verteuert – ein selbstregulierender Schutz.
-
-Die Maxwellschen Dämonen sind die Validatoren. Sie sortieren "heiße" (wahre) von "kalten" (falschen) Informationen und werden für diese Arbeit belohnt.
-
-Die System-Temperatur misst das globale Chaos-Level. Eine optimale Temperatur liegt zwischen 0.3 und 0.7 – weder zu kalt (erstarrt) noch zu heiß (chaotisch).
-
-**Autopoiesis (K13-K16):** Ein autopoietisches System erschafft und erhält sich selbst.
-
-Die selbstjustierenden Parameter erlauben es dem System, seine eigenen Hyperparameter zu optimieren. Der Decay-Faktor, der Exploration-Bonus, die Apoptose-Schwelle – all diese Werte werden basierend auf Systemgesundheits-Gradienten angepasst.
-
-Der PID-Regler ist ein klassischer Feedback-Controller aus der Regeltechnik. Er reagiert auf den aktuellen Fehler (P), kompensiert langfristige Abweichungen (I) und dämpft Oszillationen (D).
-
-Die System-Atmung ist ein rhythmischer Zyklus. Alle 30 Tage "atmet" das System: In der Einatem-Phase werden Exploration-Boni erhöht und Kosten gesenkt, in der Ausatem-Phase umgekehrt. Dies verhindert Gleichgewichtsfallen.
-
-Die Meta-Observation stellt sicher, dass die Beobachter selbst beobachtet werden. Für jeden Shard gibt es Beobachter zweiter Ordnung, die kollektive Blindheit und Gruppendenken erkennen.
-
-### 2.7 Ebene 7: Quanta (Axiome Q1-Q15)
-
-Die Quanta-Ebene transzendiert die klassischen Beschränkungen dezentraler Systeme. Die fünfzehn Axiome basieren auf drei mathematischen Säulen: Quantenmechanik, Kategorientheorie und Topologie.
-
-**Quantenmechanik (Q1-Q5):** In der Quantenmechanik existiert ein System in einer Superposition aller möglichen Zustände, bis eine Messung durchgeführt wird.
-
-Die Trust-Superposition bedeutet, dass ein Agent nicht "zu 85% vertrauenswürdig ist", sondern in einer Superposition verschiedener Trust-Zustände existiert. Die Amplituden dieser Superposition beschreiben die Wahrscheinlichkeiten.
-
-Der Messung/Kollaps tritt ein, wenn eine Interaktion stattfindet. Die Interaktion ist eine "Messung", die die Wellenfunktion kollabiert. Danach wird die Superposition neu berechnet, wobei die gemessene Richtung verstärkt wird.
-
-Die Verschränkung beschreibt korrelierte Trust-Zustände. Wenn zwei Agenten verschränkt sind (etwa Sub-Identitäten derselben DID), beeinflusst die Messung des einen den Zustand des anderen.
-
-Die Kontextualität besagt, dass derselbe Agent in verschiedenen Kontexten verschiedene Trust-Zustände haben kann. Alice mag im Gaming-Realm hochvertrauenswürdig sein und im Finanz-Realm ein Neuling.
-
-Die Interaktions-Wahrscheinlichkeit berechnet vor einer Transaktion, wie wahrscheinlich ein erfolgreicher Abschluss ist. Dies ermöglicht ein intelligentes Pre-Matching.
-
-**Kategorientheorie (Q6-Q10):** Die Kategorientheorie ist die Mathematik der Struktur. Sie beschreibt, wie Objekte und Beziehungen zwischen Objekten zusammenhängen.
-
-Die Realm-Kategorien formalisieren jeden Realm als mathematische Kategorie. Die Objekte sind die Agenten, die Morphismen sind die Transaktionen zwischen Agenten.
-
-Die Funktoren sind strukturerhaltende Abbildungen zwischen Kategorien. Ein Funktor von Gaming nach Finance bildet Spieler auf Kreditentitäten ab und In-Game-Transaktionen auf Finanztransaktionen – und erhält dabei die logische Struktur.
-
-Die natürlichen Transformationen vergleichen verschiedene Funktoren. Wenn zwei verschiedene Übersetzungsmechanismen existieren, kann eine natürliche Transformation zeigen, dass sie äquivalent sind.
-
-Die Monaden kapseln kontextuelle Berechnungen. Die Trust-Monade fügt jedem Wert einen Trust-Kontext hinzu. Die Async-Monade fügt jedem Prozess einen Pending/Resolved-Zustand hinzu.
-
-Die semantische Interoperabilität definiert, wann zwei Realms kompatibel sind: wenn Funktoren in beide Richtungen existieren, die zusammen die Identität approximieren.
-
-**Topologie (Q11-Q15):** Die Topologie beschreibt die Geometrie der Bedeutung. Anstatt Aussagen binär zu validieren, messen wir ihre semantische Nähe.
-
-Die Axiom-Embeddings repräsentieren jedes Axiom als Vektor in einem hochdimensionalen Raum. Die 128 Dimensionen erfassen verschiedene Aspekte: Ethik, Prozess, Ressourcen, Kontext, Beziehung.
-
-Die semantische Ähnlichkeit wird als Kosinus-Distanz gemessen. Zwei Vektoren, die in die gleiche Richtung zeigen, sind ähnlich. Orthogonale Vektoren sind unabhängig. Entgegengesetzte Vektoren sind Antonyme.
-
-Die weiche Axiom-Validierung ersetzt binäre Checks durch Ähnlichkeits-Schwellen. Eine Aktion, die zu 95% mit einem Axiom übereinstimmt, gilt als compliant. Eine Aktion mit 60% Übereinstimmung wird reviewed.
-
-Die Manifold-Projektion erkennt, dass hochdimensionale Daten auf einer niederdimensionalen Oberfläche (Mannigfaltigkeit) liegen. Punkte, die weit von dieser Oberfläche entfernt sind, sind Anomalien.
-
-Die topologische Persistenz analysiert die Stabilität von Strukturen. Persistente Cluster sind bedeutsamer als kurzlebige. Persistente Löcher im Trust-Netzwerk zeigen isolierte Gruppen oder Sybil-Ringe.
+## Teil V: Das Realm-System
+
+### Hierarchische Kontexträume
+
+Das Erynoa-Netzwerk ist in hierarchische Kontexträume (Realms) unterteilt. Ein Realm ist eine logische Partition mit eigenen Regeln, Governance und Semantik.
+
+Die Hierarchie:
+```
+erynoa (root)
+├── finance
+│   ├── trading
+│   │   ├── crypto
+│   │   └── commodities
+│   ├── insurance
+│   └── lending
+├── energy
+│   ├── grid
+│   └── mobility
+├── healthcare
+└── entertainment
+```
+
+Jeder Realm kann eigene Axiome definieren, die die globalen Axiome erweitern, aber nicht verletzen. Beispiel für einen Healthcare-Realm:
+
+```ecl
+realm healthcare {
+  // Strengere Zugangsbedingungen
+  require credential MedicalProfessional
+  
+  // Höheres LoD-Minimum
+  min_lod = "Enhanced"
+  
+  // Spezielle Datenschutzregeln
+  require patient_consent for data_access
+  
+  // Verstöße führen zu sofortigem Ausschluss
+  on_violation = "immediate_ban"
+}
+```
+
+### ECL (Erynoa Configuration Language)
+
+ECL ist eine deterministische, sandboxed Sprache für Realm-Definitionen und Smart Contracts. Sie wird in der ECLVM (ECL Virtual Machine) ausgeführt.
+
+Eigenschaften:
+- **Deterministisch:** Gleiche Eingabe → gleiche Ausgabe, immer
+- **Terminierend:** Alle Programme terminieren (kein Turing-complete)
+- **Gas-metered:** Berechnung kostet proportional zur Komplexität
+- **Sandboxed:** Kein Zugriff auf externe Ressourcen
+
+ECL-Programme können:
+- Zugangsbedingungen definieren
+- Transaktionslogik implementieren
+- Events validieren
+- Trust-Modifikationen spezifizieren
+
+Sie können nicht:
+- Endlosschleifen erzeugen
+- Auf das Dateisystem zugreifen
+- Netzwerkanfragen machen
+- Zufallszahlen generieren
+
+### Cross-Realm-Interoperabilität
+
+Verschiedene Realms haben verschiedene Semantiken. Ein "Reputation Point" im Gaming-Realm bedeutet etwas anderes als im Finance-Realm.
+
+Cross-Realm-Transfers erfordern Konversionsregeln, die in Bridge-Contracts definiert sind:
+
+```ecl
+bridge gaming_to_finance {
+  // 1000 Gaming-Reputation = 1 Finance-Trust-Point
+  conversion_rate = 0.001
+  
+  // Nur Competence-Dimension transferiert
+  dimensions = ["competence"]
+  
+  // Maximum pro Transfer
+  max_per_tx = 100
+  
+  // Cooling-off zwischen Transfers
+  min_interval = 7d
+}
+```
+
+Diese Bridges ermöglichen kontrollierte Wertübertragung zwischen Domänen, ohne die Semantik zu verwässern.
 
 ---
 
-## Teil III: Architektonische Komponenten
+## Teil VI: Das Robustheitssystem
 
-### 3.1 Die Kybernetische Triade
+### Die fünf Verteidigungslinien
 
-Das Erynoa-System ist als kybernetische Triade organisiert: ERY, ECHO und NOA sind drei miteinander verbundene Subsysteme, die zusammen die vollständige Funktionalität bieten.
+Ein produktionsreifes System braucht Robustheit gegen reale Angriffe. Erynoa implementiert fünf Verteidigungslinien:
 
-**ERY** ist das semantische Netzwerk und der Identitäts-Layer. Es verwaltet die DIDs, die Vertrauensbeziehungen und die semantischen Strukturen. ERY ist der "Gedächtnis"-Teil des Systems – es weiß, wer wer ist und wie die Dinge zusammenhängen.
+**Layer 1: Fuzzy Interpretation**
+- Rohe Zahlen werden in qualitative Buckets übersetzt
+- Konfidenzintervalle werden kommuniziert
+- Hysterese verhindert Oszillation an Schwellwerten
+- Nutzer sehen "Verified (High Confidence)" statt "0.723456"
 
-**ECHO** ist der emergente Schwarm und die Ausführungsumgebung. Die ECLVM (Erynoa Configuration Language Virtual Machine) führt Logic Guards, Policies und Smart Contracts aus. ECHO ist deterministisch, sandboxed und gas-metered. Es ist der "Handlungs"-Teil des Systems.
+**Layer 2: Reality Anchor**
+- Hardware-Binding durch Physical Unclonable Functions (PUFs)
+- Multi-Path-Witnessing erfordert geografische Diversität
+- Geo-Proofs verifizieren physische Präsenz
+- Supply-Chain-Trust für Hardware-Hersteller
 
-**NOA** ist der kausale Ledger und die Finalitäts-Garantie. NOA speichert die unveränderliche Geschichte aller Events. Es ist der "Wahrheits"-Teil des Systems – was in NOA steht, ist passiert.
+**Layer 3: Anti-Gaming**
+- EigenTrust erkennt Sybil-Cluster
+- Stake-at-Risk: Hohe Reputation erfordert hinterlegtes Kapital
+- Slashing bei nachgewiesenem Betrug
+- Collusion-Detection durch Netzwerkanalyse
 
-Der **NEXUS** ist die Verbindungsschicht zwischen den drei Komponenten und zu externen Systemen. Er ermöglicht Cross-Chain-Kommunikation, Bridge-Protokolle und die Integration mit Legacy-Systemen.
+**Layer 4: Market Bootstrap**
+- Single-Player-Mode: Interne Nutzung ohne externes Netzwerk
+- Federated Genesis: Unternehmen verbinden ihre internen Netze
+- Retroactive Public Goods Funding: Belohnung für frühe Blueprint-Ersteller
 
-### 3.2 Identitäts-Management
+**Layer 5: Legal Wrapper**
+- Ricardian Contracts: Code + menschenlesbares PDF
+- Jurisdiction Binding: Rechtsstandort ist definiert
+- Controller Chain: Immer eine haftbare natürliche/juristische Person
 
-Die Identität ist das Fundament aller Interaktionen. Erynoa verwendet dezentrale Identifikatoren nach dem W3C DID Standard.
+### Antifragile Erweiterungen
 
-Ein Erynoa-DID folgt dem Schema `did:erynoa:<namespace>:<unique-id>`. Der Namespace identifiziert den Kontext (etwa "gaming" oder "finance"), die Unique-ID ist ein kryptographisch zufälliger Bezeichner.
+Über Robustheit hinaus strebt Erynoa Antifragilität an: Das System soll durch Stress stärker werden.
 
-Jede DID ist an einen oder mehrere kryptographische Schlüssel gebunden. Der primäre Schlüssel authentifiziert den Agenten. Sekundäre Schlüssel können für spezifische Zwecke definiert werden (etwa ein Schlüssel nur für Governance-Abstimmungen).
+**Anti-Calcification:**
+- Trust verfällt (Halbwertszeit 6 Jahre)
+- Novelty-Bonus für neue Partner (bis 3x)
+- Stagnation wird bestraft, Exploration belohnt
 
-Sub-Identitäten ermöglichen es einem Agenten, unter verschiedenen Identitäten zu agieren, die dennoch mit seiner Haupt-Identität verknüpft sind. Dies ist nützlich für Pseudonymität: Alice kann im Gaming-Realm als "DragonSlayer" bekannt sein, ohne ihre bürgerliche Identität preiszugeben, aber dennoch Trust von ihrer Haupt-Identität erben.
+**Hardware-Diversity:**
+- Kritische Events erfordern Zeugen von 3+ Herstellern
+- Geografische Verteilung (2+ Regionen)
+- Kein Single Point of Failure
 
-Die Schlüsselrotation ermöglicht den sicheren Wechsel von Schlüsseln, etwa wenn ein Schlüssel kompromittiert wurde. Das DID-Dokument enthält die Historie aller Schlüssel und deren Gültigkeitszeiträume.
+**Circuit Breakers:**
+- Maximale Trust-Änderung pro Stunde begrenzt (±10%)
+- Automatischer Cooldown bei hoher Volatilität
+- Dampening bei schnellen Änderungen
 
-### 3.3 Trust-Mechanismen
-
-Der Trust eines Agenten wird durch die sechsdimensionale Wächter-Metrik erfasst und evoliert über Zeit.
-
-Die sechs Dimensionen werden aus verschiedenen Quellen gespeist. Reliability ergibt sich aus der Historie erfolgreicher Transaktionen. Integrity aus der Konsistenz des Verhaltens über Zeit. Competence aus den vorliegenden Credentials und der Transaktionshistorie im jeweiligen Fachgebiet. Predictability aus der Varianz des Verhaltens. Vigilance aus der Qualität der Bezeugungen und dem Erkennen von Fehlern. Omega-Alignment aus der gemessenen Abweichung von den Systemaxiomen.
-
-Die Gewichtung der Dimensionen ist kontextabhängig. Im Finanzbereich mag Reliability wichtiger sein, im Kreativbereich Competence. Die Basis-Gewichtung kann durch Realm-spezifische Regeln überschrieben werden.
-
-Der Trust-Score evoliert durch Events. Positive Events (erfolgreiche Transaktionen, korrekte Bezeugungen) erhöhen den Score. Negative Events (gescheiterte Transaktionen, erkannte Verstöße) senken ihn asymmetrisch stärker. Ohne Events verfällt der Score langsam.
-
-Der Karma-Engine ist der Algorithmus, der diese Evolution steuert. Er berücksichtigt die Event-Typen, den Kontext, die beteiligten Parteien und die aktuelle Trust-Verteilung im System.
-
-### 3.4 Transaktions-Infrastruktur
-
-Transaktionen in Erynoa folgen dem TAT-Lebenszyklus und können verschiedene Formen annehmen.
-
-Die einfachste Form ist die atomare Transaktion: Alice sendet X an Bob, Bob sendet Y an Alice, beide Seiten signieren, Wächter bezeugen, fertig.
-
-Komplexer sind Streaming-Transaktionen für langfristige Leistungen. Alice bezahlt Bob kontinuierlich für eine Dienstleistung. Der Wert fließt proportional zur Zeit, sodass ein Abbruch jederzeit fair abgerechnet werden kann.
-
-Multi-Party-Transaktionen involvieren mehr als zwei Parteien. Ein Escrow-Dienst kann als Mittler fungieren, ein Marktplatz kann Käufer und Verkäufer zusammenbringen.
-
-Cross-Realm-Transaktionen nutzen die kategorietheoretischen Funktoren, um Wert und Bedeutung über Realm-Grenzen hinweg zu übertragen.
-
-### 3.5 Governance-Mechanismen
-
-Die Governance von Erynoa ist selbst dezentral und folgt den Schutz-Axiomen.
-
-Proposals können von jedem Agenten eingereicht werden, wobei 20% der Slots für niedrigere Trust-Tiers reserviert sind. Ein Proposal enthält die vorgeschlagene Änderung, eine Begründung, eine Impact-Analyse und einen Implementierungsplan.
-
-Die Diskussionsphase dauert mindestens 14 Tage. In dieser Zeit können Agenten Fragen stellen, Bedenken äußern und Änderungsvorschläge machen.
-
-Die Abstimmung verwendet quadratisches Voting mit domain-spezifischer Gewichtung. Die Stimmen werden nach Trust und Relevanz gewichtet.
-
-Für operative Änderungen genügt eine einfache Mehrheit. Für strukturelle Änderungen (etwa an den Fundament-Axiomen) ist eine Zweidrittelmehrheit bei 40% Quorum erforderlich.
-
-Das Minority-Veto kann die Abstimmung pausieren, wenn 70% einer definierten Minderheitsgruppe dagegen sind.
+**Post-Quantum Readiness:**
+- Hybride Signaturen (Ed25519 + Dilithium)
+- Key-Rotation-Protokoll mit Trust-Erhalt
+- Crypto-Agility: Algorithmen austauschbar
 
 ---
 
-## Teil IV: Implementierungs-Aspekte
+## Teil VII: Die Humanistische Verfassung
 
-### 4.1 Effizienz durch Quanten-Modellierung
+### Die vier existenziellen Gefahren
 
-Die Quanten-Modellierung des Trust bietet erhebliche Effizienzvorteile gegenüber klassischen Ansätzen.
+Mit technischer Robustheit allein ist es nicht getan. Ein System kann perfekt funktionieren und trotzdem unmenschlich sein.
 
-In einem klassischen System mit n Agenten müssten n² paarweise Trust-Werte berechnet und gespeichert werden. Bei einer Million Agenten wären das eine Billion Werte.
+**Gefahr 1: Alignment-Krise (Paperclip Maximizer)**
+Das System optimiert Effizienz und schließt Menschen aus, weil Maschinen zuverlässiger sind.
 
-Im Quanten-Modell speichert jeder Agent nur seinen eigenen Zustandsvektor. Bei der Interaktion werden die relevanten Erwartungswerte on-demand berechnet. Die Komplexität sinkt von O(n²) auf O(n × log(n)) plus O(1) pro Messung.
+**Gefahr 2: Thermodynamische Entropie**
+Verifikation kostet mehr als die Transaktion wert ist. Das System verbrennt Wert statt ihn zu schaffen.
 
-Zusätzlich ermöglicht die Lazy-Evaluation: Trust-Werte, die nie abgefragt werden, müssen nie berechnet werden. Das System berechnet nur, was gebraucht wird.
+**Gefahr 3: Unbarmherzige Finalität**
+Keine Vergebung, keine zweite Chance. Einmal gefallen, für immer gebrandmarkt.
 
-### 4.2 ECLVM – Die Ausführungsumgebung
+**Gefahr 4: Semantische Entfremdung**
+Maschinen entwickeln Sprachen, die Menschen nicht verstehen. Kontrollverlust durch Unverständlichkeit.
 
-Die ECLVM ist die Laufzeitumgebung für alle ausführbare Logik im System. Sie ist:
+### Die vier humanistischen Axiome
 
-**Deterministisch:** Dieselben Eingaben führen immer zu denselben Ausgaben. Dies ist essentiell für Konsens.
+**H1: Human-Alignment**
+Das System existiert, um menschliches Gedeihen zu ermöglichen.
+→ Implementiert durch H(s)-Faktor: Mensch = 2.0, Human-kontrolliert = 1.5, Sonstige = 1.0
 
-**Sandboxed:** Kein Code kann auf Ressourcen außerhalb seiner Sandbox zugreifen. Dies garantiert Sicherheit.
+**H2: Verhältnismäßigkeit**
+Die Kosten des Vertrauens dürfen den Wert nicht übersteigen.
+→ Implementiert durch LoD-System und 5%-Constraint
 
-**Gas-metered:** Jede Operation verbraucht Gas. Dies verhindert Endlosschleifen und Denial-of-Service.
+**H3: Temporale Gnade**
+Alte Fehler verblassen. Vergebung ist möglich.
+→ Implementiert durch exponentielle Gewichtung w(s,t) und Amnestie-System
 
-**Formally-verifiable:** Die ECLVM hat eine formale Semantik, die Beweise über Programmeigenschaften ermöglicht.
+**H4: Semantische Verankerung**
+Jede Abstraktion muss menschlich verständlich bleiben.
+→ Implementiert durch NLD-Requirement und LLM-Auditor
 
-Die Sprache ECL (Erynoa Configuration Language) ist eine deklarative Sprache mit funktionalen Elementen. Sie ist ausdrucksstark genug für komplexe Logic Guards, aber eingeschränkt genug für formale Analyse.
-
-### 4.3 Skalierung durch Sharding
-
-Das System skaliert durch horizontale Partitionierung in Shards.
-
-Jeder Shard ist ein selbstständiger Subraum mit eigenen Validatoren und eigener Konsensbildung. Shards können spezialisiert sein (etwa ein Shard für Gaming, einer für DeFi) oder geografisch partitioniert.
-
-Cross-Shard-Transaktionen nutzen ein atomares Commit-Protokoll. Beide Shards müssen die Transaktion akzeptieren, oder sie wird auf beiden zurückgerollt.
-
-Die dynamische Shard-Bildung erlaubt es dem System, neue Shards zu erstellen, wenn existierende überlastet sind, und Shards zu fusionieren, wenn sie unterausgelastet sind.
-
-### 4.4 Datenhaltung und Privacy
-
-Die Datenhaltung in Erynoa folgt dem Prinzip der Datensparsamkeit.
-
-Öffentliche Daten (DIDs, öffentliche Credentials, finalisierte Events) werden im NOA-Ledger gespeichert und sind für alle sichtbar.
-
-Private Daten werden nur von den Beteiligten gespeichert. Das System speichert nur Hashes und Merkle-Roots, die die Existenz und Integrität der Daten beweisen, ohne sie preiszugeben.
-
-Selektive Offenlegung ermöglicht es Agenten, nur die notwendigen Teile eines Credentials offenzulegen. Alice kann beweisen, dass sie über 18 ist, ohne ihr genaues Geburtsdatum preiszugeben.
-
-Zero-Knowledge-Proofs ermöglichen Aussagen über Daten, ohne die Daten selbst zu offenbaren. Alice kann beweisen, dass ihr Trust-Score über einem Schwellwert liegt, ohne den genauen Wert zu nennen.
+Diese vier Axiome haben Vorrang. Bei Konflikt zwischen Effizienz und Menschlichkeit gewinnt Menschlichkeit.
 
 ---
 
-## Teil V: Garantien und Grenzen
+## Teil VIII: Technische Architektur
 
-### 5.1 Was das System garantiert
+### Die drei Säulen
 
-**Identitäts-Integrität:** Keine Identität kann ohne den zugehörigen Schlüssel gekapert werden. Die Einzigartigkeit von DIDs ist systemweit garantiert.
+**ERY (Semantic & Identity Layer)**
+- Verwaltet DIDs, Credentials, Schemas, Ontologien
+- Content-addressable Storage (CAS) für Blueprints
+- Semantic Index für Discovery
 
-**Trust-Fairness:** Kein Agent kann unter den Trust-Floor fallen. Die Asymmetrie und der Decay sind transparent und vorhersagbar. Die Schutz-Axiome verhindern systematische Benachteiligung.
+**ECHO (Action & Execution Layer)**
+- Aktive Agenten führen Transaktionen durch
+- ECLVM führt Smart Contracts aus
+- Witness-Netzwerk attestiert Events
 
-**Transaktions-Fairness:** Streaming garantiert faire Abrechnung bei Abbruch. Escrow-Mechanismen schützen beide Seiten. Betrug wird durch Trust-Verlust bestraft.
+**NOA (Truth & Finality Layer)**
+- Event-DAG speichert alle Geschichte
+- Konsens-Mechanismus für Finalität
+- Berechnung der Systemgleichung
 
-**Kausalitäts-Integrität:** Finalisierte Events können nicht geändert werden. Die Historie ist vollständig und überprüfbar.
+**NEXUS (Connection Layer)**
+- Bridges zu externen Systemen
+- APIs für Anwendungen
+- Routing zwischen Realms
 
-**Emergente Intelligenz:** Das System wird über Zeit intelligenter, nicht nur größer. Die Novelty-Belohnung fördert Innovation.
+### Content-Addressable Storage
 
-### 5.2 Was das System nicht garantiert
+Alle Daten werden durch ihren Hash identifiziert:
 
-**Absolute Sicherheit:** Kein System kann 100% sicher sein. Kryptographische Annahmen können brechen. Implementation kann Bugs haben.
+```
+datum_id = sha256(content)
+```
 
-**Perfekte Fairness:** Trotz aller Schutz-Mechanismen werden manche Agenten erfolgreicher sein als andere. Das System garantiert Chancengleichheit, nicht Ergebnisgleichheit.
+Vorteile:
+- Automatische Deduplizierung
+- Kryptographische Integritätsprüfung
+- Dezentrale Verfügbarkeit
+- Einfache Caching-Strategien
 
-**Wahrheit außerhalb des Systems:** Das System kann nur Aussagen innerhalb seiner Grenzen verifizieren. Eine Aussage über die reale Welt (etwa "Das Auto hat 50.000 km") kann nur verifiziert werden, wenn vertrauenswürdige Oracles existieren.
+Events werden in Merkle-Trees organisiert. Der Root-Hash fasst den Zustand zusammen. Änderungen an einem Event ändern den Root-Hash. Synchronisation ist effizient: Nur unterschiedliche Teilbäume müssen ausgetauscht werden.
 
-**Sofortige Reaktion:** Konsens braucht Zeit. Finalisierung braucht Bezeugung. Das System ist nicht für Millisekunden-Reaktionen optimiert.
+### Das SDK
 
-### 5.3 Risiken und Mitigationen
+Das SDK abstrahiert die Komplexität in Schichten:
 
-**51%-Angriff:** Wenn eine Partei mehr als die Hälfte der Validator-Kapazität kontrolliert, kann sie den Konsens manipulieren. Mitigation: Diversity-Requirements, geografische Verteilung, Trust-basierte Gewichtung.
+**Core (Rust):**
+- Systemgleichung-Engine
+- Krypto-Modul (klassisch + post-quantum)
+- Storage-Engine (CAS)
+- Network-Engine (libp2p)
+- Event-Engine
 
-**Sybil-Angriff:** Eine Partei erstellt viele Fake-Identitäten, um das System zu manipulieren. Mitigation: Collusion-Detection, History-Requirements, Proof-of-Personhood-Integration.
+**SDK API (Rust/TypeScript/Python/Go):**
+- Identity-Modul
+- Transaction-Modul
+- Trust-Modul
+- Shard-Modul
+- Credential-Modul
+- Governance-Modul
+- Humanismus-Modul (HumanAuth, LoD, Amnesty, Blueprint)
 
-**Governance-Capture:** Eine Gruppe übernimmt die Governance und ändert die Regeln zu ihren Gunsten. Mitigation: Supermajority-Requirements, Minority-Veto, unveränderliche Fundament-Axiome.
-
-**Trust-Inflation:** Das Vertrauen im System steigt ohne reale Grundlage. Mitigation: Trust-Decay, Trust-Anchors, entropiebasierte Kosten.
+**CLI:**
+Git-ähnliche Befehle für alle Operationen:
+```bash
+erynoa init                    # Neue Identität
+erynoa seek "developer"        # Partner suchen
+erynoa propose <did> --amount 1000  # Angebot
+erynoa stream status           # Fortschritt
+erynoa close                   # Abschluss
+```
 
 ---
 
-## Teil VI: Zusammenfassung
+## Zusammenfassung
 
-Erynoa ist ein dezentrales System für vertrauensbasierte Interaktionen, das auf einer mathematisch fundierten Weltformel basiert. Die Formel beschreibt, wie der Existenzwert des Systems aus den Beiträgen seiner Agenten entsteht.
+Erynoa ist ein dezentrales Ökosystem für vertrauensbasierte Interaktionen. Es basiert auf einer Systemgleichung, die den Gesamtwert aus Aktivität, Vertrauen, Geschichte, Novelty, Human-Alignment und temporaler Gewichtung berechnet.
 
 Das System ist in sieben Ebenen organisiert:
-- **Fundament** garantiert die Korrektheit der grundlegenden Operationen
-- **Emergenz** ermöglicht kollektive Intelligenz
-- **Prozess** formalisiert alle Handlungen
-- **Objekt** definiert die Substanz des Systems
-- **Schutz** verhindert Degeneration und Tyrannei
-- **Kybernetik** macht das System lebendig und anpassungsfähig
-- **Quanta** ermöglicht Kontextualität und Nuance
 
-Die 116 Axiome dieser Ebenen bilden ein kohärentes Regelwerk, das Entwicklern und Nutzern klare Garantien gibt und gleichzeitig Raum für Innovation lässt.
+1. **Fundament:** Identität, Kausalität, grundlegende Regeln (30 Axiome)
+2. **Emergenz:** Kollektive Intelligenz, Konsens (15 Axiome)
+3. **Prozess:** Transaktionen, TAT-Lifecycle (13 Axiome)
+4. **Objekt:** Assets, Services, Credentials (9 Axiome)
+5. **Schutz:** Anti-Gaming, Anti-Calcification (18 Axiome)
+6. **Kybernetik:** Feedback, Selbstregulation, Antifragilität (23 Axiome)
+7. **Humanismus:** Alignment, Verhältnismäßigkeit, Vergebung, Transparenz (4 Axiome)
 
-Die Quanten-Erweiterung der Weltformel ermöglicht eine effizientere Berechnung, kontextuelles Vertrauen und weiche Validierung. Die kategorietheoretischen Funktoren ermöglichen semantische Interoperabilität zwischen verschiedenen Anwendungsdomänen.
+Die Mathematik ist klassische Wahrscheinlichkeitstheorie und Statistik. Die Berechnung ist effizient und auf Standard-Hardware möglich. Die Modelle sind interpretierbar und erklärbar.
 
-Das Ziel von Erynoa ist nicht weniger als die Schaffung einer vertrauenswürdigen Infrastruktur für die dezentrale Gesellschaft – eine Infrastruktur, die intelligent, gerecht, lebendig und anpassungsfähig ist.
+Das Ziel ist eine vertrauenswürdige Infrastruktur für die dezentrale Gesellschaft – intelligent, gerecht, robust und menschlich.
 
 ---
 
@@ -450,13 +683,17 @@ Das Ziel von Erynoa ist nicht weniger als die Schaffung einer vertrauenswürdige
 
 | Dokument | Beschreibung |
 |----------|--------------|
-| [WORLD-FORMULA.md](./WORLD-FORMULA.md) | Vollständige mathematische Spezifikation |
-| [LOGIC.md](./LOGIC.md) | Formale Logik und Beweisführung |
-| [LOGIC-SYMBOLS.md](./LOGIC-SYMBOLS.md) | Symbolreferenz und Operatoren |
-| [WORLD-FORMULA-PROOF.md](./WORLD-FORMULA-PROOF.md) | Formale Beweise |
+| [WORLD-FORMULA.md](./WORLD-FORMULA.md) | Mathematische Spezifikation |
+| [LOGIC.md](./LOGIC.md) | Formale Logik und Axiome |
+| [CONSTITUTION.md](./CONSTITUTION.md) | Humanistische Verfassung |
+| [ROBUSTNESS-LAYER.md](./ROBUSTNESS-LAYER.md) | Robustheits-Architektur |
+| [SDK-ARCHITECTURE.md](./SDK-ARCHITECTURE.md) | SDK-Spezifikation |
+| [PROTOCOL.md](./PROTOCOL.md) | Protokoll-Details |
+| [CLI-REFERENCE.md](./CLI-REFERENCE.md) | CLI-Referenz |
 
 ---
 
-*Erynoa Fachkonzept Version 5.0*
-*116 Axiome über 7 Ebenen*
-*Korrektheit → Intelligenz → Fairness → Leben → Transzendenz*
+*Erynoa Fachkonzept Version 6.1*
+*112 Axiome über 7 Ebenen*
+*Klassische Wahrscheinlichkeitstheorie, Bayessche Inferenz, Standard-Kryptographie*
+*"Das System existiert, um menschliches Gedeihen zu ermöglichen."*

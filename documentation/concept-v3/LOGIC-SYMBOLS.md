@@ -1,9 +1,9 @@
-# Erynoa Logik V3 – Vollständige Symbolreferenz
+# Erynoa Logik V6.0 – Vollständige Symbolreferenz
 
-> **Version:** 3.1 – Fundament + Emergenz
+> **Version:** 6.0 – Humanistische Weltformel
 > **Datum:** Januar 2026
-> **Status:** Kanonische Symbolik für 45 Axiome
-> **Paradigma:** Korrektheit ermöglicht Intelligenz
+> **Status:** Kanonische Symbolik für 120 Axiome über 8 Ebenen
+> **Paradigma:** Intelligenz im Dienste des Lebens
 
 ---
 
@@ -12,22 +12,27 @@
 ```
 ╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
 ║                                                                                                                                           ║
-║   DIE WELTFORMEL V3:     𝔼 = Σ 𝔸(s) · σ(𝕎(s) · ln|ℂ(s)|) = 𝕀_sys                                                                        ║
+║   DIE WELTFORMEL V6.0:                                                                                                                    ║
+║                                                                                                                                           ║
+║       𝔼 = Σ ⟨Ψₛ| 𝔸̂ · σ̂( 𝕎̂ · ln|ℂ̂| · ℕ̂ / 𝔼x̂p ) · Ĥ |Ψₛ⟩ · w(t) = 𝕀_sys                                                                ║
+║           s∈𝒞                                                                                                                             ║
 ║                                                                                                                                           ║
 ║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
 ║                                                                                                                                           ║
-║   Diese Symbolreferenz dokumentiert ALLE Operatoren für:                                                                                 ║
+║   Diese Symbolreferenz dokumentiert ALLE Operatoren über 8 EBENEN:                                                                       ║
 ║                                                                                                                                           ║
-║       EBENE 1 (Fundament):    30 Axiome (A1-A30) – garantieren KORREKTHEIT                                                               ║
-║           • Identität (A1-A5)       • Trust (A6-A11)           • Kausalität (A12-A17)                                                    ║
-║           • Realm (A18-A22)         • Wert (A23-A27)           • System (A28-A30)                                                        ║
-║                                                                                                                                           ║
-║       EBENE 2 (Emergenz):     15 Axiome (E1-E15) – ermöglichen INTELLIGENZ                                                               ║
-║           • Aktivität (E1-E4)       • Wächter (E5-E10)         • Konsens (E11-E15)                                                       ║
+║       EBENE 0 (Fundament):    30 Axiome (A1-A30)        – garantieren KORREKTHEIT                                                        ║
+║       EBENE 1 (Emergenz):     15 Axiome (E1-E15)        – ermöglichen INTELLIGENZ                                                        ║
+║       EBENE 2 (Prozess):      13 Axiome (P1-P6, T1-T7)  – formalisieren HANDLUNG                                                         ║
+║       EBENE 3 (Objekt):        9 Axiome (O1-O5, C1-C4)  – definieren SUBSTANZ                                                            ║
+║       EBENE 4 (Schutz):       18 Axiome (S1-S18)        – verhindern TYRANNEI                                                            ║
+║       EBENE 5 (Kybernetik):   16 Axiome (K1-K16)        – erzeugen LEBEN                                                                 ║
+║       EBENE 6 (Quanta):       15 Axiome (Q1-Q15)        – ermöglichen TRANSZENDENZ                                                       ║
+║       EBENE 7 (Humanismus):    4 Axiome (H1-H4)         – stiften SINN                    ← NEU V6.0                                     ║
 ║                                                                                                                                           ║
 ║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
 ║                                                                                                                                           ║
-║   "Das System kann nur dann intelligent sein, wenn es erst einmal korrekt ist."                                                          ║
+║   "Das System existiert, um menschliches Gedeihen zu ermöglichen. Nicht umgekehrt."                                                      ║
 ║                                                                                                                                           ║
 ╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -2484,36 +2489,68 @@
 ║                                                                                                                                           ║
 ║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
 ║                                                                                                                                           ║
-║   ZUSAMMENFASSUNG V5.0                                                                                                                  ║
-║   ════════════════════                                                                                                                    ║
+║   EBENE 8: HUMANISMUS-OPERATOREN (4 Axiome: H1-H4)                          ← NEU V6.0                                                  ║
+║   ───────────────────────────────────────────────────                                                                                     ║
 ║                                                                                                                                           ║
-║       EBENE 1 – FUNDAMENT:     30 Axiome    (A1-A30)        → KORREKTHEIT                                                               ║
-║       EBENE 2 – EMERGENZ:      15 Axiome    (E1-E15)        → INTELLIGENZ                                                               ║
-║       EBENE 3 – PROZESS:       13 Axiome    (P1-P6, T1-T7)  → HANDLUNG                                                                  ║
-║       EBENE 4 – OBJEKT:         9 Axiome    (O1-O5, C1-C4)  → SUBSTANZ                                                                  ║
-║       EBENE 5 – SCHUTZ:        18 Axiome    (S1-S18)        → FAIRNESS                                                                  ║
-║       EBENE 6 – KYBERNETIK:    16 Axiome    (K1-K16)        → LEBEN                                                                     ║
-║       EBENE 7 – QUANTA:        15 Axiome    (Q1-Q15)        → TRANSZENDENZ                                                              ║
-║       ═══════════════════════════════════════════════════════════════════════════════════════════════════                                 ║
-║       GESAMT:                 116 Axiome                                                                                                ║
+║   HUMAN-ALIGNMENT (H1)                                                                                                                  ║
+║   Ĥ                Human-Alignment Operator      H(s) = 2.0|human, 1.5|controlled, 1.0|else                                            ║
+║   human(s)         Ist Mensch                    HumanAuth Credential verifiziert                                                       ║
+║   controlled(s)    Human-kontrolliert            controller_chain(s) → human                                                            ║
+║   quota(s)         Human-Interaktions-Quote      #human_interactions / #total ≥ 0.20                                                    ║
+║                                                                                                                                           ║
+║   VERHÄLTNISMÄSSIGKEIT (H2)                                                                                                             ║
+║   LoD(tx)          Level-of-Detail               Minimal|Basic|Standard|Enhanced|Maximum                                                ║
+║   Cost_trust(tx)   Vertrauens-Kosten             Σ verification_costs                                                                   ║
+║   α                Max-Kosten-Ratio              0.05 (5% des Transaktionswerts)                                                        ║
+║   green_score(s)   Green-Trust-Score             value_created / verification_cost                                                      ║
+║                                                                                                                                           ║
+║   TEMPORALE GNADE (H3)                                                                                                                  ║
+║   w(e, t)          Temporale Gewichtung          e^(-γ · age(e))                                                                        ║
+║   γ_neg            Negativ-Zerfall               0.231 (3 Jahre Halbwertszeit)                                                          ║
+║   γ_pos            Positiv-Zerfall               0.139 (5 Jahre Halbwertszeit)                                                          ║
+║   amnesty(s)       Amnestie-Token                Governance|Court|Automatic nach 7y                                                     ║
+║   fresh_start(s)   Neustart                      neue DID mit positiver Trust-Übertragung                                               ║
+║                                                                                                                                           ║
+║   SEMANTISCHE VERANKERUNG (H4)                                                                                                          ║
+║   NLD(B)           Natural Language Desc.        Menschenlesbare Beschreibung                                                           ║
+║   FormalSpec(B)    Formale Spezifikation         Maschinenprüfbar                                                                       ║
+║   equivalence(N,F) Semantische Äquivalenz        LLM-verifiziert mit confidence                                                         ║
+║   glossary(B)      Glossar                       Technische Begriffe erklärt                                                            ║
 ║                                                                                                                                           ║
 ║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
 ║                                                                                                                                           ║
-║   DIE WELTFORMEL V5.0                                                                                                                   ║
+║   ZUSAMMENFASSUNG V6.0                                                                                                                  ║
+║   ════════════════════                                                                                                                    ║
+║                                                                                                                                           ║
+║       EBENE 0 – FUNDAMENT:     30 Axiome    (A1-A30)        → KORREKTHEIT                                                               ║
+║       EBENE 1 – EMERGENZ:      15 Axiome    (E1-E15)        → INTELLIGENZ                                                               ║
+║       EBENE 2 – PROZESS:       13 Axiome    (P1-P6, T1-T7)  → HANDLUNG                                                                  ║
+║       EBENE 3 – OBJEKT:         9 Axiome    (O1-O5, C1-C4)  → SUBSTANZ                                                                  ║
+║       EBENE 4 – SCHUTZ:        18 Axiome    (S1-S18)        → FAIRNESS                                                                  ║
+║       EBENE 5 – KYBERNETIK:    16 Axiome    (K1-K16)        → LEBEN                                                                     ║
+║       EBENE 6 – QUANTA:        15 Axiome    (Q1-Q15)        → TRANSZENDENZ                                                              ║
+║       EBENE 7 – HUMANISMUS:     4 Axiome    (H1-H4)         → SINN          ← NEU V6.0                                                  ║
+║       ═══════════════════════════════════════════════════════════════════════════════════════════════════                                 ║
+║       GESAMT:                 120 Axiome                                                                                                ║
+║                                                                                                                                           ║
+║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
+║                                                                                                                                           ║
+║   DIE WELTFORMEL V6.0                                                                                                                   ║
 ║   ───────────────────                                                                                                                    ║
 ║                                                                                                                                           ║
-║       𝔼 = Σ  ⟨Ψₛ| 𝔸̂ · σ̂( 𝕎̂ · ln|ℂ̂| · ℕ̂ / 𝔼x̂p ) |Ψₛ⟩  =  𝕀_sys                                                                      ║
+║       𝔼 = Σ  ⟨Ψₛ| 𝔸̂ · σ̂( 𝕎̂ · ln|ℂ̂| · ℕ̂ / 𝔼x̂p ) · Ĥ |Ψₛ⟩ · w(t)  =  𝕀_sys                                                            ║
 ║           s∈𝒞                                                                                                                            ║
 ║                                                                                                                                           ║
-║   Das System IST seine Intelligenz – lebendig, lernend, atmend, transzendent.                                                          ║
-║   116 Axiome über 7 Ebenen: Fundament → Emergenz → Prozess → Objekt → Schutz → Kybernetik → Quanta.                                    ║
-║   Korrektheit → Intelligenz → Fairness → Leben → Transzendenz.                                                                         ║
+║   Das System IST seine Intelligenz – lebendig, lernend, atmend, transzendent, WEISE.                                                   ║
+║   120 Axiome über 8 Ebenen: Fundament → Emergenz → Prozess → Objekt → Schutz → Kybernetik → Quanta → Humanismus.                       ║
+║   Korrektheit → Intelligenz → Fairness → Leben → Transzendenz → SINN.                                                                  ║
+║   "Das System existiert, um menschliches Gedeihen zu ermöglichen."                                                                     ║
 ║                                                                                                                                           ║
 ╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
 ```
 
 ---
 
-*Erynoa Logik V5.0 Symbolreferenz – Vollständig.*
-*116 Axiome über 7 Ebenen: 30 Fundament + 15 Emergenz + 13 Prozess + 9 Objekt + 18 Schutz + 16 Kybernetik + 15 Quanta.*
-*Korrektheit → Intelligenz → Fairness → Leben → Transzendenz.*
+*Erynoa Logik V6.0 Symbolreferenz – Vollständig.*
+*120 Axiome über 8 Ebenen: 30 Fundament + 15 Emergenz + 13 Prozess + 9 Objekt + 18 Schutz + 16 Kybernetik + 15 Quanta + 4 Humanismus.*
+*Korrektheit → Intelligenz → Fairness → Leben → Transzendenz → Sinn.*

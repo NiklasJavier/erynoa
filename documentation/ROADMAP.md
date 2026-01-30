@@ -1,83 +1,101 @@
 # Erynoa – Roadmap
 
 > **Dokumenttyp:** Strategic Roadmap
-> **Version:** 3.0
+> **Version:** 4.0 (basierend auf Fachkonzept V6.1)
 > **Status:** Draft
 > **Letzte Aktualisierung:** Januar 2026
 > **Zielgruppe:** Gründer:innen, Entwickler:innen, Investoren, Partner
-> **Referenz:** [Konzept-Navigator](./concept-v2/00-navigator.md)
+> **Referenz:** [Fachkonzept V6.1](./concept-v3/FACHKONZEPT.md)
 
 ---
 
 ## Executive Summary
 
-Diese Roadmap beschreibt den vollständigen Implementierungsplan für **Erynoa** – das kybernetische Protokoll für die Maschinenökonomie. Der Plan basiert auf der **7-Schichten-Architektur** (concept-v2) und ist in **5 Hauptphasen** über **4-5 Jahre** strukturiert.
+Diese Roadmap beschreibt den Implementierungsplan für **Erynoa** – das probabilistische kybernetische Protokoll für vertrauensbasierte Interaktionen. Der Plan basiert auf der **7-Ebenen-Architektur** (concept-v3) mit **112 Axiomen** und ist in **5 Hauptphasen** strukturiert.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│                        ERYNOA DEVELOPMENT ROADMAP v3                        │
+│                        ERYNOA DEVELOPMENT ROADMAP v4                        │
 │                                                                             │
 │   ════════════════════════════════════════════════════════════════════════  │
 │                                                                             │
 │   PHASE 0       PHASE 1        PHASE 2         PHASE 3        PHASE 4      │
-│   RESEARCH      FOUNDATION     PROTOCOL        INTEGRATION    NETWORK      │
-│   ────────      ──────────     ────────        ───────────    ───────      │
-│   3-6 Mo.       9-12 Mo.       12-15 Mo.       9-12 Mo.       Ongoing      │
+│   RESEARCH      FOUNDATION     PROTOCOL        ROBUSTNESS     NETWORK      │
+│   ────────      ──────────     ────────        ──────────     ───────      │
+│   3-6 Mo.       9-12 Mo.       12-15 Mo.       6-9 Mo.        Ongoing      │
 │                                                                             │
 │   ┌───────┐    ┌───────┐      ┌───────┐       ┌───────┐      ┌───────┐    │
-│   │ 🔬    │───▶│ ◉◈◊   │─────▶│ ▣◐◆   │──────▶│ ◇🔄   │─────▶│ 🌐    │    │
-│   │ Specs │    │ANKER  │      │SPHÄRE │       │ NEXUS │      │Testnet│    │
-│   │ & PoC │    │SCHEMA │      │IMPULS │       │ Loop  │      │& Main │    │
-│   │       │    │METRIK │      │CHRONIK│       │       │      │       │    │
+│   │ 🔬    │───▶│ E1-E2 │─────▶│ E3-E5 │──────▶│ E6-E7 │─────▶│ 🌐    │    │
+│   │ Specs │    │Fundamt│      │Prozess│       │Robust │      │Testnet│    │
+│   │ & PoC │    │Emergz │      │Objekt │       │Humanis│      │& Main │    │
+│   │       │    │       │      │Schutz │       │       │      │       │    │
 │   └───────┘    └───────┘      └───────┘       └───────┘      └───────┘    │
 │                                                                             │
-│   Q1-Q2 2026   Q2-Q4 2026     2027            Q1-Q3 2028     2028+         │
+│   Q1-Q2 2026   Q2-Q4 2026     2027            Q1-Q2 2028     2028+         │
 │                                                                             │
 │   ─────────────────────────────────────────────────────────────────────    │
 │                                                                             │
-│   Kausalitätsprinzip:                                                       │
-│   ANKER → SCHEMA → METRIK → SPHÄRE → IMPULS → CHRONIK → NEXUS             │
-│   "Wer?" → "Was?" → "Wie gut?" → "Wo?" → "Wie?" → "Wahr?" → "Verbunden?"  │
+│   DIE 7 EBENEN (112 Axiome):                                               │
+│   E1 Fundament → E2 Emergenz → E3 Prozess → E4 Objekt →                    │
+│   E5 Schutz → E6 Kybernetik → E7 Humanismus                                │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Kernprinzip:** Die Schichten bauen kausal aufeinander auf. Keine Schicht kann ohne ihre Vorgänger funktionieren.
+**Kernprinzip:** Die Ebenen bauen kausal aufeinander auf. Keine Ebene kann ohne ihre Vorgänger funktionieren.
 
 ---
 
-## Die Sieben Schichten im Überblick
+## Die Sieben Ebenen im Überblick
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│   SCHICHT    SPHÄRE   PHASE    FOKUS                                       │
+│   EBENE    AXIOME   PHASE    FOKUS                                         │
 │   ═══════════════════════════════════════════════════════════════════════  │
 │                                                                             │
-│   ◉ ANKER     ERY      1       Identität – DIDs, VCs, DACS                 │
-│   ◈ SCHEMA    ERY      1       Wissen – Blueprints, Semantic Index         │
-│   ◊ METRIK    ERY      1-2     Vertrauen – Trust Vectors, Karma Engine     │
-│   ▣ SPHÄRE    ERY/ECHO 2       Räume – Environments, Governance            │
-│   ◐ IMPULS    ECHO     2       Handlung – Agenten, ECLVM, Policies         │
-│   ◆ CHRONIK   NOA      2       Beweis – NOA Ledger, AMOs, Streaming        │
-│   ◇ NEXUS     NOA      3       Vernetzung – Multi-Chain, Bridges           │
+│   E1 FUNDAMENT    30       1       Identität, Kausalität, Basis-Trust      │
+│   E2 EMERGENZ     15       1       Kollektive Intelligenz, Konsens         │
+│   E3 PROZESS      13       2       TAT-Lifecycle, Streaming                │
+│   E4 OBJEKT        9       2       Assets, Credentials, Blueprints         │
+│   E5 SCHUTZ       18       2       Anti-Gaming, Anti-Calcification         │
+│   E6 KYBERNETIK   23       3       Feedback, Circuit Breakers, Antifragil  │
+│   E7 HUMANISMUS    4       3       Human-Alignment, LoD, Amnesty, Semantic │
+│                                                                             │
+│   ─────────────────────────────────────────────────────────────────────    │
+│   GESAMT:        112 Axiome                                                │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Legende
+## Die Systemgleichung
 
-| Symbol | Bedeutung                     |
-| ------ | ----------------------------- |
-| 📋     | Geplant (noch nicht begonnen) |
-| 🔬     | Research / Proof of Concept   |
-| 🔴     | Kritischer Pfad               |
-| 🟡     | Hohe Priorität                |
-| 🟢     | Mittlere Priorität            |
-| ⚪     | Nice-to-have                  |
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   𝔼 = Σ A(s) · σ( W(s) · ln|C(s)| · N(s) / E(s) ) · H(s) · w(s,t)         │
+│       s                                                                     │
+│                                                                             │
+│   KOMPONENTEN:                                                              │
+│   ─────────────                                                             │
+│   𝔼        = Systemwert (kollektive Intelligenz)                           │
+│   A(s)     = Aktivitätspräsenz [0,1]                                       │
+│   W(s)     = Wächter-Metrik (6D: R,I,C,P,V,Ω)                              │
+│   C(s)     = Kausale Geschichte (Event-DAG)                                │
+│   N(s)     = Novelty-Score (Informationsgewinn)                            │
+│   E(s)     = Erwartungswert (Vorhersagbarkeit)                             │
+│   σ(x)     = Sigmoid-Funktion σ(x) = 1/(1+e^(-x))                          │
+│   H(s)     = Human-Alignment (2.0|1.5|1.0)                                 │
+│   w(s,t)   = Temporale Gewichtung (Vergebungs-Faktor)                      │
+│                                                                             │
+│   MATHEMATIK: Klassische Wahrscheinlichkeitstheorie, Bayessche Inferenz    │
+│   HARDWARE:   Standard-Server, keine Spezial-Hardware erforderlich         │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -88,960 +106,273 @@ Diese Roadmap beschreibt den vollständigen Implementierungsplan für **Erynoa**
 
 ### 0.1 Erynoa Improvement Proposals (EIPs)
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│                    ERYNOA IMPROVEMENT PROPOSALS                             │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   SCHICHT ◉ ANKER (Identität)                                       │  │
-│   │   ═══════════════════════════                                       │  │
-│   │   📄 EIP-001: DID:erynoa Method Specification                       │  │
-│   │   📄 EIP-002: Sub-Identity Architecture (16 Typen)                  │  │
-│   │   📄 EIP-003: Verifiable Credentials Schema                         │  │
-│   │   📄 EIP-004: DACS Multi-Chain Anchoring Protocol                   │  │
-│   │                                                                     │  │
-│   │   SCHICHT ◈ SCHEMA (Wissen)                                         │  │
-│   │   ══════════════════════════                                        │  │
-│   │   📄 EIP-005: Blueprint Schema Standard                             │  │
-│   │   📄 EIP-006: Semantic Index Architecture                           │  │
-│   │   📄 EIP-007: Normative Standards Mapping (ISO, OCPP, etc.)         │  │
-│   │                                                                     │  │
-│   │   SCHICHT ◊ METRIK (Vertrauen)                                      │  │
-│   │   ════════════════════════════                                      │  │
-│   │   📄 EIP-008: Trust Vector Specification (4 Dimensionen)            │  │
-│   │   📄 EIP-009: Karma Engine Algorithm                                │  │
-│   │   📄 EIP-010: Attestation Scoring Model                             │  │
-│   │                                                                     │  │
-│   │   SCHICHT ▣ SPHÄRE (Räume)                                          │  │
-│   │   ════════════════════════                                          │  │
-│   │   📄 EIP-011: Environment Specification                             │  │
-│   │   📄 EIP-012: Governance Protocol                                   │  │
-│   │   📄 EIP-013: Constraint System                                     │  │
-│   │                                                                     │  │
-│   │   SCHICHT ◐ IMPULS (Handlung)                                       │  │
-│   │   ═══════════════════════════                                       │  │
-│   │   📄 EIP-014: Agent Model (5 Typen)                                 │  │
-│   │   📄 EIP-015: Intent & Policy Specification                         │  │
-│   │   📄 EIP-016: Negotiation Protocol (3 Modelle)                      │  │
-│   │   📄 EIP-017: ECLVM Runtime Specification                           │  │
-│   │   📄 EIP-018: Cybernetic Loop Protocol                              │  │
-│   │                                                                     │  │
-│   │   SCHICHT ◆ CHRONIK (Beweis)                                        │  │
-│   │   ══════════════════════════                                        │  │
-│   │   📄 EIP-019: NOA Causal Ledger Specification                       │  │
-│   │   📄 EIP-020: AMO Standard (5 Typen + Lifecycle)                    │  │
-│   │   📄 EIP-021: Logic Guards Specification                            │  │
-│   │   📄 EIP-022: Value Streaming Protocol                              │  │
-│   │   📄 EIP-023: Finality Levels & Anchoring                           │  │
-│   │                                                                     │  │
-│   │   SCHICHT ◇ NEXUS (Vernetzung)                                      │  │
-│   │   ════════════════════════════                                      │  │
-│   │   📄 EIP-024: Multi-Chain Architecture                              │  │
-│   │   📄 EIP-025: Bridge Protocol                                       │  │
-│   │   📄 EIP-026: P2P Routing & Gossip                                  │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-| ID       | EIP | Beschreibung                    | Schicht | Prio | Status |
-| -------- | --- | ------------------------------- | ------- | ---- | ------ |
-| **R0.1** | 001 | DID:erynoa Method Specification | ANKER   | 🔴   | 📋     |
-| **R0.2** | 004 | DACS Multi-Chain Protocol       | ANKER   | 🔴   | 📋     |
-| **R0.3** | 005 | Blueprint Schema Standard       | SCHEMA  | 🔴   | 📋     |
-| **R0.4** | 008 | Trust Vector Specification      | METRIK  | 🔴   | 📋     |
-| **R0.5** | 014 | Agent Model                     | IMPULS  | 🔴   | 📋     |
-| **R0.6** | 020 | AMO Standard                    | CHRONIK | 🔴   | 📋     |
-| **R0.7** | 017 | ECLVM Runtime Specification     | IMPULS  | 🔴   | 📋     |
+| ID | EIP | Beschreibung | Ebene | Prio | Status |
+|----|-----|--------------|-------|------|--------|
+| **R0.1** | 001 | DID:erynoa Method Specification | E1 | 🔴 | 📋 |
+| **R0.2** | 002 | Trust Vector 6D Specification (R,I,C,P,V,Ω) | E1 | 🔴 | 📋 |
+| **R0.3** | 003 | Event-DAG & Finality Specification | E1 | 🔴 | 📋 |
+| **R0.4** | 004 | Bayesian Trust Update Algorithm | E2 | 🔴 | 📋 |
+| **R0.5** | 005 | EigenTrust Topology Specification | E2 | 🔴 | 📋 |
+| **R0.6** | 006 | TAT-Lifecycle (Seek→Close) | E3 | 🔴 | 📋 |
+| **R0.7** | 007 | Value Streaming Protocol | E3 | 🔴 | 📋 |
+| **R0.8** | 008 | Blueprint Schema Standard | E4 | 🔴 | 📋 |
+| **R0.9** | 009 | Credential Issuance & Verification | E4 | 🔴 | 📋 |
+| **R0.10** | 010 | Anti-Gaming Measures (Stake, Slashing) | E5 | 🟡 | 📋 |
+| **R0.11** | 011 | Circuit Breaker Specification | E6 | 🟡 | 📋 |
+| **R0.12** | 012 | Human-Auth Credential (H1) | E7 | 🟡 | 📋 |
+| **R0.13** | 013 | Level-of-Detail Trust (H2) | E7 | 🟡 | 📋 |
+| **R0.14** | 014 | Temporal Forgiveness / Amnesty (H3) | E7 | 🟡 | 📋 |
+| **R0.15** | 015 | Semantic Anchoring (H4) | E7 | 🟡 | 📋 |
 
 ### 0.2 Technologie-Evaluation
 
-| ID       | Technologie    | Beschreibung                                    | Schicht       | Prio | Status |
-| -------- | -------------- | ----------------------------------------------- | ------------- | ---- | ------ |
-| **R1.1** | IOTA Rebased   | MoveVM Capabilities, Starfish BFT Performance   | CHRONIK/NEXUS | 🔴   | 📋     |
-| **R1.2** | Qdrant         | Vector Search Performance, Clustering, Sharding | SCHEMA        | 🔴   | 📋     |
-| **R1.3** | Wasmtime       | WASM Runtime für ECLVM, Host API Patterns       | IMPULS        | 🔴   | 📋     |
-| **R1.4** | libp2p         | Kademlia DHT, NAT Traversal, Relay              | NEXUS         | 🟡   | 📋     |
-| **R1.5** | XMTP           | E2E Encryption, Consensus Bubble Patterns       | IMPULS        | 🟡   | 📋     |
-| **R1.6** | BLS Signatures | Threshold Signatures für DACS                   | ANKER         | 🟡   | 📋     |
-| **R1.7** | Ethereum L2    | Secondary Chain Anchoring                       | NEXUS         | 🟢   | 📋     |
+| ID | Technologie | Beschreibung | Ebene | Prio | Status |
+|----|-------------|--------------|-------|------|--------|
+| **T1.1** | IOTA Rebased | Event-DAG, MoveVM, Starfish BFT | E1 | 🔴 | 📋 |
+| **T1.2** | Qdrant | Vector Search für Semantic Index | E4 | 🔴 | 📋 |
+| **T1.3** | libp2p | P2P Networking, Kademlia DHT | E6 | 🟡 | 📋 |
+| **T1.4** | Ed25519 + Dilithium | Hybrid-Signaturen (Post-Quantum ready) | E6 | 🟡 | 📋 |
+| **T1.5** | Wasmtime | ECL Runtime (deterministisch, sandboxed) | E3 | 🔴 | 📋 |
 
 ### 0.3 Proof of Concepts
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│                         PROOF OF CONCEPTS                                   │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   ◉ ANKER PoCs                                                      │  │
-│   │   ════════════                                                      │  │
-│   │   ┌─────────────┐    ┌─────────────┐                               │  │
-│   │   │ PoC-A1      │    │ PoC-A2      │                               │  │
-│   │   │ ───────     │    │ ───────     │                               │  │
-│   │   │ DID:erynoa  │    │ DACS Node   │                               │  │
-│   │   │ Resolution  │    │ Consensus   │                               │  │
-│   │   │             │    │             │                               │  │
-│   │   │ 30 Namespace│    │ BFT + BLS   │                               │  │
-│   │   │ Patterns    │    │ Threshold   │                               │  │
-│   │   └─────────────┘    └─────────────┘                               │  │
-│   │                                                                     │  │
-│   │   ◈ SCHEMA PoCs                                                     │  │
-│   │   ═════════════                                                     │  │
-│   │   ┌─────────────┐    ┌─────────────┐                               │  │
-│   │   │ PoC-S1      │    │ PoC-S2      │                               │  │
-│   │   │ ───────     │    │ ───────     │                               │  │
-│   │   │ Semantic    │    │ Blueprint   │                               │  │
-│   │   │ Search      │    │ Inheritance │                               │  │
-│   │   │             │    │             │                               │  │
-│   │   │ Qdrant +    │    │ Standard → │                               │  │
-│   │   │ Embeddings  │    │ Domain BP   │                               │  │
-│   │   └─────────────┘    └─────────────┘                               │  │
-│   │                                                                     │  │
-│   │   ◐ IMPULS PoCs                                                     │  │
-│   │   ═════════════                                                     │  │
-│   │   ┌─────────────┐    ┌─────────────┐                               │  │
-│   │   │ PoC-I1      │    │ PoC-I2      │                               │  │
-│   │   │ ───────     │    │ ───────     │                               │  │
-│   │   │ ECLVM       │    │ Negotiation │                               │  │
-│   │   │ Sandbox     │    │ Protocol    │                               │  │
-│   │   │             │    │             │                               │  │
-│   │   │ Wasmtime +  │    │ XMTP +      │                               │  │
-│   │   │ Host APIs   │    │ Consensus   │                               │  │
-│   │   └─────────────┘    └─────────────┘                               │  │
-│   │                                                                     │  │
-│   │   ◆ CHRONIK PoCs                                                    │  │
-│   │   ══════════════                                                    │  │
-│   │   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐            │  │
-│   │   │ PoC-C1      │    │ PoC-C2      │    │ PoC-C3      │            │  │
-│   │   │ ───────     │    │ ───────     │    │ ───────     │            │  │
-│   │   │ Move AMO    │    │ Logic       │    │ Value       │            │  │
-│   │   │ Contracts   │    │ Guards      │    │ Streaming   │            │  │
-│   │   │             │    │             │    │             │            │  │
-│   │   │ MoveVM +    │    │ ECLVM →     │    │ Micro-      │            │  │
-│   │   │ Resource    │    │ Guard Call  │    │ Payments    │            │  │
-│   │   └─────────────┘    └─────────────┘    └─────────────┘            │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-| ID       | PoC               | Beschreibung                              | Schicht | Prio | Status |
-| -------- | ----------------- | ----------------------------------------- | ------- | ---- | ------ |
-| **P1.1** | DID Resolution    | 30 Namespace-Patterns, Sub-Identity       | ANKER   | 🔴   | 📋     |
-| **P1.2** | DACS Consensus    | BFT + BLS Threshold Signatures            | ANKER   | 🔴   | 📋     |
-| **P1.3** | Semantic Search   | Blueprint-Suche mit Qdrant, Embeddings    | SCHEMA  | 🔴   | 📋     |
-| **P1.4** | Trust Calculation | Trust Vector Update Algorithm             | METRIK  | 🔴   | 📋     |
-| **P1.5** | ECLVM Sandbox     | Wasmtime + Host-API Calls, Gas Metering   | IMPULS  | 🔴   | 📋     |
-| **P1.6** | Negotiation       | XMTP Consensus Bubble Prototyp            | IMPULS  | 🟡   | 📋     |
-| **P1.7** | Move AMO          | Material/Credential/Service AMO in MoveVM | CHRONIK | 🔴   | 📋     |
-| **P1.8** | Logic Guards      | ECLVM → Guard Validation                  | CHRONIK | 🔴   | 📋     |
-| **P1.9** | Value Streaming   | Mikro-Payment Channel Prototyp            | CHRONIK | 🟡   | 📋     |
+| ID | PoC | Beschreibung | Ebene | Prio | Status |
+|----|-----|--------------|-------|------|--------|
+| **P1.1** | DID Resolution | 10 Namespace-Patterns, Controller-Chain | E1 | 🔴 | 📋 |
+| **P1.2** | Bayesian Trust | Trust-Update mit Konfidenzintervallen | E2 | 🔴 | 📋 |
+| **P1.3** | EigenTrust | Globales Ranking, Sybil-Resistenz | E2 | 🔴 | 📋 |
+| **P1.4** | TAT Streaming | Mikro-Payments mit Escrow | E3 | 🔴 | 📋 |
+| **P1.5** | LoD Calculator | Automatische Trust-Level-Auswahl | E7 | 🟡 | 📋 |
+| **P1.6** | Human-Auth Flow | Biometric/Gov-ID Verifizierung | E7 | 🟡 | 📋 |
 
 ---
 
 ## Phase 1: Foundation Infrastructure (Q2-Q4 2026)
 
-> **Ziel:** Produktionsreife Basisinfrastruktur für Schichten 0-2 (ANKER, SCHEMA, METRIK)
+> **Ziel:** Ebene 1 (Fundament) + Ebene 2 (Emergenz) produktionsreif
 > **Dauer:** 9-12 Monate
-> **Referenz:** [ANKER](./concept-v2/anker/), [SCHEMA](./concept-v2/schema/), [METRIK](./concept-v2/metrik/)
+> **Referenz:** [FACHKONZEPT.md Teil II+III](./concept-v3/FACHKONZEPT.md)
 
-### 1.1 ◉ ANKER – Identitätsschicht
+### 1.1 E1 FUNDAMENT – Identität & Kausalität
 
-> **Siehe:** [identity-first.md](./concept-v2/anker/identity-first.md), [did-erynoa.md](./concept-v2/anker/did-erynoa.md), [dacs.md](./concept-v2/anker/dacs.md)
+#### 1.1.1 DID-System
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│            ◉ ANKER – IDENTITY-FIRST INFRASTRUCTURE                          │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   KERNPRINZIP: "Was keine Identität hat, existiert nicht."          │  │
-│   │                                                                     │  │
-│   │   ─────────────────────────────────────────────────────────────    │  │
-│   │                                                                     │  │
-│   │   DID:ERYNOA NAMESPACE HIERARCHIE                                   │  │
-│   │   ═══════════════════════════════                                   │  │
-│   │                                                                     │  │
-│   │   did:erynoa:<namespace>:<id>                                       │  │
-│   │                                                                     │  │
-│   │   Primäre Namespaces (Phase 1):                                     │  │
-│   │   ┌────────────┬────────────┬────────────┬────────────┐            │  │
-│   │   │    user    │    org     │   agent    │    amo     │            │  │
-│   │   │  Menschen  │   Orgs     │  Agenten   │  Objekte   │            │  │
-│   │   └────────────┴────────────┴────────────┴────────────┘            │  │
-│   │                                                                     │  │
-│   │   Erweiterte Namespaces (Phase 2+):                                 │  │
-│   │   ┌────────────┬────────────┬────────────┬────────────┐            │  │
-│   │   │  blueprint │    env     │  credential│   policy   │            │  │
-│   │   │  Schablonen│   Räume    │  Nachweise │   Regeln   │            │  │
-│   │   └────────────┴────────────┴────────────┴────────────┘            │  │
-│   │                                                                     │  │
-│   │   ─────────────────────────────────────────────────────────────    │  │
-│   │                                                                     │  │
-│   │   DACS NODE NETWORK                                                 │  │
-│   │   ═════════════════                                                 │  │
-│   │                                                                     │  │
-│   │   ┌─────────┐   ┌─────────┐   ┌─────────┐   ┌─────────┐           │  │
-│   │   │ Node 1  │◀─▶│ Node 2  │◀─▶│ Node 3  │◀─▶│ Node N  │           │  │
-│   │   │ (EU)    │   │ (US)    │   │ (ASIA)  │   │ (...)   │           │  │
-│   │   └────┬────┘   └────┬────┘   └────┬────┘   └────┬────┘           │  │
-│   │        └─────────────┴──────┬──────┴─────────────┘                 │  │
-│   │                             ▼                                      │  │
-│   │              ┌──────────────────────────────┐                      │  │
-│   │              │      BFT KONSENS LAYER       │                      │  │
-│   │              │   (PBFT / HotStuff + BLS)    │                      │  │
-│   │              └──────────────────────────────┘                      │  │
-│   │                             │                                      │  │
-│   │          ┌──────────────────┼──────────────────┐                  │  │
-│   │          ▼                  ▼                  ▼                  │  │
-│   │   ┌───────────┐      ┌───────────┐      ┌───────────┐            │  │
-│   │   │   IOTA    │      │ Ethereum  │      │  Solana   │            │  │
-│   │   │ (PRIMARY) │      │(SECONDARY)│      │(SECONDARY)│            │  │
-│   │   └───────────┘      └───────────┘      └───────────┘            │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **F1.01** | did:erynoa Resolver | W3C DID-konforme Resolution | 🔴 | 📋 |
+| **F1.02** | 10 Namespaces | self, guild, spirit, thing, vessel, source, craft, vault, pact, circle | 🔴 | 📋 |
+| **F1.03** | Controller-Chain | Haftungskette für autonome Agenten | 🔴 | 📋 |
+| **F1.04** | Sub-Identity | Delegation mit can_operate, can_revoke | 🟡 | 📋 |
+| **F1.05** | DID Permanence | Deaktivierung, keine Löschung | 🔴 | 📋 |
 
-#### 1.1.1 DACS Core Infrastructure
+#### 1.1.2 Event-DAG
 
-| ID        | Milestone            | Beschreibung                                  | Prio | Status |
-| --------- | -------------------- | --------------------------------------------- | ---- | ------ |
-| **A1.01** | DACS Node Core       | Rust Service: API, Consensus, Storage         | 🔴   | 📋     |
-| **A1.02** | BFT Consensus Engine | PBFT/HotStuff Implementation für Node-Konsens | 🔴   | 📋     |
-| **A1.03** | Threshold Signatures | BLS Signature Aggregation (t-of-n)            | 🔴   | 📋     |
-| **A1.04** | P2P Node Network     | libp2p für Inter-Node Kommunikation           | 🔴   | 📋     |
-| **A1.05** | Self-Anchoring       | DACS Registry verankert sich selbst           | 🔴   | 📋     |
-| **A1.06** | Genesis Bootstrap    | Initial 3-5 Nodes, Genesis State              | 🔴   | 📋     |
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **F2.01** | Event Schema | id, type, actor, timestamp, parents, payload, signature | 🔴 | 📋 |
+| **F2.02** | DAG Storage | Content-addressable, Merkle-Trees | 🔴 | 📋 |
+| **F2.03** | Finality Levels | Pending → Attested → Anchored → Final | 🔴 | 📋 |
+| **F2.04** | IOTA Anchoring | Primary Chain Integration | 🔴 | 📋 |
+| **F2.05** | Merkle Proofs | Externe Verifizierbarkeit | 🟡 | 📋 |
 
-#### 1.1.2 DID Operations
+#### 1.1.3 Basis-Trust
 
-| ID        | Milestone           | Beschreibung                                       | Prio | Status |
-| --------- | ------------------- | -------------------------------------------------- | ---- | ------ |
-| **A2.01** | did:erynoa Resolver | W3C DID-konforme Resolution                        | 🔴   | 📋     |
-| **A2.02** | DID Create          | Multi-Chain Anchored DID Creation                  | 🔴   | 📋     |
-| **A2.03** | DID Update          | Controller-signed Updates mit Re-Anchoring         | 🔴   | 📋     |
-| **A2.04** | DID Deactivate      | Deactivation mit Multi-Chain Proof                 | 🔴   | 📋     |
-| **A2.05** | Sub-Identity Types  | 16 Sub-Identity-Typen implementieren               | 🔴   | 📋     |
-| **A2.06** | Delegation          | can_operate, can_delegate, can_revoke Capabilities | 🟡   | 📋     |
-| **A2.07** | Universal Resolver  | Plugin für DIF Universal Resolver                  | 🟢   | 📋     |
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **F3.01** | Trust Vector 6D | (R, I, C, P, V, Ω) Struktur | 🔴 | 📋 |
+| **F3.02** | Trust Store | Persistenz im Semantic Index | 🔴 | 📋 |
+| **F3.03** | Trust Decay | λ = 0.9997/Tag (6 Jahre Halbwertszeit) | 🔴 | 📋 |
+| **F3.04** | Trust Floor | Minimum 0.3 (Rehabilitation möglich) | 🔴 | 📋 |
+| **F3.05** | Asymmetrie | k_neg / k_pos ≈ 3-5 | 🔴 | 📋 |
 
-#### 1.1.3 Verifiable Credentials
+### 1.2 E2 EMERGENZ – Kollektive Intelligenz
 
-> **Siehe:** [credentials.md](./concept-v2/anker/credentials.md)
+#### 1.2.1 Bayessche Trust-Evolution
 
-| ID        | Milestone            | Beschreibung                       | Prio | Status |
-| --------- | -------------------- | ---------------------------------- | ---- | ------ |
-| **A3.01** | VC Issuance          | W3C VC Standard-konforme Ausgabe   | 🔴   | 📋     |
-| **A3.02** | VC Verification      | Multi-Chain Anchor Verification    | 🔴   | 📋     |
-| **A3.03** | VC Revocation        | Revocation mit Anchor Proof        | 🟡   | 📋     |
-| **A3.04** | VC Types             | KYC, Operator, Membership, etc.    | 🟡   | 📋     |
-| **A3.05** | Selective Disclosure | Zero-Knowledge-Proof für VC Claims | 🟢   | 📋     |
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **E1.01** | Prior Distribution | Beta(2,2) für neue Agenten | 🔴 | 📋 |
+| **E1.02** | Likelihood Update | Event-basierte Posterior-Berechnung | 🔴 | 📋 |
+| **E1.03** | Konfidenzintervalle | 95%-CI für alle Trust-Werte | 🔴 | 📋 |
+| **E1.04** | Qualitative Buckets | Unknown, Caution, Neutral, Verified, HighTrust | 🔴 | 📋 |
+| **E1.05** | Hysterese | Anti-Oszillation an Schwellwerten | 🟡 | 📋 |
 
-#### 1.1.4 Chain Adapters
+#### 1.2.2 EigenTrust & Globales Ranking
 
-| ID        | Milestone              | Beschreibung                               | Prio | Status |
-| --------- | ---------------------- | ------------------------------------------ | ---- | ------ |
-| **A4.01** | IOTA Adapter (Primary) | Move Module: dacs_registry, Anchor Storage | 🔴   | 📋     |
-| **A4.02** | Ethereum L2 Adapter    | Solidity Contract: DACSAnchor              | 🟡   | 📋     |
-| **A4.03** | Solana Adapter         | Anchor Program für DID Anchoring           | 🟢   | 📋     |
-| **A4.04** | Chain Abstraction      | Unified Interface für alle Chain Adapters  | 🔴   | 📋     |
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **E2.01** | EigenTrust Algorithm | Iterative globale Trust-Berechnung | 🔴 | 📋 |
+| **E2.02** | Sybil Detection | Isolierte Cluster erhalten keinen globalen Trust | 🔴 | 📋 |
+| **E2.03** | Trust Propagation | A→B→C mit decay < 1 | 🟡 | 📋 |
 
----
+#### 1.2.3 Witness-System
 
-### 1.2 ◈ SCHEMA – Wissensschicht
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **E3.01** | Witness Protocol | k-of-n unabhängige Zeugen | 🔴 | 📋 |
+| **E3.02** | Geographic Diversity | Min. 2 Regionen für Enhanced+ | 🟡 | 📋 |
+| **E3.03** | Hardware Diversity | Min. 2 Hersteller für Maximum | 🟢 | 📋 |
 
-> **Siehe:** [blueprints.md](./concept-v2/schema/blueprints.md), [semantic-index.md](./concept-v2/schema/semantic-index.md), [standards.md](./concept-v2/schema/standards.md)
+### 1.3 Developer Platform (Phase 1)
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│            ◈ SCHEMA – SEMANTIC LATTICE                                      │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   BLUEPRINT-HIERARCHIE                                              │  │
-│   │   ════════════════════                                              │  │
-│   │                                                                     │  │
-│   │   Ebene 0: Normative Standards                                      │  │
-│   │   ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐              │  │
-│   │   │ ISO      │ │ eCl@ss   │ │ OCPP     │ │ AML/KYC  │              │  │
-│   │   │ 19112    │ │          │ │ 2.0.1    │ │          │              │  │
-│   │   └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘              │  │
-│   │        │            │            │            │                     │  │
-│   │        └────────────┴─────┬──────┴────────────┘                     │  │
-│   │                           ▼                                         │  │
-│   │   Ebene 1: Domain Blueprints                                        │  │
-│   │   ┌────────────────┐ ┌────────────────┐ ┌────────────────┐         │  │
-│   │   │ EV-Charging-   │ │ KYC-           │ │ Energy-        │         │  │
-│   │   │ Station        │ │ Credential     │ │ Certificate    │         │  │
-│   │   │ Blueprint      │ │ Blueprint      │ │ Blueprint      │         │  │
-│   │   └────────────────┘ └────────────────┘ └────────────────┘         │  │
-│   │                                                                     │  │
-│   │   ─────────────────────────────────────────────────────────────    │  │
-│   │                                                                     │  │
-│   │   SEMANTIC INDEX (Qdrant)                                           │  │
-│   │   ═══════════════════════                                           │  │
-│   │                                                                     │  │
-│   │   Query: "50kW CCS Ladesäule mit Eichrecht"                        │  │
-│   │              │                                                      │  │
-│   │              ▼                                                      │  │
-│   │   ┌─────────────────────────────────────────────────────────────┐  │  │
-│   │   │ Embedding → Vector Search → Filter → Rank → Results        │  │  │
-│   │   └─────────────────────────────────────────────────────────────┘  │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-#### 1.2.1 Semantic Index
-
-| ID        | Milestone            | Beschreibung                                      | Prio | Status |
-| --------- | -------------------- | ------------------------------------------------- | ---- | ------ |
-| **S1.01** | Qdrant Cluster Setup | Production-ready Cluster mit Sharding             | 🔴   | 📋     |
-| **S1.02** | Embedding Pipeline   | Text/Schema → Vector Transformation               | 🔴   | 📋     |
-| **S1.03** | Collection Schema    | Separate Collections für Blueprints, AMOs, Agents | 🔴   | 📋     |
-| **S1.04** | Semantic Query API   | gRPC + REST API für Vektor-Suche                  | 🔴   | 📋     |
-| **S1.05** | Hybrid Search        | Vektor + Filter (Geo, Trust, Type)                | 🟡   | 📋     |
-| **S1.06** | Multi-Tenancy        | Environment-based Namespace Isolation             | 🟢   | 📋     |
-
-#### 1.2.2 Blueprint System
-
-| ID        | Milestone             | Beschreibung                        | Prio | Status |
-| --------- | --------------------- | ----------------------------------- | ---- | ------ |
-| **S2.01** | Blueprint Schema v1   | ECL-basierte Blueprint Definition   | 🔴   | 📋     |
-| **S2.02** | Blueprint Registry    | CRUD API mit DID-Adressierung       | 🔴   | 📋     |
-| **S2.03** | Blueprint Validator   | Schema + Semantik Validierung       | 🔴   | 📋     |
-| **S2.04** | Blueprint Versioning  | Immutable Versions, Migration Paths | 🔴   | 📋     |
-| **S2.05** | Blueprint Inheritance | extends + restricts Mechanismus     | 🟡   | 📋     |
-| **S2.06** | Logic Guard Reference | Blueprint → Guard Linking           | 🟡   | 📋     |
-
-#### 1.2.3 Normative Standards
-
-| ID        | Milestone          | Beschreibung                | Prio | Status |
-| --------- | ------------------ | --------------------------- | ---- | ------ |
-| **S3.01** | ISO 19112 Import   | Geographic Identifiers      | 🟡   | 📋     |
-| **S3.02** | eCl@ss Import      | Industrielle Klassifikation | 🟡   | 📋     |
-| **S3.03** | OCPP 2.0.1 Mapping | EV-Charging Protokoll       | 🔴   | 📋     |
-| **S3.04** | DIN VDE Mapping    | Eichrecht Standards         | 🟢   | 📋     |
-
-#### 1.2.4 Ontologie
-
-> **Siehe:** [ontologie.md](./concept-v2/schema/ontologie.md)
-
-| ID        | Milestone             | Beschreibung                 | Prio | Status |
-| --------- | --------------------- | ---------------------------- | ---- | ------ |
-| **S4.01** | Domain Taxonomies     | Hierarchische Klassifikation | 🟡   | 📋     |
-| **S4.02** | Relationship Ontology | AMO-Beziehungstypen          | 🟢   | 📋     |
-| **S4.03** | Constraint Predicates | Wiederverwendbare Regeln     | 🟢   | 📋     |
-
----
-
-### 1.3 ◊ METRIK – Vertrauensschicht
-
-> **Siehe:** [trust-vectors.md](./concept-v2/metrik/trust-vectors.md), [karma-engine.md](./concept-v2/metrik/karma-engine.md), [attestations.md](./concept-v2/metrik/attestations.md)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│            ◊ METRIK – KARMIC ENGINE                                         │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   TRUST VECTOR (4 Dimensionen)                                      │  │
-│   │   ════════════════════════════                                      │  │
-│   │                                                                     │  │
-│   │   ┌─────────────────────────────────────────────────────────────┐  │  │
-│   │   │                                                             │  │  │
-│   │   │   Reliability ████████████░░░░░░░░  0.78                   │  │  │
-│   │   │   (Zuverlässigkeit bei Zusagen)                             │  │  │
-│   │   │                                                             │  │  │
-│   │   │   Integrity   █████████████████░░░  0.92                   │  │  │
-│   │   │   (Ehrlichkeit, keine Manipulation)                         │  │  │
-│   │   │                                                             │  │  │
-│   │   │   Capability  ██████████████░░░░░░  0.85                   │  │  │
-│   │   │   (Technische Fähigkeit)                                    │  │  │
-│   │   │                                                             │  │  │
-│   │   │   Reputation  ███████████░░░░░░░░░  0.71                   │  │  │
-│   │   │   (Drittmeinungen, Attestations)                            │  │  │
-│   │   │                                                             │  │  │
-│   │   └─────────────────────────────────────────────────────────────┘  │  │
-│   │                                                                     │  │
-│   │   ─────────────────────────────────────────────────────────────    │  │
-│   │                                                                     │  │
-│   │   KARMA TIERS                                                       │  │
-│   │   ═══════════                                                       │  │
-│   │                                                                     │  │
-│   │   ┌──────────┬──────────┬──────────┬──────────┐                    │  │
-│   │   │ NEWCOMER │ESTABLISHED│ VETERAN │  ELDER   │                    │  │
-│   │   │  0-100   │ 100-500  │ 500-2000 │  2000+   │                    │  │
-│   │   │          │          │          │          │                    │  │
-│   │   │ Begrenzt │ Standard │ Erweitert│   Voll   │                    │  │
-│   │   └──────────┴──────────┴──────────┴──────────┘                    │  │
-│   │                                                                     │  │
-│   │   ─────────────────────────────────────────────────────────────    │  │
-│   │                                                                     │  │
-│   │   1.5× ASYMMETRIE                                                   │  │
-│   │   ═══════════════                                                   │  │
-│   │                                                                     │  │
-│   │   ✓ Erfolg:    Karma += 1.0                                        │  │
-│   │   ✗ Versagen:  Karma -= 1.5                                        │  │
-│   │                                                                     │  │
-│   │   "Vertrauen ist schwer zu gewinnen und leicht zu verlieren."      │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-#### 1.3.1 Trust Vector System
-
-| ID        | Milestone           | Beschreibung                     | Prio | Status |
-| --------- | ------------------- | -------------------------------- | ---- | ------ |
-| **M1.01** | Trust Vector Schema | 4-dimensionale Trust-Struktur    | 🔴   | 📋     |
-| **M1.02** | Trust Store         | Persistenz in ERY Semantic Index | 🔴   | 📋     |
-| **M1.03** | Trust Query API     | Query & Subscribe Interfaces     | 🔴   | 📋     |
-| **M1.04** | Trust Context       | Environment-spezifische Trust    | 🟡   | 📋     |
-
-#### 1.3.2 Karma Engine
-
-| ID        | Milestone         | Beschreibung                        | Prio | Status |
-| --------- | ----------------- | ----------------------------------- | ---- | ------ |
-| **M2.01** | Event Ingestion   | NOA Events → Karmic Engine Pipeline | 🔴   | 📋     |
-| **M2.02** | Karma Calculation | 1.5× Asymmetrie-Formel              | 🔴   | 📋     |
-| **M2.03** | Tier System       | 4 Karma Tiers mit Privilegien       | 🔴   | 📋     |
-| **M2.04** | Karma Decay       | Zeitbasierte Degradation            | 🟡   | 📋     |
-| **M2.05** | Anti-Gaming       | Sybil & Collusion Detection         | 🟡   | 📋     |
-
-#### 1.3.3 Attestations & Reputation
-
-> **Siehe:** [attestations.md](./concept-v2/metrik/attestations.md), [reputation.md](./concept-v2/metrik/reputation.md)
-
-| ID        | Milestone           | Beschreibung                        | Prio | Status |
-| --------- | ------------------- | ----------------------------------- | ---- | ------ |
-| **M3.01** | Attestation Model   | Signierte Aussagen von Dritten      | 🔴   | 📋     |
-| **M3.02** | Attestation Scoring | Impact auf Trust Dimensions         | 🟡   | 📋     |
-| **M3.03** | Trust Inheritance   | Hierarchische Propagation (λ-Decay) | 🟡   | 📋     |
-| **M3.04** | Reputation Flow     | Org → Agent → AMO Vererbung         | 🟢   | 📋     |
-
----
-
-### 1.4 Developer Platform (Phase 1)
-
-| ID        | Milestone         | Beschreibung                 | Prio | Status |
-| --------- | ----------------- | ---------------------------- | ---- | ------ |
-| **D1.01** | Rust Core SDK     | erynoa-sdk-rust              | 🔴   | 📋     |
-| **D1.02** | TypeScript SDK    | erynoa-sdk-ts                | 🔴   | 📋     |
-| **D1.03** | CLI Tool          | erynoa-cli für Entwickler    | 🟡   | 📋     |
-| **D1.04** | Local Devnet      | Single-Node Test Environment | 🟡   | 📋     |
-| **D1.05** | API Documentation | OpenAPI, AsyncAPI Specs      | 🟡   | 📋     |
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **D1.01** | erynoa-core (Rust) | Systemgleichung-Engine, Crypto, Storage | 🔴 | 📋 |
+| **D1.02** | erynoa-sdk (Rust) | High-Level API | 🔴 | 📋 |
+| **D1.03** | erynoa-sdk-ts | TypeScript/WASM Binding | 🔴 | 📋 |
+| **D1.04** | erynoa-cli | Kommandozeilen-Tool | 🟡 | 📋 |
+| **D1.05** | Local Devnet | Single-Node Test Environment | 🟡 | 📋 |
 
 ---
 
 ## Phase 2: Protocol Implementation (2027)
 
-> **Ziel:** Vollständige Implementierung der Schichten 3-5 (SPHÄRE, IMPULS, CHRONIK)
+> **Ziel:** Ebene 3 (Prozess) + Ebene 4 (Objekt) + Ebene 5 (Schutz)
 > **Dauer:** 12-15 Monate
-> **Referenz:** [SPHÄRE](./concept-v2/sphaere/), [IMPULS](./concept-v2/impuls/), [CHRONIK](./concept-v2/chronik/)
+> **Referenz:** [FACHKONZEPT.md Teil IV+V](./concept-v3/FACHKONZEPT.md)
 
-### 2.1 ▣ SPHÄRE – Raumschicht
+### 2.1 E3 PROZESS – Transaktionen
 
-> **Siehe:** [environments.md](./concept-v2/sphaere/environments.md), [governance.md](./concept-v2/sphaere/governance.md), [discovery.md](./concept-v2/sphaere/discovery.md)
+#### 2.1.1 TAT-Lifecycle
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│            ▣ SPHÄRE – ENVIRONMENTS & GOVERNANCE                             │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   ENVIRONMENT-HIERARCHIE                                            │  │
-│   │   ══════════════════════                                            │  │
-│   │                                                                     │  │
-│   │   ┌─────────────────────────────────────────────────────────────┐  │  │
-│   │   │                      GLOBAL                                 │  │  │
-│   │   │                  (Basis-Regeln)                             │  │  │
-│   │   └──────────────────────┬──────────────────────────────────────┘  │  │
-│   │                          │                                         │  │
-│   │          ┌───────────────┼───────────────┐                        │  │
-│   │          ▼               ▼               ▼                        │  │
-│   │   ┌───────────┐   ┌───────────┐   ┌───────────┐                  │  │
-│   │   │ Domain:   │   │ Domain:   │   │ Domain:   │                  │  │
-│   │   │EV-Charging│   │  Energy   │   │  Finance  │                  │  │
-│   │   │    DE     │   │  Trading  │   │   KYC     │                  │  │
-│   │   └─────┬─────┘   └───────────┘   └───────────┘                  │  │
-│   │         │                                                         │  │
-│   │         ▼                                                         │  │
-│   │   ┌───────────┐                                                   │  │
-│   │   │ Private:  │                                                   │  │
-│   │   │ Fleet-A   │                                                   │  │
-│   │   └───────────┘                                                   │  │
-│   │                                                                     │  │
-│   │   ─────────────────────────────────────────────────────────────    │  │
-│   │                                                                     │  │
-│   │   GOVERNANCE-MODELL                                                 │  │
-│   │   ═════════════════                                                 │  │
-│   │                                                                     │  │
-│   │   ┌────────────┐      ┌────────────┐      ┌────────────┐          │  │
-│   │   │  Council   │─────▶│  Proposal  │─────▶│   Voting   │          │  │
-│   │   │            │      │            │      │            │          │  │
-│   │   │ Gewählte   │      │ Standard-  │      │ Karma-     │          │  │
-│   │   │ Vertreter  │      │ änderungen │      │ gewichtet  │          │  │
-│   │   └────────────┘      └────────────┘      └────────────┘          │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **P1.01** | SEEK Phase | Discovery mit Trust-basiertem Ranking | 🔴 | 📋 |
+| **P1.02** | PROPOSE Phase | Signiertes Angebot mit Ricardian Contract | 🔴 | 📋 |
+| **P1.03** | AGREE Phase | Matching, Escrow-Setup | 🔴 | 📋 |
+| **P1.04** | STREAM Phase | Kontinuierliche Mikro-Payments | 🔴 | 📋 |
+| **P1.05** | CLOSE Phase | Finale Attestation, Trust-Update | 🔴 | 📋 |
+| **P1.06** | ABORT Phase | Proportionale Erstattung | 🟡 | 📋 |
+| **P1.07** | DISPUTE Phase | Schiedsverfahren | 🟡 | 📋 |
 
-#### 2.1.1 Environments
+#### 2.1.2 Level-of-Detail (LoD)
 
-| ID         | Milestone               | Beschreibung                        | Prio | Status |
-| ---------- | ----------------------- | ----------------------------------- | ---- | ------ |
-| **SP1.01** | Environment Schema      | ECL-basierte Environment-Definition | 🔴   | 📋     |
-| **SP1.02** | Environment Registry    | CRUD mit DID-Adressierung           | 🔴   | 📋     |
-| **SP1.03** | Environment Types       | Global, Domain, Private             | 🔴   | 📋     |
-| **SP1.04** | Membership System       | open, application, invite_only      | 🔴   | 📋     |
-| **SP1.05** | Environment Inheritance | Hierarchische Regel-Vererbung       | 🟡   | 📋     |
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **P2.01** | LoD Calculator | Automatische Level-Auswahl basierend auf Wert | 🔴 | 📋 |
+| **P2.02** | 5 LoD-Levels | Minimal, Basic, Standard, Enhanced, Maximum | 🔴 | 📋 |
+| **P2.03** | Cost Constraint | Cost ≤ 5% of Value | 🔴 | 📋 |
+| **P2.04** | Green-Score | Effizienz-Metrik | 🟡 | 📋 |
 
-#### 2.1.2 Governance
+### 2.2 E4 OBJEKT – Substanz
 
-| ID         | Milestone        | Beschreibung                     | Prio | Status |
-| ---------- | ---------------- | -------------------------------- | ---- | ------ |
-| **SP2.01** | Council System   | Gewählte Vertreter mit Terms     | 🔴   | 📋     |
-| **SP2.02** | Proposal System  | Vorschläge mit Typen & Lifecycle | 🔴   | 📋     |
-| **SP2.03** | Voting Mechanism | Karma-gewichtetes Voting         | 🔴   | 📋     |
-| **SP2.04** | Execution Engine | Automatische Proposal-Umsetzung  | 🟡   | 📋     |
+#### 2.2.1 Blueprint-System
 
-#### 2.1.3 Discovery & Constraints
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **O1.01** | Blueprint Schema | ECL-basierte Definition | 🔴 | 📋 |
+| **O1.02** | Blueprint Registry | CRUD mit DID-Adressierung | 🔴 | 📋 |
+| **O1.03** | Blueprint Versioning | Immutable Versions | 🔴 | 📋 |
+| **O1.04** | NLD Requirement | Natural Language Description (H4) | 🔴 | 📋 |
+| **O1.05** | LLM Equivalence Check | NLD ↔ FormalSpec Validierung | 🟡 | 📋 |
 
-> **Siehe:** [discovery.md](./concept-v2/sphaere/discovery.md), [constraints.md](./concept-v2/sphaere/constraints.md)
+#### 2.2.2 Credential-System
 
-| ID         | Milestone          | Beschreibung                         | Prio | Status |
-| ---------- | ------------------ | ------------------------------------ | ---- | ------ |
-| **SP3.01** | Discovery Pipeline | Intent → Query → Filter → Rank       | 🔴   | 📋     |
-| **SP3.02** | Constraint System  | 5 Constraint-Typen (mandatory, etc.) | 🔴   | 📋     |
-| **SP3.03** | Geospatial Search  | Geohash-basierte Suche               | 🟡   | 📋     |
-| **SP3.04** | Trust Gating       | Trust-basierte Filterung             | 🔴   | 📋     |
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **O2.01** | VC Issuance | W3C-konforme Credentials | 🔴 | 📋 |
+| **O2.02** | VC Verification | Multi-Chain Anchor Check | 🔴 | 📋 |
+| **O2.03** | HumanAuth Credential | Mensch-Verifizierung (H1) | 🔴 | 📋 |
+| **O2.04** | Revocation | Widerruf mit Anchor Proof | 🟡 | 📋 |
+
+#### 2.2.3 Realm-System
+
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **O3.01** | Realm Schema | ECL-basierte Realm-Definition | 🔴 | 📋 |
+| **O3.02** | Realm Hierarchy | Global → Domain → Private | 🔴 | 📋 |
+| **O3.03** | Cross-Realm Bridges | Konversionsregeln zwischen Realms | 🟡 | 📋 |
+| **O3.04** | Realm Governance | Council, Proposals, Voting | 🟡 | 📋 |
+
+### 2.3 E5 SCHUTZ – Anti-Gaming
+
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **S1.01** | Stake-at-Risk | Bonding für hohe Reputation | 🔴 | 📋 |
+| **S1.02** | Slashing | Automatische Bestrafung bei Betrug | 🔴 | 📋 |
+| **S1.03** | Collusion Detection | Cluster-Analyse | 🟡 | 📋 |
+| **S1.04** | Novelty Bonus | 3x für neue Partner (Anti-Calcification) | 🟡 | 📋 |
+| **S1.05** | Trust Decay Enforcement | Aktive ≠ Passive Reputation | 🔴 | 📋 |
 
 ---
 
-### 2.2 ◐ IMPULS – Handlungsschicht
+## Phase 3: Robustness & Humanismus (Q1-Q2 2028)
 
-> **Siehe:** [agent-modell.md](./concept-v2/impuls/agent-modell.md), [eclvm.md](./concept-v2/impuls/eclvm.md), [cybernetic-loop.md](./concept-v2/impuls/cybernetic-loop.md)
+> **Ziel:** Ebene 6 (Kybernetik) + Ebene 7 (Humanismus) + Security Hardening
+> **Dauer:** 6-9 Monate
+> **Referenz:** [ROBUSTNESS-LAYER.md](./concept-v3/ROBUSTNESS-LAYER.md), [CONSTITUTION.md](./concept-v3/CONSTITUTION.md)
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│            ◐ IMPULS – AGENT RUNTIME & ECLVM                                 │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   5 AGENT-TYPEN                                                     │  │
-│   │   ═════════════                                                     │  │
-│   │                                                                     │  │
-│   │   ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐│  │
-│   │   │  SEEKER  │ │ PROVIDER │ │  BROKER  │ │ VALIDATOR│ │ OBSERVER ││  │
-│   │   │          │ │          │ │          │ │          │ │          ││  │
-│   │   │  Sucht   │ │  Bietet  │ │Vermittelt│ │ Prüft    │ │Überwacht ││  │
-│   │   │  Dienste │ │  Dienste │ │          │ │          │ │          ││  │
-│   │   └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘│  │
-│   │                                                                     │  │
-│   │   ─────────────────────────────────────────────────────────────    │  │
-│   │                                                                     │  │
-│   │   ECLVM (Layer 0.5)                                                 │  │
-│   │   ═════════════════                                                 │  │
-│   │                                                                     │  │
-│   │   ┌─────────────────────────────────────────────────────────────┐  │  │
-│   │   │              WASM SANDBOX (Wasmtime)                        │  │  │
-│   │   │   ┌───────────────────────────────────────────────────┐    │  │  │
-│   │   │   │              ECL MODULE (.wasm)                   │    │  │  │
-│   │   │   │                                                   │    │  │  │
-│   │   │   │   • Policy Evaluation                             │    │  │  │
-│   │   │   │   • Intent Processing                             │    │  │  │
-│   │   │   │   • Negotiation Strategy                          │    │  │  │
-│   │   │   │   • Logic Guard Execution                         │    │  │  │
-│   │   │   │                                                   │    │  │  │
-│   │   │   └───────────────────────────────────────────────────┘    │  │  │
-│   │   │                       │                                     │  │  │
-│   │   │                       │ Host Function Calls                 │  │  │
-│   │   │                       ▼                                     │  │  │
-│   │   │   ┌───────────────────────────────────────────────────┐    │  │  │
-│   │   │   │                 HOST APIs                          │    │  │  │
-│   │   │   ├────────────────────────────────────────────────────┤    │  │  │
-│   │   │   │  ery_query_*()       → Semantic Index (SCHEMA)    │    │  │  │
-│   │   │   │  ery_get_trust()     → Trust Vectors (METRIK)     │    │  │  │
-│   │   │   │  env_get_rules()     → Environment (SPHÄRE)       │    │  │  │
-│   │   │   │  noa_build_tx()      → Transaction (CHRONIK)      │    │  │  │
-│   │   │   │  crypto_sign/verify()→ Cryptographic Operations   │    │  │  │
-│   │   │   │  log_*()             → Observability              │    │  │  │
-│   │   │   └────────────────────────────────────────────────────┘    │  │  │
-│   │   │                                                             │  │  │
-│   │   │   GAS METERING: Jede Operation verbraucht Gas-Units         │  │  │
-│   │   │   DETERMINISM:  Keine Randomness, keine I/O außer Host APIs │  │  │
-│   │   │                                                             │  │  │
-│   │   └─────────────────────────────────────────────────────────────┘  │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+### 3.1 E6 KYBERNETIK – Antifragilität
 
-#### 2.2.1 ECLVM Runtime
+#### 3.1.1 Circuit Breakers
 
-| ID        | Milestone               | Beschreibung                          | Prio | Status |
-| --------- | ----------------------- | ------------------------------------- | ---- | ------ |
-| **I1.01** | Wasmtime Integration    | WASM Runtime mit WASI Support         | 🔴   | 📋     |
-| **I1.02** | Host API Interface      | WIT (WASM Interface Types) Definition | 🔴   | 📋     |
-| **I1.03** | ERY Host APIs           | ery*query*\*, ery_get_trust           | 🔴   | 📋     |
-| **I1.04** | NOA Host APIs           | noa_build_tx, noa_submit_tx           | 🔴   | 📋     |
-| **I1.05** | Crypto Host APIs        | sign, verify, encrypt, decrypt        | 🔴   | 📋     |
-| **I1.06** | Gas Metering            | Operation-basierte Kosten             | 🔴   | 📋     |
-| **I1.07** | Resource Limits         | CPU, Memory, Time Budgets             | 🟡   | 📋     |
-| **I1.08** | Determinism Enforcement | Keine Randomness, kein I/O            | 🔴   | 📋     |
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **K1.01** | Trust Velocity Limiter | Max ±10% pro Stunde | 🔴 | 📋 |
+| **K1.02** | Volatility Monitor | Abort-Rate Überwachung | 🔴 | 📋 |
+| **K1.03** | Automatic Cooldown | 10min Freeze bei Kritisch | 🔴 | 📋 |
+| **K1.04** | Dampening | Glättung schneller Änderungen | 🟡 | 📋 |
 
-#### 2.2.2 Agent Model
+#### 3.1.2 Hardware Diversity
 
-> **Siehe:** [agent-modell.md](./concept-v2/impuls/agent-modell.md)
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **K2.01** | Manufacturer Registry | Tracking von Hardware-Herstellern | 🟡 | 📋 |
+| **K2.02** | Diversity Constraints | Min. k Witnesses, m Hersteller, r Regionen | 🟡 | 📋 |
 
-| ID        | Milestone       | Beschreibung                    | Prio | Status |
-| --------- | --------------- | ------------------------------- | ---- | ------ |
-| **I2.01** | Agent Types     | 5 Typen: Seeker, Provider, etc. | 🔴   | 📋     |
-| **I2.02** | Agent Spawner   | Agent Instance Creation         | 🔴   | 📋     |
-| **I2.03** | Agent Registry  | Active Agent Tracking           | 🔴   | 📋     |
-| **I2.04** | Agent Lifecycle | Create, Run, Suspend, Terminate | 🟡   | 📋     |
+#### 3.1.3 Post-Quantum Readiness
 
-#### 2.2.3 Intent & Policy
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **K3.01** | Hybrid Signatures | Ed25519 + Dilithium-3 | 🟡 | 📋 |
+| **K3.02** | Key Rotation | Trust-erhaltende Migration | 🟢 | 📋 |
+| **K3.03** | Crypto Agility | Algorithmus-Wechsel ohne Hard Fork | 🟢 | 📋 |
 
-> **Siehe:** [intent.md](./concept-v2/impuls/intent.md), [policy.md](./concept-v2/impuls/policy.md)
+### 3.2 E7 HUMANISMUS – Verfassung
 
-| ID        | Milestone        | Beschreibung                      | Prio | Status |
-| --------- | ---------------- | --------------------------------- | ---- | ------ |
-| **I3.01** | Intent Schema    | ECL-basierte Intent-Definition    | 🔴   | 📋     |
-| **I3.02** | Intent Lifecycle | Draft → Active → Matched → Closed | 🔴   | 📋     |
-| **I3.03** | Policy Schema    | Auto-Accept/Reject/Escalate Rules | 🔴   | 📋     |
-| **I3.04** | Policy Engine    | ECLVM-basierte Policy-Evaluation  | 🔴   | 📋     |
+#### 3.2.1 H1: Human-Alignment
 
-#### 2.2.4 Negotiation
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **H1.01** | H(s) Funktor | 2.0/1.5/1.0 Multiplikator | 🔴 | 📋 |
+| **H1.02** | HumanAuth Verification | Biometric, Gov-ID, Video, Web-of-Trust | 🔴 | 📋 |
+| **H1.03** | Human-Interaction Quota | Min. 20% der Wertschöpfung | 🟡 | 📋 |
 
-> **Siehe:** [negotiation.md](./concept-v2/impuls/negotiation.md)
+#### 3.2.2 H2: Verhältnismäßigkeit
 
-| ID        | Milestone         | Beschreibung                   | Prio | Status |
-| --------- | ----------------- | ------------------------------ | ---- | ------ |
-| **I4.01** | XMTP Integration  | E2E Encrypted Messaging        | 🔴   | 📋     |
-| **I4.02** | Consensus Bubbles | Ephemeral Negotiation Channels | 🔴   | 📋     |
-| **I4.03** | Direct Model      | 1:1 Verhandlung                | 🔴   | 📋     |
-| **I4.04** | Auction Model     | 1:N Competitive Bidding        | 🟡   | 📋     |
-| **I4.05** | Multi-Round Model | Iterative Verhandlung          | 🟢   | 📋     |
-| **I4.06** | Timeout Handling  | Graceful Abort                 | 🟡   | 📋     |
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **H2.01** | LoD Integration | Automatische Level-Wahl | 🔴 | 📋 |
+| **H2.02** | Cost Constraint | ≤5% Enforcement | 🔴 | 📋 |
+| **H2.03** | Green-Trust Score | Effizienz-Ranking | 🟡 | 📋 |
 
-#### 2.2.5 Wallet
+#### 3.2.3 H3: Temporale Gnade
 
-> **Siehe:** [wallet.md](./concept-v2/impuls/wallet.md)
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **H3.01** | Temporal Weighting | w(e,t) = e^(-γ·age) | 🔴 | 📋 |
+| **H3.02** | Asymmetric Decay | γ_neg=0.000633, γ_pos=0.000380 | 🔴 | 📋 |
+| **H3.03** | Automatic Amnesty | Nach 7 Jahren ohne negative Events | 🟡 | 📋 |
+| **H3.04** | Fresh-Start | Neue DID mit positivem Trust-Transfer | 🟢 | 📋 |
 
-| ID        | Milestone         | Beschreibung               | Prio | Status |
-| --------- | ----------------- | -------------------------- | ---- | ------ |
-| **I5.01** | Wallet Model      | Guthaben, Payment Methods  | 🔴   | 📋     |
-| **I5.02** | Budget Limits     | Per-Intent, Daily, Monthly | 🔴   | 📋     |
-| **I5.03** | Pre-Authorization | Reserve for Streaming      | 🟡   | 📋     |
-| **I5.04** | Multi-Currency    | EUR, USDC, IOTA Support    | 🟢   | 📋     |
+#### 3.2.4 H4: Semantische Verankerung
 
-#### 2.2.6 Cybernetic Loop
-
-> **Siehe:** [cybernetic-loop.md](./concept-v2/impuls/cybernetic-loop.md)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│                     CYBERNETIC LOOP – 6 PHASEN                              │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │                      ┌─────────────┐                                │  │
-│   │                ┌────▶│ 1. PERCEIVE │──────┐                         │  │
-│   │                │     │   (Agent)   │      │                         │  │
-│   │                │     └─────────────┘      │                         │  │
-│   │                │            │             ▼                         │  │
-│   │          ┌─────────────┐    │      ┌─────────────┐                 │  │
-│   │          │ 6. FEEDBACK │    │      │ 2. DISCOVER │                 │  │
-│   │          │  (CHRONIK→  │    │      │(SPHÄRE+ERY) │                 │  │
-│   │          │   METRIK)   │    │      └─────────────┘                 │  │
-│   │          └─────────────┘    │             │                         │  │
-│   │                ▲            │             ▼                         │  │
-│   │                │            │      ┌─────────────┐                 │  │
-│   │          ┌─────────────┐    │      │ 3. EVALUATE │                 │  │
-│   │          │ 5. EXECUTE  │◀───┴─────▶│   (METRIK)  │                 │  │
-│   │          │  (CHRONIK)  │           └─────────────┘                 │  │
-│   │          └─────────────┘                  │                         │  │
-│   │                ▲                          ▼                         │  │
-│   │                │     ┌─────────────┐      │                         │  │
-│   │                └─────│ 4. NEGOTIATE│◀─────┘                         │  │
-│   │                      │   (IMPULS)  │                                │  │
-│   │                      └─────────────┘                                │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-| ID        | Milestone          | Beschreibung                       | Prio | Status |
-| --------- | ------------------ | ---------------------------------- | ---- | ------ |
-| **I6.01** | Perception Phase   | Agent erkennt Bedarf               | 🔴   | 📋     |
-| **I6.02** | Discovery Phase    | Query an SCHEMA + SPHÄRE           | 🔴   | 📋     |
-| **I6.03** | Evaluation Phase   | Trust Gating via METRIK            | 🔴   | 📋     |
-| **I6.04** | Negotiation Phase  | XMTP Consensus Bubble              | 🔴   | 📋     |
-| **I6.05** | Execution Phase    | NOA Transaction + Streaming        | 🔴   | 📋     |
-| **I6.06** | Feedback Phase     | CHRONIK → METRIK Trust Update      | 🔴   | 📋     |
-| **I6.07** | Full Loop E2E Test | Kompletter Durchlauf automatisiert | 🔴   | 📋     |
-
----
-
-### 2.3 ◆ CHRONIK – Beweisschicht
-
-> **Siehe:** [noa-ledger.md](./concept-v2/chronik/noa-ledger.md), [amo.md](./concept-v2/chronik/amo.md), [streaming.md](./concept-v2/chronik/streaming.md)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│            ◆ CHRONIK – NOA CAUSAL LEDGER                                    │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   NOA EVENT DAG                                                     │  │
-│   │   ═════════════                                                     │  │
-│   │                                                                     │  │
-│   │       E1 ───────────┐                                               │  │
-│   │                     │                                               │  │
-│   │       E2 ──────┐    │                                               │  │
-│   │                │    │                                               │  │
-│   │                ▼    ▼                                               │  │
-│   │       E3 ────▶ E4 ──────────▶ E6 ─────▶ ...                        │  │
-│   │                     ▲                                               │  │
-│   │       E5 ───────────┘                                               │  │
-│   │                                                                     │  │
-│   │   Jedes Event zeigt auf seine kausalen Vorgänger.                  │  │
-│   │   Die Ordnung ergibt sich aus den Abhängigkeiten.                  │  │
-│   │                                                                     │  │
-│   │   ─────────────────────────────────────────────────────────────    │  │
-│   │                                                                     │  │
-│   │   AMO ARCHETYPEN                                                    │  │
-│   │   ══════════════                                                    │  │
-│   │                                                                     │  │
-│   │   ┌──────────────────────────────────────────────────────────────┐ │  │
-│   │   │                                                              │ │  │
-│   │   │   MATERIAL         CREDENTIAL        SERVICE                 │ │  │
-│   │   │   ════════         ══════════        ═══════                 │ │  │
-│   │   │   Transfer: ✅     Transfer: ❌      Transfer: ❌            │ │  │
-│   │   │   Permanent        Soulbound         TTL-basiert             │ │  │
-│   │   │   Ladesäule        KYC-Nachweis      Ladevorgang             │ │  │
-│   │   │                                                              │ │  │
-│   │   │   ─────────────────────────────────────────────────────────  │ │  │
-│   │   │                                                              │ │  │
-│   │   │   DATA             CONTRACT                                  │ │  │
-│   │   │   ════             ════════                                  │ │  │
-│   │   │   Transfer: ✅     Transfer: ❌                              │ │  │
-│   │   │   Referenzen       Smart Logic                               │ │  │
-│   │   │   Sensorwert       Escrow                                    │ │  │
-│   │   │                                                              │ │  │
-│   │   └──────────────────────────────────────────────────────────────┘ │  │
-│   │                                                                     │  │
-│   │   ─────────────────────────────────────────────────────────────    │  │
-│   │                                                                     │  │
-│   │   VALUE STREAMING                                                   │  │
-│   │   ═══════════════                                                   │  │
-│   │                                                                     │  │
-│   │   ┌────────────────────────────────────────────────────────────┐   │  │
-│   │   │                                                            │   │  │
-│   │   │   START ──▶ TICK ──▶ TICK ──▶ TICK ──▶ ... ──▶ CLOSE      │   │  │
-│   │   │             0.42€    0.42€    0.42€            Settlement  │   │  │
-│   │   │                                                            │   │  │
-│   │   │   Zahlung fließt kontinuierlich mit der Leistung.         │   │  │
-│   │   │                                                            │   │  │
-│   │   └────────────────────────────────────────────────────────────┘   │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-#### 2.3.1 NOA Ledger Core
-
-| ID        | Milestone          | Beschreibung                | Prio | Status |
-| --------- | ------------------ | --------------------------- | ---- | ------ |
-| **C1.01** | Event Schema       | Causal Event Structure      | 🔴   | 📋     |
-| **C1.02** | DAG Ordering       | Kausale Ordnung via Parents | 🔴   | 📋     |
-| **C1.03** | Event Types        | 15+ Event Types             | 🔴   | 📋     |
-| **C1.04** | Event Indexing     | Schnelle Event-Suche        | 🟡   | 📋     |
-| **C1.05** | Event Subscription | Real-time Notifications     | 🟡   | 📋     |
-
-#### 2.3.2 AMO System (Move Modules)
-
-> **Siehe:** [amo.md](./concept-v2/chronik/amo.md)
-
-| ID        | Milestone             | Beschreibung                 | Prio | Status |
-| --------- | --------------------- | ---------------------------- | ---- | ------ |
-| **C2.01** | amo_core Module       | Basis-Structs, Capabilities  | 🔴   | 📋     |
-| **C2.02** | amo_material Module   | Transfer, Ownership, Linking | 🔴   | 📋     |
-| **C2.03** | amo_credential Module | Soulbound, Non-transferable  | 🔴   | 📋     |
-| **C2.04** | amo_service Module    | TTL-based, State Transitions | 🔴   | 📋     |
-| **C2.05** | amo_data Module       | Referenzierbare Datenpunkte  | 🟡   | 📋     |
-| **C2.06** | amo_contract Module   | Smart Logic Container        | 🟢   | 📋     |
-| **C2.07** | AMO Lifecycle         | 6 Status: Draft → Archived   | 🔴   | 📋     |
-
-#### 2.3.3 Logic Guards
-
-> **Siehe:** [logic-guards.md](./concept-v2/chronik/logic-guards.md)
-
-| ID        | Milestone        | Beschreibung                      | Prio | Status |
-| --------- | ---------------- | --------------------------------- | ---- | ------ |
-| **C3.01** | Guard Interface  | ECLVM Guard Execution             | 🔴   | 📋     |
-| **C3.02** | Guard Chains     | Sequentielle Guard-Ausführung     | 🔴   | 📋     |
-| **C3.03** | Blueprint Guards | Blueprint-spezifische Validierung | 🟡   | 📋     |
-| **C3.04** | Domain Guards    | Domänen-Regeln (EV, Energy, etc.) | 🟡   | 📋     |
-
-#### 2.3.4 Value Streaming
-
-> **Siehe:** [streaming.md](./concept-v2/chronik/streaming.md)
-
-| ID        | Milestone          | Beschreibung                     | Prio | Status |
-| --------- | ------------------ | -------------------------------- | ---- | ------ |
-| **C4.01** | Stream Channel     | Bi-direktionaler Payment Channel | 🔴   | 📋     |
-| **C4.02** | Micro-Payments     | Sub-Cent Transaktionen           | 🔴   | 📋     |
-| **C4.03** | Tick Protocol      | Leistung → Payment Trigger       | 🔴   | 📋     |
-| **C4.04** | Abort Handling     | Graceful Stream Termination      | 🟡   | 📋     |
-| **C4.05** | Dispute Resolution | Timeout, Fraud Handling          | 🟡   | 📋     |
-
-#### 2.3.5 Finality
-
-> **Siehe:** [finality.md](./concept-v2/chronik/finality.md)
-
-| ID        | Milestone       | Beschreibung                      | Prio | Status |
-| --------- | --------------- | --------------------------------- | ---- | ------ |
-| **C5.01** | Finality Levels | 4 Levels: Pending → Final         | 🔴   | 📋     |
-| **C5.02** | Merkle Trees    | Event-Batching & Root Calculation | 🔴   | 📋     |
-| **C5.03** | IOTA Anchoring  | Primary Chain Anchor              | 🔴   | 📋     |
-| **C5.04** | Merkle Proofs   | Verifiability für externe Prüfer  | 🟡   | 📋     |
-
----
-
-## Phase 3: Full Integration (Q1-Q3 2028)
-
-> **Ziel:** NEXUS-Schicht + Cybernetic Loop vollständig integriert + Security Hardening
-> **Dauer:** 9-12 Monate
-> **Referenz:** [NEXUS](./concept-v2/nexus/)
-
-### 3.1 ◇ NEXUS – Vernetzungsschicht
-
-> **Siehe:** [multi-chain.md](./concept-v2/nexus/multi-chain.md), [bridges.md](./concept-v2/nexus/bridges.md), [routing.md](./concept-v2/nexus/routing.md)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│            ◇ NEXUS – MULTI-CHAIN & BRIDGES                                  │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   CHAIN HIERARCHY                                                   │  │
-│   │   ═══════════════                                                   │  │
-│   │                                                                     │  │
-│   │   ┌─────────────────────────────────────────────────────────────┐  │  │
-│   │   │                                                             │  │  │
-│   │   │   PRIMARY: IOTA                                             │  │  │
-│   │   │   ════════════════                                          │  │  │
-│   │   │   • Feeless Transactions                                    │  │  │
-│   │   │   • Alle Events werden hier anchored                        │  │  │
-│   │   │   • ~10s Finality                                           │  │  │
-│   │   │                                                             │  │  │
-│   │   │   ───────────────────────────────────────────────────────   │  │  │
-│   │   │                                                             │  │  │
-│   │   │   SECONDARY CHAINS                                          │  │  │
-│   │   │   ════════════════                                          │  │  │
-│   │   │                                                             │  │  │
-│   │   │   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │  │  │
-│   │   │   │  Ethereum   │  │   Solana    │  │   Polygon   │        │  │  │
-│   │   │   │ High-Value  │  │ High-Speed  │  │  Low-Cost   │        │  │  │
-│   │   │   │ DeFi-Bridge │  │   Trading   │  │   Scaling   │        │  │  │
-│   │   │   └─────────────┘  └─────────────┘  └─────────────┘        │  │  │
-│   │   │                                                             │  │  │
-│   │   └─────────────────────────────────────────────────────────────┘  │  │
-│   │                                                                     │  │
-│   │   ─────────────────────────────────────────────────────────────    │  │
-│   │                                                                     │  │
-│   │   BRIDGE TYPES                                                      │  │
-│   │   ════════════                                                      │  │
-│   │                                                                     │  │
-│   │   ┌────────────────┐ ┌────────────────┐ ┌────────────────┐         │  │
-│   │   │  CHAIN BRIDGE  │ │ ORACLE BRIDGE  │ │  API BRIDGE    │         │  │
-│   │   │ Erynoa ↔ Chain │ │ Real World →   │ │ Legacy ↔      │         │  │
-│   │   │                │ │ Erynoa         │ │ Erynoa         │         │  │
-│   │   │ ETH, SOL, etc. │ │ Prices, etc.   │ │ OCPP, etc.     │         │  │
-│   │   └────────────────┘ └────────────────┘ └────────────────┘         │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-#### 3.1.1 Multi-Chain
-
-| ID        | Milestone                | Beschreibung                 | Prio | Status |
-| --------- | ------------------------ | ---------------------------- | ---- | ------ |
-| **N1.01** | Chain Selection Logic    | Automatische Chain-Auswahl   | 🔴   | 📋     |
-| **N1.02** | IOTA Full Integration    | Message Format, Confirmation | 🔴   | 📋     |
-| **N1.03** | Ethereum Integration     | Smart Contract Anchoring     | 🟡   | 📋     |
-| **N1.04** | Cross-Chain Verification | Merkle Proof Verification    | 🔴   | 📋     |
-
-#### 3.1.2 Bridges
-
-| ID        | Milestone       | Beschreibung                     | Prio | Status |
-| --------- | --------------- | -------------------------------- | ---- | ------ |
-| **N2.01** | Chain Bridge    | Erynoa ↔ Ethereum/Solana         | 🟡   | 📋     |
-| **N2.02** | Oracle Bridge   | Price Feeds (Chainlink, etc.)    | 🟡   | 📋     |
-| **N2.03** | OCPP Bridge     | EV-Charging Protocol Integration | 🔴   | 📋     |
-| **N2.04** | Bridge Security | Validators, Fraud Proofs, Limits | 🔴   | 📋     |
-
-#### 3.1.3 P2P Routing
-
-| ID        | Milestone          | Beschreibung                     | Prio | Status |
-| --------- | ------------------ | -------------------------------- | ---- | ------ |
-| **N3.01** | Gossip Protocol    | Event Distribution via Mesh      | 🔴   | 📋     |
-| **N3.02** | Content Addressing | CID-basierte Datenreferenzierung | 🟡   | 📋     |
-| **N3.03** | NAT Traversal      | Hole Punching, Relay             | 🟡   | 📋     |
-| **N3.04** | Node Types         | Full, Light, Edge, Validator     | 🟢   | 📋     |
-
----
-
-### 3.2 Domain Blueprints (Production)
-
-| ID        | Milestone                    | Beschreibung                     | Prio | Status |
-| --------- | ---------------------------- | -------------------------------- | ---- | ------ |
-| **B1.01** | EV-Charging Blueprint        | Vollständiges EV-Charging Schema | 🔴   | 📋     |
-| **B1.02** | Energy-Certificate Blueprint | Herkunftsnachweise               | 🟡   | 📋     |
-| **B1.03** | KYC-Credential Blueprint     | Identitätsnachweis               | 🟡   | 📋     |
-| **B1.04** | Maintenance-Record Blueprint | Wartungshistorie                 | 🟢   | 📋     |
-| **B1.05** | Sensor-Asset Blueprint       | IoT Sensoren                     | 🟢   | 📋     |
-
----
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **H4.01** | NLD Requirement | Menschenlesbare Beschreibung | 🔴 | 📋 |
+| **H4.02** | FormalSpec Requirement | Maschinenprüfbare Spezifikation | 🔴 | 📋 |
+| **H4.03** | LLM Equivalence Auditor | Automatische Äquivalenz-Prüfung | 🟡 | 📋 |
+| **H4.04** | Glossary Enforcement | Technische Begriffe erklärt | 🟢 | 📋 |
 
 ### 3.3 Security Hardening
 
-| ID        | Milestone              | Beschreibung               | Prio | Status |
-| --------- | ---------------------- | -------------------------- | ---- | ------ |
-| **S1.01** | Security Audit Phase 1 | ANKER + SCHEMA Code Review | 🔴   | 📋     |
-| **S1.02** | Security Audit Phase 2 | IMPULS + CHRONIK Review    | 🔴   | 📋     |
-| **S1.03** | Security Audit Phase 3 | Move Contracts Audit       | 🔴   | 📋     |
-| **S1.04** | Penetration Testing    | Full Stack Pentest         | 🔴   | 📋     |
-| **S1.05** | Bug Bounty (Private)   | Closed Bug Bounty          | 🟡   | 📋     |
-| **S1.06** | Formal Verification    | Move Contract Verification | 🟢   | 📋     |
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **S1.01** | Security Audit Phase 1 | E1+E2 Code Review | 🔴 | 📋 |
+| **S1.02** | Security Audit Phase 2 | E3+E4+E5 Review | 🔴 | 📋 |
+| **S1.03** | Security Audit Phase 3 | E6+E7 Review | 🔴 | 📋 |
+| **S1.04** | Penetration Testing | Full Stack | 🔴 | 📋 |
+| **S1.05** | Bug Bounty (Private) | Closed Beta | 🟡 | 📋 |
 
 ---
 
@@ -1052,125 +383,28 @@ Diese Roadmap beschreibt den vollständigen Implementierungsplan für **Erynoa**
 
 ### 4.1 Testnet
 
-| ID        | Milestone            | Beschreibung              | Prio | Status |
-| --------- | -------------------- | ------------------------- | ---- | ------ |
-| **T1.01** | Testnet Alpha        | Private, 10-20 Nodes      | 📋   | 📋     |
-| **T1.02** | Testnet Beta         | Public, 50+ Nodes         | 📋   | 📋     |
-| **T1.03** | Incentivized Testnet | Rewards für Participation | 📋   | 📋     |
-| **T1.04** | Faucet & Explorer    | Testnet Tools             | 📋   | 📋     |
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **T1.01** | Testnet Alpha | Private, 10-20 Nodes | 📋 | 📋 |
+| **T1.02** | Testnet Beta | Public, 50+ Nodes | 📋 | 📋 |
+| **T1.03** | Incentivized Testnet | Rewards | 📋 | 📋 |
 
 ### 4.2 Pilot: EV-Charging
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│                      EV-CHARGING PILOT                                      │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   TEILNEHMER                                                        │  │
-│   │   ───────────                                                       │  │
-│   │   • 5-10 Ladesäulen-Betreiber (Provider Agents)                     │  │
-│   │   • 100+ Ladesäulen als Material-AMOs                               │  │
-│   │   • 500+ Fahrzeug-Agents (Seeker Agents)                            │  │
-│   │   • 1.000+ Ladevorgänge (Service-AMOs mit Streaming)                │  │
-│   │                                                                     │  │
-│   │   ─────────────────────────────────────────────────────────────    │  │
-│   │                                                                     │  │
-│   │   CYBERNETIC LOOP IN ACTION                                         │  │
-│   │   ═════════════════════════                                         │  │
-│   │                                                                     │  │
-│   │   1. PERCEIVE:  Fahrzeug-Agent erkennt: Batterie 20%               │  │
-│   │   2. DISCOVER:  Query: 50kW+, CCS, 5km Radius, Trust > 0.7         │  │
-│   │   3. EVALUATE:  Trust Gating filtert auf 3 Kandidaten              │  │
-│   │   4. NEGOTIATE: Consensus Bubble, Best Offer: 0.42€/kWh            │  │
-│   │   5. EXECUTE:   Service-AMO + Value Streaming                       │  │
-│   │   6. FEEDBACK:  Trust Update: Provider +0.02, Seeker +0.02         │  │
-│   │                                                                     │  │
-│   │   ─────────────────────────────────────────────────────────────    │  │
-│   │                                                                     │  │
-│   │   SUCCESS METRICS                                                   │  │
-│   │   ───────────────                                                   │  │
-│   │   • Avg. Discovery Time: < 500ms                                   │  │
-│   │   • Avg. Negotiation Time: < 5s                                    │  │
-│   │   • Transaction Finality: < 2s                                     │  │
-│   │   • User Satisfaction: > 4.5/5                                     │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-| ID         | Milestone            | Beschreibung                | Prio | Status |
-| ---------- | -------------------- | --------------------------- | ---- | ------ |
-| **EV1.01** | OCPP Bridge          | OCPP 2.0.1 ↔ Erynoa Gateway | 📋   | 📋     |
-| **EV1.02** | Betreiber Onboarding | 5 Betreiber, 100 Säulen     | 📋   | 📋     |
-| **EV1.03** | Fahrzeug-Agent App   | Mobile App Prototyp         | 📋   | 📋     |
-| **EV1.04** | Pilot Execution      | 3-Monate Live Test          | 📋   | 📋     |
-| **EV1.05** | Pilot Evaluation     | Metrics, Lessons Learned    | 📋   | 📋     |
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **EV1.01** | OCPP Bridge | OCPP 2.0.1 ↔ Erynoa | 📋 | 📋 |
+| **EV1.02** | 5 Operators, 100 Chargers | Onboarding | 📋 | 📋 |
+| **EV1.03** | 500+ Vehicle Agents | Mobile App | 📋 | 📋 |
+| **EV1.04** | 1000+ Charging Sessions | Live Test | 📋 | 📋 |
 
 ### 4.3 Mainnet
 
-| ID        | Milestone           | Beschreibung                   | Prio | Status |
-| --------- | ------------------- | ------------------------------ | ---- | ------ |
-| **M1.01** | Genesis Preparation | Validator Setup, Genesis State | 📋   | 📋     |
-| **M1.02** | Mainnet Launch      | Go-Live                        | 📋   | 📋     |
-| **M1.03** | Validator Program   | 50+ Validators                 | 📋   | 📋     |
-| **M1.04** | Governance Launch   | On-Chain Governance            | 📋   | 📋     |
-
----
-
-## Dependency Graph
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│                      KAUSAL-BASIERTE DEPENDENCIES                           │
-│                                                                             │
-│   PHASE 0: Specs & PoCs                                                     │
-│   ═════════════════════                                                     │
-│   ┌─────────────┐                                                           │
-│   │ EIPs + PoCs │                                                           │
-│   │ (alle       │                                                           │
-│   │  Schichten) │                                                           │
-│   └──────┬──────┘                                                           │
-│          │                                                                  │
-│          ▼                                                                  │
-│   PHASE 1: Foundation (ERY Core)                                            │
-│   ══════════════════════════════                                            │
-│   ┌─────────────┐   ┌─────────────┐   ┌─────────────┐                      │
-│   │ ◉ ANKER    │──▶│ ◈ SCHEMA   │──▶│ ◊ METRIK   │                      │
-│   │ (Identity)  │   │ (Knowledge) │   │ (Trust)     │                      │
-│   └─────────────┘   └─────────────┘   └──────┬──────┘                      │
-│                                              │                              │
-│                                              ▼                              │
-│   PHASE 2: Protocol (ECHO + NOA)                                            │
-│   ══════════════════════════════                                            │
-│   ┌─────────────┐   ┌─────────────┐   ┌─────────────┐                      │
-│   │ ▣ SPHÄRE   │──▶│ ◐ IMPULS   │──▶│ ◆ CHRONIK  │                      │
-│   │ (Spaces)    │   │ (Action)    │   │ (Proof)     │                      │
-│   └─────────────┘   └─────────────┘   └──────┬──────┘                      │
-│                                              │                              │
-│                                              ▼                              │
-│   PHASE 3: Integration (Full Loop + NEXUS)                                  │
-│   ════════════════════════════════════════                                  │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   ◇ NEXUS (Networking) + CYBERNETIC LOOP INTEGRATION               │  │
-│   │                                                                     │  │
-│   │   ◉→◈→◊→▣→◐→◆→◇ (vollständiger Kreis mit Feedback)                 │  │
-│   │                                                                     │  │
-│   └──────────────────────────────┬──────────────────────────────────────┘  │
-│                                  │                                          │
-│                                  ▼                                          │
-│   PHASE 4: Network Launch                                                   │
-│   ═══════════════════════                                                   │
-│   ┌─────────────┐   ┌─────────────┐   ┌─────────────┐                      │
-│   │ Testnet     │──▶│ Pilots      │──▶│ Mainnet     │                      │
-│   └─────────────┘   └─────────────┘   └─────────────┘                      │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+| ID | Milestone | Beschreibung | Prio | Status |
+|----|-----------|--------------|------|--------|
+| **M1.01** | Genesis Preparation | Validator Setup | 📋 | 📋 |
+| **M1.02** | Mainnet Launch | Go-Live | 📋 | 📋 |
+| **M1.03** | 50+ Validators | Decentralization | 📋 | 📋 |
 
 ---
 
@@ -1178,106 +412,72 @@ Diese Roadmap beschreibt den vollständigen Implementierungsplan für **Erynoa**
 
 ### Technical KPIs
 
-| Phase   | Schicht | Metric                   | Target        |
-| ------- | ------- | ------------------------ | ------------- |
-| Phase 1 | ANKER   | DID Resolution Time      | < 50ms (p95)  |
-| Phase 1 | SCHEMA  | Semantic Query Latency   | < 100ms (p95) |
-| Phase 1 | METRIK  | Trust Calculation        | < 10ms        |
-| Phase 2 | SPHÄRE  | Discovery + Trust-Gating | < 500ms       |
-| Phase 2 | IMPULS  | ECLVM Gas Execution      | < 100ms       |
-| Phase 2 | IMPULS  | Negotiation Round        | < 2s          |
-| Phase 2 | CHRONIK | Transaction Finality     | < 2s (IOTA)   |
-| Phase 3 | NEXUS   | Cross-Chain Verification | < 5s          |
-| Phase 3 | ALL     | Full Cybernetic Loop E2E | < 10s         |
-| Phase 4 | ALL     | Testnet Uptime           | > 99.5%       |
-| Phase 4 | ALL     | Mainnet Uptime           | > 99.9%       |
+| Phase | Ebene | Metric | Target |
+|-------|-------|--------|--------|
+| Phase 1 | E1 | DID Resolution | < 50ms (p95) |
+| Phase 1 | E2 | Trust Calculation | < 10ms |
+| Phase 1 | E2 | Konfidenzintervall-Berechnung | < 5ms |
+| Phase 2 | E3 | TAT Full Cycle (Seek→Close) | < 10s |
+| Phase 2 | E4 | Blueprint Validation | < 100ms |
+| Phase 2 | E5 | Sybil Detection | < 1s |
+| Phase 3 | E6 | Circuit Breaker Activation | < 100ms |
+| Phase 3 | E7 | HumanAuth Verification | < 30s |
+| Phase 3 | E7 | LLM Equivalence Check | < 5s |
+| Phase 4 | ALL | Testnet Uptime | > 99.5% |
+| Phase 4 | ALL | Mainnet Uptime | > 99.9% |
 
 ### Business KPIs
 
-| Phase   | Metric                          | Target       |
-| ------- | ------------------------------- | ------------ |
-| Phase 1 | SDKs Released                   | 2 (Rust, TS) |
-| Phase 2 | Domain Blueprints Published     | 5+           |
-| Phase 3 | Security Audits Passed          | 3            |
-| Phase 4 | Pilot Partners                  | 10+          |
-| Phase 4 | Active DIDs (Mainnet Y1)        | 50.000+      |
-| Phase 4 | Active AMOs (Mainnet Y1)        | 100.000+     |
-| Phase 4 | Daily Transactions (Mainnet Y1) | 10.000+      |
+| Phase | Metric | Target |
+|-------|--------|--------|
+| Phase 1 | SDKs Released | 3 (Rust, TS, Python) |
+| Phase 2 | Blueprints Published | 10+ |
+| Phase 3 | Security Audits Passed | 3 |
+| Phase 4 | Active DIDs (Year 1) | 50.000+ |
+| Phase 4 | Daily Transactions (Year 1) | 10.000+ |
 
 ---
 
 ## Risk Matrix
 
-| Risk                     | Wahrscheinlichkeit | Impact    | Mitigation                                  |
-| ------------------------ | ------------------ | --------- | ------------------------------------------- |
-| IOTA Rebased Verzögerung | 🟡 Mittel          | 🔴 Hoch   | Alternative L1 evaluieren, Modularer Ansatz |
-| Trust System Gaming      | 🟢 Niedrig         | 🔴 Hoch   | Sybil-Resistenz, 1.5× Asymmetrie            |
-| ECLVM Performance        | 🟡 Mittel          | 🟡 Mittel | Benchmark früh, Alternative Runtimes        |
-| Partner-Akquise          | 🟡 Mittel          | 🟡 Mittel | Early Adopter Program, Incentives           |
-| Regulatory Changes       | 🟡 Mittel          | 🟡 Mittel | Legal Advisory, Compliance-First            |
-| Team Scaling             | 🟡 Mittel          | 🟡 Mittel | Dokumentation, Open Source Community        |
+| Risk | Wahrscheinlichkeit | Impact | Mitigation |
+|------|-------------------|--------|------------|
+| IOTA Rebased Verzögerung | 🟡 Mittel | 🔴 Hoch | Alternative L1, modularer Ansatz |
+| Trust Gaming | 🟢 Niedrig | 🔴 Hoch | EigenTrust, Stake-at-Risk, Asymmetrie |
+| Humanismus-Akzeptanz | 🟡 Mittel | 🟡 Mittel | Opt-in für Enterprises, klare Kommunikation |
+| LLM Equivalence Accuracy | 🟡 Mittel | 🟡 Mittel | Fallback auf manuellen Review |
+| Regulatory Changes | 🟡 Mittel | 🟡 Mittel | Legal Advisory, Compliance-First |
 
 ---
 
-## Team & Resources
+## Verwandte Dokumente (concept-v3)
 
-### Required Expertise by Phase
-
-| Phase     | Role                      | Headcount | Fokus-Schichten    |
-| --------- | ------------------------- | --------- | ------------------ |
-| Phase 0-1 | Protocol Engineer (Rust)  | 2-3       | ANKER, SCHEMA      |
-| Phase 0-1 | Smart Contract Dev (Move) | 1-2       | CHRONIK            |
-| Phase 1-2 | Distributed Systems       | 1-2       | IMPULS (ECLVM)     |
-| Phase 2   | P2P Networking            | 1         | NEXUS              |
-| Phase 1-3 | Frontend/SDK Developer    | 1-2       | Developer Platform |
-| Phase 2-3 | Security Engineer         | 1         | All                |
-| Phase 3-4 | DevOps/SRE                | 1-2       | Operations         |
-| All       | Product/Technical PM      | 1         | Coordination       |
-
----
-
-## Appendix
-
-### A. Verwandte Dokumente (concept-v2)
-
-| Schicht   | Dokumente                                                                                                                                                                                                                                                                                                                           |
-| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Navigator | [00-navigator.md](./concept-v2/00-navigator.md)                                                                                                                                                                                                                                                                                     |
-| ◉ ANKER   | [identity-first](./concept-v2/anker/identity-first.md), [did-erynoa](./concept-v2/anker/did-erynoa.md), [credentials](./concept-v2/anker/credentials.md), [dacs](./concept-v2/anker/dacs.md)                                                                                                                                        |
-| ◈ SCHEMA  | [blueprints](./concept-v2/schema/blueprints.md), [semantic-index](./concept-v2/schema/semantic-index.md), [standards](./concept-v2/schema/standards.md), [ontologie](./concept-v2/schema/ontologie.md)                                                                                                                              |
-| ◊ METRIK  | [trust-vectors](./concept-v2/metrik/trust-vectors.md), [karma-engine](./concept-v2/metrik/karma-engine.md), [attestations](./concept-v2/metrik/attestations.md), [reputation](./concept-v2/metrik/reputation.md)                                                                                                                    |
-| ▣ SPHÄRE  | [environments](./concept-v2/sphaere/environments.md), [governance](./concept-v2/sphaere/governance.md), [discovery](./concept-v2/sphaere/discovery.md), [constraints](./concept-v2/sphaere/constraints.md)                                                                                                                          |
-| ◐ IMPULS  | [agent-modell](./concept-v2/impuls/agent-modell.md), [intent](./concept-v2/impuls/intent.md), [policy](./concept-v2/impuls/policy.md), [negotiation](./concept-v2/impuls/negotiation.md), [wallet](./concept-v2/impuls/wallet.md), [eclvm](./concept-v2/impuls/eclvm.md), [cybernetic-loop](./concept-v2/impuls/cybernetic-loop.md) |
-| ◆ CHRONIK | [noa-ledger](./concept-v2/chronik/noa-ledger.md), [amo](./concept-v2/chronik/amo.md), [logic-guards](./concept-v2/chronik/logic-guards.md), [streaming](./concept-v2/chronik/streaming.md), [finality](./concept-v2/chronik/finality.md)                                                                                            |
-| ◇ NEXUS   | [multi-chain](./concept-v2/nexus/multi-chain.md), [bridges](./concept-v2/nexus/bridges.md), [routing](./concept-v2/nexus/routing.md)                                                                                                                                                                                                |
-| Appendix  | [glossar](./concept-v2/appendix/glossar.md), [ecl-referenz](./concept-v2/appendix/ecl-referenz.md), [anwendungen](./concept-v2/appendix/anwendungen.md)                                                                                                                                                                             |
-
-### B. Technologie-Referenzen
-
-| Technologie  | Verwendung           | Dokumentation                                                  |
-| ------------ | -------------------- | -------------------------------------------------------------- |
-| IOTA Rebased | CHRONIK/NEXUS Ledger | [docs.iota.org](https://docs.iota.org)                         |
-| MoveVM       | CHRONIK Contracts    | [move-book.com](https://move-book.com)                         |
-| Qdrant       | SCHEMA Vector DB     | [qdrant.tech/documentation](https://qdrant.tech/documentation) |
-| libp2p       | NEXUS P2P            | [docs.libp2p.io](https://docs.libp2p.io)                       |
-| XMTP         | IMPULS Messaging     | [xmtp.org/docs](https://xmtp.org/docs)                         |
-| Wasmtime     | IMPULS ECLVM Runtime | [wasmtime.dev](https://wasmtime.dev)                           |
-| BLS          | ANKER Signatures     | [BLS Spec](https://github.com/ethereum/consensus-specs)        |
+| Dokument | Beschreibung |
+|----------|--------------|
+| [FACHKONZEPT.md](./concept-v3/FACHKONZEPT.md) | Vollständiges technisches Konzept |
+| [WORLD-FORMULA.md](./concept-v3/WORLD-FORMULA.md) | Systemgleichung, Axiome |
+| [LOGIC.md](./concept-v3/LOGIC.md) | Formale Logik, Beweise |
+| [CONSTITUTION.md](./concept-v3/CONSTITUTION.md) | Humanistische Verfassung (H1-H4) |
+| [ROBUSTNESS-LAYER.md](./concept-v3/ROBUSTNESS-LAYER.md) | Antifragilitäts-Architektur |
+| [SDK-ARCHITECTURE.md](./concept-v3/SDK-ARCHITECTURE.md) | SDK-Spezifikation |
+| [PROTOCOL.md](./concept-v3/PROTOCOL.md) | Protokoll-Details |
+| [CLI-REFERENCE.md](./concept-v3/CLI-REFERENCE.md) | CLI-Befehle |
 
 ---
 
 <div align="center">
 
-**Erynoa – Kybernetisches Protokoll für die Maschinenökonomie**
+**Erynoa – Probabilistisches Protokoll für vertrauensbasierte Interaktionen**
 
-_„Ein Protokoll, das Maschinen befähigt, eigenständig zu handeln, zu verhandeln und voneinander zu lernen – mit mathematisch fundiertem Vertrauen."_
+_„Intelligenz im Dienste des Lebens."_
 
 ```
-◉ ANKER → ◈ SCHEMA → ◊ METRIK → ▣ SPHÄRE → ◐ IMPULS → ◆ CHRONIK → ◇ NEXUS
-   │                                                                    │
-   └────────────────────── FEEDBACK LOOP ◀──────────────────────────────┘
+E1 FUNDAMENT → E2 EMERGENZ → E3 PROZESS → E4 OBJEKT →
+E5 SCHUTZ → E6 KYBERNETIK → E7 HUMANISMUS
+         │                                    │
+         └──────────── FEEDBACK LOOP ◀────────┘
 ```
 
-**ERY** (◉◈◊▣) + **ECHO** (◐) + **NOA** (◆◇) = **ERYNOA**
+**112 Axiome · 7 Ebenen · Klassische Wahrscheinlichkeitstheorie**
 
 </div>

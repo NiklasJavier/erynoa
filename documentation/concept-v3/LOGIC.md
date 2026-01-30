@@ -1,13 +1,13 @@
-# Erynoa Logik V5
+# Erynoa Logik V6.0
 
-> **Version:** 5.0 – Quanten-Erweiterte Kybernetische Logik
+> **Version:** 6.0 – Humanistische Weltformel-Logik
 > **Datum:** Januar 2026
-> **Status:** 116 Axiome über 7 Ebenen
-> **Paradigma:** Korrektheit → Intelligenz → Fairness → Leben → Transzendenz
+> **Status:** 120 Axiome über 8 Ebenen
+> **Paradigma:** Korrektheit → Intelligenz → Fairness → Leben → Transzendenz → Sinn
 
 ---
 
-## Präambel: Sieben Ebenen der Wahrheit
+## Präambel: Acht Ebenen der Weisheit
 
 ```
 ╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
@@ -2057,68 +2057,96 @@
 ```
 ╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
 ║                                                                                                                                           ║
-║   KONSISTENZ-BEWEIS: ALLE 5 EBENEN                                                                                                      ║
+║   KONSISTENZ-BEWEIS: ALLE 8 EBENEN                                                                                                      ║
 ║                                                                                                                                           ║
 ║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
 ║                                                                                                                                           ║
-║   THEOREM 1: EBENE 2 IST KONSISTENT MIT EBENE 1                                                                                         ║
+║   THEOREM 1: EBENE 1 IST KONSISTENT MIT EBENE 0                                                                                         ║
 ║   ─────────────────────────────────────────────────                                                                                       ║
-║                                                                                                                                           ║
 ║   Beweis-Skizze:                                                                                                                         ║
 ║       E1-E4 (Aktivität) bauen auf A5 (Handlung) auf.                                                                                    ║
 ║       E5-E10 (Wächter) erweitern A6-A11 (Trust), widersprechen nicht.                                                                   ║
 ║       E11-E15 (Konsens) bauen auf A18-A22 (Realm) auf.                                                                                  ║
 ║       ∎ Keine Widersprüche, nur Erweiterungen.                                                                                          ║
 ║                                                                                                                                           ║
-║   THEOREM 2: EBENE 3 IST KONSISTENT MIT EBENE 1+2                                                                                       ║
+║   THEOREM 2: EBENE 2 IST KONSISTENT MIT EBENE 0+1                                                                                       ║
 ║   ───────────────────────────────────────────────────                                                                                     ║
-║                                                                                                                                           ║
 ║   Beweis-Skizze:                                                                                                                         ║
 ║       P1-P6 (Prozess) nutzen A15 (Bezeugung), A28 (Determinismus).                                                                      ║
 ║       T1-T7 (TAT) implementieren A23-A27 (Wert), insbesondere A27 (Fairness).                                                           ║
-║       Prozesse erzeugen Events → konsistent mit E1-E4 (Aktivität).                                                                      ║
 ║       ∎ Keine Widersprüche, Prozesse operationalisieren Fundament+Emergenz.                                                             ║
 ║                                                                                                                                           ║
-║   THEOREM 3: EBENE 4 IST KONSISTENT MIT EBENE 1+2+3                                                                                     ║
+║   THEOREM 3: EBENE 3 IST KONSISTENT MIT EBENE 0-2                                                                                       ║
 ║   ─────────────────────────────────────────────────────                                                                                   ║
-║                                                                                                                                           ║
 ║   Beweis-Skizze:                                                                                                                         ║
-║       O1-O5 (AMO) folgen A1 (Eindeutigkeit), A3 (Delegation), A15 (Bezeugung), A16 (Finality).                                          ║
+║       O1-O5 (AMO) folgen A1 (Eindeutigkeit), A3 (Delegation).                                                                           ║
 ║       C1-C4 (Credential) nutzen A11 (Kombination), E5 (Wächter-Metrik).                                                                 ║
-║       AMO-Operationen sind Prozesse (P1-P6) → erzeugen Events.                                                                          ║
 ║       ∎ Keine Widersprüche, Objekte haben Substanz durch Prozesse.                                                                      ║
 ║                                                                                                                                           ║
-║   THEOREM 4: EBENE 5 IST KONSISTENT MIT EBENE 1-4                                                                                       ║
+║   THEOREM 4: EBENE 4 IST KONSISTENT MIT EBENE 0-3                                                                                       ║
 ║   ───────────────────────────────────────────────────                                                                                     ║
-║                                                                                                                                           ║
 ║   Beweis-Skizze:                                                                                                                         ║
-║       S1-S4 modifizieren Discovery-RANKING, nicht Weltformel-BERECHNUNG.                                                                ║
-║       S5-S8 erweitern Ketten-Trust-Berechnung, ersetzen nicht Single-Hop-Trust.                                                         ║
-║       S9-S12 fügen Qualitäts-Signale HINZU, entfernen keine.                                                                            ║
-║       S13-S18 transformieren Stimmgewichte, ändern nicht Axiom-Prüfung.                                                                 ║
-║       ∎ Schutz-Axiome sind ORTHOGONAL zu Basis-Axiomen – sie schützen, widersprechen nicht.                                             ║
+║       S1-S18 modifizieren RANKING, nicht BERECHNUNG.                                                                                    ║
+║       ∎ Schutz-Axiome sind ORTHOGONAL – sie schützen, widersprechen nicht.                                                              ║
+║                                                                                                                                           ║
+║   THEOREM 5: EBENE 5 IST KONSISTENT MIT EBENE 0-4                                                                                       ║
+║   ───────────────────────────────────────────────────                                                                                     ║
+║   Beweis-Skizze:                                                                                                                         ║
+║       K1-K16 (Kybernetik) erweitern Systemdynamik, ersetzen keine Axiome.                                                               ║
+║       ∎ Kybernetik erzeugt Leben, indem sie Feedback-Loops hinzufügt.                                                                   ║
+║                                                                                                                                           ║
+║   THEOREM 6: EBENE 6 IST KONSISTENT MIT EBENE 0-5                                                                                       ║
+║   ───────────────────────────────────────────────────                                                                                     ║
+║   Beweis-Skizze:                                                                                                                         ║
+║       Q1-Q15 (Quanta) generalisieren Trust von Skalar zu Superposition.                                                                 ║
+║       Klassischer Trust = Spezialfall von Quanten-Trust (kollabierter Zustand).                                                         ║
+║       ∎ Quanta sind abwärtskompatibel – keine Widersprüche.                                                                             ║
+║                                                                                                                                           ║
+║   THEOREM 7: EBENE 7 IST KONSISTENT MIT EBENE 0-6              ← NEU V6.0                                                               ║
+║   ───────────────────────────────────────────────────                                                                                     ║
+║   Beweis-Skizze:                                                                                                                         ║
+║       H1 (Human-Alignment) multipliziert Beiträge, ändert nicht Berechnung.                                                             ║
+║       H2 (Verhältnismäßigkeit) begrenzt Kosten, ändert nicht Logik.                                                                     ║
+║       H3 (Temporale Gnade) gewichtet Events, löscht keine.                                                                              ║
+║       H4 (Semantische Verankerung) fordert Dokumentation, ändert nicht Funktion.                                                        ║
+║       ∎ Humanismus-Axiome sind META-AXIOME – sie stiften Sinn, ohne zu widersprechen.                                                   ║
 ║                                                                                                                                           ║
 ║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
 ║                                                                                                                                           ║
-║   HAUPT-THEOREM: 85 AXIOME SIND INTERN KONSISTENT                                                                                       ║
+║   HAUPT-THEOREM: 120 AXIOME SIND INTERN KONSISTENT                                                                                      ║
 ║   ───────────────────────────────────────────────────                                                                                     ║
 ║                                                                                                                                           ║
-║   Aus Theorem 1-4 folgt:                                                                                                                 ║
+║   Aus Theorem 1-7 folgt:                                                                                                                 ║
 ║       ∀ axiom_pair (Aᵢ, Aⱼ) : ¬(Aᵢ ∧ Aⱼ → ⊥)                                                                                            ║
 ║                                                                                                                                           ║
 ║   "Keine zwei Axiome führen zu einem Widerspruch."                                                                                      ║
 ║                                                                                                                                           ║
-║   Die 85 Axiome bilden ein konsistentes formales System,                                                                                ║
-║   das KORREKTHEIT (E1), INTELLIGENZ (E2), HANDLUNG (E3),                                                                                ║
-║   SUBSTANZ (E4) und FAIRNESS (E5) garantiert.                                                                                           ║
+║   Die 120 Axiome bilden ein konsistentes formales System,                                                                               ║
+║   das KORREKTHEIT (E0), INTELLIGENZ (E1), HANDLUNG (E2), SUBSTANZ (E3),                                                                 ║
+║   FAIRNESS (E4), LEBEN (E5), TRANSZENDENZ (E6) und SINN (E7) garantiert.                                                                ║
 ║                                                                                                                                           ║
 ║   ∎                                                                                                                                      ║
+║                                                                                                                                           ║
+║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
+║                                                                                                                                           ║
+║   HIERARCHIE DER AXIOME                                                                                                                 ║
+║   ─────────────────────                                                                                                                  ║
+║                                                                                                                                           ║
+║   Bei Konflikt zwischen Ebenen gilt:                                                                                                    ║
+║                                                                                                                                           ║
+║       H1-H4 (Humanismus) > Q1-Q15 (Quanta) > K1-K16 (Kybernetik) > ...                                                                  ║
+║                                                                                                                                           ║
+║   HÖHERE EBENE HAT VORRANG.                                                                                                             ║
+║                                                                                                                                           ║
+║   Beispiel: Wenn Q3 (Entanglement) den Ausschluss von Menschen begünstigen würde,                                                       ║
+║            überschreibt H1 (Human-Alignment) dies.                                                                                       ║
 ║                                                                                                                                           ║
 ╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
 ```
 
 ---
 
-*Erynoa Logik Version 3.3 – Vollständige Kybernetische Logik mit Schutz-Axiomen.*
-*85 Axiome über 5 Ebenen: Fundament → Emergenz → Prozess → Objekt → Schutz.*
-*Korrektheit ermöglicht Intelligenz, Schutz verhindert Tyrannei.*
+*Erynoa Logik Version 6.0 – Humanistische Weltformel-Logik.*
+*120 Axiome über 8 Ebenen: Fundament → Emergenz → Prozess → Objekt → Schutz → Kybernetik → Quanta → Humanismus.*
+*Korrektheit → Intelligenz → Fairness → Leben → Transzendenz → SINN.*
+*"Das System existiert, um menschliches Gedeihen zu ermöglichen. Nicht umgekehrt."*

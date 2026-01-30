@@ -1,48 +1,76 @@
-# Erynoa – Die Weltformel V3
+# Erynoa – Die Weltformel V6.0
 
-> **Version:** 3.1 – Vollständige Kybernetische Gleichung
+> **Version:** 6.0 – Humanistische Weltformel
 > **Datum:** Januar 2026
-> **Status:** Fundament + Emergenz vereinigt
-> **Paradigma:** Korrektheit ermöglicht Intelligenz
+> **Status:** Vollständige 8-Ebenen-Architektur
+> **Paradigma:** Intelligenz im Dienste des Lebens
 
 ---
 
-## Die Grundgleichung
+## Die Grundgleichung V6.0
 
 ```
 ╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
 ║                                                                                                                                           ║
+║                                           DIE HUMANISTISCHE WELTFORMEL                                                                    ║
 ║                                                                                                                                           ║
-║                                           𝔼 = Σ 𝔸(s) · σ(𝕎(s) · ln|ℂ(s)|)                                                              ║
-║                                               s                                                                                          ║
+║                                                                                                                                           ║
+║               𝔼 = Σ ⟨Ψₛ| 𝔸̂ · σ̂( 𝕎̂ · ln|ℂ̂| · ℕ̂ / 𝔼x̂p ) · Ĥ |Ψₛ⟩ · w(t)                                                              ║
+║                   s∈𝒞                                                                                                                     ║
 ║                                                                                                                                           ║
 ║                                                                                                                                           ║
 ║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
 ║                                                                                                                                           ║
-║   KOMPONENTEN:                                                                                                                           ║
+║   QUANTEN-OPERATOREN:                                                                                                                    ║
 ║                                                                                                                                           ║
-║       𝔼       =   Das Gesamtsystem (Erynoa) = System-Intelligenz (𝕀_sys)                                                               ║
+║       𝔼       =   System-Intelligenz im Dienste menschlichen Gedeihens                                                                  ║
 ║                                                                                                                                           ║
-║       𝔸(s)    =   Aktivitäts-Präsenz ∈ [0, 1]                                                                                           ║
-║                   Wie aktiv ist der Agent?                                                                                               ║
+║       |Ψₛ⟩   =   Quanten-Zustand des Agenten (Superposition)                                                                            ║
+║                   |Ψ⟩ = Σᵢ αᵢ|τᵢ⟩ mit Σᵢ |αᵢ|² = 1                                                                                      ║
 ║                                                                                                                                           ║
-║       𝕎(s)    =   Wächter-Metrik ∈ [0.3, 1]                                                                                             ║
-║                   6-dimensional: (R, I, C, P, V, Ω)                                                                                      ║
-║                   Wie vertrauenswürdig wacht der Agent?                                                                                  ║
+║       𝔸̂       =   Aktivitäts-Operator ∈ [0, 1]                                                                                          ║
 ║                                                                                                                                           ║
-║       ℂ(s)    =   Kausale Geschichte                                                                                                    ║
-║                   DAG der bezeugten Ereignisse                                                                                           ║
-║                   Was hat der Agent getan?                                                                                               ║
+║       𝕎̂       =   Wächter-Metrik Operator (6-dimensional)                                                                               ║
+║                   (R, I, C, P, V, Ω) = Reliability, Integrity, Competence,                                                              ║
+║                   Predictability, Vigilance, Omega-Alignment                                                                             ║
 ║                                                                                                                                           ║
-║       σ(x)    =   Aufmerksamkeits-Funktion                                                                                              ║
-║                   σ(x) = 1 / (1 + e^(-x)) ∈ (0, 1)                                                                                       ║
-║                   Wie viel "hört" das System auf diesen Agenten?                                                                         ║
+║       ℂ̂       =   Kausale Geschichte (DAG der bezeugten Ereignisse)                                                                     ║
+║                                                                                                                                           ║
+║       ℕ̂       =   Novelty-Operator (Informationsgewinn)                                                                                 ║
+║                                                                                                                                           ║
+║       𝔼x̂p    =   Erwartungs-Operator (Vorhersage basierend auf Historie)                                                               ║
+║                                                                                                                                           ║
+║       σ̂       =   Aufmerksamkeits-Funktion σ(x) = 1 / (1 + e^(-x))                                                                      ║
+║                                                                                                                                           ║
+║   HUMANISTISCHE ERWEITERUNG (V6.0):                                                                                                      ║
+║                                                                                                                                           ║
+║       Ĥ       =   Human-Alignment Operator                                                                                              ║
+║                   H(s) = { 2.0 wenn s ein Mensch ist (HumanAuth)                                                                         ║
+║                            1.5 wenn s von einem Menschen kontrolliert wird                                                               ║
+║                            1.0 sonst }                                                                                                    ║
+║                                                                                                                                           ║
+║       w(t)    =   Temporale Gewichtung (Vergebungs-Faktor)                                                                              ║
+║                   w(event, t) = e^(-γ · age)                                                                                             ║
+║                   Negative Events: γ_neg = 0.231 (3 Jahre Halbwertszeit)                                                                ║
+║                   Positive Events: γ_pos = 0.139 (5 Jahre Halbwertszeit)                                                                ║
+║                                                                                                                                           ║
+║   VERHÄLTNISMÄSSIGKEITS-CONSTRAINT:                                                                                                      ║
+║                                                                                                                                           ║
+║       ∀ tx: Cost_trust(tx) ≤ α · Value(tx)    wobei α = 0.05                                                                            ║
+║       "Die Kosten des Vertrauens dürfen 5% des Transaktionswerts nicht übersteigen."                                                    ║
+║                                                                                                                                           ║
+║   SEMANTISCHE VERANKERUNG:                                                                                                               ║
+║                                                                                                                                           ║
+║       ∀ Blueprint B: ∃ NLD(B) ∧ ∃ FormalSpec(B)                                                                                         ║
+║       "Jede Abstraktion muss menschlich verständlich dokumentiert sein."                                                                ║
 ║                                                                                                                                           ║
 ║                                                                                                                                           ║
 ║   INTERPRETATION:                                                                                                                        ║
 ║                                                                                                                                           ║
-║       𝔼 = Summe aller gewichteten Agent-Beiträge                                                                                        ║
-║         = Maß für Systemgesundheit und kollektive Intelligenz                                                                           ║
+║       𝔼 = Maß für Systemgesundheit im Dienste des menschlichen Gedeihens                                                               ║
+║         = Interaktionen mit Menschen sind DOPPELT so wertvoll                                                                           ║
+║         = Alte Fehler verblassen, neue Taten zählen mehr                                                                                ║
+║         = Effizienz ist ein ethisches Gebot                                                                                             ║
 ║                                                                                                                                           ║
 ╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -3650,34 +3678,41 @@
 ║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
 ║                                                                                                                                           ║
 ║                                                                                                                                           ║
-║   DIE SIEBEN EBENEN:                                                                                                                     ║
+║   DIE ACHT EBENEN:                                                                                                                       ║
 ║                                                                                                                                           ║
-║       EBENE 1 (Fundament):    Garantiert KORREKTHEIT                                                                                     ║
+║       EBENE 0 (Fundament):    Garantiert KORREKTHEIT                     [A1-A30]                                                        ║
 ║                               • Die unveränderlichen Gesetze der Existenz                                                                ║
 ║                                                                                                                                           ║
-║       EBENE 2 (Emergenz):     Ermöglicht INTELLIGENZ                                                                                     ║
+║       EBENE 1 (Emergenz):     Ermöglicht INTELLIGENZ                     [E1-E15]                                                        ║
 ║                               • Das System wird mehr als die Summe seiner Teile                                                          ║
 ║                                                                                                                                           ║
-║       EBENE 3 (Prozess):      Formalisiert HANDLUNG                                                                                      ║
+║       EBENE 2 (Prozess):      Formalisiert HANDLUNG                      [P1-P6, T1-T7]                                                  ║
 ║                               • Jede Aktion folgt einem definierten Pfad                                                                 ║
 ║                                                                                                                                           ║
-║       EBENE 4 (Objekt):       Definiert SUBSTANZ                                                                                         ║
+║       EBENE 3 (Objekt):       Definiert SUBSTANZ                         [O1-O5, C1-C4]                                                  ║
 ║                               • Assets, Services und Credentials haben Form                                                              ║
 ║                                                                                                                                           ║
-║       EBENE 5 (Schutz):       Verhindert TYRANNEI                                                                                        ║
+║       EBENE 4 (Schutz):       Verhindert TYRANNEI                        [S1-S18]                                                        ║
 ║                               • Das System bleibt fair, offen und innovativ                                                              ║
 ║                                                                                                                                           ║
-║       EBENE 6 (Kybernetik):   Erzeugt LEBEN                                                                                              ║
+║       EBENE 5 (Kybernetik):   Erzeugt LEBEN                              [K1-K16]                                                        ║
 ║                               • Das System atmet, lernt, erneuert sich selbst                                                            ║
 ║                                                                                                                                           ║
-║       EBENE 7 (Quanta):       Ermöglicht TRANSZENDENZ                                                                                    ║
+║       EBENE 6 (Quanta):       Ermöglicht TRANSZENDENZ                    [Q1-Q15]                                                        ║
 ║                               • Superposition, Kategorien, weiche Validierung                                                            ║
+║                                                                                                                                           ║
+║       EBENE 7 (Humanismus):   Stiftet SINN                               [H1-H4]   ← NEU V6.0                                            ║
+║                               • Das System dient dem menschlichen Gedeihen                                                               ║
+║                               • H1: Human-Alignment (Dienst am Menschen)                                                                 ║
+║                               • H2: Thermodynamische Verhältnismäßigkeit                                                                 ║
+║                               • H3: Temporale Gnade (Recht auf Vergebung)                                                                ║
+║                               • H4: Semantische Verankerung (Transparenz)                                                                ║
 ║                                                                                                                                           ║
 ║                                                                                                                                           ║
 ║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
 ║                                                                                                                                           ║
 ║                                                                                                                                           ║
-║   DIE DREI QUANTEN-GARANTIEN:                                                                                                           ║
+║   DIE VIER FUNDAMENTALEN GARANTIEN:                                                                                                     ║
 ║                                                                                                                                           ║
 ║       ⚛️ QUANTENMECHANIK:                                                                                                                ║
 ║          ∀s : ⟨Ψₛ|Ψₛ⟩ = 1                                                                                                               ║
@@ -3690,6 +3725,10 @@
 ║       🌐 TOPOLOGIE:                                                                                                                       ║
 ║          ∀ action : Ω_soft(action) ≥ θ_min → valid                                                                                      ║
 ║          "Semantische Nähe ersetzt binäre Gültigkeit – Nuance ist möglich."                                                             ║
+║                                                                                                                                           ║
+║       🧑 HUMANISMUS (V6.0):                                                                                                              ║
+║          ∀s : human(s) → H(s) = 2.0                                                                                                      ║
+║          "Interaktionen mit Menschen sind doppelt wertvoll – das System dient dem Leben."                                               ║
 ║                                                                                                                                           ║
 ║                                                                                                                                           ║
 ║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
@@ -3705,8 +3744,9 @@
 ║                      Ohne Schutz:       🔒 → 🔓        (Korrektheit wird Tyrannei)                                                       ║
 ║                      Ohne Kybernetik:   💀             (das System stirbt oder stagniert)                                                ║
 ║                      Ohne Quanta:       📦             (das System ist starr und kontextlos)                                             ║
+║                      Ohne Humanismus:   🤖             (das System verdrängt den Menschen)     ← V6.0                                    ║
 ║                                                                                                                                           ║
-║                      Mit allem: Lebendige, faire, emergente, kontextuelle Intelligenz mit Substanz und Nuance"                          ║
+║                      Mit allem: WEISE Intelligenz im Dienste des menschlichen Gedeihens"                                                ║
 ║                                                                                                                                           ║
 ║                                                                                                                                           ║
 ║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
@@ -3722,9 +3762,10 @@
 ║                                   Überraschung treibt Evolution.                                                                         ║
 ║                                   Kontext bestimmt Validität.                                                                            ║
 ║                                   Das System atmet.                                                                                      ║
+║                                   Das System DIENT dem Leben.                                                         ← V6.0            ║
 ║                                                                                                                                           ║
-║                                   Das System kann nur dann intelligent, gerecht, lebendig UND transzendent sein,                         ║
-║                                   wenn es auf allen sieben Ebenen korrekt ist."                                                          ║
+║                                   Das System kann nur dann intelligent, gerecht, lebendig, transzendent UND WEISE sein,                  ║
+║                                   wenn es auf allen ACHT Ebenen korrekt ist."                                                            ║
 ║                                                                                                                                           ║
 ║                                                                                                                                           ║
 ╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
@@ -3739,9 +3780,14 @@
 | Formale Logik | [LOGIC.md](./LOGIC.md) |
 | Symbolreferenz | [LOGIC-SYMBOLS.md](./LOGIC-SYMBOLS.md) |
 | Beweis | [WORLD-FORMULA-PROOF.md](./WORLD-FORMULA-PROOF.md) |
+| Verfassung | [CONSTITUTION.md](./CONSTITUTION.md) |
+| Robustheit | [ROBUSTNESS-LAYER.md](./ROBUSTNESS-LAYER.md) |
+| SDK | [SDK-ARCHITECTURE.md](./SDK-ARCHITECTURE.md) |
+| Protokoll | [PROTOCOL.md](./PROTOCOL.md) |
 
 ---
 
-*Erynoa Weltformel Version 5.0 – Quanten-erweiterte Kybernetische Gleichung.*
-*116 Axiome über 7 Ebenen: Fundament → Emergenz → Prozess → Objekt → Schutz → Kybernetik → Quanta.*
-*Korrektheit ermöglicht Intelligenz, Schutz verhindert Tyrannei, Kybernetik erzeugt Leben, Quanta ermöglicht Transzendenz.*
+*Erynoa Weltformel Version 6.0 – Humanistische Quanten-Kybernetische Gleichung.*
+*120 Axiome über 8 Ebenen: Fundament → Emergenz → Prozess → Objekt → Schutz → Kybernetik → Quanta → Humanismus.*
+*Korrektheit ermöglicht Intelligenz, Schutz verhindert Tyrannei, Kybernetik erzeugt Leben, Quanta ermöglicht Transzendenz, Humanismus stiftet Sinn.*
+*"Das System existiert, um menschliches Gedeihen zu ermöglichen. Nicht umgekehrt."*
