@@ -3,11 +3,13 @@
 > **EIP:** 004
 > **Titel:** Bayesian Trust Update Algorithm
 > **Status:** Draft
-> **Version:** 0.1
+> **Version:** 0.2
 > **Typ:** Standard
 > **Ebene:** E2 (Emergenz)
 > **Erstellt:** Januar 2026
+> **Aktualisiert:** Januar 2026
 > **Abhängigkeiten:** EIP-001 (DID:erynoa), EIP-002 (Trust Vector 6D), EIP-003 (Event-DAG)
+> **Verwandt:** EIP-006 (Slashing & Dispute Resolution) [Planned]
 
 ---
 
@@ -229,18 +231,36 @@ pub enum LiabilityLevel {
 ```rust
 const INHERITANCE_DAMPING: f64 = 0.3;  // β - Max 30% des Guardian-Trusts
 const MAX_GUARDIANS_FOR_BOOST: usize = 3;  // Max 3 Guardians zählen
+const MAX_TRUST_CHAIN_DEPTH: usize = 5;   // Max Tiefe für Trust-Ketten
 
 /// Berechnet effektiven Trust unter Berücksichtigung von Guardians
+/// MIT LOOP-DETECTION (verhindert zirkuläre Trust-Pumping)
 pub fn calculate_effective_trust(
+    subject: &DID,
     base_trust: &TrustState,
     guardians: &[StakedGuardian],
     guardian_trust_cache: &HashMap<DID, TrustState>,
+    visited: &mut HashSet<DID>,  // V0.2: Loop Detection
 ) -> TrustState {
     let mut effective = base_trust.clone();
+    
+    // V0.2: LOOP DETECTION - Verhindert A→B→A Zyklen
+    if visited.contains(subject) {
+        // Zyklus erkannt! Kein Trust-Boost für zirkuläre Referenzen
+        return effective;
+    }
+    visited.insert(subject.clone());
+    
+    // V0.2: DEPTH LIMIT - Verhindert zu lange Ketten
+    if visited.len() > MAX_TRUST_CHAIN_DEPTH {
+        return effective;
+    }
     
     // Sortiere Guardians nach Trust (beste zuerst)
     let mut sorted_guardians: Vec<_> = guardians.iter()
         .filter(|g| g.endorsement.is_some())
+        // V0.2: Filtere Guardians die bereits in der Kette sind
+        .filter(|g| !visited.contains(&g.did))
         .collect();
     sorted_guardians.sort_by(|a, b| {
         let ta = guardian_trust_cache.get(&a.did).map(|t| t.scalar()).unwrap_or(0.0);
@@ -310,7 +330,183 @@ fn calculate_token_stake_factor(tokens: u64) -> f64 {
 }
 ```
 
-#### 2.3 DID-Dokument Erweiterung
+#### 2.3 Loop Detection & Circular Reference Protection (V0.2)
+
+**Problem:** Bank A bürgt für Bank B, Bank B bürgt für Bank A. Beide pumpen ihren Trust künstlich hoch.
+
+**Lösung:** PageRank-ähnliche Loop-Detection:
+
+```rust
+/// Detektiert zirkuläre Bürgschafts-Ketten
+pub fn detect_circular_endorsement(
+    subject: &DID,
+    endorsement_graph: &EndorsementGraph,
+) -> Option<CircularChain> {
+    let mut visited = HashSet::new();
+    let mut path = Vec::new();
+    
+    fn dfs(
+        current: &DID,
+        target: &DID,
+        graph: &EndorsementGraph,
+        visited: &mut HashSet<DID>,
+        path: &mut Vec<DID>,
+    ) -> Option<CircularChain> {
+        if current == target && !path.is_empty() {
+            return Some(CircularChain { dids: path.clone() });
+        }
+        
+        if visited.contains(current) {
+            return None;
+        }
+        
+        visited.insert(current.clone());
+        path.push(current.clone());
+        
+        for guardian in graph.get_guardians(current) {
+            if let Some(chain) = dfs(&guardian, target, graph, visited, path) {
+                return Some(chain);
+            }
+        }
+        
+        path.pop();
+        None
+    }
+    
+    dfs(subject, subject, endorsement_graph, &mut visited, &mut path)
+}
+
+/// Wird bei Guardian-Registrierung aufgerufen
+pub fn validate_endorsement(
+    new_guardian: &DID,
+    ward: &DID,
+    graph: &EndorsementGraph,
+) -> Result<(), EndorsementError> {
+    // 1. Prüfe, ob der Guardian selbst vom Ward gebürgt wird
+    if graph.get_guardians(new_guardian).contains(ward) {
+        return Err(EndorsementError::DirectCircularReference);
+    }
+    
+    // 2. Prüfe auf indirekte Zyklen
+    let mut test_graph = graph.clone();
+    test_graph.add_edge(new_guardian, ward);
+    
+    if detect_circular_endorsement(ward, &test_graph).is_some() {
+        return Err(EndorsementError::IndirectCircularReference);
+    }
+    
+    Ok(())
+}
+```
+
+**Regeln:**
+
+1. **Direkte Zyklen verboten:** A→B UND B→A ist nicht erlaubt
+2. **Indirekte Zyklen verboten:** A→B→C→A ist nicht erlaubt
+3. **Maximale Ketten-Tiefe:** 5 Stufen (verhindert "Trust-Laundering")
+4. **Periodischer Audit:** Background-Job prüft alle 24h auf neue Zyklen
+
+#### 2.4 Privacy-Preserving Guardianship (V0.2)
+
+**Problem:** Wenn `did:erynoa:guild:sparkasse` öffentlich im DID-Dokument steht, weiß jeder, dass Alice bei der Sparkasse ist.
+
+**Lösung:** Selective Disclosure mit ZK-Proofs
+
+```rust
+/// Guardianship kann privat oder öffentlich sein
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum GuardianshipVisibility {
+    /// Vollständig öffentlich (Guardian-DID sichtbar)
+    Public,
+    
+    /// Privat mit ZK-Proof (nur "ist gebürgt von Tier-1 Bank" sichtbar)
+    Private {
+        /// ZK-Proof: "Guardian ist in Set {Tier1Banks}" ohne zu verraten welche
+        zk_proof: ZkProof,
+        /// Tier-Level (ohne konkreten Guardian)
+        tier_level: GuardianTier,
+        /// Commitment (für spätere selektive Enthüllung)
+        commitment: [u8; 32],
+    },
+}
+
+#[derive(Clone, Debug)]
+pub enum GuardianTier {
+    Tier1Institutional,  // Zentralbanken, Staatsorgane
+    Tier2Institutional,  // Große Privatbanken, Notare
+    Tier3Institutional,  // Regionale Banken, Anwälte
+    Personal,            // Freunde, Familie
+}
+
+/// Generiert ZK-Proof für Guardianship
+pub fn generate_guardianship_proof(
+    guardian: &DID,
+    tier: GuardianTier,
+    tier_membership_list: &[DID],
+) -> Result<ZkProof, ZkError> {
+    // ZK-Proof: "Ich kenne ein DID X, sodass:"
+    // 1. X ist in tier_membership_list
+    // 2. X hat für mich gebürgt
+    // OHNE X zu verraten
+    
+    let circuit = GuardianshipMembershipCircuit::new(
+        guardian,
+        tier_membership_list,
+    );
+    
+    circuit.prove()
+}
+
+/// Selektive Enthüllung (z.B. für Autovermietung)
+pub fn reveal_guardianship(
+    commitment: &[u8; 32],
+    guardian: &DID,
+    reveal_to: &DID,
+) -> RevealProof {
+    // Signierte Aussage: "Für DID {reveal_to} enthülle ich: Mein Guardian ist {guardian}"
+    // Nur der Empfänger kann das verifizieren
+    RevealProof {
+        commitment: *commitment,
+        guardian: guardian.clone(),
+        revealed_to: reveal_to.clone(),
+        timestamp: now_ms(),
+        signature: vec![],  // Signiert vom Ward
+    }
+}
+```
+
+**DID-Dokument mit Privacy:**
+
+```json
+{
+  "erynoa": {
+    "recovery": {
+      "method": "social-staked",
+      "threshold": 2,
+      "guardians": [
+        {
+          "visibility": "private",
+          "tier": "Tier1Institutional",
+          "zkProof": "z8aGdRnI...",
+          "commitment": "0xabc123..."
+        },
+        {
+          "did": "did:erynoa:self:bob-friend",
+          "visibility": "public",
+          "role": "personal"
+        }
+      ]
+    },
+    "trustDerived": {
+      "level": "Verified",
+      "source": "private",
+      "proof": "z9bHeSnJ..."
+    }
+  }
+}
+```
+
+#### 2.5 DID-Dokument Erweiterung
 
 ```json
 {
@@ -1023,6 +1219,39 @@ T_effective = 0.5 + 0.081 = 0.581
 
 Guardian-Integrity sinkt um 2.4%.
 
+### TV-4: Circular Reference Detection (V0.2)
+
+**Input:**
+- Bank A bürgt für Bank B
+- Bank B versucht, für Bank A zu bürgen
+
+**Expected:**
+
+```
+Error: DirectCircularReference
+Message: "Cannot create endorsement: A↔B cycle detected"
+```
+
+### TV-5: Private Guardianship (V0.2)
+
+**Input:**
+- Guardian: Sparkasse (Tier2Institutional)
+- Visibility: Private
+
+**Expected DID Document:**
+
+```json
+{
+  "guardians": [{
+    "visibility": "private",
+    "tier": "Tier2Institutional",
+    "zkProof": "z8aGdRnI..."
+  }]
+}
+```
+
+Guardian-DID ist NICHT öffentlich sichtbar.
+
 ---
 
 ## Referenzen
@@ -1030,6 +1259,7 @@ Guardian-Integrity sinkt um 2.4%.
 - [EIP-001: DID:erynoa](./EIP-001-did-erynoa.md)
 - [EIP-002: Trust Vector 6D](./EIP-002-trust-vector-6d.md)
 - [EIP-003: Event-DAG & Finality](./EIP-003-event-dag-finality.md)
+- [EIP-006: Slashing & Dispute Resolution](./EIP-006-slashing-dispute.md) [Planned]
 - [Bayesian Inference (Wikipedia)](https://en.wikipedia.org/wiki/Bayesian_inference)
 - [Beta Distribution](https://en.wikipedia.org/wiki/Beta_distribution)
 - [Erynoa Fachkonzept V6.1](../FACHKONZEPT.md)
@@ -1041,10 +1271,11 @@ Guardian-Integrity sinkt um 2.4%.
 | Version | Datum | Änderung |
 |---------|-------|----------|
 | 0.1 | 2026-01-29 | Initial Draft mit Staked Guardianship |
+| 0.2 | 2026-01-29 | **Loop Detection**: Circular Reference Protection (PageRank-ähnlich), **Privacy**: ZK-Proofs für Guardianship, Selective Disclosure, **Trust-Chain Depth Limit**: Max 5 Stufen |
 
 ---
 
 *EIP-004: Bayesian Trust Update Algorithm*
-*Version: 0.1*
+*Version: 0.2*
 *Status: Draft*
 *Ebene: E2 (Emergenz)*

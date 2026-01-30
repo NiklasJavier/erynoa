@@ -108,21 +108,23 @@ Diese Roadmap beschreibt den Implementierungsplan für **Erynoa** – das probab
 
 | ID | EIP | Beschreibung | Ebene | Prio | Status |
 |----|-----|--------------|-------|------|--------|
-| **R0.1** | 001 | DID:erynoa Method Specification | E1 | 🔴 | 📋 |
-| **R0.2** | 002 | Trust Vector 6D Specification (R,I,C,P,V,Ω) | E1 | 🔴 | 📋 |
-| **R0.3** | 003 | Event-DAG & Finality Specification | E1 | 🔴 | 📋 |
-| **R0.4** | 004 | Bayesian Trust Update Algorithm | E2 | 🔴 | 📋 |
-| **R0.5** | 005 | EigenTrust Topology Specification | E2 | 🔴 | 📋 |
-| **R0.6** | 006 | TAT-Lifecycle (Seek→Close) | E3 | 🔴 | 📋 |
-| **R0.7** | 007 | Value Streaming Protocol | E3 | 🔴 | 📋 |
-| **R0.8** | 008 | Blueprint Schema Standard | E4 | 🔴 | 📋 |
-| **R0.9** | 009 | Credential Issuance & Verification | E4 | 🔴 | 📋 |
-| **R0.10** | 010 | Anti-Gaming Measures (Stake, Slashing) | E5 | 🟡 | 📋 |
-| **R0.11** | 011 | Circuit Breaker Specification | E6 | 🟡 | 📋 |
-| **R0.12** | 012 | Human-Auth Credential (H1) | E7 | 🟡 | 📋 |
-| **R0.13** | 013 | Level-of-Detail Trust (H2) | E7 | 🟡 | 📋 |
-| **R0.14** | 014 | Temporal Forgiveness / Amnesty (H3) | E7 | 🟡 | 📋 |
-| **R0.15** | 015 | Semantic Anchoring (H4) | E7 | 🟡 | 📋 |
+| **R0.1** | 001 | DID:erynoa Method Specification (V0.3 mit Staked Guardianship) | E1 | 🔴 | ✅ |
+| **R0.2** | 002 | Trust Vector 6D Specification (R,I,C,P,V,Ω) | E1 | 🔴 | ✅ |
+| **R0.3** | 003 | Event-DAG & Finality Specification (V0.2 mit MMR) | E1 | 🔴 | ✅ |
+| **R0.4** | 004 | Bayesian Trust Update Algorithm (V0.2 mit Loop Detection) | E2 | 🔴 | ✅ |
+| **R0.5** | 005 | **Virtualized Environment Architecture (Root-Env/Virt-Env)** | E5/E6 | 🔴 | ✅ |
+| **R0.6** | 006 | **Slashing & Dispute Resolution** | E5 | 🔴 | 📋 |
+| **R0.7** | 007 | EigenTrust Topology Specification | E2 | 🔴 | 📋 |
+| **R0.8** | 008 | TAT-Lifecycle (Seek→Close) | E3 | 🔴 | 📋 |
+| **R0.9** | 009 | Value Streaming Protocol | E3 | 🔴 | 📋 |
+| **R0.10** | 010 | Blueprint Schema Standard | E4 | 🔴 | 📋 |
+| **R0.11** | 011 | Credential Issuance & Verification | E4 | 🔴 | 📋 |
+| **R0.12** | 012 | Anti-Gaming Measures (Stake, additional) | E5 | 🟡 | 📋 |
+| **R0.13** | 013 | Circuit Breaker Specification | E6 | 🟡 | 📋 |
+| **R0.14** | 014 | Human-Auth Credential (H1) | E7 | 🟡 | 📋 |
+| **R0.15** | 015 | Level-of-Detail Trust (H2) | E7 | 🟡 | 📋 |
+| **R0.16** | 016 | Temporal Forgiveness / Amnesty (H3) | E7 | 🟡 | 📋 |
+| **R0.17** | 017 | Semantic Anchoring (H4) | E7 | 🟡 | 📋 |
 
 ### 0.2 Technologie-Evaluation
 
