@@ -227,13 +227,13 @@ service EnvironmentService {
 
 ### Backend Module (109 Tests ✅)
 
-| Schicht        | Module                                                          | Tests | Status |
-| -------------- | --------------------------------------------------------------- | ----- | ------ |
-| **Domain**     | did, trust, event, realm, saga, formula                         | 23    | ✅     |
-| **Core**       | event_engine, trust_engine, surprisal, world_formula, consensus | 23    | ✅     |
-| **Protection** | anti_calcification, diversity, quadratic, anomaly               | 17    | ✅     |
-| **Peer**       | intent_parser, saga_composer, gateway                           | 14    | ✅     |
-| **Local**      | kv_store, identity_store, event_store, trust_store, content_store | 32  | ✅     |
+| Schicht        | Module                                                            | Tests | Status |
+| -------------- | ----------------------------------------------------------------- | ----- | ------ |
+| **Domain**     | did, trust, event, realm, saga, formula                           | 23    | ✅     |
+| **Core**       | event_engine, trust_engine, surprisal, world_formula, consensus   | 23    | ✅     |
+| **Protection** | anti_calcification, diversity, quadratic, anomaly                 | 17    | ✅     |
+| **Peer**       | intent_parser, saga_composer, gateway                             | 14    | ✅     |
+| **Local**      | kv_store, identity_store, event_store, trust_store, content_store | 32    | ✅     |
 
 ### Axiom Coverage
 
@@ -273,15 +273,15 @@ cd backend && cargo test
 
 ### Backend (Dezentral)
 
-| Komponente | Technologie              |
-| ---------- | ------------------------ |
-| Runtime    | **Rust**, Tokio          |
-| Framework  | Axum                     |
-| API        | Connect-RPC (Protobuf)   |
-| Database   | **Fjall** (Embedded KV)  |
-| Auth       | **DID + Ed25519**        |
-| Storage    | **CAS** (Content-Hash)   |
-| Crypto     | ed25519-dalek, blake3    |
+| Komponente | Technologie             |
+| ---------- | ----------------------- |
+| Runtime    | **Rust**, Tokio         |
+| Framework  | Axum                    |
+| API        | Connect-RPC (Protobuf)  |
+| Database   | **Fjall** (Embedded KV) |
+| Auth       | **DID + Ed25519**       |
+| Storage    | **CAS** (Content-Hash)  |
+| Crypto     | ed25519-dalek, blake3   |
 
 </td>
 <td width="50%">
@@ -303,14 +303,14 @@ cd backend && cargo test
 
 ### Infrastructure
 
-| Komponente       | Technologie                        |
-| ---------------- | ---------------------------------- |
-| Dev Environment  | Nix Flakes                         |
-| Containerization | Docker Compose (nur Frontend)      |
-| Reverse Proxy    | Caddy                              |
-| Task Runner      | just                               |
-| Code Generation  | buf (Protobuf)                     |
-| Backend Storage  | **Embedded** (keine Container!)    |
+| Komponente       | Technologie                     |
+| ---------------- | ------------------------------- |
+| Dev Environment  | Nix Flakes                      |
+| Containerization | Docker Compose (nur Frontend)   |
+| Reverse Proxy    | Caddy                           |
+| Task Runner      | just                            |
+| Code Generation  | buf (Protobuf)                  |
+| Backend Storage  | **Embedded** (keine Container!) |
 
 ---
 
@@ -380,13 +380,13 @@ erynoa/
 
 ### Backend
 
-| Befehl       | Beschreibung               |
-| ------------ | -------------------------- |
-| `just check` | Cargo check                |
-| `just lint`  | Clippy Linter              |
-| `just fmt`   | Code formatieren           |
-| `just test` | Tests ausführen (109 Tests) |
-| `just ci`    | fmt + lint + test          |
+| Befehl       | Beschreibung                |
+| ------------ | --------------------------- |
+| `just check` | Cargo check                 |
+| `just lint`  | Clippy Linter               |
+| `just fmt`   | Code formatieren            |
+| `just test`  | Tests ausführen (109 Tests) |
+| `just ci`    | fmt + lint + test           |
 
 ### Protobuf
 
