@@ -2,28 +2,28 @@
 
 # Erynoa
 
-**Dezentrales Vertrauen für Menschen, Organisationen und KI-Agenten**
+**Probabilistisches Protokoll für vertrauensbasierte Interaktionen**
 
 [![Rust](https://img.shields.io/badge/Rust-1.75+-orange?style=flat-square&logo=rust)](https://www.rust-lang.org/)
+[![Tests](https://img.shields.io/badge/Tests-73%20passed-brightgreen?style=flat-square)](backend/src/)
 [![SvelteKit](https://img.shields.io/badge/SvelteKit-2.0-FF3E00?style=flat-square&logo=svelte)](https://kit.svelte.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![Nix](https://img.shields.io/badge/Nix-Flakes-5277C3?style=flat-square&logo=nixos)](https://nixos.org/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
-[![Logic](https://img.shields.io/badge/Axioms-28%20Kern--Axiome-blueviolet?style=flat-square)](documentation/concept-v4/LOGIC.md)
+[![Axioms](https://img.shields.io/badge/Axioms-126-blueviolet?style=flat-square)](documentation/concept-v3/FACHKONZEPT.md)
 
-<pre>
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│   "Ein axiomatisch fundiertes System für dezentrales            │
-│    Vertrauen – mathematisch garantiert, human-aligned,          │
-│    manipulationsresistent."                                     │
-│                                                                 │
-│   𝔼 = Σ 𝔸(s) · σ⃗( ‖𝕎(s)‖ · ln|ℂ(s)| · 𝒮(s) ) · Ĥ(s) · w(s,t)  │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-</pre>
+```
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                                                                               ║
+║   𝔼 = Σ A(s) · σ( W(s) · ln|C(s)| · N(s) / E(s) ) · H(s) · w(s,t)           ║
+║       s                                                                       ║
+║                                                                               ║
+║   "Intelligenz im Dienste des Lebens."                                        ║
+║                                                                               ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+```
 
-[Schnellstart](#-schnellstart) · [Konzept](#-was-ist-erynoa) · [Dokumentation](#-dokumentation) · [Befehle](#-befehle)
+[Schnellstart](#-schnellstart) · [Architektur](#-architektur) · [Status](#-implementation-status) · [Dokumentation](#-dokumentation)
 
 </div>
 
@@ -31,57 +31,58 @@
 
 ## 🧠 Was ist Erynoa?
 
-Erynoa ist ein **axiomatisch fundiertes, dezentrales System** für Vertrauen zwischen Menschen, Organisationen und KI-Agenten. Es basiert auf **28 formal definierten Kern-Axiomen**, die zusammen eine vollständige und widerspruchsfreie Logik für dezentrale Kooperation bilden.
+Erynoa ist ein **probabilistisches kybernetisches Protokoll** für vertrauensbasierte Interaktionen zwischen Menschen, Organisationen und KI-Agenten. Es basiert auf **126 formal definierten Axiomen** und einer mathematisch fundierten **Systemgleichung (Weltformel)**.
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│                      ERYNOA V4.1 – KERNKONZEPTE                             │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐   │
-│   │                        REALM-HIERARCHIE (Κ1)                        │   │
-│   │                                                                     │   │
-│   │              ROOT-REALM (Universelle Axiome Κ1-Κ28)                 │   │
-│   │                           │                                         │   │
-│   │            ┌──────────────┼──────────────┐                          │   │
-│   │            ▼              ▼              ▼                          │   │
-│   │      VIRTUAL-REALM  VIRTUAL-REALM  VIRTUAL-REALM                    │   │
-│   │      (Knowledge)    (Finance)      (Governance)                     │   │
-│   │            │              │              │                          │   │
-│   │         ┌──┴──┐        ┌──┴──┐        ┌──┴──┐                       │   │
-│   │         ▼     ▼        ▼     ▼        ▼     ▼                       │   │
-│   │     Partition  ...  Partition  ...  Partition  ...                  │   │
-│   │                                                                     │   │
-│   └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│   ┌───────────────────────┐  ┌───────────────────────┐                      │
-│   │   TRUST-VEKTOR 𝕎      │  │   WELTFORMEL 𝔼        │                      │
-│   │   6-dimensional:      │  │                       │                      │
-│   │   • Reliability       │  │   𝔼 = Σ 𝔸·σ⃗(𝕎·𝒮)·Ĥ·w  │                      │
-│   │   • Integrity         │  │                       │                      │
-│   │   • Competence        │  │   Trust-gedämpfte     │                      │
-│   │   • Prestige          │  │   Surprisal + Human-  │                      │
-│   │   • Vigilance         │  │   Alignment-Faktor    │                      │
-│   │   • Omega (Axiom-Treue)│  │                       │                      │
-│   └───────────────────────┘  └───────────────────────┘                      │
-│                                                                             │
-│   EIGENSCHAFTEN:                                                            │
-│   ✓ Dezentral (P2P)        ✓ Skalierbar (Milliarden Entitäten)             │
-│   ✓ Human-Aligned (Ĥ)      ✓ Formal Verifiziert (TLA+)                     │
-│   ✓ Anti-Gaming            ✓ Asymmetrische Trust-Dynamik                   │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                 │
+│                         ERYNOA V4.1 – OVERVIEW                                  │
+│                                                                                 │
+│   ┌─────────────────────────────────────────────────────────────────────────┐   │
+│   │  Peer Layer         (IntentParser, SagaComposer, GatewayGuard) ✅       │   │
+│   ├─────────────────────────────────────────────────────────────────────────┤   │
+│   │  Protection Layer   (AntiCalcification, Diversity, Anomaly) ✅          │   │
+│   ├─────────────────────────────────────────────────────────────────────────┤   │
+│   │  Core Logic Layer   (EventEngine, TrustEngine, Consensus) ✅            │   │
+│   ├─────────────────────────────────────────────────────────────────────────┤   │
+│   │  Domain Layer       (DID, Trust6D, Event, Realm, Saga, Formula) ✅      │   │
+│   └─────────────────────────────────────────────────────────────────────────┘   │
+│            │                                    │                               │
+│            └──────────── FEEDBACK LOOP ◀────────┘                               │
+│                                                                                 │
+│   KERN-FEATURES:                                                                │
+│   ✅ 6D Trust-Vektor (R,I,C,P,V,Ω)     ✅ Bayessche Trust-Evolution            │
+│   ✅ Event-DAG mit Finalität           ✅ Anti-Calcification (Gini, Power-Cap) │
+│   ✅ Human-Alignment (H = 2.0/1.5/1.0) ✅ Quadratic Voting                     │
+│   ✅ Intent → Saga Resolution          ✅ Gateway Trust-Dampening              │
+│   ✅ Realm-Hierarchie (Root/Virtual)   ✅ Anomaly Detection                    │
+│                                                                                 │
+│   73 TESTS ✅ · 126 AXIOME · 4 SCHICHTEN · KLASSISCHE WAHRSCHEINLICHKEIT       │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-> 📖 **Mehr erfahren:** [Fachkonzept](documentation/concept-v4/FACHKONZEPT.md) · [Logic V4.1](documentation/concept-v4/LOGIC.md) · [System-Architektur](documentation/concept-v4/SYSTEM-ARCHITECTURE.md)
+### Die Systemgleichung
+
+| Symbol     | Bedeutung                           | Implementation          |
+| ---------- | ----------------------------------- | ----------------------- |
+| **𝔼**      | Systemwert (kollektive Intelligenz) | `core/world_formula.rs` |
+| **A(s)**   | Aktivitätspräsenz [0,1]             | `domain/formula.rs`     |
+| **W(s)**   | Wächter-Metrik 6D (R,I,C,P,V,Ω)     | `domain/trust.rs`       |
+| **C(s)**   | Kausale Geschichte (Event-DAG)      | `domain/event.rs`       |
+| **N(s)**   | Novelty-Score (Surprisal)           | `core/surprisal.rs`     |
+| **E(s)**   | Erwartungswert                      | `core/surprisal.rs`     |
+| **σ(x)**   | Sigmoid 1/(1+e^(-x))                | `domain/formula.rs`     |
+| **H(s)**   | Human-Alignment (2.0\|1.5\|1.0)     | `domain/formula.rs`     |
+| **w(s,t)** | Temporale Gewichtung                | `core/world_formula.rs` |
+
+> 📖 **Mehr erfahren:** [Fachkonzept V6.2](documentation/concept-v3/FACHKONZEPT.md) · [CLI-Referenz](documentation/concept-v3/CLI-REFERENCE.md) · [Roadmap](documentation/ROADMAP.md)
 
 ---
 
 ## ⚡ Schnellstart
 
 > **Voraussetzungen:** [Nix](https://nixos.org/) und [Docker Desktop](https://www.docker.com/products/docker-desktop/)
->
-> 📖 **Detaillierte Anleitung:** [Setup Guide](documentation/system/setup/setup.md)
 
 ```bash
 # 1. Repository klonen
@@ -106,7 +107,6 @@ just dev
 | Platform                | <http://localhost:3001/platform> |
 | Docs                    | <http://localhost:3001/docs>     |
 | Backend API             | <http://localhost:3001/api>      |
-| Backend direkt          | <http://localhost:3000>          |
 | ZITADEL (Auth)          | <http://localhost:8080>          |
 | MinIO (Storage)         | <http://localhost:9001>          |
 
@@ -119,76 +119,110 @@ just dev
 
 ---
 
-## 📖 Dokumentation
+## 🏗 Architektur
 
-### 🧠 Konzept & Protokoll (V4.1)
-
-| Dokument                                                                     | Beschreibung                                              |
-| ---------------------------------------------------------------------------- | --------------------------------------------------------- |
-| **[📋 Fachkonzept](documentation/concept-v4/FACHKONZEPT.md)**                | **Fließtext-Übersicht** – Vision, Konzepte, Use Cases     |
-| **[🔢 LOGIC.md](documentation/concept-v4/LOGIC.md)**                         | **28 Kern-Axiome + 4 Unter-Axiome** – Formale Logik       |
-| **[🏗️ System-Architektur](documentation/concept-v4/SYSTEM-ARCHITECTURE.md)** | **Implementierbare Architektur** – 4 Schichten, Rust-Code |
-
-<details>
-<summary><strong>📊 Axiom-Übersicht (Κ1-Κ28)</strong></summary>
-
-| Kategorie                  | Axiome          | Beschreibung                                  |
-| -------------------------- | --------------- | --------------------------------------------- |
-| **Kategorien-Algebra**     | Κ1              | Regelvererbung in Realm-Hierarchie            |
-| **Trust-Algebra**          | Κ2-Κ5           | 6D-Vektor, Asymmetrie, Kombination            |
-| **Identität & Delegation** | Κ6-Κ8           | DIDs, Capability-basierte Delegation          |
-| **Kausalität & Finalität** | Κ9-Κ12          | DAG-Struktur, Finalitätsspektrum              |
-| **Wert & Atomizität**      | Κ13-Κ14         | Wert-Äquivalenz, Saga-Pattern                 |
-| **Weltformel**             | Κ15a-d, Κ16-Κ17 | 𝔼-Berechnung, Human-Alignment, Temporal       |
-| **Konsens & Schutz**       | Κ18-Κ21         | Partition-Wahrheit, Anti-Degeneration         |
-| **Peer-Logik**             | Κ22-Κ24         | Intent→Saga, Gateway Guards                   |
-| **System-Garantien**       | Κ25-Κ28         | Determinismus, Offenheit, Verhältnismäßigkeit |
-
-</details>
-
-### 🗺️ Roadmap & Archiv
-
-| Dokument                                   | Beschreibung                   |
-| ------------------------------------------ | ------------------------------ |
-| **[🗺️ Roadmap](documentation/ROADMAP.md)** | Strategischer Entwicklungsplan |
-| [Concept V2](documentation/concept-v2/)    | Archiv: 7-Schichten-Navigator  |
-| [Concept V3](documentation/concept-v3/)    | Archiv: EIPs, Protocol Spec    |
-
-### 🛠️ System-Dokumentation
-
-| Dokument                                                          | Beschreibung                    |
-| ----------------------------------------------------------------- | ------------------------------- |
-| **[📚 Übersicht](documentation/system/readme.md)**                | Plattform-Dokumentation         |
-| [Essential Guide](documentation/system/essential_guide.md)        | Alles Wichtige auf einen Blick  |
-| [Getting Started](documentation/system/guides/getting-started.md) | Erste Schritte                  |
-| [Setup](documentation/system/setup/setup.md)                      | Entwicklungsumgebung einrichten |
-| [Architecture](documentation/system/reference/architecture.md)    | System-Architektur              |
-| [Configuration](documentation/system/reference/config.md)         | Service-Konfiguration           |
-| [Style Guide](documentation/system/development/style-guide.md)    | Code-Stil                       |
-| [Testing](documentation/system/development/testing.md)            | Test-Strategien                 |
-| [TODOs](documentation/system/development/todos.md)                | Offene Aufgaben                 |
-
-### 📁 Dokumentations-Struktur
+### 4-Schichten Backend (Rust)
 
 ```
-documentation/
-├── ROADMAP.md                    # 🗺️ Strategische Roadmap
+backend/src/
+├── domain/                    # 🎯 Domain Layer (Κ1-Κ5)
+│   ├── did.rs                 # DID:erynoa mit 10 Namespaces
+│   ├── trust.rs               # TrustVector6D, Dampening Matrix
+│   ├── event.rs               # Event-DAG, Finality Levels
+│   ├── realm.rs               # Realm-Hierarchie (Root/Virtual/Partition)
+│   ├── saga.rs                # Intent, Saga, SagaStep
+│   └── formula.rs             # Weltformel-Komponenten
 │
-├── concept-v4/                   # 🧠 AKTUELL: Unified Logic Framework V4.1
-│   ├── FACHKONZEPT.md           # ⭐ Fließtext für Stakeholder
-│   ├── LOGIC.md                  # ⭐ 28 Kern-Axiome + Weltformel
-│   └── SYSTEM-ARCHITECTURE.md    # ⭐ Implementierbare Architektur
+├── core/                      # ⚙️ Core Logic Layer (Κ6-Κ18)
+│   ├── event_engine.rs        # DAG Storage, Parent-Validation
+│   ├── trust_engine.rs        # Bayessche Updates, Self-Attestation-Verbot
+│   ├── surprisal.rs           # Count-Min Sketch, -log₂(P)
+│   ├── world_formula.rs       # 𝔼 = Σ contributions
+│   └── consensus.rs           # Witness-basierte Finality
 │
-├── concept-v3/                   # 📦 Archiv: EIPs, Protocol Spec
-├── concept-v2/                   # 📦 Archiv: 7-Schichten-Navigator
+├── protection/                # 🛡️ Protection Layer (Κ19-Κ21, Κ26-Κ28)
+│   ├── anti_calcification.rs  # Novelty-Bonus, Gini, Power-Cap
+│   ├── diversity.rs           # Shannon-Entropie, Monoculture-Detection
+│   ├── quadratic.rs           # √n Stimmen für n² Credits
+│   └── anomaly.rs             # Velocity/Amount Alerts
 │
-└── system/                       # 🛠️ Plattform & Entwicklung
-    ├── readme.md
-    ├── essential_guide.md
-    ├── guides/
-    ├── setup/
-    ├── reference/
-    └── development/
+├── peer/                      # 🌐 Peer Layer (PR1-PR6)
+│   ├── intent_parser.rs       # Natural Language → Intent
+│   ├── saga_composer.rs       # Intent → Saga (< 5% Cost)
+│   └── gateway.rs             # Realm-Crossing, Trust-Dampening
+│
+└── api/                       # 🔌 API Layer (gRPC/Connect-RPC)
+    └── ...                    # PeerService, IntentService, SagaService
+```
+
+### Proto-Services
+
+```protobuf
+// backend/proto/erynoa/v1/peer.proto
+
+service PeerService {
+  rpc GetStatus(...)           // Peer-Status
+  rpc GetInfo(...)             // Capabilities, Config
+  rpc DeriveKey(...)           // BIP44 Key Derivation
+  rpc EvaluateGateway(...)     // Realm-Crossing Check
+}
+
+service IntentService {
+  rpc SubmitIntent(...)        // Natural Language Goal
+  rpc ResolveIntent(...)       // Intent → Saga
+  rpc SimulateIntent(...)      // Dry-Run
+}
+
+service SagaService {
+  rpc ExecuteSaga(...)         // HTLC Cross-Chain
+  rpc StreamSagaUpdates(...)   // Real-time Progress
+}
+
+service EnvironmentService {
+  rpc CreateEnvironment(...)   // Virtual Realm
+  rpc JoinEnvironment(...)     // Membership
+}
+```
+
+---
+
+## 📊 Implementation Status
+
+### Backend Module (73 Tests ✅)
+
+| Schicht        | Module                                                          | Tests | Status |
+| -------------- | --------------------------------------------------------------- | ----- | ------ |
+| **Domain**     | did, trust, event, realm, saga, formula                         | 23    | ✅     |
+| **Core**       | event_engine, trust_engine, surprisal, world_formula, consensus | 23    | ✅     |
+| **Protection** | anti_calcification, diversity, quadratic, anomaly               | 17    | ✅     |
+| **Peer**       | intent_parser, saga_composer, gateway                           | 14    | ✅     |
+
+### Axiom Coverage
+
+| Kategorie    | Axiome     | Status   |
+| ------------ | ---------- | -------- |
+| Kern-Axiome  | Κ1-Κ28     | ✅ 28/28 |
+| Peer-Axiome  | PR1-PR6    | ✅ 6/6   |
+| API-Services | peer.proto | ✅ Proto |
+
+### API Layer
+
+| Service            | Proto | Handler | Status        |
+| ------------------ | ----- | ------- | ------------- |
+| PeerService        | ✅    | 📋      | Proto defined |
+| IntentService      | ✅    | 📋      | Proto defined |
+| SagaService        | ✅    | 📋      | Proto defined |
+| EnvironmentService | ✅    | 📋      | Proto defined |
+| StorageService     | ✅    | ✅      | Complete      |
+| HealthService      | ✅    | ✅      | Complete      |
+
+```bash
+# Tests ausführen
+cd backend && cargo test
+
+# Ergebnis:
+# running 73 tests
+# test result: ok. 73 passed; 0 failed
 ```
 
 ---
@@ -245,35 +279,44 @@ documentation/
 
 ```
 erynoa/
-├── backend/              # 🦀 Rust API Server
-│   ├── src/              # Source Code
-│   ├── config/           # TOML Konfiguration
-│   ├── migrations/       # SQL Migrations
-│   └── proto/            # Protobuf Definitionen
+├── backend/                   # 🦀 Rust API Server
+│   ├── src/
+│   │   ├── domain/            # DID, Trust, Event, Realm, Saga
+│   │   ├── core/              # Engines (Event, Trust, Surprisal, Consensus)
+│   │   ├── protection/        # Anti-Gaming, Diversity, Anomaly
+│   │   ├── peer/              # Intent, Saga, Gateway
+│   │   └── api/               # HTTP/gRPC Handlers
+│   ├── proto/erynoa/v1/       # Protobuf Definitions
+│   │   ├── peer.proto         # ⭐ Peer/Intent/Saga/Environment Services
+│   │   ├── storage.proto
+│   │   ├── health.proto
+│   │   └── user.proto
+│   ├── config/                # TOML Konfiguration
+│   └── migrations/            # SQL Migrations
 │
-├── frontend/             # 🎨 SvelteKit Apps (pnpm Workspace)
-│   ├── console/          # Admin Console
-│   ├── platform/         # Main Platform
-│   └── docs/             # Documentation Site
+├── frontend/                  # 🎨 SvelteKit Apps
+│   ├── console/               # Admin Console
+│   ├── platform/              # Main Platform
+│   └── docs/                  # Documentation Site
 │
-├── documentation/        # 📖 Dokumentation
-│   ├── concept-v4/       # 🧠 Unified Logic Framework V4.1
-│   ├── concept-v3/       # 📦 Archiv
-│   ├── concept-v2/       # 📦 Archiv
-│   └── system/           # 🛠️ Plattform & Entwicklung
+├── documentation/             # 📖 Dokumentation
+│   ├── ROADMAP.md             # ⭐ Strategic Roadmap V4.1
+│   ├── concept-v3/            # ⭐ Aktuell: Fachkonzept V6.2
+│   │   ├── FACHKONZEPT.md     # Vollständiges Konzept
+│   │   ├── CLI-REFERENCE.md   # 126 CLI Commands
+│   │   ├── WORLD-FORMULA.md   # Systemgleichung
+│   │   └── PROTOCOL.md        # Protokoll-Details
+│   └── system/                # Setup, Guides, Reference
 │
-├── infra/                # 🏗 Infrastructure
-│   ├── docker/           # Docker Compose & Dockerfiles
-│   ├── proxy/            # Caddy Reverse Proxy
-│   ├── auth/             # ZITADEL Config
-│   └── static/           # Static Files
+├── infra/                     # 🏗 Infrastructure
+│   ├── docker/
+│   ├── proxy/
+│   └── auth/
 │
-├── scripts/              # 🔧 Build & Dev Scripts
-│
-├── flake.nix             # Nix Dev Environment
-├── justfile              # Task Runner Commands
-├── buf.yaml              # Protobuf Config
-└── turbo.json            # Turborepo Config
+├── flake.nix                  # Nix Dev Environment
+├── justfile                   # Task Runner
+├── buf.yaml                   # Protobuf Config
+└── turbo.json                 # Turborepo Config
 ```
 
 ---
@@ -282,92 +325,136 @@ erynoa/
 
 ### Entwicklung
 
-| Befehl             | Beschreibung                                       |
-| ------------------ | -------------------------------------------------- |
-| `just dev`         | **Startet alles** (Frontends + Backend + Services) |
-| `just dev console` | Nur Console starten                                |
-| `just status`      | Status aller Services                              |
-| `just logs`        | Logs anzeigen                                      |
-| `just stop`        | Alle Container stoppen                             |
-| `just restart`     | Schneller Neustart                                 |
-| `just reset`       | Alles löschen und neu starten                      |
+| Befehl        | Beschreibung                                       |
+| ------------- | -------------------------------------------------- |
+| `just dev`    | **Startet alles** (Frontends + Backend + Services) |
+| `just status` | Status aller Services                              |
+| `just logs`   | Logs anzeigen                                      |
+| `just stop`   | Alle Container stoppen                             |
+| `just reset`  | Alles löschen und neu starten                      |
 
 ### Backend
 
-| Befehl       | Beschreibung      |
-| ------------ | ----------------- |
-| `just check` | Cargo check       |
-| `just lint`  | Clippy Linter     |
-| `just fmt`   | Code formatieren  |
-| `just test`  | Tests ausführen   |
-| `just ci`    | fmt + lint + test |
+| Befehl       | Beschreibung               |
+| ------------ | -------------------------- |
+| `just check` | Cargo check                |
+| `just lint`  | Clippy Linter              |
+| `just fmt`   | Code formatieren           |
+| `just test`  | Tests ausführen (73 Tests) |
+| `just ci`    | fmt + lint + test          |
 
-### Setup
+### Protobuf
 
-| Befehl               | Beschreibung                    |
-| -------------------- | ------------------------------- |
-| `just init`          | Initialisierung ohne Dev-Server |
-| `just init-env`      | `.env` erstellen                |
-| `just zitadel-setup` | ZITADEL neu konfigurieren       |
-| `just proto-gen`     | Protobuf Types generieren       |
+| Befehl         | Beschreibung                    |
+| -------------- | ------------------------------- |
+| `buf lint`     | Proto-Dateien validieren        |
+| `buf generate` | TypeScript-Code generieren      |
+| `cargo build`  | Rust-Code generieren (build.rs) |
+
+---
+
+## 📖 Dokumentation
+
+### Kern-Dokumente
+
+| Dokument                                                           | Beschreibung                      |
+| ------------------------------------------------------------------ | --------------------------------- |
+| **[📋 Fachkonzept V6.2](documentation/concept-v3/FACHKONZEPT.md)** | Vollständiges technisches Konzept |
+| **[🗺️ Roadmap V4.1](documentation/ROADMAP.md)**                    | Strategischer Entwicklungsplan    |
+| **[💻 CLI-Referenz](documentation/concept-v3/CLI-REFERENCE.md)**   | 126 CLI Commands                  |
+| **[🔢 Weltformel](documentation/concept-v3/WORLD-FORMULA.md)**     | Systemgleichung, Axiome           |
+| **[⚖️ Verfassung](documentation/concept-v3/CONSTITUTION.md)**      | Human-Alignment (H1-H4)           |
+
+### System-Dokumentation
+
+| Dokument                                                       | Beschreibung         |
+| -------------------------------------------------------------- | -------------------- |
+| [Setup Guide](documentation/system/setup/setup.md)             | Entwicklungsumgebung |
+| [Essential Guide](documentation/system/essential_guide.md)     | Troubleshooting      |
+| [Architecture](documentation/system/reference/architecture.md) | System-Architektur   |
+| [Style Guide](documentation/system/development/style-guide.md) | Code-Stil            |
+
+### Axiom-Übersicht
 
 <details>
-<summary><strong>📋 Alle Befehle anzeigen</strong></summary>
+<summary><strong>Κ1-Κ28 Kern-Axiome</strong></summary>
 
-```bash
-just --list
-```
+| Axiom | Name                    | Modul                              |
+| ----- | ----------------------- | ---------------------------------- |
+| Κ1    | DID-Identität           | `domain/did.rs`                    |
+| Κ2    | Trust-Vektor 6D         | `domain/trust.rs`                  |
+| Κ3    | Event-Kausalität        | `domain/event.rs`                  |
+| Κ4    | Self-Attestation-Verbot | `core/trust_engine.rs`             |
+| Κ5    | Realm-Hierarchie        | `domain/realm.rs`                  |
+| Κ6    | Trust-Kombination       | `domain/trust.rs`                  |
+| Κ7    | Chain-Trust             | `domain/trust.rs`                  |
+| Κ8    | Asymmetric Update       | `core/trust_engine.rs`             |
+| Κ9    | Surprisal               | `core/surprisal.rs`                |
+| Κ10   | World Formula           | `core/world_formula.rs`            |
+| Κ11   | Human Factor            | `domain/formula.rs`                |
+| Κ12   | Temporal Decay          | `core/world_formula.rs`            |
+| Κ13   | Activity Presence       | `domain/formula.rs`                |
+| Κ14   | Sigmoid Normalization   | `domain/formula.rs`                |
+| Κ15   | Consensus Finality      | `core/consensus.rs`                |
+| Κ16   | Witness Requirement     | `core/consensus.rs`                |
+| Κ17   | Revert Probability      | `core/consensus.rs`                |
+| Κ18   | Event-Engine            | `core/event_engine.rs`             |
+| Κ19   | Anti-Calcification      | `protection/anti_calcification.rs` |
+| Κ20   | Diversity               | `protection/diversity.rs`          |
+| Κ21   | Quadratic Voting        | `protection/quadratic.rs`          |
+| Κ22   | Intent-Parsing          | `peer/intent_parser.rs`            |
+| Κ23   | Cost-Constraint (5%)    | `peer/saga_composer.rs`            |
+| Κ24   | Gateway-Predicates      | `peer/gateway.rs`                  |
+| Κ25   | Trust-Dampening         | `peer/gateway.rs`                  |
+| Κ26   | Anomaly-Detection       | `protection/anomaly.rs`            |
+| Κ27   | Gini-Coefficient        | `protection/anti_calcification.rs` |
+| Κ28   | Power-Cap               | `protection/anti_calcification.rs` |
+
+</details>
+
+<details>
+<summary><strong>PR1-PR6 Peer-Axiome</strong></summary>
+
+| Axiom | Name                    | Modul                                            |
+| ----- | ----------------------- | ------------------------------------------------ |
+| PR1   | Intent-Auflösung        | `peer/intent_parser.rs`, `peer/saga_composer.rs` |
+| PR2   | Saga-Atomarität         | `domain/saga.rs`                                 |
+| PR3   | Gateway-Vollständigkeit | `peer/gateway.rs`                                |
+| PR4   | Funktor-Eigenschaften   | `domain/trust.rs`                                |
+| PR5   | Schlüssel-Isolation     | `peer.proto`                                     |
+| PR6   | Trust-Dämpfung          | `peer/gateway.rs`                                |
 
 </details>
 
 ---
 
-## 📊 Status
-
-### ✅ Implementiert
-
-- ✅ **Unified Logic Framework V4.1** (28 Kern-Axiome)
-- ✅ **Weltformel V2.0** mit Trust-gedämpfter Surprisal
-- ✅ **System-Architektur** (4-Schichten, formal verifiziert)
-- ✅ Connect-RPC API (Protobuf)
-- ✅ Monorepo mit pnpm & Turborepo
-- ✅ SvelteKit Frontends (Svelte 5)
-- ✅ ZITADEL Auth mit automatischem Setup
-- ✅ Caddy Reverse Proxy
-- ✅ DevContainer Support
-- ✅ GitHub Actions CI/CD
-- ✅ Nix Flakes Dev Environment
-
-### 🔄 In Arbeit
-
-- Event Engine (DAG-Struktur)
-- Trust Engine (6D-Vektor)
-- P2P Networking (libp2p)
-- Frontend Tests
-- Weitere Details: [TODOs](documentation/system/development/todos.md)
-
----
-
 ## 🤝 Contributing
 
-1. Prüfe [TODOs](documentation/system/development/todos.md) für offene Aufgaben
+1. Prüfe [Roadmap](documentation/ROADMAP.md) für offene Aufgaben
 2. Folge dem [Style Guide](documentation/system/development/style-guide.md)
 3. Schreibe Tests ([Testing Guide](documentation/system/development/testing.md))
-
----
-
-## 📞 Support
-
-Bei Problemen:
-
-1. [Essential Guide](documentation/system/essential_guide.md) – Troubleshooting
-2. [TODOs](documentation/system/development/todos.md) – Bekannte Issues
-3. [Connections](documentation/system/reference/connections.md) – Service-Probleme
+4. Validiere Axiom-Konsistenz
 
 ---
 
 <div align="center">
 
 **[MIT License](LICENSE)**
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  Peer Layer         (IntentParser, SagaComposer, GatewayGuard) ✅   │
+├─────────────────────────────────────────────────────────────────────┤
+│  Protection Layer   (AntiCalcification, Diversity, Anomaly) ✅      │
+├─────────────────────────────────────────────────────────────────────┤
+│  Core Logic Layer   (EventEngine, TrustEngine, Consensus) ✅        │
+├─────────────────────────────────────────────────────────────────────┤
+│  Domain Layer       (DID, Trust6D, Event, Realm, Saga, Formula) ✅  │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**126 Axiome · 4 Schichten · 73 Tests ✅**
+
+_„Intelligenz im Dienste des Lebens."_
 
 </div>
