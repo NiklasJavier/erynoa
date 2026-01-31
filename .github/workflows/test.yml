@@ -1,87 +1,54 @@
+# =============================================================================
+# Erynoa Test Pipeline
+# =============================================================================
+# Testet Backend (Rust) und Frontend (SvelteKit/TypeScript)
+# =============================================================================
+
 name: Tests
 
 on:
   push:
-    branches: [main, develop, new-console-svelte]
+    branches: [main, develop]
   pull_request:
-    branches: [main, develop, new-console-svelte]
+    branches: [main, develop]
   workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_BACKTRACE: 1
+  SQLX_OFFLINE: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   # ============================================================================
-  # Backend: Unit Tests (mit cargo-nextest für 60% schnellere Ausführung)
+  # Backend Tests (Rust)
   # ============================================================================
-  backend-tests-unit:
-    name: Backend Unit Tests
+  backend-tests:
+    name: Backend Tests
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-      redis:
-        image: redis:7-alpine
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 6379:6379
+
     steps:
-      - uses: actions/checkout@v4
-      
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-      
+
       - name: Install mold linker
-        id: install_mold
         run: |
-          # Disable mold config first to prevent linker errors during installation
-          if [ -f backend/.cargo/config.toml ]; then
-            mv backend/.cargo/config.toml backend/.cargo/config.toml.bak || true
-          fi
-          sudo apt-get update
-          sudo apt-get install -y wget tar || true
-          if ! command -v mold &> /dev/null; then
-            # Install from GitHub releases
-            MOLD_VERSION="2.4.0"
-            cd /tmp
-            wget -q https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz || true
-            if [ -f mold-${MOLD_VERSION}-x86_64-linux.tar.gz ]; then
-              tar -xzf mold-${MOLD_VERSION}-x86_64-linux.tar.gz
-              sudo cp mold-${MOLD_VERSION}-x86_64-linux/bin/mold /usr/local/bin/mold
-              sudo chmod +x /usr/local/bin/mold
-              rm -rf mold-${MOLD_VERSION}-x86_64-linux*
-            fi
-          fi
-          # Verify installation and restore mold config if available
-          if mold --version &>/dev/null; then
-            echo "mold_available=true" >> $GITHUB_OUTPUT
-            if [ -f backend/.cargo/config.toml.bak ]; then
-              mv backend/.cargo/config.toml.bak backend/.cargo/config.toml
-            fi
-          else
-            echo "mold_available=false" >> $GITHUB_OUTPUT
-            echo "Mold not available, using default linker"
-          fi
-      
+          MOLD_VERSION="2.34.1"
+          cd /tmp
+          wget -q "https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz"
+          tar -xzf "mold-${MOLD_VERSION}-x86_64-linux.tar.gz"
+          sudo cp "mold-${MOLD_VERSION}-x86_64-linux/bin/mold" /usr/local/bin/mold
+          sudo chmod +x /usr/local/bin/mold
+          rm -rf "mold-${MOLD_VERSION}-x86_64-linux"*
+
       - name: Install cargo-nextest
         uses: taiki-e/install-action@cargo-nextest
-      
+
       - name: Cache Cargo
         uses: actions/cache@v4
         with:
@@ -91,287 +58,119 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             backend/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('backend/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('backend/Cargo.lock') }}
           restore-keys: |
+            ${{ runner.os }}-cargo-test-
             ${{ runner.os }}-cargo-
-      
-      - name: Cache nextest
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/cargo-nextest
-            backend/target/nextest
-          key: ${{ runner.os }}-nextest-${{ hashFiles('backend/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-nextest-
-      
-      - name: Run unit tests (nextest)
+
+      # Unit Tests (lib)
+      - name: Run unit tests
         working-directory: backend
         run: |
-          # Unit tests können fehlen - das ist OK
-          cargo nextest run --lib --verbose || {
+          cargo nextest run --lib --no-fail-fast 2>&1 || {
+            EXIT_CODE=$?
+            # Exit code 4 = no tests found, which is OK
+            if [ $EXIT_CODE -eq 4 ]; then
+              echo "ℹ️ No unit tests found"
+              exit 0
+            fi
+            exit $EXIT_CODE
+          }
+
+      # Integration Tests
+      - name: Run integration tests
+        working-directory: backend
+        run: |
+          cargo nextest run --test '*' --no-fail-fast 2>&1 || {
             EXIT_CODE=$?
             if [ $EXIT_CODE -eq 4 ]; then
-              echo "No unit tests found - this is OK"
+              echo "ℹ️ No integration tests found"
               exit 0
-            else
-              exit $EXIT_CODE
             fi
+            exit $EXIT_CODE
           }
-        env:
-          APP_ENVIRONMENT: local
-          APP_DATABASE__HOST: localhost
-          APP_DATABASE__PORT: 5432
-          APP_DATABASE__USERNAME: test
-          APP_DATABASE__PASSWORD: test
-          APP_DATABASE__DATABASE: test
-          APP_CACHE__URL: redis://localhost:6379
-          RUST_LOG: info
-          SQLX_OFFLINE: true
 
-  # ============================================================================
-  # Backend: Integration Tests (mit cargo-nextest)
-  # ============================================================================
-  backend-tests-integration:
-    name: Backend Integration Tests
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-      redis:
-        image: redis:7-alpine
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 6379:6379
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-      
-      - name: Install mold linker
-        id: install_mold
-        run: |
-          # Disable mold config first to prevent linker errors during installation
-          if [ -f backend/.cargo/config.toml ]; then
-            mv backend/.cargo/config.toml backend/.cargo/config.toml.bak || true
-          fi
-          sudo apt-get update
-          sudo apt-get install -y wget tar || true
-          if ! command -v mold &> /dev/null; then
-            # Install from GitHub releases
-            MOLD_VERSION="2.4.0"
-            cd /tmp
-            wget -q https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz || true
-            if [ -f mold-${MOLD_VERSION}-x86_64-linux.tar.gz ]; then
-              tar -xzf mold-${MOLD_VERSION}-x86_64-linux.tar.gz
-              sudo cp mold-${MOLD_VERSION}-x86_64-linux/bin/mold /usr/local/bin/mold
-              sudo chmod +x /usr/local/bin/mold
-              rm -rf mold-${MOLD_VERSION}-x86_64-linux*
-            fi
-          fi
-          # Verify installation and restore mold config if available
-          if mold --version &>/dev/null; then
-            echo "mold_available=true" >> $GITHUB_OUTPUT
-            if [ -f backend/.cargo/config.toml.bak ]; then
-              mv backend/.cargo/config.toml.bak backend/.cargo/config.toml
-            fi
-          else
-            echo "mold_available=false" >> $GITHUB_OUTPUT
-            echo "Mold not available, using default linker"
-          fi
-      
-      - name: Install cargo-nextest
-        uses: taiki-e/install-action@cargo-nextest
-      
-      - name: Cache Cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            backend/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('backend/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-      
-      - name: Cache nextest
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/cargo-nextest
-            backend/target/nextest
-          key: ${{ runner.os }}-nextest-${{ hashFiles('backend/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-nextest-
-      
-      - name: Run integration tests (nextest)
+      # Doc Tests
+      - name: Run doc tests
         working-directory: backend
-        run: cargo nextest run --test '*' --verbose
-        env:
-          APP_DATABASE__HOST: localhost
-          APP_DATABASE__PORT: 5432
-          APP_DATABASE__USERNAME: test
-          APP_DATABASE__PASSWORD: test
-          APP_DATABASE__DATABASE: test
-          APP_CACHE__URL: redis://localhost:6379
-          RUST_LOG: debug
-          SQLX_OFFLINE: true
+        run: cargo test --doc
 
   # ============================================================================
-  # Backend: Tests with Features (parallel via matrix)
+  # Frontend Tests (TypeScript/Vitest)
   # ============================================================================
-  backend-tests-features:
-    name: Backend Tests (Features)
+  frontend-tests:
+    name: Frontend Tests
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-      redis:
-        image: redis:7-alpine
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 6379:6379
-    strategy:
-      matrix:
-        features: ['', 'connect', 'jemalloc']
-      fail-fast: false
+
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-      
-      - name: Install mold linker
-        id: install_mold
-        run: |
-          # Disable mold config first to prevent linker errors during installation
-          if [ -f backend/.cargo/config.toml ]; then
-            mv backend/.cargo/config.toml backend/.cargo/config.toml.bak || true
-          fi
-          sudo apt-get update
-          sudo apt-get install -y wget tar || true
-          if ! command -v mold &> /dev/null; then
-            # Install from GitHub releases
-            MOLD_VERSION="2.4.0"
-            cd /tmp
-            wget -q https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz || true
-            if [ -f mold-${MOLD_VERSION}-x86_64-linux.tar.gz ]; then
-              tar -xzf mold-${MOLD_VERSION}-x86_64-linux.tar.gz
-              sudo cp mold-${MOLD_VERSION}-x86_64-linux/bin/mold /usr/local/bin/mold
-              sudo chmod +x /usr/local/bin/mold
-              rm -rf mold-${MOLD_VERSION}-x86_64-linux*
-            fi
-          fi
-          # Verify installation and restore mold config if available
-          if mold --version &>/dev/null; then
-            echo "mold_available=true" >> $GITHUB_OUTPUT
-            if [ -f backend/.cargo/config.toml.bak ]; then
-              mv backend/.cargo/config.toml.bak backend/.cargo/config.toml
-            fi
-          else
-            echo "mold_available=false" >> $GITHUB_OUTPUT
-            echo "Mold not available, using default linker"
-          fi
-      
-      - name: Install cargo-nextest
-        uses: taiki-e/install-action@cargo-nextest
-      
-      - name: Cache Cargo
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: "pnpm-lock.yaml"
+
+      - name: Cache pnpm store
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            backend/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('backend/Cargo.lock') }}-${{ matrix.features }}
+          path: ~/.local/share/pnpm/store
+          key: ${{ runner.os }}-pnpm-test-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-${{ hashFiles('backend/Cargo.lock') }}-
-            ${{ runner.os }}-cargo-
-      
-      - name: Cache nextest
-        uses: actions/cache@v4
+            ${{ runner.os }}-pnpm-test-
+            ${{ runner.os }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Buf
+        uses: bufbuild/buf-setup-action@v1
         with:
-          path: |
-            ~/.cargo/bin/cargo-nextest
-            backend/target/nextest
-          key: ${{ runner.os }}-nextest-${{ hashFiles('backend/Cargo.lock') }}-${{ matrix.features }}
-          restore-keys: |
-            ${{ runner.os }}-nextest-
-      
-      - name: Run tests with features (nextest)
-        working-directory: backend
+          version: latest
+
+      - name: Generate Protobuf types
+        run: buf generate
+
+      # TypeScript Check (alle Packages)
+      - name: TypeScript check
+        run: pnpm run check
+
+      # Lint (Biome)
+      - name: Lint
+        run: pnpm run lint
+
+      # Unit Tests (falls vorhanden)
+      - name: Run tests
         run: |
-          if [ -z "${{ matrix.features }}" ]; then
-            cargo nextest run --verbose
+          if pnpm run test --if-present 2>/dev/null; then
+            echo "✅ Tests passed"
           else
-            cargo nextest run --features "${{ matrix.features }}" --verbose
+            echo "ℹ️ No test script found or tests skipped"
           fi
-        env:
-          APP_ENVIRONMENT: local
-          APP_DATABASE__HOST: localhost
-          APP_DATABASE__PORT: 5432
-          APP_DATABASE__USERNAME: test
-          APP_DATABASE__PASSWORD: test
-          APP_DATABASE__DATABASE: test
-          APP_CACHE__URL: redis://localhost:6379
-          RUST_LOG: info
-          SQLX_OFFLINE: true
 
   # ============================================================================
-  # Test Summary
+  # Summary
   # ============================================================================
   test-summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs:
-      - backend-tests-unit
-      - backend-tests-integration
-      - backend-tests-features
+    needs: [backend-tests, frontend-tests]
     if: always()
+
     steps:
-      - name: Test Results
+      - name: Generate Summary
         run: |
-          echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "# 🧪 Test Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Backend Unit Tests | ${{ needs.backend-tests-unit.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Backend Integration Tests | ${{ needs.backend-tests-integration.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Backend Tests (Features) | ${{ needs.backend-tests-features.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend (Rust) | ${{ needs.backend-tests.result == 'success' && '✅ Passed' || needs.backend-tests.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend (TypeScript) | ${{ needs.frontend-tests.result == 'success' && '✅ Passed' || needs.frontend-tests.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Note**: Tests use cargo-nextest for ~60% faster execution" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY

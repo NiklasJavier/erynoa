@@ -1,84 +1,53 @@
+# =============================================================================
+# Erynoa CI Pipeline
+# =============================================================================
+# Schnelle Checks für jeden Push/PR: Format, Lint, TypeScript, Build
+# =============================================================================
+
 name: CI
 
 on:
   push:
-    branches: [main, develop, new-console-svelte]
+    branches: [main, develop]
   pull_request:
-    branches: [main, develop, new-console-svelte]
+    branches: [main, develop]
   workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_BACKTRACE: 1
-  PNPM_VERSION: 9.15.0
+  SQLX_OFFLINE: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   # ============================================================================
-  # Protobuf: Lint & Format (schnell, läuft zuerst)
+  # Backend Checks
   # ============================================================================
-  proto-check:
-    name: Protobuf Check
+  backend:
+    name: Backend
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install buf
-        uses: bufbuild/buf-setup-action@v1
-        with:
-          version: latest
-      
-      - name: Lint proto files
-        run: buf lint
-      
-      - name: Check formatting
-        run: buf format --diff --exit-code
 
-  # ============================================================================
-  # Backend: Format Check
-  # ============================================================================
-  backend-fmt:
-    name: Backend Format
-    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt
-      
+          components: rustfmt, clippy
+
       - name: Install mold linker
-        id: install_mold
         run: |
-          # Disable mold config first to prevent linker errors during installation
-          if [ -f backend/.cargo/config.toml ]; then
-            mv backend/.cargo/config.toml backend/.cargo/config.toml.bak || true
-          fi
-          sudo apt-get update
-          sudo apt-get install -y wget tar || true
-          if ! command -v mold &> /dev/null; then
-            # Install from GitHub releases
-            MOLD_VERSION="2.4.0"
-            cd /tmp
-            wget -q https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz || true
-            if [ -f mold-${MOLD_VERSION}-x86_64-linux.tar.gz ]; then
-              tar -xzf mold-${MOLD_VERSION}-x86_64-linux.tar.gz
-              sudo cp mold-${MOLD_VERSION}-x86_64-linux/bin/mold /usr/local/bin/mold
-              sudo chmod +x /usr/local/bin/mold
-              rm -rf mold-${MOLD_VERSION}-x86_64-linux*
-            fi
-          fi
-          # Verify installation and restore mold config if available
-          if mold --version &>/dev/null; then
-            echo "mold_available=true" >> $GITHUB_OUTPUT
-            if [ -f backend/.cargo/config.toml.bak ]; then
-              mv backend/.cargo/config.toml.bak backend/.cargo/config.toml
-            fi
-          else
-            echo "mold_available=false" >> $GITHUB_OUTPUT
-            echo "Mold not available, using default linker"
-          fi
-      
+          MOLD_VERSION="2.34.1"
+          cd /tmp
+          wget -q "https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz"
+          tar -xzf "mold-${MOLD_VERSION}-x86_64-linux.tar.gz"
+          sudo cp "mold-${MOLD_VERSION}-x86_64-linux/bin/mold" /usr/local/bin/mold
+          sudo chmod +x /usr/local/bin/mold
+          rm -rf "mold-${MOLD_VERSION}-x86_64-linux"*
+
       - name: Cache Cargo
         uses: actions/cache@v4
         with:
@@ -88,382 +57,119 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             backend/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('backend/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-ci-${{ hashFiles('backend/Cargo.lock') }}
           restore-keys: |
+            ${{ runner.os }}-cargo-ci-
             ${{ runner.os }}-cargo-
-      
-      - name: Generate protobuf code (for gen.rs)
-        working-directory: backend
-        run: cargo build --features connect || true
-        env:
-          SQLX_OFFLINE: true
-      
+
       - name: Check formatting
         working-directory: backend
         run: cargo fmt --all -- --check
-        env:
-          SQLX_OFFLINE: true
 
-  # ============================================================================
-  # Backend: Clippy Lint
-  # ============================================================================
-  backend-clippy:
-    name: Backend Clippy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-      
-      - name: Install mold linker
-        id: install_mold
-        run: |
-          # Disable mold config first to prevent linker errors during installation
-          if [ -f backend/.cargo/config.toml ]; then
-            mv backend/.cargo/config.toml backend/.cargo/config.toml.bak || true
-          fi
-          sudo apt-get update
-          sudo apt-get install -y wget tar || true
-          if ! command -v mold &> /dev/null; then
-            # Install from GitHub releases
-            MOLD_VERSION="2.4.0"
-            cd /tmp
-            wget -q https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz || true
-            if [ -f mold-${MOLD_VERSION}-x86_64-linux.tar.gz ]; then
-              tar -xzf mold-${MOLD_VERSION}-x86_64-linux.tar.gz
-              sudo cp mold-${MOLD_VERSION}-x86_64-linux/bin/mold /usr/local/bin/mold
-              sudo chmod +x /usr/local/bin/mold
-              rm -rf mold-${MOLD_VERSION}-x86_64-linux*
-            fi
-          fi
-          # Verify installation and restore mold config if available
-          if mold --version &>/dev/null; then
-            echo "mold_available=true" >> $GITHUB_OUTPUT
-            if [ -f backend/.cargo/config.toml.bak ]; then
-              mv backend/.cargo/config.toml.bak backend/.cargo/config.toml
-            fi
-          else
-            echo "mold_available=false" >> $GITHUB_OUTPUT
-            echo "Mold not available, using default linker"
-          fi
-      
-      - name: Cache Cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            backend/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('backend/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-      
-      - name: Run Clippy
+      - name: Clippy
         working-directory: backend
         run: cargo clippy --all-targets --all-features -- -D warnings
-        env:
-          SQLX_OFFLINE: true
 
-  # ============================================================================
-  # Backend: Build Check
-  # ============================================================================
-  backend-build:
-    name: Backend Build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-      
-      - name: Install mold linker
-        id: install_mold
-        run: |
-          # Disable mold config first to prevent linker errors during installation
-          if [ -f backend/.cargo/config.toml ]; then
-            mv backend/.cargo/config.toml backend/.cargo/config.toml.bak || true
-          fi
-          sudo apt-get update
-          sudo apt-get install -y wget tar || true
-          if ! command -v mold &> /dev/null; then
-            # Install from GitHub releases
-            MOLD_VERSION="2.4.0"
-            cd /tmp
-            wget -q https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz || true
-            if [ -f mold-${MOLD_VERSION}-x86_64-linux.tar.gz ]; then
-              tar -xzf mold-${MOLD_VERSION}-x86_64-linux.tar.gz
-              sudo cp mold-${MOLD_VERSION}-x86_64-linux/bin/mold /usr/local/bin/mold
-              sudo chmod +x /usr/local/bin/mold
-              rm -rf mold-${MOLD_VERSION}-x86_64-linux*
-            fi
-          fi
-          # Verify installation and restore mold config if available
-          if mold --version &>/dev/null; then
-            echo "mold_available=true" >> $GITHUB_OUTPUT
-            if [ -f backend/.cargo/config.toml.bak ]; then
-              mv backend/.cargo/config.toml.bak backend/.cargo/config.toml
-            fi
-          else
-            echo "mold_available=false" >> $GITHUB_OUTPUT
-            echo "Mold not available, using default linker"
-          fi
-      
-      - name: Cache Cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            backend/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('backend/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-      
-      - name: Check build
+      - name: Build check
         working-directory: backend
         run: cargo check --all-features
-        env:
-          SQLX_OFFLINE: true
 
   # ============================================================================
-  # Frontend: Setup (einmalig für alle Frontend-Jobs)
+  # Frontend Checks
   # ============================================================================
-  frontend-setup:
-    name: Frontend Setup
+  frontend:
+    name: Frontend
     runs-on: ubuntu-latest
-    outputs:
-      cache-hit: ${{ steps.cache-pnpm.outputs.cache-hit }}
+
     steps:
-      - uses: actions/checkout@v4
-      
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
-          cache-dependency-path: 'pnpm-lock.yaml'
-      
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: "pnpm-lock.yaml"
+
       - name: Cache pnpm store
-        id: cache-pnpm
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.local/share/pnpm/store
-            node_modules
-            frontend/*/node_modules
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          path: ~/.local/share/pnpm/store
+          key: ${{ runner.os }}-pnpm-ci-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
+            ${{ runner.os }}-pnpm-ci-
             ${{ runner.os }}-pnpm-
-      
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      
-      - name: Install buf
-        uses: bufbuild/buf-setup-action@v1
-        with:
-          version: latest
-      
-      - name: Generate Protobuf types
-        run: buf generate
-      
+
       - name: Cache Turbo
         uses: actions/cache@v4
         with:
           path: .turbo
-          key: ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml') }}-
             ${{ runner.os }}-turbo-
 
-  # ============================================================================
-  # Frontend: TypeScript Check (alle Apps parallel via Turborepo)
-  # ============================================================================
-  frontend-check:
-    name: Frontend TypeScript Check
-    runs-on: ubuntu-latest
-    needs: frontend-setup
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-          cache-dependency-path: 'pnpm-lock.yaml'
-      
-      - name: Restore pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.local/share/pnpm/store
-            node_modules
-            frontend/*/node_modules
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
-      
-      - name: Restore Turbo cache
-        uses: actions/cache@v4
-        with:
-          path: .turbo
-          key: ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml') }}-
-            ${{ runner.os }}-turbo-
-      
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      
-      - name: Install buf
+
+      - name: Setup Buf
         uses: bufbuild/buf-setup-action@v1
         with:
           version: latest
-      
+
       - name: Generate Protobuf types
         run: buf generate
-      
-      - name: TypeScript check (Turborepo)
-        run: pnpm run check
 
-  # ============================================================================
-  # Frontend: Lint (alle Apps parallel via Turborepo + Biome)
-  # ============================================================================
-  frontend-lint:
-    name: Frontend Lint
-    runs-on: ubuntu-latest
-    needs: frontend-setup
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-          cache-dependency-path: 'pnpm-lock.yaml'
-      
-      - name: Restore pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.local/share/pnpm/store
-            node_modules
-            frontend/*/node_modules
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
-      
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      
       - name: Lint (Biome)
         run: pnpm run lint
 
-  # ============================================================================
-  # Frontend: Build (alle Apps parallel via Turborepo)
-  # ============================================================================
-  frontend-build:
-    name: Frontend Build
-    runs-on: ubuntu-latest
-    needs: frontend-setup
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-          cache-dependency-path: 'pnpm-lock.yaml'
-      
-      - name: Restore pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.local/share/pnpm/store
-            node_modules
-            frontend/*/node_modules
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
-      
-      - name: Restore Turbo cache
-        uses: actions/cache@v4
-        with:
-          path: .turbo
-          key: ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml') }}-
-            ${{ runner.os }}-turbo-
-      
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      
-      - name: Install buf
-        uses: bufbuild/buf-setup-action@v1
-        with:
-          version: latest
-      
-      - name: Generate Protobuf types
-        run: buf generate
-      
-      - name: Build (Turborepo)
+      - name: TypeScript check
+        run: pnpm run check
+
+      - name: Build
         run: pnpm run build
 
   # ============================================================================
-  # CI Summary
+  # Protobuf Checks
+  # ============================================================================
+  protobuf:
+    name: Protobuf
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Buf
+        uses: bufbuild/buf-setup-action@v1
+        with:
+          version: latest
+
+      - name: Lint
+        run: buf lint
+
+      - name: Format check
+        run: buf format --diff --exit-code
+
+  # ============================================================================
+  # Summary
   # ============================================================================
   ci-summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs:
-      - proto-check
-      - backend-fmt
-      - backend-clippy
-      - backend-build
-      - frontend-check
-      - frontend-lint
-      - frontend-build
+    needs: [backend, frontend, protobuf]
     if: always()
+
     steps:
-      - name: Summary
+      - name: Generate Summary
         run: |
-          echo "## CI Results" >> $GITHUB_STEP_SUMMARY
+          echo "# ✅ CI Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Protobuf | ${{ needs.proto-check.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Backend Format | ${{ needs.backend-fmt.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Backend Clippy | ${{ needs.backend-clippy.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Backend Build | ${{ needs.backend-build.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Frontend TypeScript | ${{ needs.frontend-check.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Frontend Lint | ${{ needs.frontend-lint.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Frontend Build | ${{ needs.frontend-build.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend | ${{ needs.backend.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend | ${{ needs.frontend.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Protobuf | ${{ needs.protobuf.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
