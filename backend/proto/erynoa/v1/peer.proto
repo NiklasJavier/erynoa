@@ -1,0 +1,874 @@
+syntax = "proto3";
+
+package erynoa.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+option go_package = "erynoa/v1;erynoav1";
+
+// =============================================================================
+// ERY PEER SERVICE
+// =============================================================================
+// Implementiert Axiome PR1-PR6:
+// - PR1: Intent-Auflösung (Composer)
+// - PR2: Saga-Atomarität (Saga-Engine)
+// - PR3: Gateway-Vollständigkeit (Gateway)
+// - PR4: Funktor-Eigenschaften (Trust-Transformation)
+// - PR5: Schlüssel-Isolation (Key Vault)
+// - PR6: Trust-Dämpfung bei Realm-Crossing
+
+service PeerService {
+  // === Peer Status & Info ===
+
+  // GetStatus returns current peer status
+  rpc GetStatus(PeerServiceGetStatusRequest)
+      returns (PeerServiceGetStatusResponse);
+
+  // GetInfo returns peer configuration and capabilities
+  rpc GetInfo(PeerServiceGetInfoRequest) returns (PeerServiceGetInfoResponse);
+  rpc ListDerivedKeys(ListDerivedKeysRequest) returns (ListDerivedKeysResponse);
+
+  // DeriveKey derives a key for a specific chain
+  rpc DeriveKey(DeriveKeyRequest) returns (DeriveKeyResponse);
+
+  // === Gateway (PR3: Gateway-Vollständigkeit, PR6: Trust-Dämpfung) ===
+
+  // EvaluateGateway evaluates gateway predicates for a crossing
+  rpc EvaluateGateway(EvaluateGatewayRequest) returns (EvaluateGatewayResponse);
+
+  // === Peer Lifecycle ===
+
+  // StartPeer starts the peer service
+  rpc StartPeer(StartPeerRequest) returns (StartPeerResponse);
+
+  // StopPeer stops the peer service
+  rpc StopPeer(StopPeerRequest) returns (StopPeerResponse);
+}
+
+// =============================================================================
+// INTENT SERVICE (PR1: Intent-Auflösung)
+// =============================================================================
+// Intents sind abstrakte Wünsche, die der Composer in Sagas auflöst.
+
+service IntentService {
+  // SubmitIntent submits a new intent for resolution
+  rpc SubmitIntent(SubmitIntentRequest) returns (SubmitIntentResponse);
+
+  // ResolveIntent manually resolves an intent to a saga
+  rpc ResolveIntent(ResolveIntentRequest) returns (ResolveIntentResponse);
+
+  // SimulateIntent simulates saga execution without committing
+  rpc SimulateIntent(SimulateIntentRequest) returns (SimulateIntentResponse);
+
+  // GetIntentStatus returns the status of an intent
+  rpc GetIntentStatus(GetIntentStatusRequest) returns (GetIntentStatusResponse);
+
+  // ListIntents lists all intents with optional filters
+  rpc ListIntents(ListIntentsRequest) returns (ListIntentsResponse);
+
+  // CancelIntent cancels a pending intent
+  rpc CancelIntent(CancelIntentRequest) returns (CancelIntentResponse);
+}
+
+// =============================================================================
+// SAGA SERVICE (PR2: Saga-Atomarität)
+// =============================================================================
+// Sagas sind atomare Sequenzen von Cross-Chain-Transaktionen.
+
+service SagaService {
+  // ListSagas lists sagas with optional filters
+  rpc ListSagas(ListSagasRequest) returns (ListSagasResponse);
+
+  // GetSagaStatus returns detailed saga status
+  rpc GetSagaStatus(GetSagaStatusRequest) returns (GetSagaStatusResponse);
+
+  // ExecuteSaga manually executes a resolved saga
+  rpc ExecuteSaga(ExecuteSagaRequest) returns (ExecuteSagaResponse);
+
+  // CancelSaga cancels an active saga with compensation
+  rpc CancelSaga(CancelSagaRequest) returns (CancelSagaResponse);
+
+  // RollbackSaga forces rollback of a saga
+  rpc RollbackSaga(RollbackSagaRequest) returns (RollbackSagaResponse);
+
+  // GetSagaHistory returns completed sagas
+  rpc GetSagaHistory(GetSagaHistoryRequest) returns (GetSagaHistoryResponse);
+
+  // StreamSagaUpdates streams real-time saga progress updates
+  rpc StreamSagaUpdates(StreamSagaUpdatesRequest)
+      returns (stream StreamSagaUpdatesResponse);
+}
+
+// =============================================================================
+// ENVIRONMENT SERVICE (3-Schichten-Architektur)
+// =============================================================================
+// Verwaltet Root-Env, Virt-Envs und Shards.
+
+service EnvironmentService {
+  // ListEnvironments lists all environments
+  rpc ListEnvironments(ListEnvironmentsRequest)
+      returns (ListEnvironmentsResponse);
+
+  // GetEnvironmentTree returns hierarchical environment structure
+  rpc GetEnvironmentTree(GetEnvironmentTreeRequest)
+      returns (GetEnvironmentTreeResponse);
+
+  // CreateEnvironment creates a new virtual environment
+  rpc CreateEnvironment(CreateEnvironmentRequest)
+      returns (CreateEnvironmentResponse);
+
+  // JoinEnvironment joins an existing environment
+  rpc JoinEnvironment(JoinEnvironmentRequest) returns (JoinEnvironmentResponse);
+
+  // LeaveEnvironment leaves an environment
+  rpc LeaveEnvironment(LeaveEnvironmentRequest)
+      returns (LeaveEnvironmentResponse);
+
+  // GetEnvironmentInfo returns detailed environment information
+  rpc GetEnvironmentInfo(GetEnvironmentInfoRequest)
+      returns (GetEnvironmentInfoResponse);
+
+  // SwitchEnvironment switches active environment context
+  rpc SwitchEnvironment(SwitchEnvironmentRequest)
+      returns (SwitchEnvironmentResponse);
+
+  // GetBootstrapStatus checks environment bootstrapping status
+  rpc GetBootstrapStatus(GetBootstrapStatusRequest)
+      returns (GetBootstrapStatusResponse);
+}
+
+// =============================================================================
+// COMMON TYPES
+// =============================================================================
+
+// DID represents a Decentralized Identifier
+message DID {
+  string namespace = 1; // self, guild, spirit, thing, etc.
+  string unique_id = 2;
+  google.protobuf.Timestamp created_at = 3;
+}
+
+// TrustVector6D represents the 6-dimensional trust vector (𝕎)
+message TrustVector6D {
+  double reliability = 1; // R: Zuverlässigkeit
+  double integrity = 2;   // I: Integrität
+  double competence = 3;  // C: Kompetenz
+  double prestige = 4;    // P: Prestige
+  double vigilance = 5;   // V: Vigilanz
+  double omega = 6;       // Ω: Langzeit-Faktor
+}
+
+// TrustDampeningMatrix represents the 6x6 trust transformation matrix (PR6)
+message TrustDampeningMatrix {
+  repeated double values = 1; // Row-major 6x6 = 36 values
+}
+
+// RealmId identifies a realm/environment
+message RealmId {
+  string id = 1; // e.g., "realm:erynoa:eu:energy"
+}
+
+// EventId identifies an event in the DAG
+message EventId {
+  string id = 1; // e.g., "event:sha3:abc123..."
+}
+
+// ChainType represents supported blockchain types
+enum ChainType {
+  CHAIN_TYPE_UNSPECIFIED = 0;
+  CHAIN_TYPE_ERYNOA = 1;
+  CHAIN_TYPE_ETHEREUM = 2;
+  CHAIN_TYPE_POLYGON = 3;
+  CHAIN_TYPE_IOTA = 4;
+  CHAIN_TYPE_SHIMMER = 5;
+  CHAIN_TYPE_ARBITRUM = 6;
+  CHAIN_TYPE_OPTIMISM = 7;
+}
+
+// Algorithm represents cryptographic algorithms
+enum Algorithm {
+  ALGORITHM_UNSPECIFIED = 0;
+  ALGORITHM_ED25519 = 1;
+  ALGORITHM_SECP256K1 = 2;
+  ALGORITHM_BLS12_381 = 3;
+}
+
+// =============================================================================
+// PEER SERVICE MESSAGES
+// =============================================================================
+
+message PeerServiceGetStatusRequest {}
+
+message PeerServiceGetStatusResponse {
+  string peer_id = 1;
+  DID did = 2;
+  PeerState state = 3;
+  repeated ConnectedChain connected_chains = 4;
+  repeated DerivedWallet wallets = 5;
+  GatewayStatus gateway_status = 6;
+  repeated ActiveSagaSummary active_sagas = 7;
+  google.protobuf.Timestamp started_at = 8;
+  google.protobuf.Timestamp last_activity = 9;
+}
+
+enum PeerState {
+  PEER_STATE_UNSPECIFIED = 0;
+  PEER_STATE_STARTING = 1;
+  PEER_STATE_RUNNING = 2;
+  PEER_STATE_STOPPING = 3;
+  PEER_STATE_STOPPED = 4;
+  PEER_STATE_ERROR = 5;
+}
+
+message ConnectedChain {
+  ChainType chain = 1;
+  string endpoint = 2;
+  bool healthy = 3;
+  int64 block_height = 4;
+  google.protobuf.Timestamp last_sync = 5;
+}
+
+message DerivedWallet {
+  ChainType chain = 1;
+  string address = 2;
+  string derivation_path = 3;
+  Algorithm algorithm = 4;
+}
+
+message GatewayStatus {
+  bool active = 1;
+  int32 registered_realms = 2;
+  int32 pending_crossings = 3;
+}
+
+message ActiveSagaSummary {
+  string saga_id = 1;
+  SagaState state = 2;
+  int32 current_step = 3;
+  int32 total_steps = 4;
+}
+
+message PeerServiceGetInfoRequest {}
+
+message PeerServiceGetInfoResponse {
+  string version = 1;
+  repeated ChainType supported_chains = 2;
+  repeated Algorithm supported_algorithms = 3;
+  PeerCapabilities capabilities = 4;
+  PeerConfig config = 5;
+}
+
+message PeerCapabilities {
+  bool composer = 1;
+  bool gateway = 2;
+  bool key_vault = 3;
+  bool htlc_support = 4;
+  bool streaming = 5;
+  repeated string supported_intent_types = 6;
+}
+
+message PeerConfig {
+  int32 max_concurrent_sagas = 1;
+  int32 default_timeout_seconds = 2;
+  double default_slippage_percent = 3;
+  string default_environment = 4;
+}
+
+// === Key Management ===
+
+message ListDerivedKeysRequest {}
+
+message ListDerivedKeysResponse { repeated DerivedKey keys = 1; }
+
+message DerivedKey {
+  ChainType chain = 1;
+  string public_key = 2;
+  string address = 3;
+  string derivation_path = 4;
+  Algorithm algorithm = 5;
+  google.protobuf.Timestamp derived_at = 6;
+}
+
+message DeriveKeyRequest {
+  ChainType chain = 1;
+  optional string path = 2; // Override BIP44 path
+  optional Algorithm algorithm = 3;
+}
+
+message DeriveKeyResponse { DerivedKey key = 1; }
+
+// === Gateway ===
+
+message EvaluateGatewayRequest {
+  DID user = 1; // DID to evaluate (default: own)
+  RealmId source_realm = 2;
+  RealmId target_realm = 3;
+  bool verbose = 4;
+}
+
+message EvaluateGatewayResponse {
+  bool allowed = 1;
+  repeated PredicateResult predicates = 2;
+  TrustVector6D original_trust = 3;
+  TrustVector6D transformed_trust = 4;
+  TrustDampeningMatrix applied_matrix = 5;
+  string denial_reason = 6; // Only if not allowed
+}
+
+message PredicateResult {
+  string name = 1; // e.g., "P₁: has_credential('Human')"
+  bool satisfied = 2;
+  string description = 3;
+  optional string failure_reason = 4;
+}
+
+// === Peer Lifecycle ===
+
+message StartPeerRequest { optional PeerConfig config = 1; }
+
+message StartPeerResponse {
+  bool success = 1;
+  string peer_id = 2;
+  optional string error = 3;
+}
+
+message StopPeerRequest {
+  bool force = 1; // Force stop even with active sagas
+}
+
+message StopPeerResponse {
+  bool success = 1;
+  int32 cancelled_sagas = 2;
+  optional string error = 3;
+}
+
+// =============================================================================
+// INTENT SERVICE MESSAGES
+// =============================================================================
+
+message SubmitIntentRequest {
+  string goal = 1; // Natural language goal, e.g., "Kaufe 50 kWh Strom"
+  Budget budget = 2;
+  optional ChainType source_chain = 3;
+  optional RealmId target_realm = 4;
+  optional double slippage_percent = 5;
+  optional int32 timeout_seconds = 6;
+  map<string, string> metadata = 7;
+}
+
+message Budget {
+  string amount = 1; // e.g., "100"
+  string asset = 2;  // e.g., "USDC"
+  ChainType chain = 3;
+}
+
+message SubmitIntentResponse {
+  string intent_id = 1;
+  IntentState state = 2;
+  SagaPlan estimated_plan = 3;
+  CostEstimate estimated_cost = 4;
+  repeated string required_approvals = 5;
+}
+
+enum IntentState {
+  INTENT_STATE_UNSPECIFIED = 0;
+  INTENT_STATE_PENDING = 1;
+  INTENT_STATE_RESOLVING = 2;
+  INTENT_STATE_RESOLVED = 3;
+  INTENT_STATE_EXECUTING = 4;
+  INTENT_STATE_COMPLETED = 5;
+  INTENT_STATE_FAILED = 6;
+  INTENT_STATE_CANCELLED = 7;
+}
+
+message SagaPlan {
+  repeated SagaStepPlan steps = 1;
+  int32 estimated_duration_seconds = 2;
+  repeated RealmCrossing realm_crossings = 3;
+}
+
+message SagaStepPlan {
+  int32 step_number = 1;
+  ChainType chain = 2;
+  string action = 3; // e.g., "Lock USDC"
+  string description = 4;
+  CostEstimate cost = 5;
+  bool requires_approval = 6;
+}
+
+message RealmCrossing {
+  RealmId from = 1;
+  RealmId to = 2;
+  TrustDampeningMatrix matrix = 3;
+}
+
+message CostEstimate {
+  string amount = 1;
+  string asset = 2;
+  double fee_estimate = 3;
+  string fee_asset = 4;
+}
+
+message ResolveIntentRequest { string intent_id = 1; }
+
+message ResolveIntentResponse {
+  string intent_id = 1;
+  string saga_id = 2;
+  SagaPlan plan = 3;
+  DependencyGraph dependency_graph = 4;
+}
+
+message DependencyGraph {
+  repeated DependencyNode nodes = 1;
+  repeated DependencyEdge edges = 2;
+}
+
+message DependencyNode {
+  string id = 1;
+  string action = 2;
+  ChainType chain = 3;
+}
+
+message DependencyEdge {
+  string from_id = 1;
+  string to_id = 2;
+  string dependency_type = 3; // e.g., "requires_completion", "requires_proof"
+}
+
+message SimulateIntentRequest {
+  string intent_id = 1;
+  bool verbose = 2;
+  bool estimate_fees = 3;
+}
+
+message SimulateIntentResponse {
+  SagaPlan plan = 1;
+  repeated SimulationStep steps = 2;
+  CostEstimate total_cost = 3;
+  bool would_succeed = 4;
+  repeated SimulationWarning warnings = 5;
+}
+
+message SimulationStep {
+  int32 step_number = 1;
+  string action = 2;
+  SimulationResult result = 3;
+  google.protobuf.Struct state_before = 4;
+  google.protobuf.Struct state_after = 5;
+}
+
+enum SimulationResult {
+  SIMULATION_RESULT_UNSPECIFIED = 0;
+  SIMULATION_RESULT_SUCCESS = 1;
+  SIMULATION_RESULT_FAILURE = 2;
+  SIMULATION_RESULT_UNCERTAIN = 3;
+}
+
+message SimulationWarning {
+  string code = 1;
+  string message = 2;
+  string step_id = 3;
+}
+
+message GetIntentStatusRequest { string intent_id = 1; }
+
+message GetIntentStatusResponse {
+  string intent_id = 1;
+  IntentState state = 2;
+  optional string saga_id = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+  optional string error_message = 6;
+  Intent intent = 7;
+}
+
+message Intent {
+  string id = 1;
+  DID author = 2;
+  string goal = 3;
+  Budget budget = 4;
+  RealmId target_realm = 5;
+  map<string, string> constraints = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message ListIntentsRequest {
+  optional IntentState state_filter = 1;
+  optional int32 limit = 2;
+  optional string cursor = 3;
+}
+
+message ListIntentsResponse {
+  repeated IntentSummary intents = 1;
+  optional string next_cursor = 2;
+  int32 total_count = 3;
+}
+
+message IntentSummary {
+  string intent_id = 1;
+  string goal = 2;
+  IntentState state = 3;
+  google.protobuf.Timestamp created_at = 4;
+}
+
+message CancelIntentRequest {
+  string intent_id = 1;
+  optional string reason = 2;
+}
+
+message CancelIntentResponse {
+  bool success = 1;
+  optional string error = 2;
+}
+
+// =============================================================================
+// SAGA SERVICE MESSAGES
+// =============================================================================
+
+message ListSagasRequest {
+  optional SagaStateFilter state_filter = 1;
+  optional int32 limit = 2;
+  optional string cursor = 3;
+}
+
+enum SagaStateFilter {
+  SAGA_STATE_FILTER_UNSPECIFIED = 0;
+  SAGA_STATE_FILTER_PENDING = 1;
+  SAGA_STATE_FILTER_ACTIVE = 2;
+  SAGA_STATE_FILTER_FAILED = 3;
+  SAGA_STATE_FILTER_COMPLETED = 4;
+}
+
+message ListSagasResponse {
+  repeated SagaSummary sagas = 1;
+  optional string next_cursor = 2;
+  int32 total_count = 3;
+}
+
+message SagaSummary {
+  string saga_id = 1;
+  string intent_id = 2;
+  SagaState state = 3;
+  int32 current_step = 4;
+  int32 total_steps = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+enum SagaState {
+  SAGA_STATE_UNSPECIFIED = 0;
+  SAGA_STATE_PENDING = 1;
+  SAGA_STATE_EXECUTING = 2;
+  SAGA_STATE_WAITING_CONFIRMATION = 3;
+  SAGA_STATE_ROLLING_BACK = 4;
+  SAGA_STATE_COMPLETED = 5;
+  SAGA_STATE_ROLLED_BACK = 6;
+  SAGA_STATE_FAILED = 7;
+  SAGA_STATE_CANCELLED = 8;
+}
+
+message GetSagaStatusRequest {
+  string saga_id = 1;
+  bool verbose = 2;
+  bool include_proofs = 3;
+}
+
+message GetSagaStatusResponse {
+  string saga_id = 1;
+  string intent_id = 2;
+  SagaState state = 3;
+  repeated SagaStep steps = 4;
+  HtlcStatus htlc_status = 5;
+  bool rollback_available = 6;
+  repeated string compensatable_steps = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+  optional string error_message = 10;
+}
+
+message SagaStep {
+  int32 step_number = 1;
+  string step_id = 2;
+  ChainType chain = 3;
+  string action = 4;
+  SagaStepState state = 5;
+  optional string tx_hash = 6;
+  optional string event_id = 7;
+  optional google.protobuf.Timestamp started_at = 8;
+  optional google.protobuf.Timestamp completed_at = 9;
+  optional string error = 10;
+  optional SagaStepProof proof = 11; // Only if include_proofs
+}
+
+enum SagaStepState {
+  SAGA_STEP_STATE_UNSPECIFIED = 0;
+  SAGA_STEP_STATE_PENDING = 1;
+  SAGA_STEP_STATE_EXECUTING = 2;
+  SAGA_STEP_STATE_WAITING = 3;
+  SAGA_STEP_STATE_FINALIZED = 4;
+  SAGA_STEP_STATE_FAILED = 5;
+  SAGA_STEP_STATE_COMPENSATED = 6;
+}
+
+message SagaStepProof {
+  string proof_type = 1; // "merkle", "htlc_lock", "htlc_unlock"
+  bytes proof_data = 2;
+  string verification_key = 3;
+}
+
+message HtlcStatus {
+  bool active = 1;
+  int32 timeout_remaining_seconds = 2;
+  string lock_hash = 3;
+  optional string secret = 4; // Only after unlock
+}
+
+message ExecuteSagaRequest {
+  string saga_id = 1;
+  bool skip_simulation = 2;
+}
+
+message ExecuteSagaResponse {
+  bool started = 1;
+  SagaState state = 2;
+  optional string error = 3;
+}
+
+message CancelSagaRequest {
+  string saga_id = 1;
+  optional string reason = 2;
+  bool force = 3; // Override timeout
+}
+
+message CancelSagaResponse {
+  bool success = 1;
+  SagaState final_state = 2;
+  repeated CompensationResult compensations = 3;
+  optional string error = 4;
+}
+
+message CompensationResult {
+  string step_id = 1;
+  bool success = 2;
+  optional string tx_hash = 3;
+  optional string error = 4;
+}
+
+message RollbackSagaRequest {
+  string saga_id = 1;
+  optional string reason = 2;
+}
+
+message RollbackSagaResponse {
+  bool success = 1;
+  repeated CompensationResult compensations = 2;
+  google.protobuf.Struct final_balances = 3;
+  optional string error = 4;
+}
+
+message GetSagaHistoryRequest {
+  optional int32 limit = 1;
+  optional string cursor = 2;
+  optional SagaState state_filter = 3;
+  optional google.protobuf.Timestamp since = 4;
+}
+
+message GetSagaHistoryResponse {
+  repeated SagaHistoryEntry entries = 1;
+  optional string next_cursor = 2;
+  int32 total_count = 3;
+}
+
+message SagaHistoryEntry {
+  string saga_id = 1;
+  string intent_id = 2;
+  string goal = 3;
+  SagaState final_state = 4;
+  int32 step_count = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp completed_at = 7;
+  CostEstimate actual_cost = 8;
+}
+
+message StreamSagaUpdatesRequest { string saga_id = 1; }
+
+message StreamSagaUpdatesResponse {
+  string saga_id = 1;
+  SagaState state = 2;
+  optional SagaStepUpdate step_update = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+message SagaStepUpdate {
+  int32 step_number = 1;
+  string step_id = 2;
+  SagaStepState state = 3;
+  optional string tx_hash = 4;
+  optional string message = 5;
+}
+
+// =============================================================================
+// ENVIRONMENT SERVICE MESSAGES
+// =============================================================================
+
+message ListEnvironmentsRequest { EnvironmentTypeFilter type_filter = 1; }
+
+enum EnvironmentTypeFilter {
+  ENVIRONMENT_TYPE_FILTER_UNSPECIFIED = 0;
+  ENVIRONMENT_TYPE_FILTER_ROOT = 1;
+  ENVIRONMENT_TYPE_FILTER_VIRTUAL = 2;
+  ENVIRONMENT_TYPE_FILTER_SUB_VIRTUAL = 3;
+  ENVIRONMENT_TYPE_FILTER_ALL = 4;
+}
+
+message ListEnvironmentsResponse {
+  repeated EnvironmentSummary environments = 1;
+}
+
+message EnvironmentSummary {
+  RealmId id = 1;
+  string name = 2;
+  EnvironmentType type = 3;
+  optional RealmId parent = 4;
+  int32 member_count = 5;
+  bool joined = 6;
+}
+
+enum EnvironmentType {
+  ENVIRONMENT_TYPE_UNSPECIFIED = 0;
+  ENVIRONMENT_TYPE_ROOT = 1;
+  ENVIRONMENT_TYPE_VIRTUAL = 2;
+  ENVIRONMENT_TYPE_SUB_VIRTUAL = 3;
+  ENVIRONMENT_TYPE_SHARD = 4;
+}
+
+message GetEnvironmentTreeRequest {
+  optional RealmId root = 1; // Default: global root
+  optional int32 max_depth = 2;
+}
+
+message GetEnvironmentTreeResponse { EnvironmentNode root = 1; }
+
+message EnvironmentNode {
+  RealmId id = 1;
+  string name = 2;
+  EnvironmentType type = 3;
+  repeated EnvironmentNode children = 4;
+  int32 axiom_count = 5;
+  bool has_cbdc = 6;
+}
+
+message CreateEnvironmentRequest {
+  string name = 1;
+  RealmId parent = 2;
+  GovernanceType governance = 3;
+  optional string axioms_ecl = 4; // ECL (Erynoa Configuration Language) content
+  optional CbdcConfig cbdc = 5;
+  optional string description = 6;
+}
+
+enum GovernanceType {
+  GOVERNANCE_TYPE_UNSPECIFIED = 0;
+  GOVERNANCE_TYPE_DAO = 1;
+  GOVERNANCE_TYPE_MULTI_SIG = 2;
+  GOVERNANCE_TYPE_SINGLE = 3;
+}
+
+message CbdcConfig {
+  string symbol = 1;
+  string name = 2;
+  int32 decimals = 3;
+  string issuer_did = 4;
+}
+
+message CreateEnvironmentResponse {
+  RealmId id = 1;
+  bool success = 2;
+  optional string error = 3;
+  BootstrapStatus bootstrap = 4;
+}
+
+message JoinEnvironmentRequest {
+  RealmId environment = 1;
+  optional string application_message = 2;
+}
+
+message JoinEnvironmentResponse {
+  bool success = 1;
+  JoinStatus status = 2;
+  optional string error = 3;
+}
+
+enum JoinStatus {
+  JOIN_STATUS_UNSPECIFIED = 0;
+  JOIN_STATUS_PENDING_APPROVAL = 1;
+  JOIN_STATUS_APPROVED = 2;
+  JOIN_STATUS_REJECTED = 3;
+  JOIN_STATUS_BOOTSTRAPPING = 4;
+}
+
+message LeaveEnvironmentRequest { RealmId environment = 1; }
+
+message LeaveEnvironmentResponse {
+  bool success = 1;
+  optional string error = 2;
+}
+
+message GetEnvironmentInfoRequest { RealmId environment = 1; }
+
+message GetEnvironmentInfoResponse {
+  RealmId id = 1;
+  string name = 2;
+  EnvironmentType type = 3;
+  optional RealmId parent = 4;
+  string description = 5;
+  GovernanceType governance = 6;
+  int32 member_count = 7;
+  int32 axiom_count = 8;
+  repeated string local_axioms = 9;
+  optional CbdcConfig cbdc = 10;
+  TrustVector6D min_trust_required = 11;
+  repeated string required_credentials = 12;
+  google.protobuf.Timestamp created_at = 13;
+}
+
+message SwitchEnvironmentRequest { RealmId environment = 1; }
+
+message SwitchEnvironmentResponse {
+  bool success = 1;
+  RealmId active_environment = 2;
+  optional string error = 3;
+}
+
+message GetBootstrapStatusRequest { RealmId environment = 1; }
+
+message GetBootstrapStatusResponse { BootstrapStatus status = 1; }
+
+message BootstrapStatus {
+  BootstrapMode mode = 1;
+  BootstrapState state = 2;
+  int32 progress_percent = 3;
+  optional string current_step = 4;
+  optional google.protobuf.Timestamp estimated_completion = 5;
+  repeated BootstrapCheck checks = 6;
+}
+
+enum BootstrapMode {
+  BOOTSTRAP_MODE_UNSPECIFIED = 0;
+  BOOTSTRAP_MODE_SHORT = 1; // Sofort aktiv, Widerruf bei Regelverletzung
+  BOOTSTRAP_MODE_LONG = 2;  // Prüfung vor Aktivierung
+}
+
+enum BootstrapState {
+  BOOTSTRAP_STATE_UNSPECIFIED = 0;
+  BOOTSTRAP_STATE_PENDING = 1;
+  BOOTSTRAP_STATE_VERIFYING = 2;
+  BOOTSTRAP_STATE_ACTIVE = 3;
+  BOOTSTRAP_STATE_REVOKED = 4;
+}
+
+message BootstrapCheck {
+  string name = 1;
+  bool passed = 2;
+  optional string message = 3;
+}
