@@ -1,38 +1,38 @@
 <script lang="ts">
-  import * as Alert from "./alert/index.js";
-  import { Button } from "./button/index.js";
-  import { AlertCircle, Loader2, RefreshCw } from "lucide-svelte";
-  import type { Snippet } from "svelte";
+import * as Alert from './alert/index.js'
+import { Button } from './button/index.js'
+import { AlertCircle, Loader2, RefreshCw } from 'lucide-svelte'
+import type { Snippet } from 'svelte'
 
-  interface Props {
-    /** Page title */
-    title?: string;
-    /** Page description */
-    description?: string;
-    /** Show header section */
-    showHeader?: boolean;
-    /** Loading state - shows skeleton */
-    loading?: boolean;
-    /** Error message - shows error alert */
-    error?: string | null;
-    /** Retry callback for error state */
-    onRetry?: () => void;
-    /** Custom header actions (buttons etc.) */
-    headerActions?: Snippet;
-    /** Page content */
-    children: Snippet;
-  }
+interface Props {
+	/** Page title */
+	title?: string
+	/** Page description */
+	description?: string
+	/** Show header section */
+	showHeader?: boolean
+	/** Loading state - shows skeleton */
+	loading?: boolean
+	/** Error message - shows error alert */
+	error?: string | null
+	/** Retry callback for error state */
+	onRetry?: () => void
+	/** Custom header actions (buttons etc.) */
+	headerActions?: Snippet
+	/** Page content */
+	children: Snippet
+}
 
-  const {
-    title = "",
-    description,
-    showHeader = true,
-    loading = false,
-    error = null,
-    onRetry,
-    headerActions,
-    children,
-  }: Props = $props();
+const {
+	title = '',
+	description,
+	showHeader = true,
+	loading = false,
+	error = null,
+	onRetry,
+	headerActions,
+	children,
+}: Props = $props()
 </script>
 
 <div class="flex flex-col gap-4 py-4 md:gap-6 md:py-6">

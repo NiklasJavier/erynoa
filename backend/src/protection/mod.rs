@@ -15,13 +15,13 @@
 //! └─────────────────────────────────────────────────────────────────────┘
 //! ```
 
-pub mod anti_calcification;
 pub mod anomaly;
+pub mod anti_calcification;
 pub mod diversity;
 pub mod quadratic;
 
 // Re-exports
-pub use anti_calcification::AntiCalcification;
 pub use anomaly::AnomalyDetector;
+pub use anti_calcification::AntiCalcification;
 pub use diversity::DiversityMonitor;
 pub use quadratic::QuadraticGovernance;

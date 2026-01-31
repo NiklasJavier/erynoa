@@ -14,12 +14,11 @@ use std::collections::HashMap;
 
 use crate::domain::{Constraint, Goal, Intent as DomainIntent, RealmId, DID};
 use crate::gen::erynoa::v1::{
-    Budget, CancelIntentRequest, CancelIntentResponse, ChainType, CostEstimate,
-    DependencyGraph, GetIntentStatusRequest, GetIntentStatusResponse, Intent,
-    IntentState, IntentSummary, ListIntentsRequest, ListIntentsResponse, ResolveIntentRequest,
-    ResolveIntentResponse, SagaPlan, SagaStepPlan, SimulateIntentRequest, SimulateIntentResponse,
-    SimulationResult, SimulationStep, SubmitIntentRequest, SubmitIntentResponse,
-    Did,
+    Budget, CancelIntentRequest, CancelIntentResponse, ChainType, CostEstimate, DependencyGraph,
+    Did, GetIntentStatusRequest, GetIntentStatusResponse, Intent, IntentState, IntentSummary,
+    ListIntentsRequest, ListIntentsResponse, ResolveIntentRequest, ResolveIntentResponse, SagaPlan,
+    SagaStepPlan, SimulateIntentRequest, SimulateIntentResponse, SimulationResult, SimulationStep,
+    SubmitIntentRequest, SubmitIntentResponse,
 };
 use crate::peer::{IntentParser, SagaComposer};
 use crate::server::AppState;

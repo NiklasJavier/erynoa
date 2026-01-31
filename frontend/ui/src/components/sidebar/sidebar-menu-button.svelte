@@ -1,30 +1,30 @@
 <script lang="ts">
-  import { Button } from "../button/index.js";
-  import { cn } from "../../utils.js";
+import { Button } from '../button/index.js'
+import { cn } from '../../utils.js'
 
-  interface Props {
-    isActive?: boolean;
-    size?: "default" | "sm" | "lg";
-    href?: string;
-    class?: string;
-    children?: import("svelte").Snippet;
-    onclick?: () => void;
-  }
+interface Props {
+	isActive?: boolean
+	size?: 'default' | 'sm' | 'lg'
+	href?: string
+	class?: string
+	children?: import('svelte').Snippet
+	onclick?: () => void
+}
 
-  const {
-    isActive = false,
-    size = "default",
-    href,
-    class: className,
-    children,
-    onclick,
-  }: Props = $props();
+const {
+	isActive = false,
+	size = 'default',
+	href,
+	class: className,
+	children,
+	onclick,
+}: Props = $props()
 
-  const sizeClasses = {
-    default: "h-8 text-sm",
-    sm: "h-7 text-xs",
-    lg: "h-12 text-sm group-data-[collapsible=icon]:!p-0",
-  };
+const sizeClasses = {
+	default: 'h-8 text-sm',
+	sm: 'h-7 text-xs',
+	lg: 'h-12 text-sm group-data-[collapsible=icon]:!p-0',
+}
 </script>
 
 {#if href}

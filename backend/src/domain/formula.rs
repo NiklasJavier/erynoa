@@ -9,7 +9,7 @@
 //! - **Κ15c (Sigmoid)**: `σ⃗(x) = 1 / (1 + e^(-x))`
 //! - **Κ15d (Approximation)**: Count-Min Sketch für ℐ
 
-use crate::domain::{ContextType, DID, TrustVector6D};
+use crate::domain::{ContextType, TrustVector6D, DID};
 use serde::{Deserialize, Serialize};
 
 /// Aktivitäts-Präsenz 𝔸(s) ∈ [0,1]

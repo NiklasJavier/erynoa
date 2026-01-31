@@ -9,8 +9,8 @@
 //! - **Κ15d (Approximation)**: Count-Min Sketch für ℐ
 
 use crate::domain::{
-    Activity, ContextType, DID, HumanFactor, Surprisal, TrustVector6D,
-    WorldFormulaContribution, WorldFormulaStatus,
+    Activity, ContextType, HumanFactor, Surprisal, TrustVector6D, WorldFormulaContribution,
+    WorldFormulaStatus, DID,
 };
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
@@ -122,7 +122,11 @@ impl WorldFormulaEngine {
             let old_e = old.compute();
             let old_activity = old.activity.value();
             let old_trust_norm = old.trust.weighted_norm(&old.context.weights());
-            let old_human = if old.human_factor != HumanFactor::NotVerified { 1 } else { 0 };
+            let old_human = if old.human_factor != HumanFactor::NotVerified {
+                1
+            } else {
+                0
+            };
 
             self.cached_total_e -= old_e;
             self.cached_total_activity -= old_activity;
@@ -133,8 +137,14 @@ impl WorldFormulaEngine {
         // Neuen Beitrag addieren
         let new_e = contribution.compute();
         let new_activity = contribution.activity.value();
-        let new_trust_norm = contribution.trust.weighted_norm(&contribution.context.weights());
-        let new_human = if contribution.human_factor != HumanFactor::NotVerified { 1 } else { 0 };
+        let new_trust_norm = contribution
+            .trust
+            .weighted_norm(&contribution.context.weights());
+        let new_human = if contribution.human_factor != HumanFactor::NotVerified {
+            1
+        } else {
+            0
+        };
 
         self.cached_total_e += new_e;
         self.cached_total_activity += new_activity;
@@ -165,7 +175,8 @@ impl WorldFormulaEngine {
 
         WorldFormulaStatus {
             total_e: self.cached_total_e,
-            delta_24h: self.last_computed
+            delta_24h: self
+                .last_computed
                 .as_ref()
                 .map(|prev| self.cached_total_e - prev.total_e)
                 .unwrap_or(0.0),
@@ -192,9 +203,9 @@ impl WorldFormulaEngine {
         for contribution in self.contributions.values() {
             total_e += contribution.compute();
             total_activity += contribution.activity.value();
-            total_trust_norm += contribution.trust.weighted_norm(
-                &contribution.context.weights(),
-            );
+            total_trust_norm += contribution
+                .trust
+                .weighted_norm(&contribution.context.weights());
 
             if contribution.human_factor != HumanFactor::NotVerified {
                 human_verified += 1;
@@ -224,7 +235,8 @@ impl WorldFormulaEngine {
             0.0
         };
 
-        let delta_24h = self.last_computed
+        let delta_24h = self
+            .last_computed
             .as_ref()
             .map(|prev| total_e - prev.total_e)
             .unwrap_or(0.0);
@@ -260,9 +272,9 @@ impl WorldFormulaEngine {
         for contribution in &realm_contributions {
             total_e += contribution.compute();
             total_activity += contribution.activity.value();
-            total_trust_norm += contribution.trust.weighted_norm(
-                &contribution.context.weights(),
-            );
+            total_trust_norm += contribution
+                .trust
+                .weighted_norm(&contribution.context.weights());
 
             if contribution.human_factor != HumanFactor::NotVerified {
                 human_verified += 1;
@@ -309,7 +321,8 @@ impl WorldFormulaEngine {
 
     /// Top N Contributors
     pub fn top_contributors(&self, n: usize) -> Vec<(DID, f64)> {
-        let mut sorted: Vec<_> = self.contributions
+        let mut sorted: Vec<_> = self
+            .contributions
             .iter()
             .map(|(did, c)| (did.clone(), c.compute()))
             .collect();

@@ -22,13 +22,12 @@
 //! }
 //! ```
 
-use chumsky::prelude::*;
 use crate::eclvm::ast::{
-    BinaryOp, ConstDecl, Expr, ExprKind, Literal, Policy, Program,
-    Span, Statement, StatementKind, TrustDim, UnaryOp, Diagnostic,
-    DiagnosticCollector,
+    BinaryOp, ConstDecl, Diagnostic, DiagnosticCollector, Expr, ExprKind, Literal, Policy, Program,
+    Span, Statement, StatementKind, TrustDim, UnaryOp,
 };
 use crate::error::{ApiError, Result};
+use chumsky::prelude::*;
 
 // Alias for the chumsky Parser trait to avoid conflict with our Parser struct
 use chumsky::Parser as ChumskyParser;
@@ -165,13 +164,10 @@ type SimpleSpan = std::ops::Range<usize>;
 /// Erstellt den Lexer für ECL
 fn lexer() -> impl ChumskyParser<char, Vec<(Token, SimpleSpan)>, Error = Simple<char>> {
     // Kommentare
-    let comment = just("//")
-        .then(take_until(just('\n')))
-        .padded();
+    let comment = just("//").then(take_until(just('\n'))).padded();
 
     // Whitespace (ohne Newlines für Statement-Trennung)
-    let ws = filter(|c: &char| c.is_whitespace() && *c != '\n')
-        .repeated();
+    let ws = filter(|c: &char| c.is_whitespace() && *c != '\n').repeated();
 
     // Strings
     let string = just('"')
@@ -247,15 +243,7 @@ fn lexer() -> impl ChumskyParser<char, Vec<(Token, SimpleSpan)>, Error = Simple<
     let newline = just('\n').to(Token::Newline);
 
     // Combine all tokens
-    let token = choice((
-        string,
-        number,
-        omega,
-        op,
-        delim,
-        ident,
-        newline,
-    ));
+    let token = choice((string, number, omega, op, delim, ident, newline));
 
     token
         .map_with_span(|tok, span| (tok, span))
@@ -306,15 +294,12 @@ fn expr_parser() -> impl ChumskyParser<Token, Expr, Error = Simple<Token>> + Clo
         };
 
         // Parenthesized expression
-        let paren = expr.clone()
+        let paren = expr
+            .clone()
             .delimited_by(just(Token::LParen), just(Token::RParen));
 
         // Atom (base expressions)
-        let atom = choice((
-            literal,
-            ident,
-            paren,
-        ));
+        let atom = choice((literal, ident, paren));
 
         // Postfix operations: function calls, member access, trust dimension
         let postfix = atom
@@ -335,7 +320,7 @@ fn expr_parser() -> impl ChumskyParser<Token, Expr, Error = Simple<Token>> + Clo
                         .ignore_then(select! { Token::Ident(s) => s })
                         .map(PostfixOp::Member),
                 ))
-                .repeated()
+                .repeated(),
             )
             .foldl(|e, op| {
                 let span = e.span;
@@ -343,7 +328,10 @@ fn expr_parser() -> impl ChumskyParser<Token, Expr, Error = Simple<Token>> + Clo
                     PostfixOp::Call(args) => {
                         if let ExprKind::Identifier(func) = &e.kind {
                             Expr::new(
-                                ExprKind::Call { function: func.clone(), args },
+                                ExprKind::Call {
+                                    function: func.clone(),
+                                    args,
+                                },
                                 span,
                             )
                         } else {
@@ -351,11 +339,17 @@ fn expr_parser() -> impl ChumskyParser<Token, Expr, Error = Simple<Token>> + Clo
                         }
                     }
                     PostfixOp::Member(field) => Expr::new(
-                        ExprKind::Member { object: Box::new(e), field },
+                        ExprKind::Member {
+                            object: Box::new(e),
+                            field,
+                        },
                         span,
                     ),
                     PostfixOp::TrustDim(dim) => Expr::new(
-                        ExprKind::TrustDim { vector: Box::new(e), dimension: dim },
+                        ExprKind::TrustDim {
+                            vector: Box::new(e),
+                            dimension: dim,
+                        },
                         span,
                     ),
                 }
@@ -378,7 +372,8 @@ fn expr_parser() -> impl ChumskyParser<Token, Expr, Error = Simple<Token>> + Clo
         // Binary operators with precedence
 
         // Multiplication/Division (highest precedence)
-        let product = unary.clone()
+        let product = unary
+            .clone()
             .then(
                 choice((
                     just(Token::Star).to(BinaryOp::Mul),
@@ -386,24 +381,26 @@ fn expr_parser() -> impl ChumskyParser<Token, Expr, Error = Simple<Token>> + Clo
                     just(Token::Percent).to(BinaryOp::Mod),
                 ))
                 .then(unary)
-                .repeated()
+                .repeated(),
             )
             .foldl(|a, (op, b)| Expr::binary(a, op, b));
 
         // Addition/Subtraction
-        let sum = product.clone()
+        let sum = product
+            .clone()
             .then(
                 choice((
                     just(Token::Plus).to(BinaryOp::Add),
                     just(Token::Minus).to(BinaryOp::Sub),
                 ))
                 .then(product)
-                .repeated()
+                .repeated(),
             )
             .foldl(|a, (op, b)| Expr::binary(a, op, b));
 
         // Comparisons
-        let comparison = sum.clone()
+        let comparison = sum
+            .clone()
             .then(
                 choice((
                     just(Token::EqEq).to(BinaryOp::Eq),
@@ -414,27 +411,29 @@ fn expr_parser() -> impl ChumskyParser<Token, Expr, Error = Simple<Token>> + Clo
                     just(Token::Gt).to(BinaryOp::Gt),
                 ))
                 .then(sum)
-                .repeated()
+                .repeated(),
             )
             .foldl(|a, (op, b)| Expr::binary(a, op, b));
 
         // Logical AND
-        let logical_and = comparison.clone()
+        let logical_and = comparison
+            .clone()
             .then(
                 just(Token::AmpAmp)
                     .to(BinaryOp::And)
                     .then(comparison)
-                    .repeated()
+                    .repeated(),
             )
             .foldl(|a, (op, b)| Expr::binary(a, op, b));
 
         // Logical OR (lowest precedence)
-        logical_and.clone()
+        logical_and
+            .clone()
             .then(
                 just(Token::PipePipe)
                     .to(BinaryOp::Or)
                     .then(logical_and)
-                    .repeated()
+                    .repeated(),
             )
             .foldl(|a, (op, b)| Expr::binary(a, op, b))
     })
@@ -460,7 +459,7 @@ fn statement_parser() -> impl ChumskyParser<Token, Statement, Error = Simple<Tok
         .then(
             just(Token::Comma)
                 .ignore_then(select! { Token::String(s) => s })
-                .or_not()
+                .or_not(),
         )
         .map_with_span(|(e, msg), span| {
             Statement::new(StatementKind::Require(e, msg), to_span(span))
@@ -478,16 +477,12 @@ fn statement_parser() -> impl ChumskyParser<Token, Statement, Error = Simple<Tok
     // emit <string>
     let emit = just(Token::Emit)
         .ignore_then(select! { Token::String(s) => s })
-        .map_with_span(|event, span| {
-            Statement::new(StatementKind::Emit(event), to_span(span))
-        });
+        .map_with_span(|event, span| Statement::new(StatementKind::Emit(event), to_span(span)));
 
     // return <expr>
     let return_stmt = just(Token::Return)
         .ignore_then(expr.clone())
-        .map_with_span(|e, span| {
-            Statement::new(StatementKind::Return(e), to_span(span))
-        });
+        .map_with_span(|e, span| Statement::new(StatementKind::Return(e), to_span(span)));
 
     // Newlines between statements
     let newlines = just(Token::Newline).repeated();
@@ -510,26 +505,20 @@ fn statement_parser() -> impl ChumskyParser<Token, Statement, Error = Simple<Tok
         just(Token::If)
             .ignore_then(expr.clone())
             .then(block.clone())
-            .then(
-                just(Token::Else)
-                    .ignore_then(block)
-                    .or_not()
-            )
+            .then(just(Token::Else).ignore_then(block).or_not())
             .map_with_span(|((cond, then_branch), else_branch), span| {
                 Statement::new(
-                    StatementKind::If { condition: cond, then_branch, else_branch },
+                    StatementKind::If {
+                        condition: cond,
+                        then_branch,
+                        else_branch,
+                    },
                     to_span(span),
                 )
             })
     });
 
-    choice((
-        require,
-        let_stmt,
-        emit,
-        return_stmt,
-        if_stmt,
-    ))
+    choice((require, let_stmt, emit, return_stmt, if_stmt))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -545,7 +534,7 @@ fn policy_parser() -> impl ChumskyParser<Token, Policy, Error = Simple<Token>> {
         .then(
             stmt.padded_by(newlines.clone())
                 .repeated()
-                .delimited_by(just(Token::LBrace), just(Token::RBrace))
+                .delimited_by(just(Token::LBrace), just(Token::RBrace)),
         )
         .map_with_span(|(name, body), span| Policy {
             name,
@@ -589,8 +578,7 @@ fn program_parser() -> impl ChumskyParser<Token, Program, Error = Simple<Token>>
         policy_parser().map(ProgramItem::Policy),
     ));
 
-    item
-        .padded_by(newlines)
+    item.padded_by(newlines)
         .repeated()
         .then_ignore(end())
         .map_with_span(|items, span| {
@@ -633,16 +621,14 @@ impl Parser {
             return Err(ApiError::Validation(errors.join("; ")));
         }
 
-        let tokens = tokens.ok_or_else(|| {
-            ApiError::Validation("Lexer produced no tokens".to_string())
-        })?;
+        let tokens =
+            tokens.ok_or_else(|| ApiError::Validation("Lexer produced no tokens".to_string()))?;
 
         // Step 2: Parsing - create proper stream from tokens
         let len = source.len();
         let stream = chumsky::Stream::from_iter(len..len + 1, tokens.into_iter());
 
-        let (program, parse_errors) = program_parser()
-            .parse_recovery(stream);
+        let (program, parse_errors) = program_parser().parse_recovery(stream);
 
         if !parse_errors.is_empty() {
             let errors: Vec<String> = parse_errors
@@ -652,9 +638,7 @@ impl Parser {
             return Err(ApiError::Validation(errors.join("; ")));
         }
 
-        program.ok_or_else(|| {
-            ApiError::Validation("Parser produced no output".to_string())
-        })
+        program.ok_or_else(|| ApiError::Validation("Parser produced no output".to_string()))
     }
 
     /// Parse mit detaillierten Diagnostics
@@ -682,8 +666,7 @@ impl Parser {
         let len = source.len();
         let stream = chumsky::Stream::from_iter(len..len + 1, tokens.into_iter());
 
-        let (program, parse_errors) = program_parser()
-            .parse_recovery(stream);
+        let (program, parse_errors) = program_parser().parse_recovery(stream);
 
         for error in &parse_errors {
             diagnostics.add(Diagnostic::error(
@@ -705,7 +688,8 @@ impl Parser {
         }
 
         let tokens = tokens.ok_or_else(|| ApiError::Validation("No tokens".to_string()))?;
-        let filtered: Vec<_> = tokens.into_iter()
+        let filtered: Vec<_> = tokens
+            .into_iter()
             .filter(|(t, _)| *t != Token::Newline)
             .collect();
 
@@ -727,7 +711,10 @@ impl Parser {
         };
 
         let program = Self::parse(&full_source)?;
-        program.policies.into_iter().next()
+        program
+            .policies
+            .into_iter()
+            .next()
             .ok_or_else(|| ApiError::Validation("No policy found".to_string()))
     }
 }
@@ -857,7 +844,12 @@ policy "conditional" {
         let program = Parser::parse(source).unwrap();
         assert_eq!(program.policies[0].body.len(), 1);
 
-        if let StatementKind::If { then_branch, else_branch, .. } = &program.policies[0].body[0].kind {
+        if let StatementKind::If {
+            then_branch,
+            else_branch,
+            ..
+        } = &program.policies[0].body[0].kind
+        {
             assert_eq!(then_branch.len(), 1);
             assert!(else_branch.is_some());
         } else {

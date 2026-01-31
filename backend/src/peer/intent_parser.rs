@@ -12,7 +12,7 @@
 //! - Strukturierte Intents (JSON)
 //! - Natürlichsprachliche Intents (via Patterns)
 
-use crate::domain::{Constraint, DID, Goal, Intent, RealmId};
+use crate::domain::{Constraint, Goal, Intent, RealmId, DID};
 use chrono::Duration;
 use thiserror::Error;
 
@@ -153,11 +153,7 @@ impl IntentParser {
             )));
         }
 
-        let mut intent = Intent::new(
-            source,
-            goal,
-            self.config.default_realm.clone(),
-        );
+        let mut intent = Intent::new(source, goal, self.config.default_realm.clone());
 
         for constraint in constraints {
             intent = intent.with_constraint(constraint);
@@ -213,7 +209,9 @@ impl IntentParser {
         let text_lower = text.to_lowercase();
 
         // Finde passendes Pattern
-        let goal_type = self.patterns.iter()
+        let goal_type = self
+            .patterns
+            .iter()
             .find(|p| p.keywords.iter().any(|k| text_lower.contains(k)))
             .map(|p| p.goal_type);
 
@@ -318,15 +316,16 @@ mod tests {
         let alice = DID::new_self("alice");
         let bob = DID::new_self("bob");
 
-        let intent = parser.parse_transfer(
-            alice.clone(),
-            bob.clone(),
-            100,
-            "ERY".to_string(),
-        ).unwrap();
+        let intent = parser
+            .parse_transfer(alice.clone(), bob.clone(), 100, "ERY".to_string())
+            .unwrap();
 
         match intent.goal {
-            Goal::Transfer { to, amount, asset_type } => {
+            Goal::Transfer {
+                to,
+                amount,
+                asset_type,
+            } => {
                 assert_eq!(to, bob);
                 assert_eq!(amount, 100);
                 assert_eq!(asset_type, "ERY");
@@ -341,15 +340,21 @@ mod tests {
         let alice = DID::new_self("alice");
         let bob = DID::new_self("bob");
 
-        let intent = parser.parse_delegation(
-            alice,
-            bob.clone(),
-            vec!["transfer".to_string(), "attest".to_string()],
-            86400,
-        ).unwrap();
+        let intent = parser
+            .parse_delegation(
+                alice,
+                bob.clone(),
+                vec!["transfer".to_string(), "attest".to_string()],
+                86400,
+            )
+            .unwrap();
 
         match intent.goal {
-            Goal::Delegate { to, capabilities, ttl_seconds } => {
+            Goal::Delegate {
+                to,
+                capabilities,
+                ttl_seconds,
+            } => {
                 assert_eq!(to, bob);
                 assert_eq!(capabilities.len(), 2);
                 assert_eq!(ttl_seconds, 86400);
@@ -363,10 +368,7 @@ mod tests {
         let parser = IntentParser::default();
         let alice = DID::new_self("alice");
 
-        let intent = parser.parse_natural(
-            alice,
-            "send 100 ERY to Bob",
-        ).unwrap();
+        let intent = parser.parse_natural(alice, "send 100 ERY to Bob").unwrap();
 
         match intent.goal {
             Goal::Complex { description, .. } => {

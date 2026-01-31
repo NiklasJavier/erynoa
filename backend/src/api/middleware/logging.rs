@@ -2,12 +2,7 @@
 //!
 //! Loggt alle Requests mit Method, Path, Status und Duration
 
-use axum::{
-    extract::Request,
-    http::StatusCode,
-    middleware::Next,
-    response::Response,
-};
+use axum::{extract::Request, http::StatusCode, middleware::Next, response::Response};
 use std::time::Instant;
 use tracing::info;
 

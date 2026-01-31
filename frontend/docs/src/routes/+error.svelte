@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { Button } from "@erynoa/ui/components/button";
-  import * as Card from "@erynoa/ui/components/card";
-  import { ArrowLeft, Home } from "lucide-svelte";
+import { Button } from '@erynoa/ui/components/button'
+import * as Card from '@erynoa/ui/components/card'
+import { ArrowLeft, Home } from 'lucide-svelte'
 </script>
 
 <div class="flex items-center justify-center min-h-[60vh]">

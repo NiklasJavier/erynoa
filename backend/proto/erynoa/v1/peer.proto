@@ -2,8 +2,8 @@ syntax = "proto3";
 
 package erynoa.v1;
 
-import "google/protobuf/timestamp.proto";
 import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
 
 option go_package = "erynoa/v1;erynoav1";
 
@@ -22,8 +22,7 @@ service PeerService {
   // === Peer Status & Info ===
 
   // GetStatus returns current peer status
-  rpc GetStatus(PeerServiceGetStatusRequest)
-      returns (PeerServiceGetStatusResponse);
+  rpc GetStatus(PeerServiceGetStatusRequest) returns (PeerServiceGetStatusResponse);
 
   // GetInfo returns peer configuration and capabilities
   rpc GetInfo(PeerServiceGetInfoRequest) returns (PeerServiceGetInfoResponse);
@@ -96,8 +95,7 @@ service SagaService {
   rpc GetSagaHistory(GetSagaHistoryRequest) returns (GetSagaHistoryResponse);
 
   // StreamSagaUpdates streams real-time saga progress updates
-  rpc StreamSagaUpdates(StreamSagaUpdatesRequest)
-      returns (stream StreamSagaUpdatesResponse);
+  rpc StreamSagaUpdates(StreamSagaUpdatesRequest) returns (stream StreamSagaUpdatesResponse);
 }
 
 // =============================================================================
@@ -107,35 +105,28 @@ service SagaService {
 
 service EnvironmentService {
   // ListEnvironments lists all environments
-  rpc ListEnvironments(ListEnvironmentsRequest)
-      returns (ListEnvironmentsResponse);
+  rpc ListEnvironments(ListEnvironmentsRequest) returns (ListEnvironmentsResponse);
 
   // GetEnvironmentTree returns hierarchical environment structure
-  rpc GetEnvironmentTree(GetEnvironmentTreeRequest)
-      returns (GetEnvironmentTreeResponse);
+  rpc GetEnvironmentTree(GetEnvironmentTreeRequest) returns (GetEnvironmentTreeResponse);
 
   // CreateEnvironment creates a new virtual environment
-  rpc CreateEnvironment(CreateEnvironmentRequest)
-      returns (CreateEnvironmentResponse);
+  rpc CreateEnvironment(CreateEnvironmentRequest) returns (CreateEnvironmentResponse);
 
   // JoinEnvironment joins an existing environment
   rpc JoinEnvironment(JoinEnvironmentRequest) returns (JoinEnvironmentResponse);
 
   // LeaveEnvironment leaves an environment
-  rpc LeaveEnvironment(LeaveEnvironmentRequest)
-      returns (LeaveEnvironmentResponse);
+  rpc LeaveEnvironment(LeaveEnvironmentRequest) returns (LeaveEnvironmentResponse);
 
   // GetEnvironmentInfo returns detailed environment information
-  rpc GetEnvironmentInfo(GetEnvironmentInfoRequest)
-      returns (GetEnvironmentInfoResponse);
+  rpc GetEnvironmentInfo(GetEnvironmentInfoRequest) returns (GetEnvironmentInfoResponse);
 
   // SwitchEnvironment switches active environment context
-  rpc SwitchEnvironment(SwitchEnvironmentRequest)
-      returns (SwitchEnvironmentResponse);
+  rpc SwitchEnvironment(SwitchEnvironmentRequest) returns (SwitchEnvironmentResponse);
 
   // GetBootstrapStatus checks environment bootstrapping status
-  rpc GetBootstrapStatus(GetBootstrapStatusRequest)
-      returns (GetBootstrapStatusResponse);
+  rpc GetBootstrapStatus(GetBootstrapStatusRequest) returns (GetBootstrapStatusResponse);
 }
 
 // =============================================================================
@@ -152,11 +143,11 @@ message DID {
 // TrustVector6D represents the 6-dimensional trust vector (𝕎)
 message TrustVector6D {
   double reliability = 1; // R: Zuverlässigkeit
-  double integrity = 2;   // I: Integrität
-  double competence = 3;  // C: Kompetenz
-  double prestige = 4;    // P: Prestige
-  double vigilance = 5;   // V: Vigilanz
-  double omega = 6;       // Ω: Langzeit-Faktor
+  double integrity = 2; // I: Integrität
+  double competence = 3; // C: Kompetenz
+  double prestige = 4; // P: Prestige
+  double vigilance = 5; // V: Vigilanz
+  double omega = 6; // Ω: Langzeit-Faktor
 }
 
 // TrustDampeningMatrix represents the 6x6 trust transformation matrix (PR6)
@@ -279,7 +270,9 @@ message PeerConfig {
 
 message ListDerivedKeysRequest {}
 
-message ListDerivedKeysResponse { repeated DerivedKey keys = 1; }
+message ListDerivedKeysResponse {
+  repeated DerivedKey keys = 1;
+}
 
 message DerivedKey {
   ChainType chain = 1;
@@ -296,7 +289,9 @@ message DeriveKeyRequest {
   optional Algorithm algorithm = 3;
 }
 
-message DeriveKeyResponse { DerivedKey key = 1; }
+message DeriveKeyResponse {
+  DerivedKey key = 1;
+}
 
 // === Gateway ===
 
@@ -325,7 +320,9 @@ message PredicateResult {
 
 // === Peer Lifecycle ===
 
-message StartPeerRequest { optional PeerConfig config = 1; }
+message StartPeerRequest {
+  optional PeerConfig config = 1;
+}
 
 message StartPeerResponse {
   bool success = 1;
@@ -359,7 +356,7 @@ message SubmitIntentRequest {
 
 message Budget {
   string amount = 1; // e.g., "100"
-  string asset = 2;  // e.g., "USDC"
+  string asset = 2; // e.g., "USDC"
   ChainType chain = 3;
 }
 
@@ -410,7 +407,9 @@ message CostEstimate {
   string fee_asset = 4;
 }
 
-message ResolveIntentRequest { string intent_id = 1; }
+message ResolveIntentRequest {
+  string intent_id = 1;
+}
 
 message ResolveIntentResponse {
   string intent_id = 1;
@@ -471,7 +470,9 @@ message SimulationWarning {
   string step_id = 3;
 }
 
-message GetIntentStatusRequest { string intent_id = 1; }
+message GetIntentStatusRequest {
+  string intent_id = 1;
+}
 
 message GetIntentStatusResponse {
   string intent_id = 1;
@@ -690,7 +691,9 @@ message SagaHistoryEntry {
   CostEstimate actual_cost = 8;
 }
 
-message StreamSagaUpdatesRequest { string saga_id = 1; }
+message StreamSagaUpdatesRequest {
+  string saga_id = 1;
+}
 
 message StreamSagaUpdatesResponse {
   string saga_id = 1;
@@ -711,7 +714,9 @@ message SagaStepUpdate {
 // ENVIRONMENT SERVICE MESSAGES
 // =============================================================================
 
-message ListEnvironmentsRequest { EnvironmentTypeFilter type_filter = 1; }
+message ListEnvironmentsRequest {
+  EnvironmentTypeFilter type_filter = 1;
+}
 
 enum EnvironmentTypeFilter {
   ENVIRONMENT_TYPE_FILTER_UNSPECIFIED = 0;
@@ -747,7 +752,9 @@ message GetEnvironmentTreeRequest {
   optional int32 max_depth = 2;
 }
 
-message GetEnvironmentTreeResponse { EnvironmentNode root = 1; }
+message GetEnvironmentTreeResponse {
+  EnvironmentNode root = 1;
+}
 
 message EnvironmentNode {
   RealmId id = 1;
@@ -807,14 +814,18 @@ enum JoinStatus {
   JOIN_STATUS_BOOTSTRAPPING = 4;
 }
 
-message LeaveEnvironmentRequest { RealmId environment = 1; }
+message LeaveEnvironmentRequest {
+  RealmId environment = 1;
+}
 
 message LeaveEnvironmentResponse {
   bool success = 1;
   optional string error = 2;
 }
 
-message GetEnvironmentInfoRequest { RealmId environment = 1; }
+message GetEnvironmentInfoRequest {
+  RealmId environment = 1;
+}
 
 message GetEnvironmentInfoResponse {
   RealmId id = 1;
@@ -832,7 +843,9 @@ message GetEnvironmentInfoResponse {
   google.protobuf.Timestamp created_at = 13;
 }
 
-message SwitchEnvironmentRequest { RealmId environment = 1; }
+message SwitchEnvironmentRequest {
+  RealmId environment = 1;
+}
 
 message SwitchEnvironmentResponse {
   bool success = 1;
@@ -840,9 +853,13 @@ message SwitchEnvironmentResponse {
   optional string error = 3;
 }
 
-message GetBootstrapStatusRequest { RealmId environment = 1; }
+message GetBootstrapStatusRequest {
+  RealmId environment = 1;
+}
 
-message GetBootstrapStatusResponse { BootstrapStatus status = 1; }
+message GetBootstrapStatusResponse {
+  BootstrapStatus status = 1;
+}
 
 message BootstrapStatus {
   BootstrapMode mode = 1;
@@ -856,7 +873,7 @@ message BootstrapStatus {
 enum BootstrapMode {
   BOOTSTRAP_MODE_UNSPECIFIED = 0;
   BOOTSTRAP_MODE_SHORT = 1; // Sofort aktiv, Widerruf bei Regelverletzung
-  BOOTSTRAP_MODE_LONG = 2;  // Prüfung vor Aktivierung
+  BOOTSTRAP_MODE_LONG = 2; // Prüfung vor Aktivierung
 }
 
 enum BootstrapState {

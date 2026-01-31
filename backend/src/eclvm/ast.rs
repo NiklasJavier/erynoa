@@ -55,7 +55,12 @@ pub struct Span {
 impl Span {
     /// Erstelle neuen Span
     pub fn new(start: usize, end: usize, line: u32, column: u32) -> Self {
-        Self { start, end, line, column }
+        Self {
+            start,
+            end,
+            line,
+            column,
+        }
     }
 
     /// Kombiniere zwei Spans
@@ -64,7 +69,11 @@ impl Span {
             start: self.start.min(other.start),
             end: self.end.max(other.end),
             line: self.line.min(other.line),
-            column: if self.line <= other.line { self.column } else { other.column },
+            column: if self.line <= other.line {
+                self.column
+            } else {
+                other.column
+            },
         }
     }
 
@@ -139,7 +148,10 @@ impl Diagnostic {
 
     /// Füge Label hinzu
     pub fn with_label(mut self, span: Span, message: impl Into<String>) -> Self {
-        self.labels.push(DiagnosticLabel { span, message: message.into() });
+        self.labels.push(DiagnosticLabel {
+            span,
+            message: message.into(),
+        });
         self
     }
 
@@ -158,7 +170,9 @@ pub struct DiagnosticCollector {
 
 impl DiagnosticCollector {
     pub fn new() -> Self {
-        Self { diagnostics: Vec::new() }
+        Self {
+            diagnostics: Vec::new(),
+        }
     }
 
     pub fn add(&mut self, diagnostic: Diagnostic) {
@@ -174,11 +188,15 @@ impl DiagnosticCollector {
     }
 
     pub fn has_errors(&self) -> bool {
-        self.diagnostics.iter().any(|d| d.severity == DiagnosticSeverity::Error)
+        self.diagnostics
+            .iter()
+            .any(|d| d.severity == DiagnosticSeverity::Error)
     }
 
     pub fn errors(&self) -> impl Iterator<Item = &Diagnostic> {
-        self.diagnostics.iter().filter(|d| d.severity == DiagnosticSeverity::Error)
+        self.diagnostics
+            .iter()
+            .filter(|d| d.severity == DiagnosticSeverity::Error)
     }
 
     pub fn all(&self) -> &[Diagnostic] {
@@ -357,12 +375,18 @@ impl Expr {
 
     /// Erstelle Literal-Expr
     pub fn literal(lit: Literal) -> Self {
-        Self { kind: ExprKind::Literal(lit), span: Span::default() }
+        Self {
+            kind: ExprKind::Literal(lit),
+            span: Span::default(),
+        }
     }
 
     /// Erstelle Identifier-Expr
     pub fn ident(name: impl Into<String>) -> Self {
-        Self { kind: ExprKind::Identifier(name.into()), span: Span::default() }
+        Self {
+            kind: ExprKind::Identifier(name.into()),
+            span: Span::default(),
+        }
     }
 
     /// Erstelle Binary-Expr
@@ -382,7 +406,10 @@ impl Expr {
     pub fn unary(op: UnaryOp, operand: Expr) -> Self {
         let span = operand.span;
         Self {
-            kind: ExprKind::Unary { op, operand: Box::new(operand) },
+            kind: ExprKind::Unary {
+                op,
+                operand: Box::new(operand),
+            },
             span,
         }
     }
@@ -391,7 +418,10 @@ impl Expr {
     pub fn member(object: Expr, field: impl Into<String>) -> Self {
         let span = object.span;
         Self {
-            kind: ExprKind::Member { object: Box::new(object), field: field.into() },
+            kind: ExprKind::Member {
+                object: Box::new(object),
+                field: field.into(),
+            },
             span,
         }
     }
@@ -399,7 +429,10 @@ impl Expr {
     /// Erstelle Function Call
     pub fn call(function: impl Into<String>, args: Vec<Expr>) -> Self {
         Self {
-            kind: ExprKind::Call { function: function.into(), args },
+            kind: ExprKind::Call {
+                function: function.into(),
+                args,
+            },
             span: Span::default(),
         }
     }
@@ -408,7 +441,10 @@ impl Expr {
     pub fn trust_dim(vector: Expr, dimension: TrustDim) -> Self {
         let span = vector.span;
         Self {
-            kind: ExprKind::TrustDim { vector: Box::new(vector), dimension },
+            kind: ExprKind::TrustDim {
+                vector: Box::new(vector),
+                dimension,
+            },
             span,
         }
     }
@@ -423,24 +459,36 @@ impl Statement {
     /// Erstelle Require-Statement
     pub fn require(expr: Expr, msg: Option<String>) -> Self {
         let span = expr.span;
-        Self { kind: StatementKind::Require(expr, msg), span }
+        Self {
+            kind: StatementKind::Require(expr, msg),
+            span,
+        }
     }
 
     /// Erstelle Let-Statement
     pub fn let_bind(name: impl Into<String>, expr: Expr) -> Self {
         let span = expr.span;
-        Self { kind: StatementKind::Let(name.into(), expr), span }
+        Self {
+            kind: StatementKind::Let(name.into(), expr),
+            span,
+        }
     }
 
     /// Erstelle Emit-Statement
     pub fn emit(event: impl Into<String>) -> Self {
-        Self { kind: StatementKind::Emit(event.into()), span: Span::default() }
+        Self {
+            kind: StatementKind::Emit(event.into()),
+            span: Span::default(),
+        }
     }
 
     /// Erstelle Return-Statement
     pub fn return_expr(expr: Expr) -> Self {
         let span = expr.span;
-        Self { kind: StatementKind::Return(expr), span }
+        Self {
+            kind: StatementKind::Return(expr),
+            span,
+        }
     }
 }
 
@@ -518,7 +566,11 @@ pub fn walk_statement<V: AstVisitor + ?Sized>(visitor: &mut V, stmt: &Statement)
         StatementKind::Require(expr, _) => visitor.visit_expr(expr),
         StatementKind::Let(_, expr) => visitor.visit_expr(expr),
         StatementKind::Emit(_) => {}
-        StatementKind::If { condition, then_branch, else_branch } => {
+        StatementKind::If {
+            condition,
+            then_branch,
+            else_branch,
+        } => {
             visitor.visit_expr(condition);
             for s in then_branch {
                 visitor.visit_statement(s);
@@ -602,7 +654,12 @@ pub fn walk_statement_mut<V: AstVisitorMut + ?Sized>(visitor: &mut V, stmt: &mut
     match &mut stmt.kind {
         StatementKind::Require(expr, _) => visitor.visit_expr_mut(expr),
         StatementKind::Let(_, expr) => visitor.visit_expr_mut(expr),
-        StatementKind::If { condition, then_branch, else_branch, .. } => {
+        StatementKind::If {
+            condition,
+            then_branch,
+            else_branch,
+            ..
+        } => {
             visitor.visit_expr_mut(condition);
             for s in then_branch {
                 visitor.visit_statement_mut(s);
@@ -627,10 +684,7 @@ mod tests {
         // require sender.trust.R >= 0.5
         let stmt = Statement::require(
             Expr::binary(
-                Expr::trust_dim(
-                    Expr::member(Expr::ident("sender"), "trust"),
-                    TrustDim::R,
-                ),
+                Expr::trust_dim(Expr::member(Expr::ident("sender"), "trust"), TrustDim::R),
                 BinaryOp::Gte,
                 Expr::literal(Literal::Number(0.5)),
             ),

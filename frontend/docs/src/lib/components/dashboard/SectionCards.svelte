@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { Badge } from "@erynoa/ui/components/badge";
-  import * as Card from "@erynoa/ui/components/card";
-  import TrendingDown from "lucide-svelte/icons/trending-down";
-  import TrendingUp from "lucide-svelte/icons/trending-up";
+import { Badge } from '@erynoa/ui/components/badge'
+import * as Card from '@erynoa/ui/components/card'
+import TrendingDown from 'lucide-svelte/icons/trending-down'
+import TrendingUp from 'lucide-svelte/icons/trending-up'
 </script>
 
 <div

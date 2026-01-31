@@ -1,15 +1,15 @@
 <script lang="ts">
-  import PanelLeft from "lucide-svelte/icons/panel-left";
-  import { cn } from "../../utils.js";
-  import { Button } from "../button/index.js";
-  import { getSidebarContext } from "./sidebar-provider.svelte";
+import PanelLeft from 'lucide-svelte/icons/panel-left'
+import { cn } from '../../utils.js'
+import { Button } from '../button/index.js'
+import { getSidebarContext } from './sidebar-provider.svelte'
 
-  interface Props {
-    class?: string;
-  }
+interface Props {
+	class?: string
+}
 
-  const { class: className }: Props = $props();
-  const { toggleSidebar } = getSidebarContext();
+const { class: className }: Props = $props()
+const { toggleSidebar } = getSidebarContext()
 </script>
 
 <Button

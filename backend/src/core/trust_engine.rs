@@ -372,7 +372,12 @@ mod tests {
 
         // Sollte besser sein als einfaches Produkt (0.9 × 0.8 = 0.72)
         let simple_product = 0.9 * 0.8;
-        assert!(chain_trust > simple_product, "Chain trust {} should be > simple product {}", chain_trust, simple_product);
+        assert!(
+            chain_trust > simple_product,
+            "Chain trust {} should be > simple product {}",
+            chain_trust,
+            simple_product
+        );
         assert!(chain_trust > 0.0);
         assert!(chain_trust < 1.0);
     }

@@ -1,84 +1,84 @@
 <script lang="ts">
-  import { page } from "$app/stores";
-  import { authStore, user } from "$lib/auth";
-  import {
-    type NavEntry,
-    type UserRole,
-    getFilteredNavigation,
-    hasChildren,
-    navigationConfig,
-  } from "$lib/config";
-  import * as Avatar from "@erynoa/ui/components/avatar";
-  import { Badge } from "@erynoa/ui/components/badge";
-  import * as Collapsible from "@erynoa/ui/components/collapsible";
-  import * as DropdownMenu from "@erynoa/ui/components/dropdown-menu";
-  import * as Sidebar from "@erynoa/ui/components/sidebar";
-  import { getSidebarContext } from "@erynoa/ui/components/sidebar";
-  import ChevronRight from "lucide-svelte/icons/chevron-right";
-  import ChevronsUpDown from "lucide-svelte/icons/chevrons-up-down";
-  import LogOut from "lucide-svelte/icons/log-out";
-  import Sparkles from "lucide-svelte/icons/sparkles";
+import { page } from '$app/stores'
+import { authStore, user } from '$lib/auth'
+import {
+	type NavEntry,
+	type UserRole,
+	getFilteredNavigation,
+	hasChildren,
+	navigationConfig,
+} from '$lib/config'
+import * as Avatar from '@erynoa/ui/components/avatar'
+import { Badge } from '@erynoa/ui/components/badge'
+import * as Collapsible from '@erynoa/ui/components/collapsible'
+import * as DropdownMenu from '@erynoa/ui/components/dropdown-menu'
+import * as Sidebar from '@erynoa/ui/components/sidebar'
+import { getSidebarContext } from '@erynoa/ui/components/sidebar'
+import ChevronRight from 'lucide-svelte/icons/chevron-right'
+import ChevronsUpDown from 'lucide-svelte/icons/chevrons-up-down'
+import LogOut from 'lucide-svelte/icons/log-out'
+import Sparkles from 'lucide-svelte/icons/sparkles'
 
-  interface Props {
-    variant?: "sidebar" | "floating" | "inset";
-  }
+interface Props {
+	variant?: 'sidebar' | 'floating' | 'inset'
+}
 
-  const { variant = "inset" }: Props = $props();
+const { variant = 'inset' }: Props = $props()
 
-  // Sidebar Context für collapsed State
-  const { state: sidebarState } = getSidebarContext();
-  const isCollapsed = $derived($sidebarState === "collapsed");
+// Sidebar Context für collapsed State
+const { state: sidebarState } = getSidebarContext()
+const isCollapsed = $derived($sidebarState === 'collapsed')
 
-  // Benutzerrollen aus OIDC-Claims extrahieren
-  const userRoles = $derived(() => {
-    if (!$user?.profile) return ["user"] as UserRole[];
+// Benutzerrollen aus OIDC-Claims extrahieren
+const userRoles = $derived(() => {
+	if (!$user?.profile) return ['user'] as UserRole[]
 
-    const roles: UserRole[] = ["user"];
-    const profile = $user.profile as Record<string, unknown>;
+	const roles: UserRole[] = ['user']
+	const profile = $user.profile as Record<string, unknown>
 
-    // Standard OIDC role claims (works with most providers)
-    // Check common role claims: roles, groups, realm_access.roles
-    const rolesClaim =
-      profile.roles ||
-      profile.groups ||
-      (profile["realm_access"] as Record<string, unknown>)?.roles ||
-      profile["urn:zitadel:iam:org:project:roles"] ||
-      {};
-    const rolesArray = Array.isArray(rolesClaim)
-      ? rolesClaim
-      : Object.keys((rolesClaim as Record<string, unknown>) || {});
+	// Standard OIDC role claims (works with most providers)
+	// Check common role claims: roles, groups, realm_access.roles
+	const rolesClaim =
+		profile.roles ||
+		profile.groups ||
+		(profile.realm_access as Record<string, unknown>)?.roles ||
+		profile['urn:zitadel:iam:org:project:roles'] ||
+		{}
+	const rolesArray = Array.isArray(rolesClaim)
+		? rolesClaim
+		: Object.keys((rolesClaim as Record<string, unknown>) || {})
 
-    if (rolesArray.includes("admin")) roles.push("admin");
-    if (rolesArray.includes("editor")) roles.push("editor");
+	if (rolesArray.includes('admin')) roles.push('admin')
+	if (rolesArray.includes('editor')) roles.push('editor')
 
-    return roles;
-  });
+	return roles
+})
 
-  // Gefilterte Navigation basierend auf Benutzerrollen
-  const filteredConfig = $derived(() => {
-    const roles = userRoles();
-    return getFilteredNavigation(roles);
-  });
+// Gefilterte Navigation basierend auf Benutzerrollen
+const filteredConfig = $derived(() => {
+	const roles = userRoles()
+	return getFilteredNavigation(roles)
+})
 
-  // Navigation aus gefilterter Config
-  const { brand } = navigationConfig; // Brand immer sichtbar
-  const topItems = $derived.by(() => filteredConfig().topItems);
-  const groups = $derived.by(() => filteredConfig().groups);
-  const footer = $derived.by(() => filteredConfig().footer);
+// Navigation aus gefilterter Config
+const { brand } = navigationConfig // Brand immer sichtbar
+const topItems = $derived.by(() => filteredConfig().topItems)
+const groups = $derived.by(() => filteredConfig().groups)
+const footer = $derived.by(() => filteredConfig().footer)
 
-  // Exakter Match - für Leaf-Items (ohne Kinder)
-  function isExactActive(url: string | undefined): boolean {
-    if (!url) return false;
-    return $page.url.pathname === url;
-  }
+// Exakter Match - für Leaf-Items (ohne Kinder)
+function isExactActive(url: string | undefined): boolean {
+	if (!url) return false
+	return $page.url.pathname === url
+}
 
-  // Prüft ob ein Item mit Children (oder deren Children) aktiv ist
-  function isChildActiveRecursive(entry: NavEntry): boolean {
-    if (!hasChildren(entry)) {
-      return isExactActive(entry.url);
-    }
-    return entry.children.some((child) => isChildActiveRecursive(child));
-  }
+// Prüft ob ein Item mit Children (oder deren Children) aktiv ist
+function isChildActiveRecursive(entry: NavEntry): boolean {
+	if (!hasChildren(entry)) {
+		return isExactActive(entry.url)
+	}
+	return entry.children.some((child) => isChildActiveRecursive(child))
+}
 </script>
 
 {#snippet renderDropdownItems(children: NavEntry[])}

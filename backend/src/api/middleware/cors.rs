@@ -9,7 +9,7 @@ use std::time::Duration;
 use tower_http::cors::CorsLayer;
 
 /// Erstellt CORS-Layer basierend auf Environment
-/// 
+///
 /// Erlaubt Connect-RPC und gRPC-Web spezifische Headers:
 /// - Connect-Protocol-Version
 /// - Connect-Timeout-Ms
@@ -25,7 +25,14 @@ pub fn build_cors(state: &AppState) -> CorsLayer {
         let origin = state.config.application.console_url.clone();
         CorsLayer::new()
             .allow_origin(origin.as_str().parse::<HeaderValue>().unwrap())
-            .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::PATCH, Method::OPTIONS])
+            .allow_methods([
+                Method::GET,
+                Method::POST,
+                Method::PUT,
+                Method::DELETE,
+                Method::PATCH,
+                Method::OPTIONS,
+            ])
             .allow_headers(tower_http::cors::Any)
             .allow_credentials(true)
             .max_age(Duration::from_secs(86400))

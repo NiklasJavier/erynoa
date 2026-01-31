@@ -95,16 +95,13 @@ pub async fn get_info_handler(
             ChainType::Iota as i32,
             ChainType::Shimmer as i32,
         ],
-        supported_algorithms: vec![
-            Algorithm::Ed25519 as i32,
-            Algorithm::Secp256k1 as i32,
-        ],
+        supported_algorithms: vec![Algorithm::Ed25519 as i32, Algorithm::Secp256k1 as i32],
         capabilities: Some(PeerCapabilities {
-            composer: true,   // IntentParser + SagaComposer verfügbar
-            gateway: true,    // GatewayGuard verfügbar
-            key_vault: true,  // Ed25519 KeyVault verfügbar
+            composer: true,      // IntentParser + SagaComposer verfügbar
+            gateway: true,       // GatewayGuard verfügbar
+            key_vault: true,     // Ed25519 KeyVault verfügbar
             htlc_support: false, // TODO: HTLC Support implementieren
-            streaming: false, // TODO: Streaming Support
+            streaming: false,    // TODO: Streaming Support
             supported_intent_types: vec![
                 "transfer".to_string(),
                 "attest".to_string(),
@@ -196,10 +193,9 @@ pub async fn derive_key_handler(
 fn get_default_derivation_path(chain: ChainType) -> String {
     match chain {
         ChainType::Erynoa => "m/44'/1234'/0'/0/0".to_string(),
-        ChainType::Ethereum
-        | ChainType::Polygon
-        | ChainType::Arbitrum
-        | ChainType::Optimism => "m/44'/60'/0'/0/0".to_string(),
+        ChainType::Ethereum | ChainType::Polygon | ChainType::Arbitrum | ChainType::Optimism => {
+            "m/44'/60'/0'/0/0".to_string()
+        }
         ChainType::Iota | ChainType::Shimmer => "m/44'/4218'/0'/0'/0'".to_string(),
         _ => "m/44'/0'/0'/0/0".to_string(),
     }

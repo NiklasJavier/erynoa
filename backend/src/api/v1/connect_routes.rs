@@ -19,24 +19,24 @@ use crate::gen::erynoa::v1::{
 };
 
 // Import handler functions
-use crate::api::v1::health::{health_check_handler, ready_check_handler};
-use crate::api::v1::info::get_info_handler;
-use crate::api::v1::peer::{
-    derive_key_handler, evaluate_gateway_handler, get_info_handler as peer_get_info_handler,
-    get_status_handler, list_derived_keys_handler, start_peer_handler, stop_peer_handler,
-};
-use crate::api::v1::intent::{
-    cancel_intent_handler, get_intent_status_handler, list_intents_handler,
-    resolve_intent_handler, simulate_intent_handler, submit_intent_handler,
-};
-use crate::api::v1::saga::{
-    cancel_saga_handler, execute_saga_handler, get_saga_history_handler,
-    get_saga_status_handler, list_sagas_handler, rollback_saga_handler,
-};
 use crate::api::v1::environment::{
     create_environment_handler, get_bootstrap_status_handler, get_environment_info_handler,
     get_environment_tree_handler, join_environment_handler, leave_environment_handler,
     list_environments_handler, switch_environment_handler,
+};
+use crate::api::v1::health::{health_check_handler, ready_check_handler};
+use crate::api::v1::info::get_info_handler;
+use crate::api::v1::intent::{
+    cancel_intent_handler, get_intent_status_handler, list_intents_handler, resolve_intent_handler,
+    simulate_intent_handler, submit_intent_handler,
+};
+use crate::api::v1::peer::{
+    derive_key_handler, evaluate_gateway_handler, get_info_handler as peer_get_info_handler,
+    get_status_handler, list_derived_keys_handler, start_peer_handler, stop_peer_handler,
+};
+use crate::api::v1::saga::{
+    cancel_saga_handler, execute_saga_handler, get_saga_history_handler, get_saga_status_handler,
+    list_sagas_handler, rollback_saga_handler,
 };
 
 /// Erstellt Router für Connect-RPC Services

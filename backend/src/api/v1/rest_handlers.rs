@@ -78,7 +78,11 @@ pub async fn ready_handler(State(state): State<AppState>) -> impl IntoResponse {
     let storage_latency = storage_start.elapsed().as_millis() as i64;
 
     let response = ReadyResponse {
-        status: if storage_healthy { "ready" } else { "not_ready" },
+        status: if storage_healthy {
+            "ready"
+        } else {
+            "not_ready"
+        },
         services: ReadyServices {
             storage: ServiceStatusJson {
                 healthy: storage_healthy,

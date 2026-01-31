@@ -1,9 +1,9 @@
 <script lang="ts">
-  import Breadcrumbs from "$lib/components/Breadcrumbs.svelte";
-  import { Button } from "@erynoa/ui/components/button";
-  import { Separator } from "@erynoa/ui/components/separator";
-  import * as Sidebar from "@erynoa/ui/components/sidebar";
-  import CirclePlus from "lucide-svelte/icons/circle-plus";
+import Breadcrumbs from '$lib/components/Breadcrumbs.svelte'
+import { Button } from '@erynoa/ui/components/button'
+import { Separator } from '@erynoa/ui/components/separator'
+import * as Sidebar from '@erynoa/ui/components/sidebar'
+import CirclePlus from 'lucide-svelte/icons/circle-plus'
 </script>
 
 <header

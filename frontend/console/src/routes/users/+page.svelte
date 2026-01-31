@@ -1,7 +1,7 @@
 <script lang="ts">
-  import PageContent from "$lib/components/PageContent.svelte";
-  import * as Card from "@erynoa/ui/components/card";
-  import { Mail, Shield, Users } from "lucide-svelte";
+import PageContent from '$lib/components/PageContent.svelte'
+import * as Card from '@erynoa/ui/components/card'
+import { Mail, Shield, Users } from 'lucide-svelte'
 </script>
 
 <PageContent>

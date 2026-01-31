@@ -1,18 +1,18 @@
 <script lang="ts">
-  import ChevronRight from "lucide-svelte/icons/chevron-right";
+import ChevronRight from 'lucide-svelte/icons/chevron-right'
 
-  export interface BreadcrumbItem {
-    title: string;
-    url?: string;
-    isCurrentPage?: boolean;
-  }
+export interface BreadcrumbItem {
+	title: string
+	url?: string
+	isCurrentPage?: boolean
+}
 
-  interface Props {
-    /** Breadcrumb items to display */
-    items: BreadcrumbItem[];
-  }
+interface Props {
+	/** Breadcrumb items to display */
+	items: BreadcrumbItem[]
+}
 
-  const { items }: Props = $props();
+const { items }: Props = $props()
 </script>
 
 {#if items.length > 0}

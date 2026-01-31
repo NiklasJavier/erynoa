@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { Button } from "@erynoa/ui/components/button";
-  import * as DropdownMenu from "@erynoa/ui/components/dropdown-menu";
-  import { Moon, Sun } from "lucide-svelte";
-  import { setMode } from "mode-watcher";
+import { Button } from '@erynoa/ui/components/button'
+import * as DropdownMenu from '@erynoa/ui/components/dropdown-menu'
+import { Moon, Sun } from 'lucide-svelte'
+import { setMode } from 'mode-watcher'
 </script>
 
 <DropdownMenu.Root>

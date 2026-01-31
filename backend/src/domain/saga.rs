@@ -8,7 +8,7 @@
 //! - **Κ23 (Gateway-Guard)**: `cross(s, 𝒞₁, 𝒞₂) requires G(s, 𝒞₂) = true`
 //! - **Κ24 (Atomare Kompensation)**: `fail(Sᵢ) → compensate(S₁..Sᵢ₋₁)`
 
-use crate::domain::{DID, RealmId};
+use crate::domain::{RealmId, DID};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -79,10 +79,7 @@ pub enum Goal {
         asset_type: String,
     },
     /// Attestation erstellen
-    Attest {
-        subject: DID,
-        claim: String,
-    },
+    Attest { subject: DID, claim: String },
     /// Delegation erstellen
     Delegate {
         to: DID,
@@ -90,9 +87,7 @@ pub enum Goal {
         ttl_seconds: u64,
     },
     /// Query ausführen
-    Query {
-        predicate: String,
-    },
+    Query { predicate: String },
     /// Entität erstellen
     Create {
         entity_type: String,
@@ -181,7 +176,9 @@ impl Saga {
 
     /// Aktueller Schritt-Index
     pub fn current_step_index(&self) -> Option<usize> {
-        self.steps.iter().position(|s| s.status == StepStatus::Pending)
+        self.steps
+            .iter()
+            .position(|s| s.status == StepStatus::Pending)
     }
 
     /// Alle abgeschlossenen Schritte
@@ -199,7 +196,10 @@ impl Saga {
 
     /// Ist die Saga fehlgeschlagen?
     pub fn is_failed(&self) -> bool {
-        matches!(self.status, SagaStatus::Failed { .. } | SagaStatus::Compensated)
+        matches!(
+            self.status,
+            SagaStatus::Failed { .. } | SagaStatus::Compensated
+        )
     }
 }
 
@@ -210,16 +210,11 @@ pub enum SagaStatus {
     /// Noch nicht gestartet
     Pending,
     /// In Ausführung
-    InProgress {
-        current_step: usize,
-    },
+    InProgress { current_step: usize },
     /// Erfolgreich abgeschlossen
     Completed,
     /// Fehlgeschlagen (Κ24: Compensation läuft)
-    Failed {
-        at_step: usize,
-        error: String,
-    },
+    Failed { at_step: usize, error: String },
     /// Kompensation abgeschlossen
     Compensated,
     /// Timeout
@@ -294,9 +289,7 @@ pub enum SagaAction {
         asset_type: String,
     },
     /// Funds entsperren
-    Unlock {
-        lock_id: String,
-    },
+    Unlock { lock_id: String },
     /// Transfer ausführen
     Transfer {
         from: DID,
@@ -317,10 +310,7 @@ pub enum SagaAction {
         asset_type: String,
     },
     /// Gateway-Check (Κ23)
-    GatewayCheck {
-        did: DID,
-        target_realm: RealmId,
-    },
+    GatewayCheck { did: DID, target_realm: RealmId },
     /// Externe Chain-Operation
     ExternalChain {
         chain: String,

@@ -161,7 +161,10 @@ impl ContentStore {
 
     /// Prüft ob Content existiert
     pub fn exists(&self, cid: &ContentId) -> Result<bool> {
-        Ok(self.metadata.get::<_, ContentMetadata>(cid.as_str())?.is_some())
+        Ok(self
+            .metadata
+            .get::<_, ContentMetadata>(cid.as_str())?
+            .is_some())
     }
 
     /// Verifiziert Content-Integrität
@@ -271,9 +274,25 @@ mod tests {
 
         let alice = DID::new(DIDNamespace::Self_, "alice");
 
-        store.put(b"File 1".to_vec(), "text/plain", Some(alice.clone()), vec![]).unwrap();
-        store.put(b"File 2".to_vec(), "text/plain", Some(alice.clone()), vec![]).unwrap();
-        store.put(b"File 3".to_vec(), "text/plain", None, vec![]).unwrap();
+        store
+            .put(
+                b"File 1".to_vec(),
+                "text/plain",
+                Some(alice.clone()),
+                vec![],
+            )
+            .unwrap();
+        store
+            .put(
+                b"File 2".to_vec(),
+                "text/plain",
+                Some(alice.clone()),
+                vec![],
+            )
+            .unwrap();
+        store
+            .put(b"File 3".to_vec(), "text/plain", None, vec![])
+            .unwrap();
 
         let alice_content = store.get_by_creator(&alice).unwrap();
         assert_eq!(alice_content.len(), 2);
@@ -283,9 +302,30 @@ mod tests {
     fn test_by_tag() {
         let store = create_test_store();
 
-        store.put(b"Doc 1".to_vec(), "text/plain", None, vec!["important".to_string()]).unwrap();
-        store.put(b"Doc 2".to_vec(), "text/plain", None, vec!["important".to_string(), "urgent".to_string()]).unwrap();
-        store.put(b"Doc 3".to_vec(), "text/plain", None, vec!["normal".to_string()]).unwrap();
+        store
+            .put(
+                b"Doc 1".to_vec(),
+                "text/plain",
+                None,
+                vec!["important".to_string()],
+            )
+            .unwrap();
+        store
+            .put(
+                b"Doc 2".to_vec(),
+                "text/plain",
+                None,
+                vec!["important".to_string(), "urgent".to_string()],
+            )
+            .unwrap();
+        store
+            .put(
+                b"Doc 3".to_vec(),
+                "text/plain",
+                None,
+                vec!["normal".to_string()],
+            )
+            .unwrap();
 
         let important = store.get_by_tag("important").unwrap();
         assert_eq!(important.len(), 2);

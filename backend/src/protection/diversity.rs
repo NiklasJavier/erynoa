@@ -61,8 +61,8 @@ pub struct DiversityConfig {
 impl Default for DiversityConfig {
     fn default() -> Self {
         Self {
-            min_entropy: 2.0,           // ~4 gleichverteilte Kategorien
-            max_single_category: 0.5,   // Keine Kategorie > 50%
+            min_entropy: 2.0,         // ~4 gleichverteilte Kategorien
+            max_single_category: 0.5, // Keine Kategorie > 50%
             alarm_entropy_threshold: 1.5,
         }
     }
@@ -84,7 +84,8 @@ impl DiversityMonitor {
 
     /// Registriere Beobachtung in einer Dimension
     pub fn observe(&mut self, dimension: &str, category: &str) {
-        *self.dimensions
+        *self
+            .dimensions
             .entry(dimension.to_string())
             .or_default()
             .entry(category.to_string())
@@ -202,7 +203,8 @@ impl DiversityMonitor {
             return vec![];
         }
 
-        let mut sorted: Vec<_> = counts.iter()
+        let mut sorted: Vec<_> = counts
+            .iter()
             .map(|(k, &v)| (k.clone(), v, v as f64 / total as f64 * 100.0))
             .collect();
 
@@ -213,32 +215,35 @@ impl DiversityMonitor {
 
     /// Statistiken für alle Dimensionen
     pub fn stats(&self) -> DiversityStats {
-        let dimension_stats: HashMap<String, DimensionStats> = self.dimensions.keys()
+        let dimension_stats: HashMap<String, DimensionStats> = self
+            .dimensions
+            .keys()
             .map(|dim| {
                 let entropy = self.entropy(dim);
                 let normalized = self.normalized_entropy(dim);
-                let category_count = self.dimensions.get(dim)
-                    .map(|c| c.len())
-                    .unwrap_or(0);
-                let total_observations = self.dimensions.get(dim)
+                let category_count = self.dimensions.get(dim).map(|c| c.len()).unwrap_or(0);
+                let total_observations = self
+                    .dimensions
+                    .get(dim)
                     .map(|c| c.values().sum::<u64>())
                     .unwrap_or(0);
 
-                (dim.clone(), DimensionStats {
-                    entropy,
-                    normalized_entropy: normalized,
-                    category_count,
-                    total_observations,
-                })
+                (
+                    dim.clone(),
+                    DimensionStats {
+                        entropy,
+                        normalized_entropy: normalized,
+                        category_count,
+                        total_observations,
+                    },
+                )
             })
             .collect();
 
         let avg_entropy = if dimension_stats.is_empty() {
             0.0
         } else {
-            dimension_stats.values()
-                .map(|s| s.entropy)
-                .sum::<f64>() / dimension_stats.len() as f64
+            dimension_stats.values().map(|s| s.entropy).sum::<f64>() / dimension_stats.len() as f64
         };
 
         DiversityStats {
@@ -322,7 +327,10 @@ mod tests {
         }
 
         let result = dm.check_monoculture("test");
-        assert!(matches!(result, Err(DiversityError::MonocultureDetected { .. })));
+        assert!(matches!(
+            result,
+            Err(DiversityError::MonocultureDetected { .. })
+        ));
     }
 
     #[test]

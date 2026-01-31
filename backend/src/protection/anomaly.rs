@@ -9,7 +9,7 @@
 //! - **Pattern**: Verdächtige Muster (z.B. Wash-Trading)
 //! - **Trust**: Plötzliche Trust-Änderungen
 
-use crate::domain::{DID, Event, EventPayload};
+use crate::domain::{Event, EventPayload, DID};
 use chrono::{DateTime, Duration, Utc};
 use std::collections::{HashMap, VecDeque};
 use thiserror::Error;
@@ -212,9 +212,7 @@ impl AnomalyDetector {
 
         // Events in letzter Minute
         let minute_ago = now - Duration::minutes(1);
-        let events_last_minute = history.iter()
-            .filter(|&&t| t > minute_ago)
-            .count();
+        let events_last_minute = history.iter().filter(|&&t| t > minute_ago).count();
 
         if events_last_minute > self.config.max_events_per_minute {
             return Some(Anomaly {
@@ -232,9 +230,7 @@ impl AnomalyDetector {
 
         // Events in letzter Stunde
         let hour_ago = now - Duration::hours(1);
-        let events_last_hour = history.iter()
-            .filter(|&&t| t > hour_ago)
-            .count();
+        let events_last_hour = history.iter().filter(|&&t| t > hour_ago).count();
 
         if events_last_hour > self.config.max_events_per_hour {
             return Some(Anomaly {
@@ -262,9 +258,7 @@ impl AnomalyDetector {
             _ => return None,
         };
 
-        let stats = self.amount_stats
-            .entry(event.author.clone())
-            .or_default();
+        let stats = self.amount_stats.entry(event.author.clone()).or_default();
 
         // Brauchen genug Daten
         if stats.count < 10 {
@@ -287,11 +281,18 @@ impl AnomalyDetector {
         if z_score.abs() > self.config.amount_std_threshold {
             return Some(Anomaly {
                 anomaly_type: AnomalyType::UnusualAmount,
-                severity: if z_score.abs() > 5.0 { Severity::High } else { Severity::Medium },
+                severity: if z_score.abs() > 5.0 {
+                    Severity::High
+                } else {
+                    Severity::Medium
+                },
                 subject: event.author.clone(),
                 description: format!(
                     "Amount {} is {} std devs from mean {} (z={})",
-                    amount, z_score.abs(), mean, z_score
+                    amount,
+                    z_score.abs(),
+                    mean,
+                    z_score
                 ),
                 detected_at: Utc::now(),
                 related_events: vec![event.id.to_string()],
@@ -304,15 +305,18 @@ impl AnomalyDetector {
     /// Prüfe auf verdächtige Muster (z.B. Kreisläufe)
     fn check_pattern(&mut self, event: &Event) -> Option<Anomaly> {
         let (from, to, amount) = match &event.payload {
-            EventPayload::Transfer { from, to, amount, .. } => (from, to, *amount),
+            EventPayload::Transfer {
+                from, to, amount, ..
+            } => (from, to, *amount),
             _ => return None,
         };
 
         // Update Transfer-Graph
-        self.transfer_graph
-            .entry(from.clone())
-            .or_default()
-            .push((to.clone(), amount, event.timestamp));
+        self.transfer_graph.entry(from.clone()).or_default().push((
+            to.clone(),
+            amount,
+            event.timestamp,
+        ));
 
         // Prüfe auf Kreisläufe: A → B → C → A
         let transfers = self.transfer_graph.get(from)?;
@@ -323,7 +327,9 @@ impl AnomalyDetector {
 
         // Suche nach Rückfluss zu `from`
         let hour_ago = Utc::now() - Duration::hours(1);
-        let recent_to_from = self.transfer_graph.values()
+        let recent_to_from = self
+            .transfer_graph
+            .values()
             .flat_map(|t| t.iter())
             .filter(|(target, _, time)| target == from && *time > hour_ago)
             .count();
@@ -348,7 +354,8 @@ impl AnomalyDetector {
 
     /// Aktualisiere Historie
     fn update_history(&mut self, event: &Event) {
-        let history = self.event_history
+        let history = self
+            .event_history
             .entry(event.author.clone())
             .or_insert_with(VecDeque::new);
 
@@ -367,30 +374,36 @@ impl AnomalyDetector {
 
     /// Hole Anomalien für eine DID
     pub fn get_anomalies_for_did(&self, did: &DID) -> Vec<&Anomaly> {
-        self.anomalies.iter()
+        self.anomalies
+            .iter()
             .filter(|a| &a.subject == did)
             .collect()
     }
 
     /// Hole kritische Anomalien
     pub fn get_critical_anomalies(&self) -> Vec<&Anomaly> {
-        self.anomalies.iter()
+        self.anomalies
+            .iter()
             .filter(|a| a.severity >= Severity::High)
             .collect()
     }
 
     /// Statistiken
     pub fn stats(&self) -> AnomalyStats {
-        let by_type: HashMap<String, usize> = self.anomalies.iter()
-            .fold(HashMap::new(), |mut acc, a| {
+        let by_type: HashMap<String, usize> =
+            self.anomalies.iter().fold(HashMap::new(), |mut acc, a| {
                 *acc.entry(format!("{:?}", a.anomaly_type)).or_default() += 1;
                 acc
             });
 
-        let critical = self.anomalies.iter()
+        let critical = self
+            .anomalies
+            .iter()
             .filter(|a| a.severity == Severity::Critical)
             .count();
-        let high = self.anomalies.iter()
+        let high = self
+            .anomalies
+            .iter()
             .filter(|a| a.severity == Severity::High)
             .count();
 
@@ -440,13 +453,20 @@ mod tests {
             );
 
             let anomalies = detector.analyze_event(&event);
-            if anomalies.iter().any(|a| a.anomaly_type == AnomalyType::HighVelocity) {
+            if anomalies
+                .iter()
+                .any(|a| a.anomaly_type == AnomalyType::HighVelocity)
+            {
                 found_velocity_anomaly = true;
             }
         }
 
         // Nach mehr als max_events_per_minute sollte Velocity-Anomalie erkannt werden
-        assert!(found_velocity_anomaly, "High velocity anomaly should be detected after {} events", 10);
+        assert!(
+            found_velocity_anomaly,
+            "High velocity anomaly should be detected after {} events",
+            10
+        );
     }
 
     #[test]
@@ -491,7 +511,10 @@ mod tests {
         // Prüfe ob irgendeine Anomalie erkannt wurde (Amount oder andere)
         // Note: Der Detector prüft Statistiken, bei genug Varianz wird anomaly erkannt
         assert!(
-            anomalies.is_empty() || anomalies.iter().any(|a| a.anomaly_type == AnomalyType::UnusualAmount),
+            anomalies.is_empty()
+                || anomalies
+                    .iter()
+                    .any(|a| a.anomaly_type == AnomalyType::UnusualAmount),
             "If anomalies detected, should include UnusualAmount"
         );
     }

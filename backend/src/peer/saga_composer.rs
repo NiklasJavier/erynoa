@@ -23,8 +23,7 @@
 //! ```
 
 use crate::domain::{
-    Constraint, DID, Goal, Intent, RealmId, Saga, SagaAction, SagaCompensation,
-    SagaStep,
+    Constraint, Goal, Intent, RealmId, Saga, SagaAction, SagaCompensation, SagaStep, DID,
 };
 use thiserror::Error;
 
@@ -116,24 +115,28 @@ impl SagaComposer {
     /// Κ22: Komponiere Saga aus Intent
     pub fn compose(&self, intent: &Intent) -> CompositionResult<Saga> {
         let steps = match &intent.goal {
-            Goal::Transfer { to, amount, asset_type } => {
-                self.compose_transfer(&intent.source_did, to, *amount, asset_type)?
-            }
+            Goal::Transfer {
+                to,
+                amount,
+                asset_type,
+            } => self.compose_transfer(&intent.source_did, to, *amount, asset_type)?,
             Goal::Attest { subject, claim } => {
                 self.compose_attest(&intent.source_did, subject, claim)?
             }
-            Goal::Delegate { to, capabilities, ttl_seconds } => {
-                self.compose_delegate(&intent.source_did, to, capabilities, *ttl_seconds)?
-            }
-            Goal::Query { predicate } => {
-                self.compose_query(&intent.source_did, predicate)?
-            }
-            Goal::Create { entity_type, params } => {
-                self.compose_create(&intent.source_did, entity_type, params)?
-            }
-            Goal::Complex { description, parsed_goals } => {
-                self.compose_complex(&intent.source_did, description, parsed_goals)?
-            }
+            Goal::Delegate {
+                to,
+                capabilities,
+                ttl_seconds,
+            } => self.compose_delegate(&intent.source_did, to, capabilities, *ttl_seconds)?,
+            Goal::Query { predicate } => self.compose_query(&intent.source_did, predicate)?,
+            Goal::Create {
+                entity_type,
+                params,
+            } => self.compose_create(&intent.source_did, entity_type, params)?,
+            Goal::Complex {
+                description,
+                parsed_goals,
+            } => self.compose_complex(&intent.source_did, description, parsed_goals)?,
         };
 
         // Prüfe Constraints
@@ -161,7 +164,8 @@ impl SagaComposer {
                 amount,
                 asset_type: asset_type.to_string(),
             },
-        ).with_compensation(SagaCompensation::new(
+        )
+        .with_compensation(SagaCompensation::new(
             "Unlock funds",
             SagaAction::Unlock {
                 lock_id: "{{lock_id}}".to_string(), // Placeholder
@@ -179,7 +183,8 @@ impl SagaComposer {
                 amount,
                 asset_type: asset_type.to_string(),
             },
-        ).with_dependencies(vec![0]);
+        )
+        .with_dependencies(vec![0]);
         steps.push(transfer_step);
 
         Ok(steps)
@@ -209,12 +214,17 @@ impl SagaComposer {
         // (In der echten Implementierung würde hier ein Event erstellt)
         let attest_step = SagaStep::new(
             1,
-            format!("Create attestation for {} on subject {}", claim, subject.to_uri()),
+            format!(
+                "Create attestation for {} on subject {}",
+                claim,
+                subject.to_uri()
+            ),
             SagaAction::WaitFor {
                 condition: format!("attestation({}, {})", attester.to_uri(), subject.to_uri()),
                 timeout_seconds: 60,
             },
-        ).with_dependencies(vec![0]);
+        )
+        .with_dependencies(vec![0]);
         steps.push(attest_step);
 
         Ok(steps)
@@ -233,9 +243,17 @@ impl SagaComposer {
         // Step 1: Validiere Delegator hat diese Capabilities
         let validate_step = SagaStep::new(
             0,
-            format!("Validate {} has capabilities {:?}", from.to_uri(), capabilities),
+            format!(
+                "Validate {} has capabilities {:?}",
+                from.to_uri(),
+                capabilities
+            ),
             SagaAction::WaitFor {
-                condition: format!("capabilities({}) includes {:?}", from.to_uri(), capabilities),
+                condition: format!(
+                    "capabilities({}) includes {:?}",
+                    from.to_uri(),
+                    capabilities
+                ),
                 timeout_seconds: 30,
             },
         );
@@ -246,7 +264,10 @@ impl SagaComposer {
             1,
             format!(
                 "Delegate {:?} from {} to {} for {}s",
-                capabilities, from.to_uri(), to.to_uri(), ttl_seconds
+                capabilities,
+                from.to_uri(),
+                to.to_uri(),
+                ttl_seconds
             ),
             SagaAction::WaitFor {
                 condition: format!("delegation({}, {})", from.to_uri(), to.to_uri()),
@@ -267,11 +288,7 @@ impl SagaComposer {
     }
 
     /// Komponiere Query-Saga
-    fn compose_query(
-        &self,
-        _querier: &DID,
-        predicate: &str,
-    ) -> CompositionResult<Vec<SagaStep>> {
+    fn compose_query(&self, _querier: &DID, predicate: &str) -> CompositionResult<Vec<SagaStep>> {
         let step = SagaStep::new(
             0,
             format!("Execute query: {}", predicate),
@@ -296,26 +313,27 @@ impl SagaComposer {
         // Je nach Entity-Typ unterschiedliche Schritte
         match entity_type {
             "asset" | "token" => {
-                let amount = params.get("amount")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0);
+                let amount = params.get("amount").and_then(|v| v.as_u64()).unwrap_or(0);
 
-                steps.push(SagaStep::new(
-                    0,
-                    format!("Mint {} {} for {}", amount, entity_type, creator.to_uri()),
-                    SagaAction::Mint {
-                        to: creator.clone(),
-                        amount,
-                        asset_type: entity_type.to_string(),
-                    },
-                ).with_compensation(SagaCompensation::new(
-                    "Burn minted assets",
-                    SagaAction::Burn {
-                        from: creator.clone(),
-                        amount,
-                        asset_type: entity_type.to_string(),
-                    },
-                )));
+                steps.push(
+                    SagaStep::new(
+                        0,
+                        format!("Mint {} {} for {}", amount, entity_type, creator.to_uri()),
+                        SagaAction::Mint {
+                            to: creator.clone(),
+                            amount,
+                            asset_type: entity_type.to_string(),
+                        },
+                    )
+                    .with_compensation(SagaCompensation::new(
+                        "Burn minted assets",
+                        SagaAction::Burn {
+                            from: creator.clone(),
+                            amount,
+                            asset_type: entity_type.to_string(),
+                        },
+                    )),
+                );
             }
             _ => {
                 steps.push(SagaStep::new(
@@ -344,12 +362,12 @@ impl SagaComposer {
 
         for goal in parsed_goals {
             let goal_steps = match goal {
-                Goal::Transfer { to, amount, asset_type } => {
-                    self.compose_transfer(source, to, *amount, asset_type)?
-                }
-                Goal::Attest { subject, claim } => {
-                    self.compose_attest(source, subject, claim)?
-                }
+                Goal::Transfer {
+                    to,
+                    amount,
+                    asset_type,
+                } => self.compose_transfer(source, to, *amount, asset_type)?,
+                Goal::Attest { subject, claim } => self.compose_attest(source, subject, claim)?,
                 _ => {
                     // Fallback
                     vec![SagaStep::new(
@@ -364,7 +382,11 @@ impl SagaComposer {
             };
 
             // Re-Index und Dependencies anpassen
-            let previous_last = if all_steps.is_empty() { None } else { Some(step_index - 1) };
+            let previous_last = if all_steps.is_empty() {
+                None
+            } else {
+                Some(step_index - 1)
+            };
 
             for mut step in goal_steps {
                 step.index = step_index;
@@ -392,9 +414,10 @@ impl SagaComposer {
                 Constraint::MinTrust { value } => {
                     // In echter Implementierung: prüfe Trust aller Counterparts
                     if *value > 1.0 {
-                        return Err(CompositionError::ConstraintViolation(
-                            format!("Invalid MinTrust: {}", value),
-                        ));
+                        return Err(CompositionError::ConstraintViolation(format!(
+                            "Invalid MinTrust: {}",
+                            value
+                        )));
                     }
                 }
                 Constraint::MaxCost { amount, .. } => {
@@ -434,12 +457,18 @@ impl SagaComposer {
         // Füge Gateway-Check als ersten Schritt ein
         let gateway_step = SagaStep::new(
             0,
-            format!("Gateway check for {} crossing {} → {}", did.to_uri(), from_realm, to_realm),
+            format!(
+                "Gateway check for {} crossing {} → {}",
+                did.to_uri(),
+                from_realm,
+                to_realm
+            ),
             SagaAction::GatewayCheck {
                 did: did.clone(),
                 target_realm: to_realm.clone(),
             },
-        ).with_realm_crossing(from_realm, to_realm);
+        )
+        .with_realm_crossing(from_realm, to_realm);
 
         // Re-Index existierende Steps
         for step in &mut saga.steps {
@@ -533,13 +562,17 @@ mod tests {
                 asset_type: "ERY".to_string(),
             },
             RealmId::root(),
-        ).with_constraint(Constraint::MaxCost {
+        )
+        .with_constraint(Constraint::MaxCost {
             amount: 1, // Zu niedrig
             asset_type: "ERY".to_string(),
         });
 
         let result = composer.compose(&intent);
-        assert!(matches!(result, Err(CompositionError::InsufficientBudget { .. })));
+        assert!(matches!(
+            result,
+            Err(CompositionError::InsufficientBudget { .. })
+        ));
     }
 
     #[test]

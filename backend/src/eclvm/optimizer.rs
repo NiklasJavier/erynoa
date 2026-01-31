@@ -121,11 +121,8 @@ impl Optimizer {
                 }
 
                 // Boolean folding
-                if let (
-                    OpCode::PushConst(Value::Bool(a)),
-                    OpCode::PushConst(Value::Bool(b)),
-                    op,
-                ) = (&program[i], &program[i + 1], &program[i + 2])
+                if let (OpCode::PushConst(Value::Bool(a)), OpCode::PushConst(Value::Bool(b)), op) =
+                    (&program[i], &program[i + 1], &program[i + 2])
                 {
                     if let Some(folded) = self.fold_binary_bool(*a, *b, op) {
                         result.push(OpCode::PushConst(Value::Bool(folded)));

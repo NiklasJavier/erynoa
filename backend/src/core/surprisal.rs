@@ -67,11 +67,7 @@ impl SurprisalCalculator {
     /// ```text
     /// 𝒮(s) = ‖𝕎(s)‖² · ℐ(s)
     /// ```
-    pub fn calculate_dampened_surprisal(
-        &self,
-        event: &Event,
-        trust: &TrustVector6D,
-    ) -> Surprisal {
+    pub fn calculate_dampened_surprisal(&self, event: &Event, trust: &TrustVector6D) -> Surprisal {
         let raw = self.calculate_surprisal(event);
         let norm = trust.weighted_norm(&[1.0; 6]);
 
@@ -120,7 +116,9 @@ impl SurprisalCalculator {
             EventPayload::Mint { asset_type, .. } => format!("mint:{}", asset_type),
             EventPayload::Burn { asset_type, .. } => format!("burn:{}", asset_type),
             EventPayload::Attest { .. } => "attest".to_string(),
-            EventPayload::CredentialIssue { credential_type, .. } => {
+            EventPayload::CredentialIssue {
+                credential_type, ..
+            } => {
                 format!("credential:{}", credential_type)
             }
             EventPayload::CredentialRevoke { .. } => "revoke".to_string(),
@@ -236,7 +234,7 @@ impl CountMinSketch {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::{DID, EventPayload};
+    use crate::domain::{EventPayload, DID};
 
     #[test]
     fn test_surprisal_calculation() {

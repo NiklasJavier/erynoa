@@ -204,7 +204,9 @@ impl EventEngine {
 
     /// Κ10: Update Finalitätslevel
     pub fn update_finality(&mut self, event_id: &EventId, level: FinalityLevel) -> EventResult<()> {
-        let event = self.events.get_mut(event_id)
+        let event = self
+            .events
+            .get_mut(event_id)
             .ok_or_else(|| EventError::ParentNotFound(event_id.clone()))?;
 
         // Finalität kann nur aufsteigen, nie absteigen (Permanenz)
@@ -256,7 +258,13 @@ impl EventEngine {
         }
 
         for event_id in self.events.keys() {
-            visit(event_id, &self.events, &mut visited, &mut temp_mark, &mut result);
+            visit(
+                event_id,
+                &self.events,
+                &mut visited,
+                &mut temp_mark,
+                &mut result,
+            );
         }
 
         result
@@ -264,19 +272,16 @@ impl EventEngine {
 
     /// Statistiken
     pub fn stats(&self) -> EventEngineStats {
-        let finality_counts = self.events.values().fold(
-            [0usize; 5],
-            |mut acc, e| {
-                match e.finality {
-                    FinalityLevel::Nascent => acc[0] += 1,
-                    FinalityLevel::Validated => acc[1] += 1,
-                    FinalityLevel::Witnessed => acc[2] += 1,
-                    FinalityLevel::Anchored => acc[3] += 1,
-                    FinalityLevel::Eternal => acc[4] += 1,
-                }
-                acc
-            },
-        );
+        let finality_counts = self.events.values().fold([0usize; 5], |mut acc, e| {
+            match e.finality {
+                FinalityLevel::Nascent => acc[0] += 1,
+                FinalityLevel::Validated => acc[1] += 1,
+                FinalityLevel::Witnessed => acc[2] += 1,
+                FinalityLevel::Anchored => acc[3] += 1,
+                FinalityLevel::Eternal => acc[4] += 1,
+            }
+            acc
+        });
 
         EventEngineStats {
             total_events: self.events.len(),
@@ -342,7 +347,11 @@ mod tests {
         let child_id = engine.add_event(child).unwrap();
 
         // Parent sollte Child in children_index haben
-        assert!(engine.children_index.get(&genesis_id).unwrap().contains(&child_id));
+        assert!(engine
+            .children_index
+            .get(&genesis_id)
+            .unwrap()
+            .contains(&child_id));
     }
 
     #[test]
@@ -375,10 +384,24 @@ mod tests {
         let e1 = Event::genesis(alice.clone(), "pk".to_string());
         let id1 = engine.add_event(e1).unwrap();
 
-        let e2 = Event::new(alice.clone(), EventPayload::Custom { event_type: "test".to_string(), data: serde_json::Value::Null }, vec![id1.clone()]);
+        let e2 = Event::new(
+            alice.clone(),
+            EventPayload::Custom {
+                event_type: "test".to_string(),
+                data: serde_json::Value::Null,
+            },
+            vec![id1.clone()],
+        );
         let id2 = engine.add_event(e2).unwrap();
 
-        let e3 = Event::new(alice.clone(), EventPayload::Custom { event_type: "test".to_string(), data: serde_json::Value::Null }, vec![id2]);
+        let e3 = Event::new(
+            alice.clone(),
+            EventPayload::Custom {
+                event_type: "test".to_string(),
+                data: serde_json::Value::Null,
+            },
+            vec![id2],
+        );
         engine.add_event(e3).unwrap();
 
         // Bob: 1 Event

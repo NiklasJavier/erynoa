@@ -1,48 +1,48 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
-  import { authStore } from "$lib/auth";
-  import { getUser } from "$lib/auth/oidc";
-  import { Button } from "@erynoa/ui/components/button";
-  import * as Card from "@erynoa/ui/components/card";
-  import { AlertCircle, Loader2 } from "lucide-svelte";
-  import { onMount } from "svelte";
+import { goto } from '$app/navigation'
+import { authStore } from '$lib/auth'
+import { getUser } from '$lib/auth/oidc'
+import { Button } from '@erynoa/ui/components/button'
+import * as Card from '@erynoa/ui/components/card'
+import { AlertCircle, Loader2 } from 'lucide-svelte'
+import { onMount } from 'svelte'
 
-  let error = $state<string | null>(null);
+let error = $state<string | null>(null)
 
-  onMount(async () => {
-    try {
-      console.log("[Callback] Starting callback processing...");
-      const user = await authStore.handleCallback();
-      console.log("[Callback] Callback processed successfully, user:", {
-        username: user?.profile?.preferred_username,
-        expired: user?.expired,
-        hasAccessToken: !!user?.access_token,
-      });
+onMount(async () => {
+	try {
+		console.log('[Callback] Starting callback processing...')
+		const user = await authStore.handleCallback()
+		console.log('[Callback] Callback processed successfully, user:', {
+			username: user?.profile?.preferred_username,
+			expired: user?.expired,
+			hasAccessToken: !!user?.access_token,
+		})
 
-      // Warte länger, damit der State vollständig aktualisiert wird
-      // und alle reactive updates durchgelaufen sind
-      await new Promise((resolve) => setTimeout(resolve, 300));
+		// Warte länger, damit der State vollständig aktualisiert wird
+		// und alle reactive updates durchgelaufen sind
+		await new Promise((resolve) => setTimeout(resolve, 300))
 
-      // Verifiziere nochmal, dass der User gesetzt ist
-      const currentUser = await getUser();
-      if (!currentUser || currentUser.expired) {
-        throw new Error("User not properly authenticated after callback");
-      }
+		// Verifiziere nochmal, dass der User gesetzt ist
+		const currentUser = await getUser()
+		if (!currentUser || currentUser.expired) {
+			throw new Error('User not properly authenticated after callback')
+		}
 
-      console.log("[Callback] User verified, redirecting...");
+		console.log('[Callback] User verified, redirecting...')
 
-      // Hole gespeicherte Return URL oder nutze Dashboard als Default
-      const returnUrl = sessionStorage.getItem("auth_return_url") || "/";
-      sessionStorage.removeItem("auth_return_url");
-      console.log("[Callback] Redirecting to:", returnUrl);
+		// Hole gespeicherte Return URL oder nutze Dashboard als Default
+		const returnUrl = sessionStorage.getItem('auth_return_url') || '/'
+		sessionStorage.removeItem('auth_return_url')
+		console.log('[Callback] Redirecting to:', returnUrl)
 
-      // Verwende replace statt goto, um die Callback-URL aus der History zu entfernen
-      goto(returnUrl, { replaceState: true });
-    } catch (err) {
-      console.error("[Callback] Error:", err);
-      error = err instanceof Error ? err.message : "Authentication failed";
-    }
-  });
+		// Verwende replace statt goto, um die Callback-URL aus der History zu entfernen
+		goto(returnUrl, { replaceState: true })
+	} catch (err) {
+		console.error('[Callback] Error:', err)
+		error = err instanceof Error ? err.message : 'Authentication failed'
+	}
+})
 </script>
 
 <!-- Callback page renders outside of normal layout -->

@@ -1,17 +1,14 @@
 <script lang="ts">
-  import {
-    type QuickLinkGroup,
-    getDashboardQuickLinksGrouped,
-  } from "$lib/config/quicklinks";
-  import { Badge } from "@erynoa/ui/components/badge";
+import { type QuickLinkGroup, getDashboardQuickLinksGrouped } from '$lib/config/quicklinks'
+import { Badge } from '@erynoa/ui/components/badge'
 
-  interface Props {
-    class?: string;
-  }
+interface Props {
+	class?: string
+}
 
-  const { class: className }: Props = $props();
+const { class: className }: Props = $props()
 
-  const quickLinkGroups: QuickLinkGroup[] = getDashboardQuickLinksGrouped();
+const quickLinkGroups: QuickLinkGroup[] = getDashboardQuickLinksGrouped()
 </script>
 
 <div class={className}>

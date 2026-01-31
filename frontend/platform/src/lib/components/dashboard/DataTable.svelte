@@ -1,87 +1,85 @@
 <script lang="ts">
-  import { Badge } from "@erynoa/ui/components/badge";
-  import { Button } from "@erynoa/ui/components/button";
-  import * as DropdownMenu from "@erynoa/ui/components/dropdown-menu";
-  import * as Table from "@erynoa/ui/components/table";
-  import * as Tabs from "@erynoa/ui/components/tabs";
-  import ArrowUpDown from "lucide-svelte/icons/arrow-up-down";
-  import ChevronLeft from "lucide-svelte/icons/chevron-left";
-  import ChevronRight from "lucide-svelte/icons/chevron-right";
-  import MoreHorizontal from "lucide-svelte/icons/more-horizontal";
+import { Badge } from '@erynoa/ui/components/badge'
+import { Button } from '@erynoa/ui/components/button'
+import * as DropdownMenu from '@erynoa/ui/components/dropdown-menu'
+import * as Table from '@erynoa/ui/components/table'
+import * as Tabs from '@erynoa/ui/components/tabs'
+import ArrowUpDown from 'lucide-svelte/icons/arrow-up-down'
+import ChevronLeft from 'lucide-svelte/icons/chevron-left'
+import ChevronRight from 'lucide-svelte/icons/chevron-right'
+import MoreHorizontal from 'lucide-svelte/icons/more-horizontal'
 
-  interface User {
-    id: string;
-    name: string;
-    email: string;
-    status: "Active" | "Inactive" | "Pending";
-    role: string;
-    lastActive: string;
-  }
+interface User {
+	id: string
+	name: string
+	email: string
+	status: 'Active' | 'Inactive' | 'Pending'
+	role: string
+	lastActive: string
+}
 
-  const users: User[] = [
-    {
-      id: "1",
-      name: "Olivia Martin",
-      email: "olivia.martin@email.com",
-      status: "Active",
-      role: "Admin",
-      lastActive: "2 min ago",
-    },
-    {
-      id: "2",
-      name: "Jackson Lee",
-      email: "jackson.lee@email.com",
-      status: "Active",
-      role: "User",
-      lastActive: "5 min ago",
-    },
-    {
-      id: "3",
-      name: "Isabella Nguyen",
-      email: "isabella.nguyen@email.com",
-      status: "Pending",
-      role: "User",
-      lastActive: "1 hour ago",
-    },
-    {
-      id: "4",
-      name: "William Kim",
-      email: "will@email.com",
-      status: "Active",
-      role: "User",
-      lastActive: "3 hours ago",
-    },
-    {
-      id: "5",
-      name: "Sofia Davis",
-      email: "sofia.davis@email.com",
-      status: "Inactive",
-      role: "User",
-      lastActive: "2 days ago",
-    },
-  ];
+const users: User[] = [
+	{
+		id: '1',
+		name: 'Olivia Martin',
+		email: 'olivia.martin@email.com',
+		status: 'Active',
+		role: 'Admin',
+		lastActive: '2 min ago',
+	},
+	{
+		id: '2',
+		name: 'Jackson Lee',
+		email: 'jackson.lee@email.com',
+		status: 'Active',
+		role: 'User',
+		lastActive: '5 min ago',
+	},
+	{
+		id: '3',
+		name: 'Isabella Nguyen',
+		email: 'isabella.nguyen@email.com',
+		status: 'Pending',
+		role: 'User',
+		lastActive: '1 hour ago',
+	},
+	{
+		id: '4',
+		name: 'William Kim',
+		email: 'will@email.com',
+		status: 'Active',
+		role: 'User',
+		lastActive: '3 hours ago',
+	},
+	{
+		id: '5',
+		name: 'Sofia Davis',
+		email: 'sofia.davis@email.com',
+		status: 'Inactive',
+		role: 'User',
+		lastActive: '2 days ago',
+	},
+]
 
-  let activeTab = $state("all");
+let activeTab = $state('all')
 
-  const filteredUsers = $derived(() => {
-    if (activeTab === "all") return users;
-    return users.filter((u) => u.status.toLowerCase() === activeTab);
-  });
+const filteredUsers = $derived(() => {
+	if (activeTab === 'all') return users
+	return users.filter((u) => u.status.toLowerCase() === activeTab)
+})
 
-  function getStatusVariant(
-    status: string,
-  ): "default" | "secondary" | "outline" {
-    switch (status) {
-      case "Active":
-        return "default";
-      case "Inactive":
-        return "secondary";
-      case "Pending":
-        return "outline";
-      default:
-        return "secondary";
-    }
-  }
+function getStatusVariant(status: string): 'default' | 'secondary' | 'outline' {
+	switch (status) {
+		case 'Active':
+			return 'default'
+		case 'Inactive':
+			return 'secondary'
+		case 'Pending':
+			return 'outline'
+		default:
+			return 'secondary'
+	}
+}
 </script>
 
 <div class="space-y-4">

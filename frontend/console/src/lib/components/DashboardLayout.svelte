@@ -1,18 +1,18 @@
 <script lang="ts">
-  import AppSidebar from "$lib/components/dashboard/AppSidebar.svelte";
-  import SiteHeader from "$lib/components/dashboard/SiteHeader.svelte";
-  import { getSidebarWidth } from "$lib/config";
-  import * as Sidebar from "@erynoa/ui/components/sidebar";
-  import type { Snippet } from "svelte";
+import AppSidebar from '$lib/components/dashboard/AppSidebar.svelte'
+import SiteHeader from '$lib/components/dashboard/SiteHeader.svelte'
+import { getSidebarWidth } from '$lib/config'
+import * as Sidebar from '@erynoa/ui/components/sidebar'
+import type { Snippet } from 'svelte'
 
-  interface Props {
-    children: Snippet;
-  }
+interface Props {
+	children: Snippet
+}
 
-  const { children }: Props = $props();
+const { children }: Props = $props()
 
-  // Dynamische Sidebar-Breite basierend auf Navigation-Tiefe
-  const sidebarWidth = getSidebarWidth();
+// Dynamische Sidebar-Breite basierend auf Navigation-Tiefe
+const sidebarWidth = getSidebarWidth()
 </script>
 
 <Sidebar.Provider

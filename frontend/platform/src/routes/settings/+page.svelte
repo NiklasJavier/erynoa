@@ -1,17 +1,17 @@
 <script lang="ts">
-  import { user } from "$lib/auth";
-  import PageContent from "$lib/components/PageContent.svelte";
-  import { getAppConfig } from "$lib/config";
-  import { Badge } from "@erynoa/ui/components/badge";
-  import * as Card from "@erynoa/ui/components/card";
-  import { Bell, ExternalLink, Server, Shield, User } from "lucide-svelte";
-  import { onMount } from "svelte";
+import { user } from '$lib/auth'
+import PageContent from '$lib/components/PageContent.svelte'
+import { getAppConfig } from '$lib/config'
+import { Badge } from '@erynoa/ui/components/badge'
+import * as Card from '@erynoa/ui/components/card'
+import { Bell, ExternalLink, Server, Shield, User } from 'lucide-svelte'
+import { onMount } from 'svelte'
 
-  let config = $state<ReturnType<typeof getAppConfig> | null>(null);
+let config = $state<ReturnType<typeof getAppConfig> | null>(null)
 
-  onMount(() => {
-    config = getAppConfig();
-  });
+onMount(() => {
+	config = getAppConfig()
+})
 </script>
 
 <PageContent>

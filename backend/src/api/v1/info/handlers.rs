@@ -1,16 +1,16 @@
 //! Connect-RPC Info Service Implementation
 
+use async_trait::async_trait;
 use axum::extract::State;
 use axum::http::request::Parts;
 use axum_connect::parts::RpcFromRequestParts;
-use async_trait::async_trait;
 
-use crate::config::version::VERSION;
-use crate::server::AppState;
 use crate::api::middleware::FrontendOrigin;
+use crate::config::version::VERSION;
 use crate::gen::erynoa::v1::{
-    GetInfoRequest, GetInfoResponse, AuthConfig, UrlConfig, FeatureFlags,
+    AuthConfig, FeatureFlags, GetInfoRequest, GetInfoResponse, UrlConfig,
 };
+use crate::server::AppState;
 
 /// Extract FrontendOrigin from request extensions
 #[async_trait]
@@ -39,7 +39,7 @@ where
 }
 
 /// Get Info Handler
-/// 
+///
 /// Returns application configuration including OIDC client ID.
 /// Determines the correct client ID based on the request origin/referer header.
 pub async fn get_info_handler(
@@ -48,7 +48,7 @@ pub async fn get_info_handler(
     _request: GetInfoRequest,
 ) -> GetInfoResponse {
     let client_id = frontend.client_id;
-    
+
     GetInfoResponse {
         version: VERSION.to_string(),
         environment: state.config.application.environment.as_str().to_string(),

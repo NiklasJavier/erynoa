@@ -1,28 +1,28 @@
 <script lang="ts">
-  import { authStore, isAuthenticated, user } from "$lib/auth";
-  import * as Avatar from "@erynoa/ui/components/avatar";
-  import { Button } from "@erynoa/ui/components/button";
-  import * as DropdownMenu from "@erynoa/ui/components/dropdown-menu";
-  import { LogOut, Settings, User } from "lucide-svelte";
+import { authStore, isAuthenticated, user } from '$lib/auth'
+import * as Avatar from '@erynoa/ui/components/avatar'
+import { Button } from '@erynoa/ui/components/button'
+import * as DropdownMenu from '@erynoa/ui/components/dropdown-menu'
+import { LogOut, Settings, User } from 'lucide-svelte'
 
-  async function handleLogin() {
-    await authStore.login();
-  }
+async function handleLogin() {
+	await authStore.login()
+}
 
-  async function handleLogout() {
-    await authStore.logout();
-  }
+async function handleLogout() {
+	await authStore.logout()
+}
 
-  // Get initials from user name
-  function getInitials(name: string | undefined): string {
-    if (!name) return "?";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  }
+// Get initials from user name
+function getInitials(name: string | undefined): string {
+	if (!name) return '?'
+	return name
+		.split(' ')
+		.map((n) => n[0])
+		.join('')
+		.toUpperCase()
+		.slice(0, 2)
+}
 </script>
 
 {#if $isAuthenticated && $user}

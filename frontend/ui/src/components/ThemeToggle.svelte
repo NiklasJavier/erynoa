@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { Moon, Sun } from "lucide-svelte";
-  import { setMode } from "mode-watcher";
-  import { Button } from "./button/index.js";
-  import * as DropdownMenu from "./dropdown-menu/index.js";
+import { Moon, Sun } from 'lucide-svelte'
+import { setMode } from 'mode-watcher'
+import { Button } from './button/index.js'
+import * as DropdownMenu from './dropdown-menu/index.js'
 </script>
 
 <DropdownMenu.Root>

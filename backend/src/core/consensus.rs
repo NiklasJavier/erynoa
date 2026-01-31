@@ -14,7 +14,7 @@
 //! ```
 //! wobei vᵢ die Witnesses sind und θ_finality = 0.67 (Supermajorität)
 
-use crate::domain::{DID, EventId, FinalityLevel, TrustVector6D, WitnessAttestation};
+use crate::domain::{EventId, FinalityLevel, TrustVector6D, WitnessAttestation, DID};
 use chrono::Utc;
 use std::collections::HashMap;
 use thiserror::Error;
@@ -90,9 +90,9 @@ pub struct ConsensusConfig {
 impl Default for ConsensusConfig {
     fn default() -> Self {
         Self {
-            min_witnesses: 3,          // Κ18: k ≥ 3
-            finality_threshold: 0.67,   // 2/3 Supermajorität
-            min_witness_trust: 0.5,     // Minimum Trust für Witness
+            min_witnesses: 3,              // Κ18: k ≥ 3
+            finality_threshold: 0.67,      // 2/3 Supermajorität
+            min_witness_trust: 0.5,        // Minimum Trust für Witness
             max_revert_probability: 1e-50, // Κ18: P_revert ≤ 10⁻⁵⁰
         }
     }
@@ -126,7 +126,9 @@ impl ConsensusEngine {
         signature: String,
     ) -> ConsensusResult<FinalityCheck> {
         // Prüfe ob Witness registriert ist
-        let trust = self.witness_trust.get(&witness)
+        let trust = self
+            .witness_trust
+            .get(&witness)
             .ok_or_else(|| ConsensusError::UnauthorizedWitness(witness.to_uri()))?;
 
         // Prüfe Minimum Trust
@@ -159,19 +161,21 @@ impl ConsensusEngine {
 
     /// Κ18: Prüfe ob Event Finalität erreicht hat
     pub fn check_finality(&self, event_id: &EventId) -> ConsensusResult<FinalityCheck> {
-        let attestations = self.attestations.get(event_id)
+        let attestations = self
+            .attestations
+            .get(event_id)
             .map(|a| a.as_slice())
             .unwrap_or(&[]);
 
         let witness_count = attestations.len();
 
         // Berechne Trust-gewichtete Summe
-        let total_trust: f64 = attestations.iter()
-            .map(|a| a.trust_weight)
-            .sum();
+        let total_trust: f64 = attestations.iter().map(|a| a.trust_weight).sum();
 
         // Maximum möglicher Trust (alle registrierten Witnesses)
-        let max_possible_trust: f64 = self.witness_trust.values()
+        let max_possible_trust: f64 = self
+            .witness_trust
+            .values()
             .map(|t| t.weighted_norm(&[1.0; 6]))
             .sum();
 
@@ -226,23 +230,20 @@ impl ConsensusEngine {
 
     /// Hole alle Attestations für ein Event
     pub fn get_attestations(&self, event_id: &EventId) -> &[WitnessAttestation] {
-        self.attestations.get(event_id)
+        self.attestations
+            .get(event_id)
             .map(|a| a.as_slice())
             .unwrap_or(&[])
     }
 
     /// Statistiken
     pub fn stats(&self) -> ConsensusEngineStats {
-        let total_attestations: usize = self.attestations.values()
-            .map(|a| a.len())
-            .sum();
+        let total_attestations: usize = self.attestations.values().map(|a| a.len()).sum();
 
-        let finalized_events = self.attestations.keys()
-            .filter(|id| {
-                self.check_finality(id)
-                    .map(|c| c.reached)
-                    .unwrap_or(false)
-            })
+        let finalized_events = self
+            .attestations
+            .keys()
+            .filter(|id| self.check_finality(id).map(|c| c.reached).unwrap_or(false))
             .count();
 
         ConsensusEngineStats {
@@ -305,11 +306,9 @@ mod tests {
         let mut engine = setup_engine();
         let event_id = EventId::new("event:test:1");
 
-        let result = engine.add_attestation(
-            event_id.clone(),
-            DID::new_self("w1"),
-            "sig1".to_string(),
-        ).unwrap();
+        let result = engine
+            .add_attestation(event_id.clone(), DID::new_self("w1"), "sig1".to_string())
+            .unwrap();
 
         // 1 Witness < 3 (min_witnesses)
         assert!(!result.reached);
@@ -322,13 +321,15 @@ mod tests {
         let event_id = EventId::new("event:test:2");
 
         // Drei hochvertrauenswürdige Witnesses
-        engine.add_attestation(event_id.clone(), DID::new_self("w1"), "sig1".to_string()).unwrap();
-        engine.add_attestation(event_id.clone(), DID::new_self("w2"), "sig2".to_string()).unwrap();
-        let result = engine.add_attestation(
-            event_id.clone(),
-            DID::new_self("w3"),
-            "sig3".to_string(),
-        ).unwrap();
+        engine
+            .add_attestation(event_id.clone(), DID::new_self("w1"), "sig1".to_string())
+            .unwrap();
+        engine
+            .add_attestation(event_id.clone(), DID::new_self("w2"), "sig2".to_string())
+            .unwrap();
+        let result = engine
+            .add_attestation(event_id.clone(), DID::new_self("w3"), "sig3".to_string())
+            .unwrap();
 
         // 3 Witnesses mit hohem Trust sollten Threshold erreichen
         assert_eq!(result.witness_count, 3);
@@ -340,13 +341,12 @@ mod tests {
         let mut engine = setup_engine();
         let event_id = EventId::new("event:test:3");
 
-        let result = engine.add_attestation(
-            event_id,
-            DID::new_self("unknown"),
-            "sig".to_string(),
-        );
+        let result = engine.add_attestation(event_id, DID::new_self("unknown"), "sig".to_string());
 
-        assert!(matches!(result, Err(ConsensusError::UnauthorizedWitness(_))));
+        assert!(matches!(
+            result,
+            Err(ConsensusError::UnauthorizedWitness(_))
+        ));
     }
 
     #[test]
@@ -355,15 +355,21 @@ mod tests {
         let event_id = EventId::new("event:test:4");
 
         // Eine Attestation
-        engine.add_attestation(event_id.clone(), DID::new_self("w1"), "sig1".to_string()).unwrap();
+        engine
+            .add_attestation(event_id.clone(), DID::new_self("w1"), "sig1".to_string())
+            .unwrap();
         let check1 = engine.check_finality(&event_id).unwrap();
 
         // Zwei Attestations
-        engine.add_attestation(event_id.clone(), DID::new_self("w2"), "sig2".to_string()).unwrap();
+        engine
+            .add_attestation(event_id.clone(), DID::new_self("w2"), "sig2".to_string())
+            .unwrap();
         let check2 = engine.check_finality(&event_id).unwrap();
 
         // Drei Attestations
-        engine.add_attestation(event_id.clone(), DID::new_self("w3"), "sig3".to_string()).unwrap();
+        engine
+            .add_attestation(event_id.clone(), DID::new_self("w3"), "sig3".to_string())
+            .unwrap();
         let check3 = engine.check_finality(&event_id).unwrap();
 
         // Revert-Wahrscheinlichkeit sollte sinken
