@@ -13,3 +13,6 @@ pub mod users;
 
 #[cfg(feature = "connect")]
 pub mod connect_routes;
+
+// REST fallback handlers for health checks and info
+pub mod rest_handlers;
