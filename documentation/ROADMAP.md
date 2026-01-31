@@ -5,7 +5,7 @@
 > **Status:** Active Development
 > **Letzte Aktualisierung:** Januar 2026
 > **Zielgruppe:** Gründer:innen, Entwickler:innen, Investoren, Partner
-> **Referenz:** [Fachkonzept V6.2](./concept-v3/FACHKONZEPT.md)
+> **Referenz:** [Fachkonzept V4](./concept-v4/FACHKONZEPT.md)
 
 ---
 
@@ -604,19 +604,15 @@ Diese Roadmap beschreibt den Implementierungsplan für **Erynoa** – das probab
 
 ---
 
-## Verwandte Dokumente
+## Verwandte Dokumente (concept-v4)
 
-| Dokument                                                | Beschreibung                           |
-| ------------------------------------------------------- | -------------------------------------- |
-| [FACHKONZEPT.md](./concept-v3/FACHKONZEPT.md)           | Vollständiges technisches Konzept V6.2 |
-| [CLI-REFERENCE.md](./concept-v3/CLI-REFERENCE.md)       | CLI-Befehle (126 Commands)             |
-| [WORLD-FORMULA.md](./concept-v3/WORLD-FORMULA.md)       | Systemgleichung, Axiome                |
-| [LOGIC.md](./concept-v3/LOGIC.md)                       | Formale Logik, Beweise                 |
-| [CONSTITUTION.md](./concept-v3/CONSTITUTION.md)         | Humanistische Verfassung (H1-H4)       |
-| [ROBUSTNESS-LAYER.md](./concept-v3/ROBUSTNESS-LAYER.md) | Antifragilitäts-Architektur            |
-| [SDK-ARCHITECTURE.md](./concept-v3/SDK-ARCHITECTURE.md) | SDK-Spezifikation                      |
-| [PROTOCOL.md](./concept-v3/PROTOCOL.md)                 | Protokoll-Details                      |
-| [peer.proto](../backend/proto/erynoa/v1/peer.proto)     | gRPC API Definition                    |
+| Dokument                                                      | Beschreibung                             |
+| ------------------------------------------------------------- | ---------------------------------------- |
+| [FACHKONZEPT.md](./concept-v4/FACHKONZEPT.md)                 | Vollständiges technisches Konzept V4     |
+| [LOGIC.md](./concept-v4/LOGIC.md)                             | 28 Kern-Axiome, Formale Logik            |
+| [SYSTEM-ARCHITECTURE.md](./concept-v4/SYSTEM-ARCHITECTURE.md) | 4-Schichten Implementierungs-Architektur |
+| [CLI-REFERENCE.md](./concept-v4/CLI-REFERENCE.md)             | CLI-Befehle                              |
+| [peer.proto](../backend/proto/erynoa/v1/peer.proto)           | gRPC API Definition                      |
 
 ---
 

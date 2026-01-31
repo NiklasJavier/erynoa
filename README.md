@@ -10,7 +10,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![Nix](https://img.shields.io/badge/Nix-Flakes-5277C3?style=flat-square&logo=nixos)](https://nixos.org/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
-[![Axioms](https://img.shields.io/badge/Axioms-126-blueviolet?style=flat-square)](documentation/concept-v3/FACHKONZEPT.md)
+[![Axioms](https://img.shields.io/badge/Axioms-126-blueviolet?style=flat-square)](documentation/concept-v4/FACHKONZEPT.md)
 
 ```
 ╔═══════════════════════════════════════════════════════════════════════════════╗
@@ -76,7 +76,7 @@ Erynoa ist ein **probabilistisches kybernetisches Protokoll** für vertrauensbas
 | **H(s)**   | Human-Alignment (2.0\|1.5\|1.0)     | `domain/formula.rs`     |
 | **w(s,t)** | Temporale Gewichtung                | `core/world_formula.rs` |
 
-> 📖 **Mehr erfahren:** [Fachkonzept V6.2](documentation/concept-v3/FACHKONZEPT.md) · [CLI-Referenz](documentation/concept-v3/CLI-REFERENCE.md) · [Roadmap](documentation/ROADMAP.md)
+> 📖 **Mehr erfahren:** [Fachkonzept V6.2](documentation/concept-v4/FACHKONZEPT.md) · [CLI-Referenz](documentation/concept-v4/CLI-REFERENCE.md) · [Roadmap](documentation/ROADMAP.md)
 
 ---
 
@@ -301,11 +301,11 @@ erynoa/
 │
 ├── documentation/             # 📖 Dokumentation
 │   ├── ROADMAP.md             # ⭐ Strategic Roadmap V4.1
-│   ├── concept-v3/            # ⭐ Aktuell: Fachkonzept V6.2
+│   ├── concept-v4/            # ⭐ Aktuell: Fachkonzept V6.2
 │   │   ├── FACHKONZEPT.md     # Vollständiges Konzept
 │   │   ├── CLI-REFERENCE.md   # 126 CLI Commands
-│   │   ├── WORLD-FORMULA.md   # Systemgleichung
-│   │   └── PROTOCOL.md        # Protokoll-Details
+│   │   ├── LOGIC.md           # Logik & Axiome
+│   │   └── SYSTEM-ARCHITECTURE.md # System-Architektur
 │   └── system/                # Setup, Guides, Reference
 │
 ├── infra/                     # 🏗 Infrastructure
@@ -357,13 +357,13 @@ erynoa/
 
 ### Kern-Dokumente
 
-| Dokument                                                           | Beschreibung                      |
-| ------------------------------------------------------------------ | --------------------------------- |
-| **[📋 Fachkonzept V6.2](documentation/concept-v3/FACHKONZEPT.md)** | Vollständiges technisches Konzept |
-| **[🗺️ Roadmap V4.1](documentation/ROADMAP.md)**                    | Strategischer Entwicklungsplan    |
-| **[💻 CLI-Referenz](documentation/concept-v3/CLI-REFERENCE.md)**   | 126 CLI Commands                  |
-| **[🔢 Weltformel](documentation/concept-v3/WORLD-FORMULA.md)**     | Systemgleichung, Axiome           |
-| **[⚖️ Verfassung](documentation/concept-v3/CONSTITUTION.md)**      | Human-Alignment (H1-H4)           |
+| Dokument                                                                     | Beschreibung                      |
+| ---------------------------------------------------------------------------- | --------------------------------- |
+| **[📋 Fachkonzept V6.2](documentation/concept-v4/FACHKONZEPT.md)**           | Vollständiges technisches Konzept |
+| **[🗺️ Roadmap V4.1](documentation/ROADMAP.md)**                              | Strategischer Entwicklungsplan    |
+| **[💻 CLI-Referenz](documentation/concept-v4/CLI-REFERENCE.md)**             | 126 CLI Commands                  |
+| **[📐 Logik & Axiome](documentation/concept-v4/LOGIC.md)**                   | Κ1-Κ28 Axiome, Formalisierung     |
+| **[🏗️ System-Architektur](documentation/concept-v4/SYSTEM-ARCHITECTURE.md)** | V4.1 Architektur                  |
 
 ### System-Dokumentation
 
