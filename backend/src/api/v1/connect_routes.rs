@@ -33,4 +33,3 @@ pub fn create_connect_routes(_state: AppState) -> Router<AppState> {
 
     router
 }
-

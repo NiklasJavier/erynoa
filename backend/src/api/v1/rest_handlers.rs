@@ -125,4 +125,3 @@ pub async fn status_handler(State(state): State<AppState>) -> Json<StatusRespons
         ],
     })
 }
-

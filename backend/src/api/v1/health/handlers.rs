@@ -58,4 +58,3 @@ pub async fn ready_check_handler(state: State<AppState>, _request: ReadyRequest)
         }),
     }
 }
-
