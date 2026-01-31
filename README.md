@@ -10,7 +10,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![Nix](https://img.shields.io/badge/Nix-Flakes-5277C3?style=flat-square&logo=nixos)](https://nixos.org/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
-[![Axioms](https://img.shields.io/badge/Axioms-126-blueviolet?style=flat-square)](documentation/concept-v4/FACHKONZEPT.md)
+[![Axioms](https://img.shields.io/badge/Axioms-28-blueviolet?style=flat-square)](documentation/concept-v4/FACHKONZEPT.md)
 
 ```
 ╔═══════════════════════════════════════════════════════════════════════════════╗
@@ -31,7 +31,7 @@
 
 ## 🧠 Was ist Erynoa?
 
-Erynoa ist ein **probabilistisches kybernetisches Protokoll** für vertrauensbasierte Interaktionen zwischen Menschen, Organisationen und KI-Agenten. Es basiert auf **126 formal definierten Axiomen** und einer mathematisch fundierten **Systemgleichung (Weltformel)**.
+Erynoa ist ein **probabilistisches kybernetisches Protokoll** für vertrauensbasierte Interaktionen zwischen Menschen, Organisationen und KI-Agenten. Es basiert auf **28 formal definierten Axiomen (Κ1-Κ28)** und einer mathematisch fundierten **Systemgleichung (Weltformel)**.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -57,7 +57,7 @@ Erynoa ist ein **probabilistisches kybernetisches Protokoll** für vertrauensbas
 │   ✅ Intent → Saga Resolution          ✅ Gateway Trust-Dampening              │
 │   ✅ Realm-Hierarchie (Root/Virtual)   ✅ Anomaly Detection                    │
 │                                                                                 │
-│   73 TESTS ✅ · 126 AXIOME · 4 SCHICHTEN · KLASSISCHE WAHRSCHEINLICHKEIT       │
+│   73 TESTS ✅ · 28 AXIOME · 4 SCHICHTEN · KLASSISCHE WAHRSCHEINLICHKEIT       │
 │                                                                                 │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -303,7 +303,7 @@ erynoa/
 │   ├── ROADMAP.md             # ⭐ Strategic Roadmap V4.1
 │   ├── concept-v4/            # ⭐ Aktuell: Fachkonzept V6.2
 │   │   ├── FACHKONZEPT.md     # Vollständiges Konzept
-│   │   ├── CLI-REFERENCE.md   # 126 CLI Commands
+│   │   ├── CLI-REFERENCE.md   # CLI Commands
 │   │   ├── LOGIC.md           # Logik & Axiome
 │   │   └── SYSTEM-ARCHITECTURE.md # System-Architektur
 │   └── system/                # Setup, Guides, Reference
@@ -361,7 +361,7 @@ erynoa/
 | ---------------------------------------------------------------------------- | --------------------------------- |
 | **[📋 Fachkonzept V6.2](documentation/concept-v4/FACHKONZEPT.md)**           | Vollständiges technisches Konzept |
 | **[🗺️ Roadmap V4.1](documentation/ROADMAP.md)**                              | Strategischer Entwicklungsplan    |
-| **[💻 CLI-Referenz](documentation/concept-v4/CLI-REFERENCE.md)**             | 126 CLI Commands                  |
+| **[💻 CLI-Referenz](documentation/concept-v4/CLI-REFERENCE.md)**             | CLI Commands                      |
 | **[📐 Logik & Axiome](documentation/concept-v4/LOGIC.md)**                   | Κ1-Κ28 Axiome, Formalisierung     |
 | **[🏗️ System-Architektur](documentation/concept-v4/SYSTEM-ARCHITECTURE.md)** | V4.1 Architektur                  |
 
@@ -453,7 +453,7 @@ erynoa/
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-**126 Axiome · 4 Schichten · 73 Tests ✅**
+**28 Axiome (Κ1-Κ28) · 4 Schichten · 73 Tests ✅**
 
 _„Intelligenz im Dienste des Lebens."_
 

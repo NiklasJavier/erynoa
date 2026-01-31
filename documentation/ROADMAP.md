@@ -11,7 +11,7 @@
 
 ## Executive Summary
 
-Diese Roadmap beschreibt den Implementierungsplan für **Erynoa** – das probabilistische kybernetische Protokoll für vertrauensbasierte Interaktionen. Der Plan basiert auf der **3-Schichten-Architektur** mit **126 Axiomen** (inkl. 6 Peer-Axiome) und ist in **5 Hauptphasen** strukturiert.
+Diese Roadmap beschreibt den Implementierungsplan für **Erynoa** – das probabilistische kybernetische Protokoll für vertrauensbasierte Interaktionen. Der Plan basiert auf der **4-Schichten-Architektur** mit **28 Axiomen (Κ1-Κ28)** und ist in **5 Hauptphasen** strukturiert.
 
 **🎯 Aktueller Status:** Phase 1.2 – Core Logic Layer ✅ COMPLETE
 
@@ -38,7 +38,7 @@ Diese Roadmap beschreibt den Implementierungsplan für **Erynoa** – das probab
 ║                                                                               ║
 ║   ═══════════════════════════════════════════════════════════════════════    ║
 ║                                                                               ║
-║   DIE 4 SCHICHTEN (126 Axiome):                                              ║
+║   DIE 4 SCHICHTEN (28 Axiome):                                               ║
 ║   ┌─────────────────────────────────────────────────────────────────────┐    ║
 ║   │  Peer Layer         (IntentParser, SagaComposer, GatewayGuard) ✅   │    ║
 ║   ├─────────────────────────────────────────────────────────────────────┤    ║
@@ -378,12 +378,12 @@ Diese Roadmap beschreibt den Implementierungsplan für **Erynoa** – das probab
 
 #### 1.5.3 Developer Platform
 
-| ID         | Milestone     | Beschreibung                        | Status |
-| ---------- | ------------- | ----------------------------------- | ------ |
-| **DP1.01** | erynoa-cli    | CLI-Tool (126 Befehle spezifiziert) | 📋     |
-| **DP1.02** | erynoa-sdk-rs | Rust SDK                            | 📋     |
-| **DP1.03** | erynoa-sdk-ts | TypeScript SDK (WASM)               | 📋     |
-| **DP1.04** | Local Devnet  | Single-Node Test Environment        | 📋     |
+| ID         | Milestone     | Beschreibung                 | Status |
+| ---------- | ------------- | ---------------------------- | ------ |
+| **DP1.01** | erynoa-cli    | CLI-Tool                     | 📋     |
+| **DP1.02** | erynoa-sdk-rs | Rust SDK                     | 📋     |
+| **DP1.03** | erynoa-sdk-ts | TypeScript SDK (WASM)        | 📋     |
+| **DP1.04** | Local Devnet  | Single-Node Test Environment | 📋     |
 
 ---
 
@@ -636,6 +636,6 @@ _„Intelligenz im Dienste des Lebens."_
          └──────────── FEEDBACK LOOP ◀────────┘
 ```
 
-**126 Axiome · 4 Schichten · 73 Tests ✅ · Klassische Wahrscheinlichkeitstheorie**
+**28 Axiome (Κ1-Κ28) · 4 Schichten · 73 Tests ✅ · Klassische Wahrscheinlichkeitstheorie**
 
 </div>
