@@ -1,9 +1,6 @@
 //! Authentication Middleware
 //!
-//! Unterstützt sowohl dezentrale DID-basierte Auth als auch Legacy JWT/OIDC.
-//!
-//! Note: Diese Middleware wird als Layer auf spezifische Routen angewendet.
-//! Für public routes wird sie nicht verwendet.
+//! Dezentrale DID-basierte Authentifizierung.
 
 use axum::{
     extract::{Request, State},
@@ -17,9 +14,7 @@ use crate::server::AppState;
 
 /// Authentication Middleware
 ///
-/// Unterstützt zwei Modi:
-/// 1. DID-basierte Auth: `Authorization: DID <did>:<signature>`
-/// 2. Legacy JWT Auth: `Authorization: Bearer <token>` (wenn legacy-oidc aktiviert)
+/// Unterstützt DID-basierte Auth: `Authorization: DID <did>:<signature>`
 ///
 /// Diese Middleware sollte nur auf protected routes angewendet werden.
 #[allow(dead_code)]
@@ -38,27 +33,9 @@ pub async fn auth_middleware(
                 // Die Signatur wird gegen eine gespeicherte Challenge verifiziert
                 tracing::debug!("DID-based auth detected (not yet implemented)");
             }
-            // Legacy JWT Auth
-            #[cfg(feature = "legacy-oidc")]
-            if let Some(token) = auth_str.strip_prefix("Bearer ") {
-                if let Some(ref validator) = state.jwt_validator {
-                    match validator.validate(token).await {
-                        Ok(claims) => {
-                            request.extensions_mut().insert(claims);
-                        }
-                        Err(e) => {
-                            return Err(ApiError::InvalidToken(format!(
-                                "Token validation failed: {}",
-                                e
-                            )));
-                        }
-                    }
-                } else {
-                    tracing::debug!("JWT validator not available, skipping auth");
-                }
-            }
         }
     }
 
     Ok(next.run(request).await)
 }
+

@@ -20,15 +20,9 @@
 //!
 //! - **Axum** HTTP/2 + REST API
 //! - **Connect-RPC/gRPC-Web** für type-safe API (optional)
-//! - **Sled** Embedded Key-Value Store (dezentral)
+//! - **Fjall** Embedded Key-Value Store (dezentral)
 //! - **Ed25519** DID-basierte Authentifizierung
 //! - **CAS** Content Addressable Storage
-//!
-//! ## Legacy Features (optional)
-//!
-//! - **SQLx** PostgreSQL/OrioleDB (`legacy-sql`)
-//! - **fred** DragonflyDB Cache (`legacy-cache`)
-//! - **ZITADEL** JWT Auth (`legacy-oidc`)
 //!
 //! ## Axiom-Referenz
 //!
@@ -53,19 +47,11 @@ pub mod local;
 // === ECLVM - Erynoa Configuration Language VM ===
 pub mod eclvm;
 
-// === Existing Modules ===
+// === API & Server ===
 pub mod api;
-#[cfg(feature = "legacy-oidc")]
-pub mod auth;
-#[cfg(feature = "legacy-cache")]
-pub mod cache;
 pub mod config;
-#[cfg(feature = "legacy-sql")]
-pub mod db;
 pub mod error;
 pub mod server;
-#[cfg(feature = "legacy-s3")]
-pub mod storage;
 pub mod telemetry;
 
 // Generated Connect-RPC code (available after build with --features connect)

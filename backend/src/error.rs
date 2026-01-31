@@ -47,21 +47,7 @@ pub enum ApiError {
     Conflict(String),
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Database (Legacy SQL)
-    // ─────────────────────────────────────────────────────────────────────────
-    #[cfg(feature = "legacy-sql")]
-    #[error("Database error")]
-    Database(#[from] sqlx::Error),
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Cache (Legacy Redis)
-    // ─────────────────────────────────────────────────────────────────────────
-    #[cfg(feature = "legacy-cache")]
-    #[error("Cache error")]
-    Cache(#[from] fred::error::RedisError),
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Storage (Sled) - Decentralized
+    // Storage (Fjall) - Decentralized
     // ─────────────────────────────────────────────────────────────────────────
     #[error("Storage error: {0}")]
     Storage(String),
@@ -83,6 +69,33 @@ pub enum ApiError {
         /// Zeit bis genug Mana regeneriert ist
         retry_after: std::time::Duration,
     },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Domain Errors (für ?-Operator Propagation)
+    // ─────────────────────────────────────────────────────────────────────────
+    #[error("Event error: {0}")]
+    Event(String),
+
+    #[error("Trust error: {0}")]
+    Trust(String),
+
+    #[error("Consensus error: {0}")]
+    Consensus(String),
+
+    #[error("Gateway error: {0}")]
+    Gateway(String),
+
+    #[error("Intent parse error: {0}")]
+    IntentParse(String),
+
+    #[error("Saga composition error: {0}")]
+    SagaComposition(String),
+
+    #[error("DID error: {0}")]
+    DIDError(String),
+
+    #[error("Protection error: {0}")]
+    Protection(String),
 }
 
 impl ApiError {
@@ -94,13 +107,17 @@ impl ApiError {
             Self::Validation(_) | Self::BadRequest(_) => StatusCode::BAD_REQUEST,
             Self::NotFound(_) => StatusCode::NOT_FOUND,
             Self::Conflict(_) => StatusCode::CONFLICT,
-            #[cfg(feature = "legacy-sql")]
-            Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            #[cfg(feature = "legacy-cache")]
-            Self::Cache(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Storage(_) | Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::ServiceUnavailable(_) => StatusCode::SERVICE_UNAVAILABLE,
             Self::RateLimited { .. } => StatusCode::TOO_MANY_REQUESTS,
+            // Domain Errors → 400 Bad Request (client-side fixable)
+            Self::Event(_) | Self::Trust(_) | Self::Consensus(_) => {
+                StatusCode::UNPROCESSABLE_ENTITY
+            }
+            Self::Gateway(_) => StatusCode::FORBIDDEN,
+            Self::IntentParse(_) | Self::SagaComposition(_) => StatusCode::BAD_REQUEST,
+            Self::DIDError(_) => StatusCode::BAD_REQUEST,
+            Self::Protection(_) => StatusCode::FORBIDDEN,
         }
     }
 
@@ -114,14 +131,19 @@ impl ApiError {
             Self::BadRequest(_) => "BAD_REQUEST",
             Self::NotFound(_) => "NOT_FOUND",
             Self::Conflict(_) => "CONFLICT",
-            #[cfg(feature = "legacy-sql")]
-            Self::Database(_) => "DATABASE_ERROR",
-            #[cfg(feature = "legacy-cache")]
-            Self::Cache(_) => "CACHE_ERROR",
             Self::Storage(_) => "STORAGE_ERROR",
             Self::Internal(_) => "INTERNAL_ERROR",
             Self::ServiceUnavailable(_) => "SERVICE_UNAVAILABLE",
             Self::RateLimited { .. } => "RATE_LIMITED",
+            // Domain Errors
+            Self::Event(_) => "EVENT_ERROR",
+            Self::Trust(_) => "TRUST_ERROR",
+            Self::Consensus(_) => "CONSENSUS_ERROR",
+            Self::Gateway(_) => "GATEWAY_ERROR",
+            Self::IntentParse(_) => "INTENT_PARSE_ERROR",
+            Self::SagaComposition(_) => "SAGA_COMPOSITION_ERROR",
+            Self::DIDError(_) => "DID_ERROR",
+            Self::Protection(_) => "PROTECTION_ERROR",
         }
     }
 }
@@ -144,14 +166,6 @@ impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         // Log den Fehler (für interne Fehler mit voller Info)
         match &self {
-            #[cfg(feature = "legacy-sql")]
-            ApiError::Database(e) => {
-                tracing::error!(error = ?e, "Database error occurred");
-            }
-            #[cfg(feature = "legacy-cache")]
-            ApiError::Cache(e) => {
-                tracing::error!(error = ?e, "Cache error occurred");
-            }
             ApiError::Internal(e) => {
                 tracing::error!(error = ?e, "Internal error occurred");
             }
@@ -168,14 +182,6 @@ impl IntoResponse for ApiError {
 
         // Für Production: Interne Fehler nicht im Detail exponieren
         let message = match &self {
-            #[cfg(feature = "legacy-sql")]
-            ApiError::Database(_) => {
-                "An internal error occurred. Please try again later.".to_string()
-            }
-            #[cfg(feature = "legacy-cache")]
-            ApiError::Cache(_) => {
-                "An internal error occurred. Please try again later.".to_string()
-            }
             ApiError::Storage(_) | ApiError::Internal(_) => {
                 "An internal error occurred. Please try again later.".to_string()
             }
@@ -228,8 +234,8 @@ mod rpc {
     //!
     //! Provides utilities for converting ApiError to RpcError for Connect-RPC handlers
 
-    use axum_connect::error::{RpcError, RpcErrorCode, RpcIntoError};
     use crate::error::ApiError;
+    use axum_connect::error::{RpcError, RpcErrorCode, RpcIntoError};
 
     /// Extension trait for converting ApiError to RpcError
     pub trait ApiErrorToRpc {
@@ -264,13 +270,45 @@ mod rpc {
                     RpcErrorCode::AlreadyExists,
                     format!("Resource already exists: {}", msg),
                 ),
-                ApiError::Database(_) | ApiError::Cache(_) | ApiError::Internal(_) => (
+                ApiError::Storage(_) | ApiError::Internal(_) => (
                     RpcErrorCode::Internal,
                     "An internal error occurred. Please try again later.".to_string(),
                 ),
                 ApiError::ServiceUnavailable(msg) => (
                     RpcErrorCode::Unavailable,
                     format!("Service unavailable: {}", msg),
+                ),
+                // Domain Errors
+                ApiError::Event(msg) => (RpcErrorCode::Internal, format!("Event error: {}", msg)),
+                ApiError::Trust(msg) => (
+                    RpcErrorCode::PermissionDenied,
+                    format!("Trust error: {}", msg),
+                ),
+                ApiError::Consensus(msg) => {
+                    (RpcErrorCode::Internal, format!("Consensus error: {}", msg))
+                }
+                ApiError::Gateway(msg) => (
+                    RpcErrorCode::PermissionDenied,
+                    format!("Gateway error: {}", msg),
+                ),
+                ApiError::IntentParse(msg) => (
+                    RpcErrorCode::InvalidArgument,
+                    format!("Intent parse error: {}", msg),
+                ),
+                ApiError::SagaComposition(msg) => (
+                    RpcErrorCode::InvalidArgument,
+                    format!("Saga composition error: {}", msg),
+                ),
+                ApiError::DIDError(msg) => {
+                    (RpcErrorCode::InvalidArgument, format!("DID error: {}", msg))
+                }
+                ApiError::Protection(msg) => (
+                    RpcErrorCode::PermissionDenied,
+                    format!("Protection error: {}", msg),
+                ),
+                ApiError::RateLimited { .. } => (
+                    RpcErrorCode::ResourceExhausted,
+                    "Rate limited: insufficient mana".to_string(),
                 ),
             };
 
@@ -285,4 +323,81 @@ mod rpc {
 }
 
 #[cfg(feature = "connect")]
-pub use rpc::{ApiErrorToRpc, map_api_error};
+pub use rpc::{map_api_error, ApiErrorToRpc};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// From-Implementierungen für Domain-Errors
+// Ermöglicht nahtlose Verwendung des ?-Operators
+// ─────────────────────────────────────────────────────────────────────────────
+
+impl From<crate::core::event_engine::EventError> for ApiError {
+    fn from(err: crate::core::event_engine::EventError) -> Self {
+        ApiError::Event(err.to_string())
+    }
+}
+
+impl From<crate::core::trust_engine::TrustError> for ApiError {
+    fn from(err: crate::core::trust_engine::TrustError) -> Self {
+        ApiError::Trust(err.to_string())
+    }
+}
+
+impl From<crate::core::consensus::ConsensusError> for ApiError {
+    fn from(err: crate::core::consensus::ConsensusError) -> Self {
+        ApiError::Consensus(err.to_string())
+    }
+}
+
+impl From<crate::peer::gateway::GatewayError> for ApiError {
+    fn from(err: crate::peer::gateway::GatewayError) -> Self {
+        ApiError::Gateway(err.to_string())
+    }
+}
+
+impl From<crate::peer::intent_parser::ParseError> for ApiError {
+    fn from(err: crate::peer::intent_parser::ParseError) -> Self {
+        ApiError::IntentParse(err.to_string())
+    }
+}
+
+impl From<crate::peer::saga_composer::CompositionError> for ApiError {
+    fn from(err: crate::peer::saga_composer::CompositionError) -> Self {
+        ApiError::SagaComposition(err.to_string())
+    }
+}
+
+impl From<crate::domain::did::DIDError> for ApiError {
+    fn from(err: crate::domain::did::DIDError) -> Self {
+        ApiError::DIDError(err.to_string())
+    }
+}
+
+impl From<crate::protection::diversity::DiversityError> for ApiError {
+    fn from(err: crate::protection::diversity::DiversityError) -> Self {
+        ApiError::Protection(err.to_string())
+    }
+}
+
+impl From<crate::protection::anti_calcification::CalcificationError> for ApiError {
+    fn from(err: crate::protection::anti_calcification::CalcificationError) -> Self {
+        ApiError::Protection(err.to_string())
+    }
+}
+
+impl From<crate::protection::quadratic::GovernanceError> for ApiError {
+    fn from(err: crate::protection::quadratic::GovernanceError) -> Self {
+        ApiError::Protection(err.to_string())
+    }
+}
+
+impl From<crate::protection::anomaly::AnomalyError> for ApiError {
+    fn from(err: crate::protection::anomaly::AnomalyError) -> Self {
+        ApiError::Protection(err.to_string())
+    }
+}
+
+impl From<fjall::Error> for ApiError {
+    fn from(err: fjall::Error) -> Self {
+        ApiError::Storage(err.to_string())
+    }
+}

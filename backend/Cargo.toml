@@ -15,9 +15,10 @@ name = "erynoa-api"
 path = "src/main.rs"
 
 [dependencies]
-# Async Runtime & Web Framework
+# ============================================================================
+# ASYNC RUNTIME & WEB FRAMEWORK
+# ============================================================================
 tokio = { version = "1", features = ["full"] }
-# Note: axum-connect 0.5 requires axum >= 0.8
 axum = { version = "0.8", features = ["http2", "macros", "multipart"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = [
@@ -30,71 +31,45 @@ tower-http = { version = "0.6", features = [
 ] }
 
 # ============================================================================
-# DEZENTRALE STORAGE-SCHICHT
+# DEZENTRALE STORAGE-SCHICHT (Fjall Embedded KV)
 # ============================================================================
-
-# Embedded Key-Value Store (ersetzt PostgreSQL)
 fjall = "2"
-tempfile = "3" # Für temporäre Datenbanken (Tests)
-
-# Database (SQLx + PostgreSQL) - LEGACY, wird entfernt
-sqlx = { version = "0.8", features = [
-    "runtime-tokio",
-    "tls-rustls",
-    "postgres",
-    "uuid",
-    "chrono",
-    "json",
-    "migrate",
-], optional = true }
-
-# Cache (Redis/DragonflyDB) - LEGACY, wird entfernt
-fred = { version = "9", features = ["enable-rustls"], optional = true }
+tempfile = "3"
 
 # ============================================================================
-# DEZENTRALE IDENTITÄT
+# DEZENTRALE IDENTITÄT (Ed25519 DID-Auth)
 # ============================================================================
-
-# Ed25519 Signaturen für DID-Auth (ersetzt ZITADEL)
 ed25519-dalek = { version = "2", features = ["rand_core", "serde"] }
 rand = "0.8"
-bs58 = "0.5"                                                         # Base58 Encoding für DIDs
+bs58 = "0.5"
 
-# Authentication (ZITADEL / OIDC) - LEGACY, wird entfernt
-jsonwebtoken = { version = "9", optional = true }
-reqwest = { version = "0.12", default-features = false, features = [
-    "rustls-tls",
-    "json",
-], optional = true }
-
-# Serialization
+# ============================================================================
+# SERIALIZATION
+# ============================================================================
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
-# Configuration
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
 config = "0.14"
 dotenvy = "0.15"
 
-# Observability
+# ============================================================================
+# OBSERVABILITY
+# ============================================================================
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
-# Error Handling
+# ============================================================================
+# ERROR HANDLING
+# ============================================================================
 thiserror = "1"
 anyhow = "1"
 
 # ============================================================================
-# CONTENT ADDRESSABLE STORAGE (ersetzt S3/MinIO)
+# UTILITIES
 # ============================================================================
-
-# S3 Object Storage (MinIO) - LEGACY, wird entfernt
-aws-config = { version = "1", features = [
-    "behavior-version-latest",
-], optional = true }
-aws-sdk-s3 = { version = "1", optional = true }
-aws-credential-types = { version = "1", optional = true }
-
-# Utilities
 uuid = { version = "1", features = ["v4", "v7", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 secrecy = { version = "0.8", features = ["serde"] }
@@ -102,38 +77,34 @@ once_cell = "1"
 parking_lot = "0.12"
 url = "2"
 
-# Cryptography (for Event hashing, DID signatures)
+# ============================================================================
+# CRYPTOGRAPHY (Event hashing, DID signatures)
+# ============================================================================
 sha2 = "0.10"
 hex = "0.4"
 
-# Connect-RPC / gRPC-Web
+# ============================================================================
+# CONNECT-RPC / gRPC-Web (optional)
+# ============================================================================
 axum-connect = "0.5"
 prost = "0.13"
 prost-types = "0.13"
 async-trait = "0.1"
 
-# ⚡ PRODUCTION HARDENING: Rate Limiting (verhindert DoS/Traffic-Floods)
+# ============================================================================
+# PRODUCTION HARDENING
+# ============================================================================
 tower_governor = "0.4"
 
-# Memory Allocator (Jemalloc) - optional, disabled in dev by default due to Nix build issues
+# Memory Allocator (optional)
 tikv-jemallocator = { version = "0.6", features = [
     "background_threads",
 ], optional = true }
 
 [features]
-default = ["decentralized"]
+default = []
 jemalloc = ["dep:tikv-jemallocator"]
-connect = []                         # Enable Connect-RPC/gRPC-Web support
-
-# Dezentrale Architektur (Standard)
-decentralized = []
-
-# Legacy-Features für Migration (optional)
-legacy-sql = ["dep:sqlx"]
-legacy-cache = ["dep:fred"]
-legacy-s3 = ["dep:aws-config", "dep:aws-sdk-s3", "dep:aws-credential-types"]
-legacy-oidc = ["dep:jsonwebtoken", "dep:reqwest"]
-legacy = ["legacy-sql", "legacy-cache", "legacy-s3", "legacy-oidc"]
+connect = []
 
 [build-dependencies]
 axum-connect-build = "0.3"

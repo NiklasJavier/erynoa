@@ -110,6 +110,38 @@ impl DecentralizedStorage {
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Test Utilities
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Test-Utility-Modul für einheitliche Fjall-Keyspace-Erstellung
+#[cfg(test)]
+pub mod test_utils {
+    use fjall::Keyspace;
+    use std::sync::Arc;
+
+    /// Erstellt einen temporären Fjall Keyspace für Tests
+    ///
+    /// # Returns
+    /// Tuple aus (TempDir, Arc<Keyspace>)
+    /// TempDir muss im Scope bleiben, sonst wird das Verzeichnis gelöscht!
+    ///
+    /// # Example
+    /// ```ignore
+    /// let (_dir, keyspace) = test_keyspace();
+    /// let store = MyStore::new(&keyspace).unwrap();
+    /// ```
+    pub fn test_keyspace() -> (tempfile::TempDir, Arc<Keyspace>) {
+        let dir = tempfile::tempdir().expect("Failed to create temp directory");
+        let keyspace = Arc::new(
+            fjall::Config::new(dir.path())
+                .open()
+                .expect("Failed to open keyspace"),
+        );
+        (dir, keyspace)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
