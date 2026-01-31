@@ -112,8 +112,7 @@ mod tests {
         let body: Value = res.json().await.unwrap();
         assert!(body["version"].is_string());
         assert!(body["environment"].is_string());
-        assert!(body["auth_issuer"].is_string());
-        assert!(body["auth_client_id"].is_string());
+        // Auth fields removed after ECLVM migration - now using Ed25519/DID
     }
 
     #[tokio::test]
