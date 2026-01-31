@@ -34,7 +34,7 @@ Diese V4-Logik vereinheitlicht die bisherigen Dokumente LOGIC.md und WORLD-FORMU
 ║                                                                                                        ║
 ║       Ob(𝒞_Ery)  = { Entitäten }                                                                      ║
 ║                  = { DID_self, DID_guild, DID_spirit, DID_thing, ...                                  ║
-║                      AMO, VC, Shard, VirtEnv, Root }                                                  ║
+║                      AMO, VC, Partition, VirtualRealm, RootRealm }                                    ║
 ║                                                                                                        ║
 ║       Mor(𝒞_Ery) = { Beziehungen }                                                                    ║
 ║                  = { Delegation(⊳), Attestation(⊢), Transfer(→),                                      ║
@@ -54,7 +54,7 @@ Diese V4-Logik vereinheitlicht die bisherigen Dokumente LOGIC.md und WORLD-FORMU
 ╚════════════════════════════════════════════════════════════════════════════════════════════════════════╝
 ```
 
-### 1.2 Die Drei Fundamentalen Unter-Kategorien
+### 1.2 Die Drei Fundamentalen Unter-Kategorien (Realm-Hierarchie)
 
 ```
 ╔════════════════════════════════════════════════════════════════════════════════════════════════════════╗
@@ -63,16 +63,16 @@ Diese V4-Logik vereinheitlicht die bisherigen Dokumente LOGIC.md und WORLD-FORMU
 ║                                                                                                        ║
 ║   ═══════════════════════════════════════════════════════════════════════════════════════════════════  ║
 ║                                                                                                        ║
-║       𝒞_Root ⊃ 𝒞_VirtEnv ⊃ 𝒞_Shard                                                                   ║
+║       𝒞_RootRealm ⊃ 𝒞_VirtualRealm ⊃ 𝒞_Partition                                                     ║
 ║                                                                                                        ║
 ║   INKLUSIONSFUNKTOREN:                                                                                ║
 ║                                                                                                        ║
-║       ι₁: 𝒞_Shard  ↪ 𝒞_VirtEnv     (volltreu)                                                        ║
-║       ι₂: 𝒞_VirtEnv ↪ 𝒞_Root       (volltreu)                                                        ║
+║       ι₁: 𝒞_Partition    ↪ 𝒞_VirtualRealm   (volltreu)                                               ║
+║       ι₂: 𝒞_VirtualRealm ↪ 𝒞_RootRealm      (volltreu)                                               ║
 ║                                                                                                        ║
 ║   PULLBACK-EIGENSCHAFT:                                                                               ║
 ║                                                                                                        ║
-║       Regeln(Shard) ⊇ Regeln(VirtEnv) ⊇ Regeln(Root)                                                 ║
+║       Regeln(Partition) ⊇ Regeln(VirtualRealm) ⊇ Regeln(RootRealm)                                   ║
 ║                                                                                                        ║
 ║   ═══════════════════════════════════════════════════════════════════════════════════════════════════  ║
 ║                                                                                                        ║
@@ -82,7 +82,7 @@ Diese V4-Logik vereinheitlicht die bisherigen Dokumente LOGIC.md und WORLD-FORMU
 ║                                                                                                        ║
 ║       "Kind-Kategorien können Regeln hinzufügen, nie entfernen."                                      ║
 ║                                                                                                        ║
-║   → Absorbiert: A18 (Enthaltung), A19 (Monotonie), E11 (Shard ⊂ Realm)                               ║
+║   → Absorbiert: A18 (Enthaltung), A19 (Monotonie), E11 (Partition ⊂ Realm)                           ║
 ║                                                                                                        ║
 ╚════════════════════════════════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -188,7 +188,7 @@ Diese V4-Logik vereinheitlicht die bisherigen Dokumente LOGIC.md und WORLD-FORMU
 ║       (⊕) entspricht logischem "unabhängige Bestätigung ODER"                                        ║
 ║       P(A ∨ B) = 1 - P(¬A)P(¬B) = 1 - (1-P(A))(1-P(B))                                               ║
 ║                                                                                                        ║
-║   → Absorbiert: A11 (Kombinatorik), C4 (Ketten-Kombination), E13 (Shard-Konsens-Teil)                ║
+║   → Absorbiert: A11 (Kombinatorik), C4 (Ketten-Kombination), E13 (Partition-Konsens-Teil)             ║
 ║                                                                                                        ║
 ║   ═══════════════════════════════════════════════════════════════════════════════════════════════════  ║
 ║                                                                                                        ║
@@ -516,7 +516,7 @@ Diese V4-Logik vereinheitlicht die bisherigen Dokumente LOGIC.md und WORLD-FORMU
 
 ## VII. Konsens-Algebra (Emergente Wahrheit)
 
-### 7.1 Shard-Konsens als gewichteter Mittelwert
+### 7.1 Partition-Konsens als gewichteter Mittelwert
 
 ```
 ╔════════════════════════════════════════════════════════════════════════════════════════════════════════╗
@@ -533,11 +533,11 @@ Diese V4-Logik vereinheitlicht die bisherigen Dokumente LOGIC.md und WORLD-FORMU
 ║   EIGENSCHAFTEN:                                                                                      ║
 ║                                                                                                        ║
 ║       Ψ(Σ)(φ) ∈ [0,1]                           [Normierung]                                          ║
-║       Ψ(Σ)(φ) > θ_konsens → φ ist Shard-Wahrheit  [Schwellenwert]                                     ║
+║       Ψ(Σ)(φ) > θ_konsens → φ ist Partition-Wahrheit  [Schwellenwert]                                 ║
 ║                                                                                                        ║
 ║       θ_konsens = 2/3 (Supermajorität)                                                                ║
 ║                                                                                                        ║
-║   → Absorbiert: E13 (Shard-Konsens), E14 (State-Kommunikation)                                       ║
+║   → Absorbiert: E13 (Partition-Konsens), E14 (State-Kommunikation)                                   ║
 ║                                                                                                        ║
 ║   ═══════════════════════════════════════════════════════════════════════════════════════════════════  ║
 ║                                                                                                        ║
@@ -652,7 +652,7 @@ Diese V4-Logik vereinheitlicht die bisherigen Dokumente LOGIC.md und WORLD-FORMU
 ║                                                                                                        ║
 ║       mit ‖M_ctx‖ ≤ 1    (Trust kann nicht steigen)                                                   ║
 ║                                                                                                        ║
-║   → Absorbiert: PR4 (Funktor-Korrektheit), PR6 (Trust-Dämpfung), Q7 (Environment-Funktor)            ║
+║   → Absorbiert: PR4 (Funktor-Korrektheit), PR6 (Trust-Dämpfung), Q7 (Realm-Funktor)                  ║
 ║                                                                                                        ║
 ╚════════════════════════════════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -802,7 +802,7 @@ Diese V4-Logik vereinheitlicht die bisherigen Dokumente LOGIC.md und WORLD-FORMU
 ║                                                                                                        ║
 ║   ═══════════════════════════════════════════════════════════════════════════════════════════════════  ║
 ║                                                                                                        ║
-║   ISOMORPHISMUS 3: Shard-Konsens ≅ Bayes'sches Update                                                 ║
+║   ISOMORPHISMUS 3: Partition-Konsens ≅ Bayes'sches Update                                             ║
 ║                                                                                                        ║
 ║       Ψ(Σ)(φ) = Σ 𝕎(s)·[s ⊢ φ] / Σ 𝕎(s)    ≅    P(φ|evidence) = Σ P(φ|sᵢ)·P(sᵢ)                     ║
 ║                                                                                                        ║
@@ -826,13 +826,13 @@ Diese V4-Logik vereinheitlicht die bisherigen Dokumente LOGIC.md und WORLD-FORMU
 ║                                                                                                        ║
 ║   ═══════════════════════════════════════════════════════════════════════════════════════════════════  ║
 ║                                                                                                        ║
-║   ISOMORPHISMUS 5: Environment-Hierarchie ≅ Topos                                                     ║
+║   ISOMORPHISMUS 5: Realm-Hierarchie ≅ Topos                                                           ║
 ║                                                                                                        ║
-║       𝒞_Root ⊃ 𝒞_VirtEnv ⊃ 𝒞_Shard    ≅    Topos mit Subobject-Classifier                           ║
+║       𝒞_RootRealm ⊃ 𝒞_VirtualRealm ⊃ 𝒞_Partition    ≅    Topos mit Subobject-Classifier             ║
 ║                                                                                                        ║
 ║   IMPLIKATION: Die Logik innerhalb jeder Ebene kann intuitionistisch sein.                           ║
-║                "Wahrheit" ist kontextabhängig (Shard-lokal).                                          ║
-║                Erst auf Root-Ebene gilt klassische Logik.                                            ║
+║                "Wahrheit" ist kontextabhängig (Partition-lokal).                                      ║
+║                Erst auf Root-Realm-Ebene gilt klassische Logik.                                      ║
 ║                                                                                                        ║
 ╚════════════════════════════════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -921,7 +921,7 @@ Diese V4-Logik vereinheitlicht die bisherigen Dokumente LOGIC.md und WORLD-FORMU
 ║   REDUKTION: 126 ursprüngliche Axiome → 27 Kern-Axiome + 5 Theoreme + ~94 Derivate                   ║
 ║                                                                                                        ║
 ║   VERKNÜPFUNGEN: 5 Isomorphismen entdeckt (Delegation≅Kausalität, Trust≅Probabilistik,               ║
-║                  Konsens≅Bayes, Weltformel≅FreeEnergy, Environments≅Topos)                           ║
+║                  Konsens≅Bayes, Weltformel≅FreeEnergy, Realms≅Topos)                                  ║
 ║                                                                                                        ║
 ╚════════════════════════════════════════════════════════════════════════════════════════════════════════╝
 ```
