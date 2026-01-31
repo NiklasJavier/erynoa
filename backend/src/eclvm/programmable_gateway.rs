@@ -32,9 +32,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::domain::{DID, RealmId, TrustVector6D};
+use crate::domain::{RealmId, TrustVector6D, DID};
 use crate::eclvm::bytecode::{OpCode, TrustDimIndex, Value};
-use crate::eclvm::mana::{ManaManager, ManaConfig};
+use crate::eclvm::mana::{ManaConfig, ManaManager};
 use crate::eclvm::runtime::host::HostInterface;
 use crate::eclvm::runtime::vm::ECLVM;
 use crate::error::{ApiError, Result};
@@ -164,16 +164,11 @@ impl<H: HostInterface> ProgrammableGateway<H> {
         sender_trust: &TrustVector6D,
     ) -> Result<bool> {
         // 1. Pre-Flight: Mana-Check
-        self.mana_manager.preflight_check(
-            &sender.to_uri(),
-            sender_trust,
-            policy.estimated_gas,
-        )?;
+        self.mana_manager
+            .preflight_check(&sender.to_uri(), sender_trust, policy.estimated_gas)?;
 
         // 2. Baue Programm mit Sender-DID
-        let mut program = vec![
-            OpCode::PushConst(Value::DID(sender.to_uri())),
-        ];
+        let mut program = vec![OpCode::PushConst(Value::DID(sender.to_uri()))];
         program.extend(policy.bytecode.clone());
 
         // 3. Führe VM aus
@@ -181,11 +176,8 @@ impl<H: HostInterface> ProgrammableGateway<H> {
         let result = vm.run()?;
 
         // 4. Deduct Mana
-        self.mana_manager.deduct(
-            &sender.to_uri(),
-            sender_trust,
-            result.gas_used,
-        )?;
+        self.mana_manager
+            .deduct(&sender.to_uri(), sender_trust, result.gas_used)?;
 
         // 5. Interpretiere Ergebnis
         match result.value {
@@ -368,6 +360,7 @@ mod tests {
     use super::*;
     use crate::eclvm::runtime::host::StubHost;
 
+    #[allow(dead_code)]
     fn setup_gateway() -> ProgrammableGateway<StubHost> {
         let host = Arc::new(StubHost::new());
         ProgrammableGateway::new(host)
@@ -376,19 +369,16 @@ mod tests {
     #[test]
     fn test_default_entry_policy_allows_trusted() {
         let host = Arc::new(
-            StubHost::new()
-                .with_trust("did:erynoa:self:alice", [0.8, 0.8, 0.8, 0.8, 0.8, 0.8])
+            StubHost::new().with_trust("did:erynoa:self:alice", [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]),
         );
         let gateway = ProgrammableGateway::new(host);
 
         let alice = DID::new_self("alice");
         let alice_trust = TrustVector6D::new(0.8, 0.8, 0.8, 0.8, 0.8, 0.8);
 
-        let decision = gateway.validate_entry(
-            &alice,
-            &alice_trust,
-            &RealmId::new("realm:test"),
-        ).unwrap();
+        let decision = gateway
+            .validate_entry(&alice, &alice_trust, &RealmId::new("realm:test"))
+            .unwrap();
 
         assert!(decision.allowed);
     }
@@ -396,19 +386,16 @@ mod tests {
     #[test]
     fn test_default_entry_policy_denies_newcomer() {
         let host = Arc::new(
-            StubHost::new()
-                .with_trust("did:erynoa:self:bob", [0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
+            StubHost::new().with_trust("did:erynoa:self:bob", [0.1, 0.1, 0.1, 0.1, 0.1, 0.1]),
         );
         let gateway = ProgrammableGateway::new(host);
 
         let bob = DID::new_self("bob");
         let bob_trust = TrustVector6D::newcomer(); // 0.1
 
-        let decision = gateway.validate_entry(
-            &bob,
-            &bob_trust,
-            &RealmId::new("realm:test"),
-        ).unwrap();
+        let decision = gateway
+            .validate_entry(&bob, &bob_trust, &RealmId::new("realm:test"))
+            .unwrap();
 
         assert!(!decision.allowed);
     }
@@ -416,8 +403,7 @@ mod tests {
     #[test]
     fn test_custom_policy_high_trust() {
         let host = Arc::new(
-            StubHost::new()
-                .with_trust("did:erynoa:self:alice", [0.8, 0.8, 0.8, 0.8, 0.8, 0.8])
+            StubHost::new().with_trust("did:erynoa:self:alice", [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]),
         );
         let mut gateway = ProgrammableGateway::new(host);
 
@@ -427,7 +413,9 @@ mod tests {
         let alice = DID::new_self("alice");
         let alice_trust = TrustVector6D::new(0.8, 0.8, 0.8, 0.8, 0.8, 0.8);
 
-        let decision = gateway.validate_entry(&alice, &alice_trust, &finance).unwrap();
+        let decision = gateway
+            .validate_entry(&alice, &alice_trust, &finance)
+            .unwrap();
         assert!(decision.allowed);
 
         // Medium trust user should be denied
@@ -436,13 +424,14 @@ mod tests {
 
         // Need to update host mock for charlie
         let host2 = Arc::new(
-            StubHost::new()
-                .with_trust("did:erynoa:self:charlie", [0.5, 0.5, 0.5, 0.5, 0.5, 0.5])
+            StubHost::new().with_trust("did:erynoa:self:charlie", [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]),
         );
         let mut gateway2 = ProgrammableGateway::new(host2);
         gateway2.register_entry_policy(finance.clone(), StandardPolicies::high_trust());
 
-        let decision2 = gateway2.validate_entry(&charlie, &charlie_trust, &finance).unwrap();
+        let decision2 = gateway2
+            .validate_entry(&charlie, &charlie_trust, &finance)
+            .unwrap();
         assert!(!decision2.allowed);
     }
 
@@ -451,7 +440,7 @@ mod tests {
         let host = Arc::new(
             StubHost::new()
                 .with_trust("did:erynoa:self:alice", [0.8, 0.8, 0.8, 0.8, 0.8, 0.8])
-                .with_credential("did:erynoa:self:alice", "email-verified")
+                .with_credential("did:erynoa:self:alice", "email-verified"),
         );
         let mut gateway = ProgrammableGateway::new(host);
 
@@ -461,16 +450,16 @@ mod tests {
         let alice = DID::new_self("alice");
         let alice_trust = TrustVector6D::new(0.8, 0.8, 0.8, 0.8, 0.8, 0.8);
 
-        let decision = gateway.validate_entry(&alice, &alice_trust, &verified).unwrap();
+        let decision = gateway
+            .validate_entry(&alice, &alice_trust, &verified)
+            .unwrap();
         assert!(decision.allowed);
     }
 
     #[test]
     fn test_verified_users_denied_without_credential() {
         let host = Arc::new(
-            StubHost::new()
-                .with_trust("did:erynoa:self:bob", [0.8, 0.8, 0.8, 0.8, 0.8, 0.8])
-            // Kein email-verified Credential!
+            StubHost::new().with_trust("did:erynoa:self:bob", [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]), // Kein email-verified Credential!
         );
         let mut gateway = ProgrammableGateway::new(host);
 
@@ -487,8 +476,7 @@ mod tests {
     #[test]
     fn test_public_realm_allows_anyone() {
         let host = Arc::new(
-            StubHost::new()
-                .with_trust("did:erynoa:self:newcomer", [0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
+            StubHost::new().with_trust("did:erynoa:self:newcomer", [0.1, 0.1, 0.1, 0.1, 0.1, 0.1]),
         );
         let mut gateway = ProgrammableGateway::new(host);
 
@@ -498,7 +486,9 @@ mod tests {
         let newcomer = DID::new_self("newcomer");
         let newcomer_trust = TrustVector6D::newcomer();
 
-        let decision = gateway.validate_entry(&newcomer, &newcomer_trust, &public).unwrap();
+        let decision = gateway
+            .validate_entry(&newcomer, &newcomer_trust, &public)
+            .unwrap();
         assert!(decision.allowed);
     }
 }
