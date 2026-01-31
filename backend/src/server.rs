@@ -43,12 +43,8 @@ impl Server {
         );
 
         // Dezentraler Storage (Fjall)
-        let data_dir = settings
-            .application
-            .data_dir
-            .clone()
-            .unwrap_or_else(|| "./data".to_string());
-        let storage = DecentralizedStorage::open(&data_dir)?;
+        let data_dir = &settings.storage.data_dir;
+        let storage = DecentralizedStorage::open(data_dir)?;
         tracing::info!(path = %data_dir, "✅ Decentralized storage ready");
 
         let state = AppState {
@@ -58,7 +54,10 @@ impl Server {
         };
 
         let router = create_router(state);
-        let addr = format!("{}:{}", settings.application.host, settings.application.port);
+        let addr = format!(
+            "{}:{}",
+            settings.application.host, settings.application.port
+        );
         let listener = TcpListener::bind(&addr).await?;
 
         tracing::info!(addr = %addr, "🚀 Server ready");
@@ -75,7 +74,8 @@ impl Server {
     pub async fn run(self) -> Result<(), std::io::Error> {
         axum::serve(
             self.listener,
-            self.router.into_make_service_with_connect_info::<SocketAddr>(),
+            self.router
+                .into_make_service_with_connect_info::<SocketAddr>(),
         )
         .with_graceful_shutdown(shutdown_signal())
         .await

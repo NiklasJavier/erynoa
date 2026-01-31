@@ -1,59 +1,33 @@
 # ============================================================================
-# Base Configuration - Erynoa Backend
+# Base Configuration - Erynoa Backend (Dezentrale Architektur)
 # ============================================================================
 # Diese Datei enthält die Standard-Konfiguration.
 # Überschreibungen:
 #   1. config/local.toml oder config/production.toml (je nach APP_ENVIRONMENT)
-#   2. Umgebungsvariablen (APP_<SECTION>__<KEY>, z.B. APP_DATABASE__HOST)
+#   2. Umgebungsvariablen (APP_<SECTION>__<KEY>, z.B. APP_APPLICATION__PORT)
 #
-# Im Docker-Container werden die Service-Namen (db, cache, zitadel, minio)
-# über Umgebungsvariablen in docker-compose.yml gesetzt.
+# Erynoa verwendet ausschließlich dezentrale Komponenten:
+# - Storage: Fjall (embedded KV-Store)
+# - Identität: DID-basierte Auth (Ed25519)
+# - Kein externer Cache, keine externe Datenbank
 # ============================================================================
 
 [application]
 host = "0.0.0.0"
 port = 3000
 environment = "local"
-console_url = "http://localhost:3001/console"
-platform_url = "http://localhost:3001/platform"
-docs_url = "http://localhost:3001/docs"
+console_url = "http://localhost:5173"
+platform_url = "http://localhost:5174"
+docs_url = "http://localhost:5175"
 api_url = "http://localhost:3000/api"
 
-[database]
-host = "localhost"
-port = 5432
-username = "erynoa"
-password = "erynoa"
-database = "erynoa"
-max_connections = 20
-min_connections = 5
-connect_timeout = 10
-idle_timeout = 300
-
-[cache]
-url = "redis://localhost:6379"
-pool_size = 10
-default_ttl = 3600
-
-[auth]
-issuer = "http://localhost:8080"
-# internal_issuer wird im Docker-Container gesetzt (für zitadel:8080)
-client_id = "erynoa-backend"
-console_client_id = "erynoa-console"  # Wird von setup-zitadel.sh aktualisiert
-platform_client_id = "erynoa-platform"  # Wird von setup-zitadel.sh aktualisiert
-docs_client_id = "erynoa-docs"  # Wird von setup-zitadel.sh aktualisiert
-jwks_cache_duration = 3600
-audiences = ["erynoa-api", "erynoa-backend", "erynoa-console", "erynoa-platform", "erynoa-docs"]
-
 [storage]
-endpoint = "http://localhost:9000"
-region = "us-east-1"
-access_key_id = "erynoa"
-secret_access_key = "erynoa123"
-default_bucket = "erynoa"
-max_upload_size = 104857600  # 100 MB
+# Datenverzeichnis für Fjall embedded KV-Store
+data_dir = "./data"
+# Max Content-Größe in Bytes (100 MB)
+max_content_size = 104857600
 
 [features]
 # Feature Flags für die Anwendung
-registration = true      # Benutzer-Registrierung aktiviert
-social_login = false     # Social Login aktiviert
+registration = true  # Benutzer-Registrierung aktiviert
+social_login = false # Social Login (DID-basiert, später)

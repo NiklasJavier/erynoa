@@ -1,56 +1,43 @@
 //! Configuration Constants
 //!
 //! Zentrale Konstanten für Service-URLs und Ports
-//! Harmonized with frontend/console/src/lib/service-urls.ts and docs/development/service_config.md
+//! Dezentrale Architektur - keine externen Services (DB, Cache, Auth, S3)
 
 /// Service URLs for local development
-/// These values should match backend/config/base.toml
 pub mod service_urls {
     /// Console URL
     pub const CONSOLE: &str = "http://localhost:5173";
-    
+
+    /// Platform URL
+    pub const PLATFORM: &str = "http://localhost:5174";
+
+    /// Docs URL
+    pub const DOCS: &str = "http://localhost:5175";
+
     /// API URL
     pub const API: &str = "http://localhost:3000";
-    
-    /// ZITADEL URL
-    pub const ZITADEL: &str = "http://localhost:8080";
-    
-    /// ZITADEL Console URL
-    pub const ZITADEL_CONSOLE: &str = "http://localhost:8080/ui/console";
-    
-    /// MinIO API URL
-    pub const MINIO: &str = "http://localhost:9000";
-    
-    /// MinIO Console URL
-    pub const MINIO_CONSOLE: &str = "http://localhost:9001";
-    
-    /// Database URL (for display purposes)
-    pub const DATABASE: &str = "postgresql://localhost:5432";
-    
-    /// Cache URL (for display purposes)
-    pub const CACHE: &str = "redis://localhost:6379";
 }
 
 /// Service ports
 pub mod ports {
     /// Console port
     pub const CONSOLE: u16 = 5173;
-    
+
+    /// Platform port
+    pub const PLATFORM: u16 = 5174;
+
+    /// Docs port
+    pub const DOCS: u16 = 5175;
+
     /// API port
     pub const API: u16 = 3000;
-    
-    /// ZITADEL port
-    pub const ZITADEL: u16 = 8080;
-    
-    /// MinIO API port
-    pub const MINIO_API: u16 = 9000;
-    
-    /// MinIO Console port
-    pub const MINIO_CONSOLE: u16 = 9001;
-    
-    /// Database port
-    pub const DATABASE: u16 = 5432;
-    
-    /// Cache port
-    pub const CACHE: u16 = 6379;
+}
+
+/// Storage defaults
+pub mod storage {
+    /// Default data directory
+    pub const DEFAULT_DATA_DIR: &str = "./data";
+
+    /// Default max content size (100 MB)
+    pub const DEFAULT_MAX_CONTENT_SIZE: u64 = 104_857_600;
 }

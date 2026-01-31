@@ -1,13 +1,14 @@
-# Production
+# Production Configuration
+# Dezentrale Architektur - Fjall Storage mit persistentem Datenverzeichnis
 
 [application]
 environment = "production"
 
-[database]
-max_connections = 50
-min_connections = 10
+[storage]
+# In Production: Persistentes Datenverzeichnis
+data_dir = "/var/lib/erynoa/data"
 
 [features]
 # Feature Flags für Production
-registration = false      # Registrierung standardmäßig deaktiviert in Production
-social_login = false     # Social Login standardmäßig deaktiviert
+registration = false # Registrierung standardmäßig deaktiviert
+social_login = false

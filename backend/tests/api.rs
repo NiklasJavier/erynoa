@@ -21,7 +21,7 @@ impl TestApp {
 
         let mut settings = Settings::load().expect("Failed to load config");
         settings.application.port = 0;
-        settings.application.data_dir = Some(data_path);
+        settings.storage.data_dir = data_path;
 
         let server = Server::build(settings)
             .await

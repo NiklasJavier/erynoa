@@ -1,13 +1,19 @@
 //! Configuration Module
 //!
 //! Lädt Konfiguration aus Environment und Config-Dateien
+//!
+//! ## Dezentrale Architektur
+//!
+//! Erynoa verwendet ausschließlich dezentrale Komponenten:
+//! - **Storage**: Fjall (embedded KV-Store)
+//! - **Identität**: DID-basierte Auth (Ed25519)
+//! - **Cache**: In-Memory (kein externer Redis)
 
-pub mod version;
 pub mod constants;
+pub mod version;
 
-pub use version::{VERSION, NAME, DESCRIPTION};
+pub use version::{DESCRIPTION, NAME, VERSION};
 
-use secrecy::{ExposeSecret, Secret};
 use serde::{Deserialize, Deserializer};
 use std::convert::{TryFrom, TryInto};
 
@@ -15,9 +21,8 @@ use std::convert::{TryFrom, TryInto};
 #[derive(Debug, Clone, Deserialize)]
 pub struct Settings {
     pub application: ApplicationSettings,
-    pub database: DatabaseSettings,
-    pub cache: CacheSettings,
-    pub auth: AuthSettings,
+    /// Dezentraler Storage (Fjall)
+    #[serde(default)]
     pub storage: StorageSettings,
     /// Feature Flags für die Anwendung
     #[serde(default)]
@@ -37,98 +42,34 @@ pub struct ApplicationSettings {
     pub docs_url: String,
     /// Öffentliche API-URL
     pub api_url: String,
-    /// Datenverzeichnis für dezentralen Storage (Standard: ./data)
-    #[serde(default)]
-    pub data_dir: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct DatabaseSettings {
-    pub host: String,
-    pub port: u16,
-    pub username: String,
-    pub password: Secret<String>,
-    pub database: String,
-    /// Max Connections im Pool
-    pub max_connections: u32,
-    /// Min Connections im Pool (für Cold-Start Performance)
-    pub min_connections: u32,
-    /// Connection Timeout in Sekunden
-    pub connect_timeout: u64,
-    /// Idle Timeout in Sekunden
-    pub idle_timeout: u64,
-}
-
-impl DatabaseSettings {
-    /// Erstellt die vollständige Connection URL
-    pub fn connection_string(&self) -> Secret<String> {
-        Secret::new(format!(
-            "postgres://{}:{}@{}:{}/{}",
-            self.username,
-            self.password.expose_secret(),
-            self.host,
-            self.port,
-            self.database
-        ))
-    }
-
-    /// Connection URL ohne Datenbank (für DB-Erstellung)
-    pub fn connection_string_without_db(&self) -> Secret<String> {
-        Secret::new(format!(
-            "postgres://{}:{}@{}:{}",
-            self.username,
-            self.password.expose_secret(),
-            self.host,
-            self.port
-        ))
-    }
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct CacheSettings {
-    pub url: String,
-    /// Max Connections im Pool
-    pub pool_size: u32,
-    /// Default TTL in Sekunden
-    pub default_ttl: u64,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct AuthSettings {
-    /// ZITADEL Issuer URL (externe URL für Token-Validierung)
-    pub issuer: String,
-    /// Interne JWKS URL (für Docker-Netzwerk, optional - fällt auf issuer zurück)
-    #[serde(default)]
-    pub internal_issuer: Option<String>,
-    /// Client ID für das Backend (für Service-to-Service)
-    pub client_id: String,
-    /// Client ID für das Console (für OIDC PKCE)
-    pub console_client_id: String,
-    /// Client ID für das Platform (für OIDC PKCE)
-    pub platform_client_id: String,
-    /// Client ID für das Docs (für OIDC PKCE)
-    pub docs_client_id: String,
-    /// JWKS Cache Duration in Sekunden
-    pub jwks_cache_duration: u64,
-    /// Erlaubte Audiences (kann als komma-separierter String oder Array angegeben werden)
-    #[serde(deserialize_with = "deserialize_string_or_vec")]
-    pub audiences: Vec<String>,
-}
-
+/// Dezentraler Storage (Fjall embedded KV-Store)
 #[derive(Debug, Clone, Deserialize)]
 pub struct StorageSettings {
-    /// S3-kompatibles Endpoint (MinIO)
-    pub endpoint: String,
-    /// AWS Region (kann "us-east-1" für MinIO sein)
-    pub region: String,
-    /// Access Key ID
-    pub access_key_id: String,
-    /// Secret Access Key
-    pub secret_access_key: Secret<String>,
-    /// Standard-Bucket für Uploads
-    pub default_bucket: String,
-    /// Max Upload-Größe in Bytes
-    pub max_upload_size: u64,
+    /// Datenverzeichnis für Fjall (Standard: ./data)
+    #[serde(default = "default_data_dir")]
+    pub data_dir: String,
+    /// Max Content-Größe in Bytes (Standard: 100 MB)
+    #[serde(default = "default_max_content_size")]
+    pub max_content_size: u64,
+}
+
+impl Default for StorageSettings {
+    fn default() -> Self {
+        Self {
+            data_dir: default_data_dir(),
+            max_content_size: default_max_content_size(),
+        }
+    }
+}
+
+fn default_data_dir() -> String {
+    "./data".to_string()
+}
+
+fn default_max_content_size() -> u64 {
+    104_857_600 // 100 MB
 }
 
 /// Feature Flags für die Anwendung
@@ -159,6 +100,49 @@ fn default_false() -> bool {
     false
 }
 
+#[allow(dead_code)]
+fn deserialize_string_or_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use serde::de::{self, Visitor};
+    use std::fmt;
+
+    struct StringOrVec;
+
+    impl<'de> Visitor<'de> for StringOrVec {
+        type Value = Vec<String>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("a string or a sequence of strings")
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(value
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect())
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: de::SeqAccess<'de>,
+        {
+            let mut vec = Vec::new();
+            while let Some(item) = seq.next_element::<String>()? {
+                vec.push(item);
+            }
+            Ok(vec)
+        }
+    }
+
+    deserializer.deserialize_any(StringOrVec)
+}
+
 /// Umgebungs-Typen
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -182,45 +166,6 @@ impl Environment {
     pub fn is_production(&self) -> bool {
         matches!(self, Environment::Production)
     }
-}
-
-/// Deserialisiert entweder einen komma-separierten String oder ein Array von Strings
-fn deserialize_string_or_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    use serde::de::{self, Visitor};
-    use std::fmt;
-
-    struct StringOrVec;
-
-    impl<'de> Visitor<'de> for StringOrVec {
-        type Value = Vec<String>;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("a string or a sequence of strings")
-        }
-
-        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            Ok(value.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect())
-        }
-
-        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-        where
-            A: de::SeqAccess<'de>,
-        {
-            let mut vec = Vec::new();
-            while let Some(item) = seq.next_element::<String>()? {
-                vec.push(item);
-            }
-            Ok(vec)
-        }
-    }
-
-    deserializer.deserialize_any(StringOrVec)
 }
 
 impl TryFrom<String> for Environment {
@@ -261,7 +206,6 @@ impl Settings {
             .add_source(config::File::from(config_dir.join(environment_filename)).required(false))
             // Environment Variables (überschreiben alles)
             // Format: APP_APPLICATION__PORT=8080 -> application.port = 8080
-            // Arrays können als komma-separierte Strings übergeben werden
             .add_source(
                 config::Environment::with_prefix("APP")
                     .prefix_separator("_")

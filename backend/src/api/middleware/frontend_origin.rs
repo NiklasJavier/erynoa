@@ -2,58 +2,75 @@
 //!
 //! Extrahiert die Frontend-Herkunft aus Origin/Referer Headers
 //! und speichert sie in Request.extensions für Connect-RPC Handler
+//!
+//! ## Dezentrale Architektur
+//!
+//! Mit DID-basierter Auth werden keine OIDC Client-IDs mehr benötigt.
+//! Diese Middleware identifiziert nur noch das Frontend für Logging/Debugging.
 
 use axum::{
-    extract::{Request, State},
+    extract::Request,
     http::{HeaderMap, Uri},
     middleware::Next,
     response::Response,
 };
 
-use crate::server::AppState;
-
 /// Frontend identifier stored in request extensions
 #[derive(Debug, Clone)]
 pub struct FrontendOrigin {
-    #[allow(dead_code)] // Used in handlers via RpcFromRequestParts
-    pub client_id: String,
+    /// Which frontend made the request
+    pub frontend: FrontendType,
 }
 
-/// Middleware to extract frontend origin from headers and determine client_id
-pub async fn frontend_origin_middleware(
-    State(state): State<AppState>,
-    mut request: Request,
-    next: Next,
-) -> Response {
+/// Known frontend types
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FrontendType {
+    Console,
+    Platform,
+    Docs,
+    Unknown,
+}
+
+impl FrontendType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            FrontendType::Console => "console",
+            FrontendType::Platform => "platform",
+            FrontendType::Docs => "docs",
+            FrontendType::Unknown => "unknown",
+        }
+    }
+}
+
+/// Middleware to extract frontend origin from headers
+pub async fn frontend_origin_middleware(mut request: Request, next: Next) -> Response {
     let headers = request.headers();
     let uri = request.uri().clone();
-    let client_id = determine_client_id_from_headers(headers, &uri, &state);
-    
-    // Store client_id in extensions for handlers to access
-    request.extensions_mut().insert(FrontendOrigin {
-        client_id,
-    });
-    
+    let frontend = determine_frontend_from_headers(headers, &uri);
+
+    // Store frontend info in extensions for handlers to access
+    request.extensions_mut().insert(FrontendOrigin { frontend });
+
     next.run(request).await
 }
 
-/// Determine client ID from request headers and URI
-fn determine_client_id_from_headers(headers: &HeaderMap, uri: &Uri, state: &AppState) -> String {
+/// Determine frontend type from request headers and URI
+fn determine_frontend_from_headers(headers: &HeaderMap, uri: &Uri) -> FrontendType {
     // First: Check for X-Frontend-Origin header (set by frontend interceptor)
     if let Some(frontend_origin) = headers.get("x-frontend-origin") {
         if let Ok(frontend_str) = frontend_origin.to_str() {
             match frontend_str {
                 "platform" => {
                     tracing::debug!("Detected Platform frontend from X-Frontend-Origin header");
-                    return state.config.auth.platform_client_id.clone();
+                    return FrontendType::Platform;
                 }
                 "docs" => {
                     tracing::debug!("Detected Docs frontend from X-Frontend-Origin header");
-                    return state.config.auth.docs_client_id.clone();
+                    return FrontendType::Docs;
                 }
                 "console" => {
                     tracing::debug!("Detected Console frontend from X-Frontend-Origin header");
-                    return state.config.auth.console_client_id.clone();
+                    return FrontendType::Console;
                 }
                 _ => {
                     tracing::debug!("Unknown X-Frontend-Origin value: {}", frontend_str);
@@ -61,67 +78,46 @@ fn determine_client_id_from_headers(headers: &HeaderMap, uri: &Uri, state: &AppS
             }
         }
     }
-    
+
     // Try Origin header (most reliable for CORS requests)
     if let Some(origin) = headers.get("origin") {
         if let Ok(origin_str) = origin.to_str() {
-            // Check for platform (must be first to avoid false matches)
             if origin_str.contains("/platform") || origin_str.contains(":5174") {
                 tracing::debug!("Detected Platform frontend from Origin: {}", origin_str);
-                return state.config.auth.platform_client_id.clone();
+                return FrontendType::Platform;
             }
-            // Check for docs
             if origin_str.contains("/docs") || origin_str.contains(":5175") {
                 tracing::debug!("Detected Docs frontend from Origin: {}", origin_str);
-                return state.config.auth.docs_client_id.clone();
+                return FrontendType::Docs;
             }
-            // Check for console
             if origin_str.contains("/console") || origin_str.contains(":5173") {
                 tracing::debug!("Detected Console frontend from Origin: {}", origin_str);
-                return state.config.auth.console_client_id.clone();
+                return FrontendType::Console;
             }
-            tracing::debug!("Origin header found but no frontend match: {}", origin_str);
         }
     }
-    
-    // Fallback to Referer header (for browser navigation)
+
+    // Fallback to Referer header
     if let Some(referer) = headers.get("referer") {
         if let Ok(referer_str) = referer.to_str() {
-            // Check for platform (must be first to avoid false matches)
             if referer_str.contains("/platform") {
-                tracing::debug!("Detected Platform frontend from Referer: {}", referer_str);
-                return state.config.auth.platform_client_id.clone();
+                return FrontendType::Platform;
             }
-            // Check for docs
             if referer_str.contains("/docs") {
-                tracing::debug!("Detected Docs frontend from Referer: {}", referer_str);
-                return state.config.auth.docs_client_id.clone();
+                return FrontendType::Docs;
             }
-            // Check for console
             if referer_str.contains("/console") {
-                tracing::debug!("Detected Console frontend from Referer: {}", referer_str);
-                return state.config.auth.console_client_id.clone();
+                return FrontendType::Console;
             }
-            tracing::debug!("Referer header found but no frontend match: {}", referer_str);
         }
     }
-    
-    // HealthService und andere System-Endpoints brauchen keinen Frontend-Identifier
-    // Log nur als DEBUG, nicht als WARN
+
+    // System endpoints don't need frontend detection
     if uri.path().contains("HealthService") {
-        tracing::debug!(
-            "No frontend identifier found for system endpoint, defaulting to console client ID. URI: {}",
-            uri
-        );
+        tracing::debug!("System endpoint, frontend unknown: {}", uri);
     } else {
-        // Für andere Endpoints ist es eine Warnung
-        tracing::warn!(
-            "No frontend identifier found, defaulting to console client ID. URI: {}, Headers: {:?}",
-            uri,
-            headers.keys().map(|k| k.as_str()).collect::<Vec<_>>()
-        );
+        tracing::debug!("No frontend identified for: {}", uri);
     }
-    
-    // Default to console
-    state.config.auth.console_client_id.clone()
+
+    FrontendType::Unknown
 }
