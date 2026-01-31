@@ -5,7 +5,7 @@
 **Probabilistisches Protokoll für vertrauensbasierte Interaktionen**
 
 [![Rust](https://img.shields.io/badge/Rust-1.75+-orange?style=flat-square&logo=rust)](https://www.rust-lang.org/)
-[![Tests](https://img.shields.io/badge/Tests-73%20passed-brightgreen?style=flat-square)](backend/src/)
+[![Tests](https://img.shields.io/badge/Tests-109%20passed-brightgreen?style=flat-square)](backend/src/)
 [![SvelteKit](https://img.shields.io/badge/SvelteKit-2.0-FF3E00?style=flat-square&logo=svelte)](https://kit.svelte.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![Nix](https://img.shields.io/badge/Nix-Flakes-5277C3?style=flat-square&logo=nixos)](https://nixos.org/)
@@ -57,7 +57,7 @@ Erynoa ist ein **probabilistisches kybernetisches Protokoll** für vertrauensbas
 │   ✅ Intent → Saga Resolution          ✅ Gateway Trust-Dampening              │
 │   ✅ Realm-Hierarchie (Root/Virtual)   ✅ Anomaly Detection                    │
 │                                                                                 │
-│   73 TESTS ✅ · 28 AXIOME · 4 SCHICHTEN · KLASSISCHE WAHRSCHEINLICHKEIT       │
+│   109 TESTS ✅ · 28 AXIOME · 4 SCHICHTEN · DEZENTRALE ARCHITEKTUR             │
 │                                                                                 │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -82,7 +82,7 @@ Erynoa ist ein **probabilistisches kybernetisches Protokoll** für vertrauensbas
 
 ## ⚡ Schnellstart
 
-> **Voraussetzungen:** [Nix](https://nixos.org/) und [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+> **Voraussetzungen:** [Nix](https://nixos.org/) (für Frontend zusätzlich: [Docker Desktop](https://www.docker.com/products/docker-desktop/))
 
 ```bash
 # 1. Repository klonen
@@ -91,35 +91,72 @@ git clone git@github.com:NiklasJavier/erynoa.git && cd erynoa
 # 2. Nix Dev-Shell betreten
 nix develop
 
-# 3. Projekt starten
+# 3. Backend starten (keine externen Services nötig!)
+cd backend && cargo run
+
+# ODER: Vollständige Entwicklungsumgebung mit Frontend
 just dev
 ```
 
-**Warte ~2 Minuten** ⏳ → Öffne **<http://localhost:3001>**
+**Backend Single-Binary** 🚀 → Keine externen Datenbanken nötig!
 
 <details>
-<summary><strong>🔗 Alle URLs & Test-Login</strong></summary>
+<summary><strong>🔗 Alle URLs</strong></summary>
 
 | Service                 | URL                              |
 | ----------------------- | -------------------------------- |
+| **Backend API**         | <http://localhost:8000>          |
 | **Hauptzugang (Proxy)** | <http://localhost:3001>          |
 | Console                 | <http://localhost:3001/console>  |
 | Platform                | <http://localhost:3001/platform> |
 | Docs                    | <http://localhost:3001/docs>     |
-| Backend API             | <http://localhost:3001/api>      |
-| ZITADEL (Auth)          | <http://localhost:8080>          |
-| MinIO (Storage)         | <http://localhost:9001>          |
 
-**Test-Login:**
-
-- User: `testuser` / `Test123!`
-- Admin: `zitadel-admin` / `Password1!`
+**Auth:** DID-basiert mit Ed25519-Signaturen (kein externer Auth-Service nötig)
 
 </details>
 
 ---
 
 ## 🏗 Architektur
+
+### Dezentrale Speicherarchitektur (Fjall)
+
+```
+backend/src/local/              # 🗄️ Embedded Storage Layer
+├── mod.rs                      # DecentralizedStorage Manager
+├── kv_store.rs                 # Generic Type-Safe KV Store
+├── identity_store.rs           # DID + Ed25519 Keypairs
+├── event_store.rs              # Event-DAG mit Finality
+├── trust_store.rs              # TrustVector6D per DID
+└── content_store.rs            # Content-Addressable Storage (BLAKE3)
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                    DEZENTRALE SPEICHER-ARCHITEKTUR                  │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│   ┌───────────────────────────────────────────────────────────┐     │
+│   │              DecentralizedStorage (Manager)               │     │
+│   │   • open(path) → Keyspace                                 │     │
+│   │   • open_temporary() → Temp-Keyspace                      │     │
+│   │   • flush() → persist(SyncAll)                            │     │
+│   └───────────────┬───────────────────────────────────────────┘     │
+│                   │                                                 │
+│   ┌───────────────┼───────────────────────────────────────────┐     │
+│   │               ▼  Fjall Keyspace (LSM-Tree)                │     │
+│   │  ┌─────────────────────────────────────────────────────┐  │     │
+│   │  │  identities   │  events  │  trust  │  content  │ kv │  │     │
+│   │  │  (Partition)  │ (Part.)  │ (Part.) │  (Part.)  │(P.)│  │     │
+│   │  └─────────────────────────────────────────────────────┘  │     │
+│   └───────────────────────────────────────────────────────────┘     │
+│                                                                     │
+│   FEATURES:                                                         │
+│   ✅ Embedded (keine externen Services)                             │
+│   ✅ ACID mit Sync-Persistenz                                       │
+│   ✅ LSM-Tree Architektur                                           │
+│   ✅ Type-Safe mit serde                                            │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
 ### 4-Schichten Backend (Rust)
 
@@ -188,7 +225,7 @@ service EnvironmentService {
 
 ## 📊 Implementation Status
 
-### Backend Module (73 Tests ✅)
+### Backend Module (109 Tests ✅)
 
 | Schicht        | Module                                                          | Tests | Status |
 | -------------- | --------------------------------------------------------------- | ----- | ------ |
@@ -196,6 +233,7 @@ service EnvironmentService {
 | **Core**       | event_engine, trust_engine, surprisal, world_formula, consensus | 23    | ✅     |
 | **Protection** | anti_calcification, diversity, quadratic, anomaly               | 17    | ✅     |
 | **Peer**       | intent_parser, saga_composer, gateway                           | 14    | ✅     |
+| **Local**      | kv_store, identity_store, event_store, trust_store, content_store | 32  | ✅     |
 
 ### Axiom Coverage
 
@@ -221,8 +259,8 @@ service EnvironmentService {
 cd backend && cargo test
 
 # Ergebnis:
-# running 73 tests
-# test result: ok. 73 passed; 0 failed
+# running 94 tests (unit) + 13 tests (integration) + 2 tests (doc)
+# test result: ok. 109 passed; 0 failed
 ```
 
 ---
@@ -233,17 +271,17 @@ cd backend && cargo test
 <tr>
 <td width="50%">
 
-### Backend
+### Backend (Dezentral)
 
-| Komponente | Technologie            |
-| ---------- | ---------------------- |
-| Runtime    | **Rust**, Tokio        |
-| Framework  | Axum                   |
-| API        | Connect-RPC (Protobuf) |
-| Database   | PostgreSQL (OrioleDB)  |
-| Cache      | DragonflyDB (Redis)    |
-| Storage    | MinIO (S3)             |
-| Auth       | ZITADEL (OIDC/JWT)     |
+| Komponente | Technologie              |
+| ---------- | ------------------------ |
+| Runtime    | **Rust**, Tokio          |
+| Framework  | Axum                     |
+| API        | Connect-RPC (Protobuf)   |
+| Database   | **Fjall** (Embedded KV)  |
+| Auth       | **DID + Ed25519**        |
+| Storage    | **CAS** (Content-Hash)   |
+| Crypto     | ed25519-dalek, blake3    |
 
 </td>
 <td width="50%">
@@ -265,13 +303,14 @@ cd backend && cargo test
 
 ### Infrastructure
 
-| Komponente       | Technologie    |
-| ---------------- | -------------- |
-| Dev Environment  | Nix Flakes     |
-| Containerization | Docker Compose |
-| Reverse Proxy    | Caddy          |
-| Task Runner      | just           |
-| Code Generation  | buf (Protobuf) |
+| Komponente       | Technologie                        |
+| ---------------- | ---------------------------------- |
+| Dev Environment  | Nix Flakes                         |
+| Containerization | Docker Compose (nur Frontend)      |
+| Reverse Proxy    | Caddy                              |
+| Task Runner      | just                               |
+| Code Generation  | buf (Protobuf)                     |
+| Backend Storage  | **Embedded** (keine Container!)    |
 
 ---
 
@@ -285,6 +324,12 @@ erynoa/
 │   │   ├── core/              # Engines (Event, Trust, Surprisal, Consensus)
 │   │   ├── protection/        # Anti-Gaming, Diversity, Anomaly
 │   │   ├── peer/              # Intent, Saga, Gateway
+│   │   ├── local/             # 🆕 Dezentrale Storage (Fjall)
+│   │   │   ├── kv_store.rs        # Generic KV Store
+│   │   │   ├── identity_store.rs  # DID + Ed25519
+│   │   │   ├── event_store.rs     # Event-DAG
+│   │   │   ├── trust_store.rs     # TrustVector6D
+│   │   │   └── content_store.rs   # CAS (BLAKE3)
 │   │   └── api/               # HTTP/gRPC Handlers
 │   ├── proto/erynoa/v1/       # Protobuf Definitions
 │   │   ├── peer.proto         # ⭐ Peer/Intent/Saga/Environment Services
@@ -292,7 +337,7 @@ erynoa/
 │   │   ├── health.proto
 │   │   └── user.proto
 │   ├── config/                # TOML Konfiguration
-│   └── migrations/            # SQL Migrations
+│   └── data/                  # Fjall Datenbank (gitignored)
 │
 ├── frontend/                  # 🎨 SvelteKit Apps
 │   ├── console/               # Admin Console
@@ -340,7 +385,7 @@ erynoa/
 | `just check` | Cargo check                |
 | `just lint`  | Clippy Linter              |
 | `just fmt`   | Code formatieren           |
-| `just test`  | Tests ausführen (73 Tests) |
+| `just test` | Tests ausführen (109 Tests) |
 | `just ci`    | fmt + lint + test          |
 
 ### Protobuf
