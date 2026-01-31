@@ -1,7 +1,8 @@
 /**
- * ZITADEL OIDC Authentication für Svelte 5
+ * OIDC Authentication für Svelte 5
  *
  * Verwendet oidc-client-ts für PKCE Flow (kein Client Secret für SPAs)
+ * Kompatibel mit verschiedenen Identity Providern (Keycloak, Auth0, ZITADEL, etc.)
  */
 
 import { browser } from '$app/environment'
@@ -24,7 +25,7 @@ let currentClientId: string | null = null
  * Initialisiere den OIDC UserManager
  * Wird neu initialisiert, wenn sich clientId ändert
  *
- * @param issuer - Zitadel Issuer URL
+ * @param issuer - OIDC Issuer URL
  * @param clientId - OIDC Client ID
  * @param platformUrl - Vollständige Platform URL (z.B. http://localhost:3001/platform) für Redirect-URIs
  */
@@ -49,7 +50,7 @@ export function initAuth(issuer: string, clientId: string, platformUrl?: string)
 
 	currentClientId = clientId
 
-	// Verwende Platform-URL aus Config für exakte Übereinstimmung mit Zitadel
+	// Verwende Platform-URL aus Config für exakte Übereinstimmung mit IDP
 	// Falls nicht angegeben, Fallback auf dynamische Generierung
 	// Normalisiere URL: entferne trailing slash, füge /callback hinzu
 	let redirectUri: string
@@ -86,7 +87,7 @@ export function initAuth(issuer: string, clientId: string, platformUrl?: string)
 		automaticSilentRenew: true,
 		userStore: new WebStorageStateStore({ store: window.localStorage }),
 		loadUserInfo: true,
-		// ZITADEL endpoints
+		// OIDC endpoints (configured for the identity provider)
 		metadata: {
 			issuer: issuer,
 			authorization_endpoint: `${issuer}/oauth/v2/authorize`,

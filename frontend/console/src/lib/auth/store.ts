@@ -9,7 +9,6 @@ import { fetchConfig } from '$lib/config'
 import type { User } from 'oidc-client-ts'
 import { type Readable, derived, writable } from 'svelte/store'
 import {
-	getAuth,
 	getUser,
 	initAuth,
 	getAccessToken as oidcGetAccessToken,
@@ -81,7 +80,7 @@ function createAuthStore() {
 				)
 
 				// Initialisiere OIDC mit Client-ID und Console-URL vom Backend
-				// Verwende Console-URL aus Config für exakte Redirect-URI-Übereinstimmung mit Zitadel
+				// Verwende Console-URL aus Config für exakte Redirect-URI-Übereinstimmung mit IDP
 				initAuth(config.auth.issuer, config.auth.clientId, config.urls.console)
 				console.log(
 					'[AuthStore] OIDC initialized with clientId:',
@@ -170,7 +169,7 @@ function createAuthStore() {
 					issuer: config.auth.issuer,
 					consoleUrl: config.urls.console,
 				})
-				// Verwende Console-URL aus Config für exakte Redirect-URI-Übereinstimmung mit Zitadel
+				// Verwende Console-URL aus Config für exakte Redirect-URI-Übereinstimmung mit IDP
 				initAuth(config.auth.issuer, config.auth.clientId, config.urls.console)
 				console.log(
 					'[AuthStore] OIDC initialized for callback with clientId:',

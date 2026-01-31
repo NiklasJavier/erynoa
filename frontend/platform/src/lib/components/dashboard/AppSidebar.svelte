@@ -36,14 +36,20 @@
     const roles: UserRole[] = ["user"];
     const profile = $user.profile as Record<string, unknown>;
 
-    // ZITADEL: Rollen aus project roles claim
-    if (profile["urn:zitadel:iam:org:project:roles"]) {
-      const zitadelRoles = profile[
-        "urn:zitadel:iam:org:project:roles"
-      ] as Record<string, unknown>;
-      if ("admin" in zitadelRoles) roles.push("admin");
-      if ("editor" in zitadelRoles) roles.push("editor");
-    }
+    // Standard OIDC role claims (works with most providers)
+    // Check common role claims: roles, groups, realm_access.roles
+    const rolesClaim =
+      profile.roles ||
+      profile.groups ||
+      (profile["realm_access"] as Record<string, unknown>)?.roles ||
+      profile["urn:zitadel:iam:org:project:roles"] ||
+      {};
+    const rolesArray = Array.isArray(rolesClaim)
+      ? rolesClaim
+      : Object.keys((rolesClaim as Record<string, unknown>) || {});
+
+    if (rolesArray.includes("admin")) roles.push("admin");
+    if (rolesArray.includes("editor")) roles.push("editor");
 
     return roles;
   });

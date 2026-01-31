@@ -78,7 +78,7 @@
     }
   });
 
-  // Auto-redirect to Zitadel when not authenticated
+  // Auto-redirect to auth when not authenticated
   // Wichtig: Nicht während Callback-Verarbeitung prüfen
   $effect(() => {
     // Capture current authState value with explicit type
@@ -127,8 +127,8 @@
 
     if (!$isAuthenticated) {
       redirecting = true;
-      debugInfo = "Redirecting to Zitadel...";
-      console.log("[Layout] Not authenticated, redirecting to Zitadel...", {
+      debugInfo = "Redirecting to auth...";
+      console.log("[Layout] Not authenticated, redirecting to auth...", {
         isLoading: $isLoading,
         isAuthenticated: $isAuthenticated,
         isInitialized: currentAuthState
@@ -180,7 +180,7 @@
     {@render children()}
   </DashboardLayout>
 {:else}
-  <!-- Not Authenticated: Redirecting to Zitadel -->
+  <!-- Not Authenticated: Redirecting to Auth -->
   <div class="flex min-h-screen items-center justify-center bg-background">
     <div class="flex flex-col items-center gap-4">
       <Loader2 class="h-8 w-8 animate-spin text-primary" />

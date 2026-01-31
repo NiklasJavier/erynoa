@@ -51,7 +51,7 @@
           target="_blank"
           class="text-sm text-primary hover:underline flex items-center gap-1"
         >
-          Edit in ZITADEL <ExternalLink class="h-3 w-3" />
+          Edit in Identity Provider <ExternalLink class="h-3 w-3" />
         </a>
       </Card.Footer>
     </Card.Root>
@@ -84,7 +84,7 @@
         </div>
         <div class="flex items-center justify-between">
           <span class="text-sm">Auth Provider</span>
-          <span class="text-sm text-muted-foreground">ZITADEL</span>
+          <span class="text-sm text-muted-foreground">OIDC Provider</span>
         </div>
       </Card.Content>
     </Card.Root>
@@ -108,7 +108,7 @@
               Additional security for your account
             </p>
           </div>
-          <Badge variant="secondary">ZITADEL</Badge>
+          <Badge variant="secondary">IDP</Badge>
         </div>
         <div class="flex items-center justify-between">
           <div>
@@ -117,7 +117,7 @@
               Manage your active sessions
             </p>
           </div>
-          <Badge variant="secondary">ZITADEL</Badge>
+          <Badge variant="secondary">IDP</Badge>
         </div>
       </Card.Content>
       <Card.Footer>

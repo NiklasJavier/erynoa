@@ -12,7 +12,7 @@
         User Management
       </Card.Title>
       <Card.Description>
-        User management is handled through ZITADEL.
+        User management is handled through the Identity Provider.
       </Card.Description>
     </Card.Header>
     <Card.Content class="space-y-4">
@@ -24,10 +24,12 @@
             <Shield class="h-10 w-10 text-muted-foreground" />
           </div>
           <div class="space-y-2">
-            <h3 class="text-lg font-medium">ZITADEL User Management</h3>
+            <h3 class="text-lg font-medium">
+              Identity Provider User Management
+            </h3>
             <p class="text-sm text-muted-foreground max-w-md">
-              Users are managed through the ZITADEL identity platform. Visit the
-              ZITADEL console to add, remove, or modify users.
+              Users are managed through the Identity Provider. Visit the IDP
+              console to add, remove, or modify users.
             </p>
           </div>
           <a
@@ -35,7 +37,7 @@
             target="_blank"
             class="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            Open ZITADEL Console
+            Open Identity Provider
           </a>
         </div>
       </div>
@@ -52,7 +54,7 @@
       </Card.Header>
       <Card.Content>
         <div class="text-2xl font-bold">-</div>
-        <p class="text-xs text-muted-foreground">Managed via ZITADEL</p>
+        <p class="text-xs text-muted-foreground">Managed via IDP</p>
       </Card.Content>
     </Card.Root>
 
