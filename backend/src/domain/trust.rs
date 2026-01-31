@@ -81,7 +81,8 @@ pub struct TrustVector6D {
 }
 
 impl Default for TrustVector6D {
-    /// Neutraler Startwert: 0.5 für alle Dimensionen
+    /// Neutraler Startwert für ETABLIERTE Entitäten: 0.5
+    /// Für neue Nutzer: `TrustVector6D::newcomer()` verwenden!
     fn default() -> Self {
         Self {
             r: 0.5,
@@ -95,6 +96,40 @@ impl Default for TrustVector6D {
 }
 
 impl TrustVector6D {
+    /// Sybil-Schutz: Niedriger Startwert für NEUE Nutzer (0.1)
+    ///
+    /// Durch dampened_surprisal (trust²) hat ein Newcomer mit 0.1
+    /// nur 0.01 (1%) des Einflusses eines etablierten Nutzers.
+    ///
+    /// Trust muss durch positive Interaktionen verdient werden.
+    pub fn newcomer() -> Self {
+        Self {
+            r: 0.1,
+            i: 0.1,
+            c: 0.1,
+            p: 0.1,
+            v: 0.1,
+            omega: 0.1,
+        }
+    }
+
+    /// Vouched Newcomer: Bürge transferiert Teil seines Trusts
+    ///
+    /// Ein etablierter Nutzer kann für einen Newcomer bürgen und
+    /// damit einen Teil seines Prestige-Scores "staken".
+    /// Bei Fehlverhalten des Newcomers wird auch der Bürge bestraft.
+    pub fn vouched(voucher_trust: &TrustVector6D, stake_ratio: f64) -> Self {
+        let stake = stake_ratio.clamp(0.0, 0.3); // Max 30% Transfer
+        Self {
+            r: 0.1 + voucher_trust.r * stake * 0.5, // Reliability kann nicht gebürgt werden
+            i: 0.1 + voucher_trust.i * stake * 0.5,
+            c: 0.1,                           // Competence muss selbst bewiesen werden
+            p: 0.1 + voucher_trust.p * stake, // Prestige kann übertragen werden
+            v: 0.1,                           // Vigilance muss selbst bewiesen werden
+            omega: 0.1 + voucher_trust.omega * stake * 0.3,
+        }
+    }
+
     /// Erstelle neuen Trust-Vektor mit gegebenen Werten
     pub fn new(r: f64, i: f64, c: f64, p: f64, v: f64, omega: f64) -> Self {
         Self {
@@ -405,7 +440,12 @@ mod tests {
         // exp(3 × ln(0.8) / √3) = exp(-0.669 / 1.732) = exp(-0.386) ≈ 0.68
         // Die √n Dämpfung im Exponenten macht es besser als reine Multiplikation (0.8³=0.512)
         let simple_product = 0.8_f64.powi(3); // 0.512
-        assert!(result > simple_product, "Chain trust {} should be > simple product {}", result, simple_product);
+        assert!(
+            result > simple_product,
+            "Chain trust {} should be > simple product {}",
+            result,
+            simple_product
+        );
         assert!(result < 1.0);
     }
 
@@ -442,5 +482,65 @@ mod tests {
 
         // C sollte auf 0.4 gedämpft sein
         assert!((dampened.c - 0.4).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_newcomer_low_trust() {
+        let newcomer = TrustVector6D::newcomer();
+
+        // Newcomer startet mit 0.1 auf allen Dimensionen
+        assert!((newcomer.r - 0.1).abs() < 0.001);
+        assert!((newcomer.omega - 0.1).abs() < 0.001);
+
+        // weighted_norm sollte ~0.1 sein
+        let norm = newcomer.weighted_norm(&TrustVector6D::default_weights());
+        assert!((norm - 0.1).abs() < 0.001);
+
+        // Dampened influence (trust²) ist nur 1% eines etablierten Nutzers
+        let established = TrustVector6D::default();
+        let newcomer_influence = newcomer
+            .weighted_norm(&TrustVector6D::default_weights())
+            .powi(2);
+        let established_influence = established
+            .weighted_norm(&TrustVector6D::default_weights())
+            .powi(2);
+
+        assert!(
+            newcomer_influence < established_influence * 0.05,
+            "Newcomer influence {} should be < 5% of established {}",
+            newcomer_influence,
+            established_influence
+        );
+    }
+
+    #[test]
+    fn test_vouched_trust_transfer() {
+        let voucher = TrustVector6D::new(0.8, 0.8, 0.8, 0.8, 0.8, 0.8);
+        let vouched = TrustVector6D::vouched(&voucher, 0.2); // 20% stake
+
+        // Prestige sollte am meisten profitieren
+        assert!(
+            vouched.p > vouched.c,
+            "Prestige {} should be > Competence {}",
+            vouched.p,
+            vouched.c
+        );
+
+        // Competence und Vigilance bleiben bei 0.1 (müssen selbst bewiesen werden)
+        assert!((vouched.c - 0.1).abs() < 0.001);
+        assert!((vouched.v - 0.1).abs() < 0.001);
+
+        // Vouched ist besser als reiner Newcomer
+        let newcomer = TrustVector6D::newcomer();
+        assert!(
+            vouched.weighted_norm(&TrustVector6D::default_weights())
+                > newcomer.weighted_norm(&TrustVector6D::default_weights())
+        );
+
+        // Aber immer noch deutlich unter Voucher
+        assert!(
+            vouched.weighted_norm(&TrustVector6D::default_weights())
+                < voucher.weighted_norm(&TrustVector6D::default_weights()) * 0.5
+        );
     }
 }

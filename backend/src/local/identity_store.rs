@@ -10,7 +10,7 @@ use rand::rngs::OsRng;
 use serde::{Deserialize, Serialize};
 
 use super::KvStore;
-use crate::domain::did::{DID, DIDNamespace};
+use crate::domain::did::{DIDNamespace, DID};
 
 /// Gespeicherte Identität
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,6 +28,37 @@ pub struct StoredIdentity {
     /// Optionale Metadaten
     #[serde(default)]
     pub metadata: std::collections::HashMap<String, String>,
+    /// Bürge (DID des vouching Users)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub voucher: Option<String>,
+    /// Stake-Ratio des Bürgen (0.0 - 0.3)
+    #[serde(default)]
+    pub vouch_stake: f64,
+}
+
+/// Vouching-Record für Bürgen-Tracking
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VouchRecord {
+    /// DID des Bürgen
+    pub voucher_did: String,
+    /// DID des Newcomers
+    pub newcomer_did: String,
+    /// Stake-Ratio (0.0 - 0.3)
+    pub stake_ratio: f64,
+    /// Zeitpunkt des Vouching
+    pub vouched_at: i64,
+    /// Status (active, revoked, penalty_applied)
+    pub status: VouchStatus,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum VouchStatus {
+    /// Vouching ist aktiv
+    Active,
+    /// Vouching wurde widerrufen (vor Fehlverhalten)
+    Revoked,
+    /// Penalty wurde angewendet (nach Fehlverhalten des Newcomers)
+    PenaltyApplied,
 }
 
 /// Identity Store für lokale DID-Verwaltung
@@ -37,6 +68,8 @@ pub struct IdentityStore {
     identities: KvStore,
     /// Public Keys Index (pubkey -> did)
     pubkey_index: KvStore,
+    /// Vouching Records (voucher_did:newcomer_did -> VouchRecord)
+    vouch_records: KvStore,
 }
 
 impl IdentityStore {
@@ -45,6 +78,7 @@ impl IdentityStore {
         Ok(Self {
             identities: KvStore::new(keyspace, "identities")?,
             pubkey_index: KvStore::new(keyspace, "pubkey_index")?,
+            vouch_records: KvStore::new(keyspace, "vouch_records")?,
         })
     }
 
@@ -67,6 +101,8 @@ impl IdentityStore {
             private_key: Some(private_key_hex),
             created_at: chrono::Utc::now().timestamp(),
             metadata: std::collections::HashMap::new(),
+            voucher: None,
+            vouch_stake: 0.0,
         };
 
         // Speichern
@@ -84,12 +120,100 @@ impl IdentityStore {
             private_key: None,
             created_at: chrono::Utc::now().timestamp(),
             metadata: std::collections::HashMap::new(),
+            voucher: None,
+            vouch_stake: 0.0,
         };
 
         self.identities.put(did.to_string(), &identity)?;
         self.pubkey_index.put(public_key, &did.to_string())?;
 
         Ok(identity)
+    }
+
+    /// Erstellt eine gebürgte Identität (Vouching/Invite-System)
+    ///
+    /// Der Bürge (voucher) "staked" einen Teil seines Trust-Kapitals.
+    /// Bei Fehlverhalten des Newcomers wird auch der Bürge bestraft.
+    pub fn create_vouched_identity(
+        &self,
+        namespace: DIDNamespace,
+        voucher_did: &DID,
+        stake_ratio: f64,
+    ) -> Result<StoredIdentity> {
+        // Stake begrenzen auf max 30%
+        let stake = stake_ratio.clamp(0.0, 0.3);
+
+        // Prüfen ob Bürge existiert
+        let voucher = self
+            .get(voucher_did)?
+            .context("Voucher identity not found")?;
+
+        // Bürge muss lokale Identität sein (mit Private Key)
+        if voucher.private_key.is_none() {
+            bail!("Only local identities can vouch for newcomers");
+        }
+
+        // Ed25519 Schlüsselpaar für Newcomer generieren
+        let signing_key = SigningKey::generate(&mut OsRng);
+        let verifying_key = signing_key.verifying_key();
+        let public_key_hex = hex::encode(verifying_key.as_bytes());
+        let private_key_hex = hex::encode(signing_key.to_bytes());
+
+        let did = DID::new(namespace, &public_key_hex[..16]);
+
+        let identity = StoredIdentity {
+            did: did.clone(),
+            public_key: public_key_hex.clone(),
+            private_key: Some(private_key_hex),
+            created_at: chrono::Utc::now().timestamp(),
+            metadata: std::collections::HashMap::new(),
+            voucher: Some(voucher_did.to_string()),
+            vouch_stake: stake,
+        };
+
+        // Vouching Record speichern
+        let vouch_key = format!("{}:{}", voucher_did, did);
+        let vouch_record = VouchRecord {
+            voucher_did: voucher_did.to_string(),
+            newcomer_did: did.to_string(),
+            stake_ratio: stake,
+            vouched_at: chrono::Utc::now().timestamp(),
+            status: VouchStatus::Active,
+        };
+
+        self.identities.put(did.to_string(), &identity)?;
+        self.pubkey_index.put(&public_key_hex, &did.to_string())?;
+        self.vouch_records.put(&vouch_key, &vouch_record)?;
+
+        Ok(identity)
+    }
+
+    /// Holt alle Vouching-Records für einen Bürgen
+    pub fn get_vouches_by_voucher(&self, voucher_did: &DID) -> Result<Vec<VouchRecord>> {
+        let prefix = voucher_did.to_string();
+        let mut records = Vec::new();
+
+        // Iteriere über alle Records und filtere nach Voucher
+        for result in self.vouch_records.iter::<VouchRecord>() {
+            let (key, record) = result?;
+            if key.starts_with(prefix.as_bytes()) {
+                records.push(record);
+            }
+        }
+
+        Ok(records)
+    }
+
+    /// Markiert einen Vouch-Record als "Penalty Applied"
+    pub fn apply_vouch_penalty(&self, voucher_did: &DID, newcomer_did: &DID) -> Result<()> {
+        let key = format!("{}:{}", voucher_did, newcomer_did);
+
+        if let Some(mut record) = self.vouch_records.get::<_, VouchRecord>(&key)? {
+            record.status = VouchStatus::PenaltyApplied;
+            self.vouch_records.put(&key, &record)?;
+        }
+
+        Ok(())
     }
 
     /// Holt eine Identität per DID
@@ -108,14 +232,13 @@ impl IdentityStore {
 
     /// Signiert Daten mit dem Private Key einer lokalen Identität
     pub fn sign(&self, did: &DID, data: &[u8]) -> Result<Vec<u8>> {
-        let identity = self.get(did)?
-            .context("Identity not found")?;
+        let identity = self.get(did)?.context("Identity not found")?;
 
-        let private_key_hex = identity.private_key
+        let private_key_hex = identity
+            .private_key
             .context("Cannot sign with external identity (no private key)")?;
 
-        let private_key_bytes = hex::decode(&private_key_hex)
-            .context("Invalid private key")?;
+        let private_key_bytes = hex::decode(&private_key_hex).context("Invalid private key")?;
 
         let signing_key = SigningKey::try_from(private_key_bytes.as_slice())
             .map_err(|e| anyhow::anyhow!("Invalid signing key: {}", e))?;
@@ -126,16 +249,15 @@ impl IdentityStore {
 
     /// Verifiziert eine Signatur
     pub fn verify(&self, did: &DID, data: &[u8], signature: &[u8]) -> Result<bool> {
-        let identity = self.get(did)?
-            .context("Identity not found")?;
+        let identity = self.get(did)?.context("Identity not found")?;
 
-        let public_key_bytes = hex::decode(&identity.public_key)
-            .context("Invalid public key")?;
+        let public_key_bytes = hex::decode(&identity.public_key).context("Invalid public key")?;
 
         let verifying_key = VerifyingKey::try_from(public_key_bytes.as_slice())
             .map_err(|e| anyhow::anyhow!("Invalid verifying key: {}", e))?;
 
-        let sig_bytes: [u8; 64] = signature.try_into()
+        let sig_bytes: [u8; 64] = signature
+            .try_into()
             .map_err(|_| anyhow::anyhow!("Invalid signature length"))?;
         let sig = Signature::from_bytes(&sig_bytes);
 
@@ -257,7 +379,9 @@ mod tests {
         let challenge = store.create_challenge();
 
         let signature = store.sign(&identity.did, challenge.as_bytes()).unwrap();
-        let valid = store.verify_challenge(&identity.did, &challenge, &signature, 60).unwrap();
+        let valid = store
+            .verify_challenge(&identity.did, &challenge, &signature, 60)
+            .unwrap();
 
         assert!(valid);
     }
@@ -271,5 +395,69 @@ mod tests {
 
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap().did, identity.did);
+    }
+
+    #[test]
+    fn test_vouched_identity() {
+        let store = create_test_store();
+
+        // Bürge erstellen
+        let voucher = store.create_identity(DIDNamespace::Self_).unwrap();
+
+        // Gebürgte Identität erstellen
+        let newcomer = store
+            .create_vouched_identity(
+                DIDNamespace::Self_,
+                &voucher.did,
+                0.2, // 20% stake
+            )
+            .unwrap();
+
+        // Newcomer hat Voucher-Referenz
+        assert_eq!(newcomer.voucher, Some(voucher.did.to_string()));
+        assert!((newcomer.vouch_stake - 0.2).abs() < 0.001);
+
+        // Vouch-Record wurde gespeichert
+        let vouches = store.get_vouches_by_voucher(&voucher.did).unwrap();
+        assert_eq!(vouches.len(), 1);
+        assert_eq!(vouches[0].newcomer_did, newcomer.did.to_string());
+        assert_eq!(vouches[0].status, VouchStatus::Active);
+    }
+
+    #[test]
+    fn test_vouch_penalty() {
+        let store = create_test_store();
+
+        let voucher = store.create_identity(DIDNamespace::Self_).unwrap();
+        let newcomer = store
+            .create_vouched_identity(DIDNamespace::Self_, &voucher.did, 0.2)
+            .unwrap();
+
+        // Penalty anwenden
+        store
+            .apply_vouch_penalty(&voucher.did, &newcomer.did)
+            .unwrap();
+
+        // Status geändert
+        let vouches = store.get_vouches_by_voucher(&voucher.did).unwrap();
+        assert_eq!(vouches[0].status, VouchStatus::PenaltyApplied);
+    }
+
+    #[test]
+    fn test_vouch_stake_clamped() {
+        let store = create_test_store();
+
+        let voucher = store.create_identity(DIDNamespace::Self_).unwrap();
+
+        // Stake > 30% wird auf 30% begrenzt
+        let newcomer = store
+            .create_vouched_identity(
+                DIDNamespace::Self_,
+                &voucher.did,
+                0.9, // 90% wird auf 30% begrenzt
+            )
+            .unwrap();
+
+        assert!((newcomer.vouch_stake - 0.3).abs() < 0.001);
     }
 }

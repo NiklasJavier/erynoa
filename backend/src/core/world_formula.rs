@@ -22,6 +22,14 @@ use std::collections::HashMap;
 ///     \_____/   \_____________________________________________/  \___/  \____/
 ///     Activity          Sigmoid(Trust×History×Surprisal)        Human  Temporal
 /// ```
+///
+/// ## Inkrementelle Berechnung (Performance-Optimierung)
+///
+/// Statt bei jedem Aufruf alle N Contributions zu iterieren (O(N)),
+/// wird der globale State inkrementell aktualisiert:
+/// - `update_contribution_incremental()` berechnet nur das Delta
+/// - `get_cached_global()` liefert den gecachten Wert in O(1)
+/// - `compute_global()` erzwingt Neuberechnung (nur für Validierung)
 pub struct WorldFormulaEngine {
     /// Contributions pro DID
     contributions: HashMap<DID, WorldFormulaContribution>,
@@ -31,6 +39,12 @@ pub struct WorldFormulaEngine {
 
     /// Konfiguration
     config: WorldFormulaConfig,
+
+    /// Cached global state für inkrementelle Updates
+    cached_total_e: f64,
+    cached_total_activity: f64,
+    cached_total_trust_norm: f64,
+    cached_human_verified: usize,
 }
 
 /// Konfiguration für WorldFormulaEngine
@@ -67,6 +81,10 @@ impl WorldFormulaEngine {
             contributions: HashMap::new(),
             last_computed: None,
             config,
+            cached_total_e: 0.0,
+            cached_total_activity: 0.0,
+            cached_total_trust_norm: 0.0,
+            cached_human_verified: 0,
         }
     }
 
@@ -75,7 +93,7 @@ impl WorldFormulaEngine {
         Self::new(WorldFormulaConfig::default())
     }
 
-    /// Registriere oder aktualisiere Contribution für eine DID
+    /// Registriere oder aktualisiere Contribution für eine DID (Legacy, O(1) amortisiert)
     pub fn update_contribution(
         &mut self,
         did: DID,
@@ -99,10 +117,71 @@ impl WorldFormulaEngine {
             .with_human_factor(human_factor)
             .with_context(self.config.default_context);
 
+        // Inkrementelles Update: Alten Beitrag abziehen, neuen addieren
+        if let Some(old) = self.contributions.get(&did) {
+            let old_e = old.compute();
+            let old_activity = old.activity.value();
+            let old_trust_norm = old.trust.weighted_norm(&old.context.weights());
+            let old_human = if old.human_factor != HumanFactor::NotVerified { 1 } else { 0 };
+
+            self.cached_total_e -= old_e;
+            self.cached_total_activity -= old_activity;
+            self.cached_total_trust_norm -= old_trust_norm;
+            self.cached_human_verified -= old_human;
+        }
+
+        // Neuen Beitrag addieren
+        let new_e = contribution.compute();
+        let new_activity = contribution.activity.value();
+        let new_trust_norm = contribution.trust.weighted_norm(&contribution.context.weights());
+        let new_human = if contribution.human_factor != HumanFactor::NotVerified { 1 } else { 0 };
+
+        self.cached_total_e += new_e;
+        self.cached_total_activity += new_activity;
+        self.cached_total_trust_norm += new_trust_norm;
+        self.cached_human_verified += new_human;
+
         self.contributions.insert(did, contribution);
     }
 
-    /// Κ15b: Berechne globale Weltformel 𝔼
+    /// O(1) Zugriff auf gecachten globalen State
+    pub fn get_cached_global(&self) -> WorldFormulaStatus {
+        let entity_count = self.contributions.len() as u64;
+        let avg_activity = if entity_count > 0 {
+            self.cached_total_activity / entity_count as f64
+        } else {
+            0.0
+        };
+        let avg_trust_norm = if entity_count > 0 {
+            self.cached_total_trust_norm / entity_count as f64
+        } else {
+            0.0
+        };
+        let human_ratio = if entity_count > 0 {
+            self.cached_human_verified as f64 / entity_count as f64
+        } else {
+            0.0
+        };
+
+        WorldFormulaStatus {
+            total_e: self.cached_total_e,
+            delta_24h: self.last_computed
+                .as_ref()
+                .map(|prev| self.cached_total_e - prev.total_e)
+                .unwrap_or(0.0),
+            entity_count,
+            avg_activity,
+            avg_trust_norm,
+            human_verified_ratio: human_ratio,
+            realm_id: None,
+            computed_at: Utc::now(),
+        }
+    }
+
+    /// Κ15b: Berechne globale Weltformel 𝔼 (O(N) - nur für Validierung)
+    ///
+    /// Bevorzuge `get_cached_global()` für O(1) Zugriff.
+    /// Diese Methode dient zur Validierung des Caches.
     pub fn compute_global(&mut self) -> WorldFormulaStatus {
         let now = Utc::now();
         let mut total_e = 0.0;
@@ -121,6 +200,12 @@ impl WorldFormulaEngine {
                 human_verified += 1;
             }
         }
+
+        // Cache synchronisieren (falls Drift aufgetreten)
+        self.cached_total_e = total_e;
+        self.cached_total_activity = total_activity;
+        self.cached_total_trust_norm = total_trust_norm;
+        self.cached_human_verified = human_verified;
 
         let entity_count = self.contributions.len() as u64;
         let avg_activity = if entity_count > 0 {

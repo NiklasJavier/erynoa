@@ -74,6 +74,15 @@ pub enum ApiError {
 
     #[error("Service unavailable: {0}")]
     ServiceUnavailable(String),
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Rate Limiting (Mana System)
+    // ─────────────────────────────────────────────────────────────────────────
+    #[error("Rate limited: insufficient mana")]
+    RateLimited {
+        /// Zeit bis genug Mana regeneriert ist
+        retry_after: std::time::Duration,
+    },
 }
 
 impl ApiError {
@@ -91,6 +100,7 @@ impl ApiError {
             Self::Cache(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Storage(_) | Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::ServiceUnavailable(_) => StatusCode::SERVICE_UNAVAILABLE,
+            Self::RateLimited { .. } => StatusCode::TOO_MANY_REQUESTS,
         }
     }
 
@@ -111,6 +121,7 @@ impl ApiError {
             Self::Storage(_) => "STORAGE_ERROR",
             Self::Internal(_) => "INTERNAL_ERROR",
             Self::ServiceUnavailable(_) => "SERVICE_UNAVAILABLE",
+            Self::RateLimited { .. } => "RATE_LIMITED",
         }
     }
 }
@@ -178,6 +189,19 @@ impl IntoResponse for ApiError {
                 details: None,
             },
         };
+
+        // Für RateLimited: Retry-After Header hinzufügen
+        if let ApiError::RateLimited { retry_after } = &self {
+            return (
+                status,
+                [(
+                    axum::http::header::RETRY_AFTER,
+                    retry_after.as_secs().to_string(),
+                )],
+                Json(body),
+            )
+                .into_response();
+        }
 
         (status, Json(body)).into_response()
     }

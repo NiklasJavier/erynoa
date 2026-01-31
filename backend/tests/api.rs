@@ -5,9 +5,6 @@
 use erynoa_api::config::Settings;
 use erynoa_api::server::Server;
 use serde_json::Value;
-use std::sync::atomic::{AtomicU32, Ordering};
-
-static TEST_COUNTER: AtomicU32 = AtomicU32::new(0);
 
 pub struct TestApp {
     pub address: String,

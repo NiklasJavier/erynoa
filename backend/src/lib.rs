@@ -50,6 +50,9 @@ pub mod peer;
 // === Decentralized Storage Layer ===
 pub mod local;
 
+// === ECLVM - Erynoa Configuration Language VM ===
+pub mod eclvm;
+
 // === Existing Modules ===
 pub mod api;
 #[cfg(feature = "legacy-oidc")]
