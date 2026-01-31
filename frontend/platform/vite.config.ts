@@ -19,29 +19,9 @@ export default defineConfig({
 	// Performance-Optimierungen
 	optimizeDeps: {
 		// Pre-bundle häufig verwendete Dependencies
-		include: [
-			'@sveltejs/kit',
-			'@sveltejs/kit/src/runtime/client',
-			'lucide-svelte',
-			'@connectrpc/connect',
-			'@connectrpc/connect-web',
-			'oidc-client-ts',
-		],
-		// Exclude große Dependencies, die bereits optimiert sind
-		exclude: [],
+		include: ['lucide-svelte', '@connectrpc/connect', '@connectrpc/connect-web', 'oidc-client-ts'],
 	},
 	build: {
-		// Besseres Code-Splitting
-		rollupOptions: {
-			output: {
-				manualChunks: {
-					// Separate Chunks für große Dependencies
-					vendor: ['@sveltejs/kit'],
-					connect: ['@connectrpc/connect', '@connectrpc/connect-web'],
-					icons: ['lucide-svelte'],
-				},
-			},
-		},
 		// Source Maps nur im Dev-Modus (schneller)
 		sourcemap: false,
 		// Minify für bessere Performance
