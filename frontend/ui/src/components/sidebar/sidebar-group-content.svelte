@@ -1,0 +1,14 @@
+<script lang="ts">
+import { cn } from '../../utils.js'
+
+interface Props {
+	class?: string
+	children?: import('svelte').Snippet
+}
+
+const { class: className, children }: Props = $props()
+</script>
+
+<ul data-sidebar="group-content" class={cn("flex w-full min-w-0 flex-col gap-1", className)}>
+	{@render children?.()}
+</ul>

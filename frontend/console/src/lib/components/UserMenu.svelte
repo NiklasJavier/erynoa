@@ -1,28 +1,28 @@
 <script lang="ts">
-import { authStore, isAuthenticated, user } from '$lib/auth'
-import * as Avatar from '$lib/components/ui/avatar'
-import { Button } from '$lib/components/ui/button'
-import * as DropdownMenu from '$lib/components/ui/dropdown-menu'
-import { LogOut, Settings, User } from 'lucide-svelte'
+  import { authStore, isAuthenticated, user } from "$lib/auth";
+  import * as Avatar from "@erynoa/ui/components/avatar";
+  import { Button } from "@erynoa/ui/components/button";
+  import * as DropdownMenu from "@erynoa/ui/components/dropdown-menu";
+  import { LogOut, Settings, User } from "lucide-svelte";
 
-async function handleLogin() {
-	await authStore.login()
-}
+  async function handleLogin() {
+    await authStore.login();
+  }
 
-async function handleLogout() {
-	await authStore.logout()
-}
+  async function handleLogout() {
+    await authStore.logout();
+  }
 
-// Get initials from user name
-function getInitials(name: string | undefined): string {
-	if (!name) return '?'
-	return name
-		.split(' ')
-		.map((n) => n[0])
-		.join('')
-		.toUpperCase()
-		.slice(0, 2)
-}
+  // Get initials from user name
+  function getInitials(name: string | undefined): string {
+    if (!name) return "?";
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  }
 </script>
 
 {#if $isAuthenticated && $user}
@@ -30,7 +30,10 @@ function getInitials(name: string | undefined): string {
     <DropdownMenu.Trigger>
       <Button variant="ghost" class="relative h-8 w-8 rounded-full">
         <Avatar.Root class="h-8 w-8">
-          <Avatar.Image src={$user.profile?.picture} alt={$user.profile?.name} />
+          <Avatar.Image
+            src={$user.profile?.picture}
+            alt={$user.profile?.name}
+          />
           <Avatar.Fallback>{getInitials($user.profile?.name)}</Avatar.Fallback>
         </Avatar.Root>
       </Button>
@@ -38,8 +41,12 @@ function getInitials(name: string | undefined): string {
     <DropdownMenu.Content class="w-56" align="end">
       <DropdownMenu.Label class="font-normal">
         <div class="flex flex-col space-y-1">
-          <p class="text-sm font-medium leading-none">{$user.profile?.name || 'User'}</p>
-          <p class="text-xs leading-none text-muted-foreground">{$user.profile?.email}</p>
+          <p class="text-sm font-medium leading-none">
+            {$user.profile?.name || "User"}
+          </p>
+          <p class="text-xs leading-none text-muted-foreground">
+            {$user.profile?.email}
+          </p>
         </div>
       </DropdownMenu.Label>
       <DropdownMenu.Separator />
@@ -59,7 +66,5 @@ function getInitials(name: string | undefined): string {
     </DropdownMenu.Content>
   </DropdownMenu.Root>
 {:else}
-  <Button onclick={handleLogin} variant="default">
-    Login
-  </Button>
+  <Button onclick={handleLogin} variant="default">Login</Button>
 {/if}
