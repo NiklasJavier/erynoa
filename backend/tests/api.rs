@@ -5,16 +5,26 @@
 use erynoa_api::config::Settings;
 use erynoa_api::server::Server;
 use serde_json::Value;
+use std::sync::atomic::{AtomicU32, Ordering};
+
+static TEST_COUNTER: AtomicU32 = AtomicU32::new(0);
 
 pub struct TestApp {
     pub address: String,
     pub client: reqwest::Client,
+    /// Temporäres Datenverzeichnis (wird beim Drop automatisch gelöscht)
+    _temp_dir: tempfile::TempDir,
 }
 
 impl TestApp {
     pub async fn spawn() -> Self {
+        // Erstelle temporäres Verzeichnis für diesen Test
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let data_path = temp_dir.path().to_string_lossy().to_string();
+
         let mut settings = Settings::load().expect("Failed to load config");
         settings.application.port = 0;
+        settings.application.data_dir = Some(data_path);
 
         let server = Server::build(settings)
             .await
@@ -30,6 +40,7 @@ impl TestApp {
         Self {
             address,
             client: reqwest::Client::new(),
+            _temp_dir: temp_dir,
         }
     }
 

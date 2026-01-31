@@ -39,6 +39,18 @@ impl EventId {
     }
 }
 
+impl From<&str> for EventId {
+    fn from(s: &str) -> Self {
+        Self(s.to_string())
+    }
+}
+
+impl From<String> for EventId {
+    fn from(s: String) -> Self {
+        Self(s)
+    }
+}
+
 impl fmt::Display for EventId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)

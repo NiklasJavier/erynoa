@@ -37,6 +37,9 @@ pub struct ApplicationSettings {
     pub docs_url: String,
     /// Öffentliche API-URL
     pub api_url: String,
+    /// Datenverzeichnis für dezentralen Storage (Standard: ./data)
+    #[serde(default)]
+    pub data_dir: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

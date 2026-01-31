@@ -1,11 +1,8 @@
 //! Server module - Application startup and state management
 
 use crate::api::create_router;
-use crate::auth::JwtValidator;
-use crate::cache::CachePool;
 use crate::config::Settings;
-use crate::db::DatabasePool;
-use crate::storage::StorageClient;
+use crate::local::DecentralizedStorage;
 use anyhow::Result;
 use axum::Router;
 use std::net::SocketAddr;
@@ -13,26 +10,52 @@ use std::sync::Arc;
 use std::time::Instant;
 use tokio::net::TcpListener;
 
+// Legacy imports (optional)
+#[cfg(feature = "legacy-oidc")]
+use crate::auth::JwtValidator;
+#[cfg(feature = "legacy-cache")]
+use crate::cache::CachePool;
+#[cfg(feature = "legacy-sql")]
+use crate::db::DatabasePool;
+#[cfg(feature = "legacy-s3")]
+use crate::storage::StorageClient;
+
 /// Shared application state for all handlers
 #[derive(Clone)]
 pub struct AppState {
-    pub db: DatabasePool,
-    pub cache: CachePool,
-    pub storage: Option<StorageClient>,
-    pub jwt_validator: Option<Arc<JwtValidator>>,
+    /// Dezentraler Storage (Standard)
+    pub storage: DecentralizedStorage,
+    /// Anwendungskonfiguration
     pub config: Arc<Settings>,
+    /// Startzeitpunkt für Uptime
     pub started_at: Option<Instant>,
+
+    // Legacy fields (optional)
+    #[cfg(feature = "legacy-sql")]
+    pub db: DatabasePool,
+    #[cfg(feature = "legacy-cache")]
+    pub cache: CachePool,
+    #[cfg(feature = "legacy-s3")]
+    pub s3_storage: Option<StorageClient>,
+    #[cfg(feature = "legacy-oidc")]
+    pub jwt_validator: Option<Arc<JwtValidator>>,
 }
 
 impl AppState {
     /// Check if all backends are reachable
     pub async fn health_check(&self) -> (bool, bool, bool) {
+        let storage_ok = self.storage.ping().await.is_ok();
+
+        #[cfg(feature = "legacy-sql")]
         let db_ok = self.db.ping().await.is_ok();
+        #[cfg(not(feature = "legacy-sql"))]
+        let db_ok = true;
+
+        #[cfg(feature = "legacy-cache")]
         let cache_ok = self.cache.ping().await.is_ok();
-        let storage_ok = match &self.storage {
-            Some(s) => s.ping().await.is_ok(),
-            None => true, // Wenn nicht konfiguriert, gilt als OK
-        };
+        #[cfg(not(feature = "legacy-cache"))]
+        let cache_ok = true;
+
         (db_ok, cache_ok, storage_ok)
     }
 }
@@ -51,15 +74,29 @@ impl Server {
             "🏗️  Building server..."
         );
 
-        // Database
-        let db = DatabasePool::connect(&settings.database).await?;
-        tracing::info!(host = %settings.database.host, "✅ Database connected");
+        // Dezentraler Storage (Standard - immer verfügbar)
+        let data_dir = settings.application.data_dir.clone().unwrap_or_else(|| "./data".to_string());
+        let storage = DecentralizedStorage::open(&data_dir)?;
+        tracing::info!(path = %data_dir, "✅ Decentralized storage ready");
 
-        // Cache
-        let cache = CachePool::connect(&settings.cache).await?;
-        tracing::info!(url = %settings.cache.url, "✅ Cache connected");
+        // Legacy: Database (optional)
+        #[cfg(feature = "legacy-sql")]
+        let db = {
+            let db = DatabasePool::connect(&settings.database).await?;
+            tracing::info!(host = %settings.database.host, "✅ Legacy database connected");
+            db
+        };
 
-        // JWT Validator (optional - kann fehlschlagen wenn ZITADEL nicht läuft)
+        // Legacy: Cache (optional)
+        #[cfg(feature = "legacy-cache")]
+        let cache = {
+            let cache = CachePool::connect(&settings.cache).await?;
+            tracing::info!(url = %settings.cache.url, "✅ Legacy cache connected");
+            cache
+        };
+
+        // Legacy: JWT Validator (optional)
+        #[cfg(feature = "legacy-oidc")]
         let jwt_validator = match JwtValidator::new(&settings.auth).await {
             Ok(jwt) => {
                 tracing::info!(issuer = %settings.auth.issuer, "✅ JWT validator ready");
@@ -68,43 +105,44 @@ impl Server {
             Err(e) => {
                 tracing::warn!(
                     error = %e,
-                    issuer = %settings.auth.issuer,
                     "⚠️  JWT validator disabled - Auth service not available"
                 );
                 None
             }
         };
 
-        // Storage (optional - kann fehlschlagen wenn MinIO nicht läuft)
-        let storage = match StorageClient::connect(&settings.storage).await {
+        // Legacy: S3 Storage (optional)
+        #[cfg(feature = "legacy-s3")]
+        let s3_storage = match StorageClient::connect(&settings.storage).await {
             Ok(s) => {
                 tracing::info!(
                     endpoint = %settings.storage.endpoint,
-                    bucket = %settings.storage.default_bucket,
-                    "✅ Storage connected"
+                    "✅ Legacy S3 storage connected"
                 );
                 Some(s)
             }
             Err(e) => {
-                tracing::warn!(
-                    error = %e,
-                    endpoint = %settings.storage.endpoint,
-                    "⚠️  Storage disabled - MinIO not available"
-                );
+                tracing::warn!(error = %e, "⚠️  Legacy S3 storage disabled");
                 None
             }
         };
 
         let state = AppState {
-            db,
-            cache,
             storage,
-            jwt_validator,
             config: Arc::new(settings.clone()),
             started_at: Some(Instant::now()),
+            #[cfg(feature = "legacy-sql")]
+            db,
+            #[cfg(feature = "legacy-cache")]
+            cache,
+            #[cfg(feature = "legacy-s3")]
+            s3_storage,
+            #[cfg(feature = "legacy-oidc")]
+            jwt_validator,
         };
 
-        // Run migrations in non-production
+        // Legacy: Run migrations in non-production
+        #[cfg(feature = "legacy-sql")]
         if !settings.application.environment.is_production() {
             if let Err(e) = state.db.migrate().await {
                 tracing::warn!(error = %e, "Migration skipped");

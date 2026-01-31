@@ -29,7 +29,15 @@ tower-http = { version = "0.6", features = [
     "request-id",
 ] }
 
-# Database (SQLx + PostgreSQL)
+# ============================================================================
+# DEZENTRALE STORAGE-SCHICHT
+# ============================================================================
+
+# Embedded Key-Value Store (ersetzt PostgreSQL)
+fjall = "2"
+tempfile = "3" # Für temporäre Datenbanken (Tests)
+
+# Database (SQLx + PostgreSQL) - LEGACY, wird entfernt
 sqlx = { version = "0.8", features = [
     "runtime-tokio",
     "tls-rustls",
@@ -38,17 +46,26 @@ sqlx = { version = "0.8", features = [
     "chrono",
     "json",
     "migrate",
-] }
+], optional = true }
 
-# Cache (Redis/DragonflyDB)
-fred = { version = "9", features = ["enable-rustls"] }
+# Cache (Redis/DragonflyDB) - LEGACY, wird entfernt
+fred = { version = "9", features = ["enable-rustls"], optional = true }
 
-# Authentication (ZITADEL / OIDC)
-jsonwebtoken = "9"
+# ============================================================================
+# DEZENTRALE IDENTITÄT
+# ============================================================================
+
+# Ed25519 Signaturen für DID-Auth (ersetzt ZITADEL)
+ed25519-dalek = { version = "2", features = ["rand_core", "serde"] }
+rand = "0.8"
+bs58 = "0.5"                                                         # Base58 Encoding für DIDs
+
+# Authentication (ZITADEL / OIDC) - LEGACY, wird entfernt
+jsonwebtoken = { version = "9", optional = true }
 reqwest = { version = "0.12", default-features = false, features = [
     "rustls-tls",
     "json",
-] }
+], optional = true }
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
@@ -66,10 +83,16 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 thiserror = "1"
 anyhow = "1"
 
-# S3 Object Storage (MinIO)
-aws-config = { version = "1", features = ["behavior-version-latest"] }
-aws-sdk-s3 = "1"
-aws-credential-types = "1"
+# ============================================================================
+# CONTENT ADDRESSABLE STORAGE (ersetzt S3/MinIO)
+# ============================================================================
+
+# S3 Object Storage (MinIO) - LEGACY, wird entfernt
+aws-config = { version = "1", features = [
+    "behavior-version-latest",
+], optional = true }
+aws-sdk-s3 = { version = "1", optional = true }
+aws-credential-types = { version = "1", optional = true }
 
 # Utilities
 uuid = { version = "1", features = ["v4", "v7", "serde"] }
@@ -98,9 +121,19 @@ tikv-jemallocator = { version = "0.6", features = [
 ], optional = true }
 
 [features]
-default = []
+default = ["decentralized"]
 jemalloc = ["dep:tikv-jemallocator"]
 connect = []                         # Enable Connect-RPC/gRPC-Web support
+
+# Dezentrale Architektur (Standard)
+decentralized = []
+
+# Legacy-Features für Migration (optional)
+legacy-sql = ["dep:sqlx"]
+legacy-cache = ["dep:fred"]
+legacy-s3 = ["dep:aws-config", "dep:aws-sdk-s3", "dep:aws-credential-types"]
+legacy-oidc = ["dep:jsonwebtoken", "dep:reqwest"]
+legacy = ["legacy-sql", "legacy-cache", "legacy-s3", "legacy-oidc"]
 
 [build-dependencies]
 axum-connect-build = "0.3"
@@ -110,6 +143,11 @@ tokio-test = "0.4"
 fake = { version = "2", features = ["derive", "chrono", "uuid"] }
 wiremock = "0.6"
 claims = "0.7"
+reqwest = { version = "0.12", default-features = false, features = [
+    "json",
+    "rustls-tls",
+] }
+tempfile = "3"
 
 [profile.release]
 opt-level = 3

@@ -76,31 +76,38 @@ pub async fn health_handler() -> Json<HealthResponse> {
 
 /// GET /api/v1/ready - Readiness probe
 pub async fn ready_handler(State(state): State<AppState>) -> impl IntoResponse {
-    // Database check
-    let db_start = Instant::now();
-    let db_healthy = state.db.ping().await.is_ok();
-    let db_latency = db_start.elapsed().as_millis() as i64;
+    // Storage check (dezentral - immer verfügbar)
+    let storage_start = Instant::now();
+    let storage_healthy = state.storage.ping().await.is_ok();
+    let storage_latency = storage_start.elapsed().as_millis() as i64;
 
-    // Cache check
-    let cache_start = Instant::now();
-    let cache_healthy = state.cache.ping().await.is_ok();
-    let cache_latency = cache_start.elapsed().as_millis() as i64;
+    // Legacy services checks (wenn aktiviert)
+    #[cfg(feature = "legacy-sql")]
+    let (db_healthy, db_latency) = {
+        let db_start = Instant::now();
+        let healthy = state.db.ping().await.is_ok();
+        (healthy, db_start.elapsed().as_millis() as i64)
+    };
+    #[cfg(not(feature = "legacy-sql"))]
+    let (db_healthy, db_latency) = (true, 0i64);
 
-    // Auth check
+    #[cfg(feature = "legacy-cache")]
+    let (cache_healthy, cache_latency) = {
+        let cache_start = Instant::now();
+        let healthy = state.cache.ping().await.is_ok();
+        (healthy, cache_start.elapsed().as_millis() as i64)
+    };
+    #[cfg(not(feature = "legacy-cache"))]
+    let (cache_healthy, cache_latency) = (true, 0i64);
+
+    #[cfg(feature = "legacy-oidc")]
     let auth_healthy = if let Some(ref validator) = state.jwt_validator {
         validator.is_healthy().await
     } else {
-        true // disabled is considered healthy
+        true
     };
-
-    // Storage check
-    let storage_start = Instant::now();
-    let storage_healthy = if let Some(ref storage) = state.storage {
-        storage.ping().await.is_ok()
-    } else {
-        true // disabled is considered healthy
-    };
-    let storage_latency = storage_start.elapsed().as_millis() as i64;
+    #[cfg(not(feature = "legacy-oidc"))]
+    let auth_healthy = true;
 
     let all_healthy = db_healthy && cache_healthy && auth_healthy && storage_healthy;
 
@@ -126,28 +133,23 @@ pub async fn ready_handler(State(state): State<AppState>) -> impl IntoResponse {
                 latency_ms: Some(cache_latency),
             },
             auth: ServiceStatusJson {
-                healthy: auth_healthy || state.jwt_validator.is_none(),
+                healthy: auth_healthy,
+                #[cfg(feature = "legacy-oidc")]
                 message: if state.jwt_validator.is_some() {
-                    if auth_healthy {
-                        "connected".to_string()
-                    } else {
-                        "unhealthy".to_string()
-                    }
+                    if auth_healthy { "connected".to_string() } else { "unhealthy".to_string() }
                 } else {
                     "disabled".to_string()
                 },
+                #[cfg(not(feature = "legacy-oidc"))]
+                message: "DID-based".to_string(),
                 latency_ms: None,
             },
             storage: ServiceStatusJson {
-                healthy: storage_healthy || state.storage.is_none(),
-                message: if state.storage.is_some() {
-                    if storage_healthy {
-                        "connected".to_string()
-                    } else {
-                        "disconnected".to_string()
-                    }
+                healthy: storage_healthy,
+                message: if storage_healthy {
+                    "decentralized".to_string()
                 } else {
-                    "disabled".to_string()
+                    "unavailable".to_string()
                 },
                 latency_ms: Some(storage_latency),
             },
@@ -166,25 +168,44 @@ pub async fn info_handler(State(state): State<AppState>) -> Json<InfoResponse> {
     Json(InfoResponse {
         version: VERSION,
         environment: state.config.application.environment.as_str().to_string(),
+        #[cfg(feature = "legacy-oidc")]
         auth_issuer: state.config.auth.issuer.clone(),
+        #[cfg(not(feature = "legacy-oidc"))]
+        auth_issuer: "did:erynoa:self".to_string(),
+        #[cfg(feature = "legacy-oidc")]
         auth_client_id: state.config.auth.console_client_id.clone(),
+        #[cfg(not(feature = "legacy-oidc"))]
+        auth_client_id: "local".to_string(),
     })
 }
 
 /// GET /api/v1/status - Service status overview
 pub async fn status_handler(State(state): State<AppState>) -> Json<StatusResponse> {
+    let storage_ok = state.storage.ping().await.is_ok();
+
+    #[cfg(feature = "legacy-sql")]
     let db_ok = state.db.ping().await.is_ok();
+    #[cfg(not(feature = "legacy-sql"))]
+    let db_ok = true;
+
+    #[cfg(feature = "legacy-cache")]
     let cache_ok = state.cache.ping().await.is_ok();
+    #[cfg(not(feature = "legacy-cache"))]
+    let cache_ok = true;
 
     Json(StatusResponse {
         services: vec![
             ServiceInfo {
+                name: "storage",
+                status: if storage_ok { "up" } else { "down" },
+            },
+            ServiceInfo {
                 name: "database",
-                status: if db_ok { "up" } else { "down" },
+                status: if db_ok { "up" } else { "legacy-disabled" },
             },
             ServiceInfo {
                 name: "cache",
-                status: if cache_ok { "up" } else { "down" },
+                status: if cache_ok { "up" } else { "legacy-disabled" },
             },
             ServiceInfo {
                 name: "api",

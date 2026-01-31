@@ -20,9 +20,15 @@
 //!
 //! - **Axum** HTTP/2 + REST API
 //! - **Connect-RPC/gRPC-Web** für type-safe API (optional)
-//! - **SQLx** PostgreSQL/OrioleDB
-//! - **fred** DragonflyDB Cache
-//! - **ZITADEL** JWT Auth
+//! - **Sled** Embedded Key-Value Store (dezentral)
+//! - **Ed25519** DID-basierte Authentifizierung
+//! - **CAS** Content Addressable Storage
+//!
+//! ## Legacy Features (optional)
+//!
+//! - **SQLx** PostgreSQL/OrioleDB (`legacy-sql`)
+//! - **fred** DragonflyDB Cache (`legacy-cache`)
+//! - **ZITADEL** JWT Auth (`legacy-oidc`)
 //!
 //! ## Axiom-Referenz
 //!
@@ -41,14 +47,21 @@ pub mod protection;
 // === Peer Layer (Κ22-Κ24) ===
 pub mod peer;
 
+// === Decentralized Storage Layer ===
+pub mod local;
+
 // === Existing Modules ===
 pub mod api;
+#[cfg(feature = "legacy-oidc")]
 pub mod auth;
+#[cfg(feature = "legacy-cache")]
 pub mod cache;
 pub mod config;
+#[cfg(feature = "legacy-sql")]
 pub mod db;
 pub mod error;
 pub mod server;
+#[cfg(feature = "legacy-s3")]
 pub mod storage;
 pub mod telemetry;
 

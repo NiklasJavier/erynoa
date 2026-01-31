@@ -47,16 +47,24 @@ pub enum ApiError {
     Conflict(String),
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Database
+    // Database (Legacy SQL)
     // ─────────────────────────────────────────────────────────────────────────
+    #[cfg(feature = "legacy-sql")]
     #[error("Database error")]
     Database(#[from] sqlx::Error),
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Cache
+    // Cache (Legacy Redis)
     // ─────────────────────────────────────────────────────────────────────────
+    #[cfg(feature = "legacy-cache")]
     #[error("Cache error")]
     Cache(#[from] fred::error::RedisError),
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Storage (Sled) - Decentralized
+    // ─────────────────────────────────────────────────────────────────────────
+    #[error("Storage error: {0}")]
+    Storage(String),
 
     // ─────────────────────────────────────────────────────────────────────────
     // Internal
@@ -77,9 +85,11 @@ impl ApiError {
             Self::Validation(_) | Self::BadRequest(_) => StatusCode::BAD_REQUEST,
             Self::NotFound(_) => StatusCode::NOT_FOUND,
             Self::Conflict(_) => StatusCode::CONFLICT,
-            Self::Database(_) | Self::Cache(_) | Self::Internal(_) => {
-                StatusCode::INTERNAL_SERVER_ERROR
-            }
+            #[cfg(feature = "legacy-sql")]
+            Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            #[cfg(feature = "legacy-cache")]
+            Self::Cache(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Storage(_) | Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::ServiceUnavailable(_) => StatusCode::SERVICE_UNAVAILABLE,
         }
     }
@@ -94,8 +104,11 @@ impl ApiError {
             Self::BadRequest(_) => "BAD_REQUEST",
             Self::NotFound(_) => "NOT_FOUND",
             Self::Conflict(_) => "CONFLICT",
+            #[cfg(feature = "legacy-sql")]
             Self::Database(_) => "DATABASE_ERROR",
+            #[cfg(feature = "legacy-cache")]
             Self::Cache(_) => "CACHE_ERROR",
+            Self::Storage(_) => "STORAGE_ERROR",
             Self::Internal(_) => "INTERNAL_ERROR",
             Self::ServiceUnavailable(_) => "SERVICE_UNAVAILABLE",
         }
@@ -120,14 +133,19 @@ impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         // Log den Fehler (für interne Fehler mit voller Info)
         match &self {
+            #[cfg(feature = "legacy-sql")]
             ApiError::Database(e) => {
                 tracing::error!(error = ?e, "Database error occurred");
             }
+            #[cfg(feature = "legacy-cache")]
             ApiError::Cache(e) => {
                 tracing::error!(error = ?e, "Cache error occurred");
             }
             ApiError::Internal(e) => {
                 tracing::error!(error = ?e, "Internal error occurred");
+            }
+            ApiError::Storage(e) => {
+                tracing::error!(error = %e, "Storage error occurred");
             }
             _ => {
                 tracing::warn!(error = %self, "Client error occurred");
@@ -139,7 +157,15 @@ impl IntoResponse for ApiError {
 
         // Für Production: Interne Fehler nicht im Detail exponieren
         let message = match &self {
-            ApiError::Database(_) | ApiError::Cache(_) | ApiError::Internal(_) => {
+            #[cfg(feature = "legacy-sql")]
+            ApiError::Database(_) => {
+                "An internal error occurred. Please try again later.".to_string()
+            }
+            #[cfg(feature = "legacy-cache")]
+            ApiError::Cache(_) => {
+                "An internal error occurred. Please try again later.".to_string()
+            }
+            ApiError::Storage(_) | ApiError::Internal(_) => {
                 "An internal error occurred. Please try again later.".to_string()
             }
             _ => self.to_string(),
