@@ -180,33 +180,6 @@ documentation/
 | ------------------------------------------ | -------------------------------------------------------- |
 | **[🗺️ Roadmap](documentation/ROADMAP.md)** | **Strategischer Entwicklungsplan** – 4 Phasen, 3-4 Jahre |
 
-### 📐 Fachkonzept & Weltformel
-
-| Dokument                                                                           | Beschreibung                                              |
-| ---------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| **[📐 Fachkonzept](documentation/FACHKONZEPT.md)**                                 | **Hier starten** – Vollständiges Fachkonzept in Fließtext |
-| [Weltformel](documentation/concept-v2/WORLD-FORMULA.md)                            | Die mathematische Kerngleichung: 𝔼 = 𝕀 · 𝕋 · ℂ            |
-| [Weltformel-Optimum](documentation/concept-v2/WORLD-FORMULA-OPTIMUM.md)            | Optimierte Formel mit Sigmoid-Attention                   |
-| [Beweis](documentation/concept-v2/WORLD-FORMULA-PROOF.md)                          | Formaler mathematischer Beweis                            |
-| [Fundamente](documentation/concept-v2/WORLD-FORMULA-FOUNDATIONS.md)                | Physikalische & informationstheoretische Grundlagen       |
-| [Systemarchitektur](documentation/concept-v2/SYSTEM-ARCHITECTURE.md)               | Detaillierte technische Architektur                       |
-| [Strategische Empfehlungen](documentation/concept-v2/STRATEGIC-RECOMMENDATIONS.md) | Handlungsempfehlungen aus der Formel                      |
-| [Manifest](documentation/concept-v2/MANIFEST.md)                                   | Poetische Vision & Versprechen                            |
-
-### 🧠 Konzept-Dokumentation (v2)
-
-| Schicht                                                      | Dokumente                                                                                                                                                                                                                                    | Beschreibung                             |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| **[⭐ Navigator](documentation/concept-v2/00-navigator.md)** | —                                                                                                                                                                                                                                            | **Hier starten** – 7-Schichten-Übersicht |
-| **ANKER**                                                    | [identity-first](documentation/concept-v2/anker/identity-first.md), [did-erynoa](documentation/concept-v2/anker/did-erynoa.md), [credentials](documentation/concept-v2/anker/credentials.md), [dacs](documentation/concept-v2/anker/dacs.md) | Identität, DIDs, Credentials             |
-| **SCHEMA**                                                   | [blueprints](documentation/concept-v2/schema/blueprints.md), [semantic-index](documentation/concept-v2/schema/semantic-index.md), [standards](documentation/concept-v2/schema/standards.md)                                                  | Wissen, Semantik, Standards              |
-| **METRIK**                                                   | [trust-vectors](documentation/concept-v2/metrik/trust-vectors.md), [karma-engine](documentation/concept-v2/metrik/karma-engine.md), [attestations](documentation/concept-v2/metrik/attestations.md)                                          | Vertrauen, Reputation                    |
-| **SPHÄRE**                                                   | [environments](documentation/concept-v2/sphaere/environments.md), [governance](documentation/concept-v2/sphaere/governance.md), [discovery](documentation/concept-v2/sphaere/discovery.md)                                                   | Räume, Governance                        |
-| **IMPULS**                                                   | [agent-modell](documentation/concept-v2/impuls/agent-modell.md), [intent](documentation/concept-v2/impuls/intent.md), [policy](documentation/concept-v2/impuls/policy.md), [eclvm](documentation/concept-v2/impuls/eclvm.md)                 | Agenten, Verhandlung                     |
-| **CHRONIK**                                                  | [noa-ledger](documentation/concept-v2/chronik/noa-ledger.md), [amo](documentation/concept-v2/chronik/amo.md), [streaming](documentation/concept-v2/chronik/streaming.md), [finality](documentation/concept-v2/chronik/finality.md)           | Ledger, Settlement                       |
-| **NEXUS**                                                    | [multi-chain](documentation/concept-v2/nexus/multi-chain.md), [bridges](documentation/concept-v2/nexus/bridges.md), [routing](documentation/concept-v2/nexus/routing.md)                                                                     | Netzwerk, Anchoring                      |
-| **Appendix**                                                 | [glossar](documentation/concept-v2/appendix/glossar.md), [ecl-referenz](documentation/concept-v2/appendix/ecl-referenz.md), [anwendungen](documentation/concept-v2/appendix/anwendungen.md)                                                  | Referenz                                 |
-
 ### 🛠️ System-Dokumentation
 
 | Dokument                                                          | Beschreibung                    |
