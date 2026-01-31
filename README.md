@@ -52,19 +52,12 @@ Erynoa ist ein **dezentrales Protokoll**, das autonomen Agenten ermöglicht, ver
 │              ↑                                        ↑                     │
 │       Semantik, Trust                         Finalität, Wahrheit           │
 │                                                                             │
-│                        ERY + NOA = ERYNOA                                   │
+│                                                                             │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-| Sphäre   | Funktion                   | Technologie           |
-| -------- | -------------------------- | --------------------- |
-| **DACS** | Identity, Multi-Chain DID  | BFT, BLS, libp2p      |
-| **ERY**  | Semantik, Trust, Discovery | Qdrant, Karmic Engine |
-| **ECHO** | Agenten, Verhandlung, P2P  | WASM, libp2p, XMTP    |
-| **NOA**  | Finalität, Settlement      | MoveVM, Starfish BFT  |
-
-> 📖 **Mehr erfahren:** [Navigator](documentation/concept-v2/00-navigator.md) · [Roadmap](documentation/ROADMAP.md)
+> 📖 **Mehr erfahren:** [Navigator](documentation/concept-v3/Fachkonzept.md) · [Roadmap](documentation/ROADMAP.md)
 
 ---
 
@@ -189,16 +182,16 @@ documentation/
 
 ### 📐 Fachkonzept & Weltformel
 
-| Dokument                                                                               | Beschreibung                                          |
-| -------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| **[📐 Fachkonzept](documentation/FACHKONZEPT.md)**               | **Hier starten** – Vollständiges Fachkonzept in Fließtext |
-| [Weltformel](documentation/concept-v2/WORLD-FORMULA.md)                                | Die mathematische Kerngleichung: 𝔼 = 𝕀 · 𝕋 · ℂ       |
-| [Weltformel-Optimum](documentation/concept-v2/WORLD-FORMULA-OPTIMUM.md)                | Optimierte Formel mit Sigmoid-Attention               |
-| [Beweis](documentation/concept-v2/WORLD-FORMULA-PROOF.md)                              | Formaler mathematischer Beweis                        |
-| [Fundamente](documentation/concept-v2/WORLD-FORMULA-FOUNDATIONS.md)                    | Physikalische & informationstheoretische Grundlagen   |
-| [Systemarchitektur](documentation/concept-v2/SYSTEM-ARCHITECTURE.md)                   | Detaillierte technische Architektur                   |
-| [Strategische Empfehlungen](documentation/concept-v2/STRATEGIC-RECOMMENDATIONS.md)     | Handlungsempfehlungen aus der Formel                  |
-| [Manifest](documentation/concept-v2/MANIFEST.md)                                       | Poetische Vision & Versprechen                        |
+| Dokument                                                                           | Beschreibung                                              |
+| ---------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| **[📐 Fachkonzept](documentation/FACHKONZEPT.md)**                                 | **Hier starten** – Vollständiges Fachkonzept in Fließtext |
+| [Weltformel](documentation/concept-v2/WORLD-FORMULA.md)                            | Die mathematische Kerngleichung: 𝔼 = 𝕀 · 𝕋 · ℂ            |
+| [Weltformel-Optimum](documentation/concept-v2/WORLD-FORMULA-OPTIMUM.md)            | Optimierte Formel mit Sigmoid-Attention                   |
+| [Beweis](documentation/concept-v2/WORLD-FORMULA-PROOF.md)                          | Formaler mathematischer Beweis                            |
+| [Fundamente](documentation/concept-v2/WORLD-FORMULA-FOUNDATIONS.md)                | Physikalische & informationstheoretische Grundlagen       |
+| [Systemarchitektur](documentation/concept-v2/SYSTEM-ARCHITECTURE.md)               | Detaillierte technische Architektur                       |
+| [Strategische Empfehlungen](documentation/concept-v2/STRATEGIC-RECOMMENDATIONS.md) | Handlungsempfehlungen aus der Formel                      |
+| [Manifest](documentation/concept-v2/MANIFEST.md)                                   | Poetische Vision & Versprechen                            |
 
 ### 🧠 Konzept-Dokumentation (v2)
 
