@@ -3,7 +3,7 @@
 > **EIP:** 005
 > **Titel:** Virtualized Environment Architecture (Root-Env / Virt-Env / Shards)
 > **Status:** Draft
-> **Version:** 0.3 (Refined)
+> **Version:** 0.4 (FACHKONZEPT V6.2 Sync)
 > **Typ:** Standard
 > **Ebene:** E2 (Emergenz) / E5 (Schutz) / E6 (Kybernetik)
 > **Erstellt:** Januar 2026
@@ -135,10 +135,10 @@ Kategorientheorie definiert Struktur, aber **Logic Guards** bewachen die Überg�
 guard boundary_eu_to_asean {
   // GDPR-Äquivalenz prüfen
   require(target_env.has_compliance("GDPR-equivalent"))
-  
+
   // Minimaler Trust
   require(source_trust.scalar() >= 0.6)
-  
+
   // Sanktions-Check
   require(!sanctions_list.contains(user.did))
 }
@@ -295,25 +295,25 @@ Das gesamte Erynoa-System ist als **geschachtelte Kategorien-Hierarchie** modell
 pub struct Category {
     /// Kategorie-ID (entspricht Realm/Shard/Virt-Env DID)
     pub id: DID,
-    
+
     /// Typ der Kategorie
     pub category_type: CategoryType,
-    
+
     /// Parent-Kategorie (None für Root)
     pub parent: Option<DID>,
-    
+
     /// Objekte (Agenten in dieser Kategorie)
     pub objects: HashSet<DID>,
-    
+
     /// Morphismen (Transaktionen zwischen Agenten)
     pub morphisms: HashMap<TransactionId, Morphism>,
-    
+
     /// Identitäts-Morphismen (Axiom Q6: id ∘ f = f = f ∘ id)
     pub identity_morphisms: HashMap<DID, MorphismId>,
-    
+
     /// Lokale Axiome (A19: Monotonie - nur Erweiterungen)
     pub local_axioms: Vec<LocalAxiom>,
-    
+
     /// Funktoren zu anderen Kategorien
     pub functors: HashMap<DID, Functor>,
 }
@@ -322,13 +322,13 @@ pub struct Category {
 pub enum CategoryType {
     /// Root-Environment (𝒞_Root)
     RootEnv,
-    
+
     /// Virtual Environment (𝒞_VirtEnv ⊂ 𝒞_Parent)
     VirtEnv {
         governance: GovernanceConfig,
         cbdc_bridge: Option<CbdcBridge>,
     },
-    
+
     /// Shard (𝒞_Shard ⊂ 𝒞_VirtEnv)
     Shard {
         shard_type: ShardType,
@@ -343,37 +343,51 @@ pub enum ShardType {
         cbdc_token: Option<CbdcToken>,
         settlement_currency: String,
     },
-    
+
     /// Energie-Shard (Energy Trading, Grid Management)
     Energy {
         grid_type: GridType,
         metering_protocol: String,
     },
-    
+
     /// Healthcare-Shard (Medizinische Daten, HIPAA/GDPR)
     Healthcare {
         compliance_level: ComplianceLevel,
         data_classification: DataClassification,
     },
-    
+
     /// Supply-Chain-Shard (Tracking, Provenance)
     SupplyChain {
         stages: Vec<String>,
         attestation_required: bool,
     },
-    
+
     /// Gaming-Shard (Assets, Achievements)
     Gaming {
         asset_types: Vec<String>,
         interoperability: bool,
     },
-    
+
     /// Custom-Shard (benutzerdefiniert)
     Custom {
         schema: BlueprintId,
     },
 }
 ```
+
+#### 2.2.1 Trust-Gewichtung nach Shard-Typ
+
+Jeder Shard-Typ hat spezifische Gewichtungen für die 6D-Trust-Vektor-Komponenten:
+
+| Shard-Typ       | R    | I    | C    | P    | V    | Ω    | Fokus                              |
+| --------------- | ---- | ---- | ---- | ---- | ---- | ---- | ---------------------------------- |
+| **Finance**     | 0.15 | 0.25 | 0.10 | 0.10 | 0.15 | 0.25 | Integrität & Compliance            |
+| **Energy**      | 0.25 | 0.10 | 0.15 | 0.25 | 0.15 | 0.10 | Zuverlässigkeit & Vorhersagbarkeit |
+| **Healthcare**  | 0.15 | 0.30 | 0.20 | 0.10 | 0.10 | 0.15 | Integrität & Kompetenz             |
+| **Gaming**      | 0.10 | 0.10 | 0.35 | 0.15 | 0.15 | 0.15 | Kompetenz                          |
+| **SupplyChain** | 0.20 | 0.20 | 0.15 | 0.20 | 0.15 | 0.10 | Zuverlässigkeit & Integrität       |
+
+**Legende:** R = Reliability, I = Integrity, C = Competence, P = Predictability, V = Vigilance, Ω = Omega-Alignment
 
 #### 2.3 Morphismen und Transaktionen
 
@@ -383,20 +397,20 @@ pub enum ShardType {
 pub struct Morphism {
     /// Morphismus-ID (= Transaktions-ID)
     pub id: MorphismId,
-    
+
     /// Quell-Objekt (Sender)
     pub source: DID,
-    
+
     /// Ziel-Objekt (Empfänger)
     pub target: DID,
-    
+
     /// Kategorie, in der dieser Morphismus existiert
     pub category: DID,
-    
+
     /// Komposition mit anderen Morphismen möglich?
     /// (Axiom Q6: Kompositions-Gesetz f ∘ g ∘ h = (f ∘ g) ∘ h = f ∘ (g ∘ h))
     pub composable: bool,
-    
+
     /// Event-Referenz im DAG
     pub event_id: EventId,
 }
@@ -407,13 +421,13 @@ pub fn compose(f: &Morphism, g: &Morphism) -> Result<Morphism, CategoryError> {
     if g.target != f.source {
         return Err(CategoryError::CompositionMismatch);
     }
-    
+
     // Prüfe: Gleiche Kategorie
     if g.category != f.category {
         // Cross-Shard → Funktor erforderlich
         return Err(CategoryError::CrossCategoryComposition);
     }
-    
+
     Ok(Morphism {
         id: generate_composition_id(&g.id, &f.id),
         source: g.source.clone(),
@@ -445,33 +459,33 @@ pub fn identity(agent: &DID, category: &DID) -> Morphism {
 pub struct Functor {
     /// Funktor-ID
     pub id: FunctorId,
-    
+
     /// Quell-Kategorie
     pub source_category: DID,
-    
+
     /// Ziel-Kategorie
     pub target_category: DID,
-    
+
     /// Objekt-Abbildung: F(s) für jeden Agenten s
     pub object_mapping: ObjectMapping,
-    
+
     /// Morphismus-Abbildung: F(f) für jede Transaktion f
     pub morphism_mapping: MorphismMapping,
-    
+
     /// V0.3: Trust-Transformations-Matrix (6x6)
     /// Definiert, wie R, I, C, P, V, Ω transformiert werden
     /// Beispiel: Gaming→Finance: C wird stark gedämpft, I bleibt
     pub trust_matrix: TrustMatrix,
-    
+
     /// V0.3: Dynamischer Dämpfungsfaktor basierend auf Erfolgsrate
     pub dynamic_dampening: DynamicDampening,
-    
+
     /// Wert-Konversionsregel
     pub value_conversion: ValueConversion,
-    
+
     /// V0.3: Boundary Guard (Logic Guard L1-L3)
     pub boundary_guard: BoundaryGuard,
-    
+
     /// Funktor-Eigenschaften (Q7: Identität und Komposition erhalten)
     pub properties: FunctorProperties,
 }
@@ -498,7 +512,7 @@ impl TrustMatrix {
             ],
         }
     }
-    
+
     /// Gaming → Finance: Competence gedämpft, Integrity bleibt
     pub fn gaming_to_finance() -> Self {
         Self {
@@ -512,7 +526,7 @@ impl TrustMatrix {
             ],
         }
     }
-    
+
     /// Energy → Finance: Reliability bleibt, Competence neutral
     pub fn energy_to_finance() -> Self {
         Self {
@@ -526,18 +540,18 @@ impl TrustMatrix {
             ],
         }
     }
-    
+
     /// Wendet die Matrix auf einen Trust-Vektor an
     pub fn transform(&self, vector: &TrustVector) -> TrustVector {
         let components = vector.to_array();
         let mut result = [0.0f32; 6];
-        
+
         for i in 0..6 {
             for j in 0..6 {
                 result[i] += self.matrix[i][j] * components[j];
             }
         }
-        
+
         TrustVector::from_array(result).normalize()
     }
 }
@@ -547,10 +561,10 @@ impl TrustMatrix {
 pub struct DynamicDampening {
     /// Basis-Dämpfungsfaktor
     pub base_factor: f64,
-    
+
     /// Decay-Rate für Failures (λ)
     pub failure_decay: f64,
-    
+
     /// Aktuelle Statistik
     pub stats: DampeningStats,
 }
@@ -571,10 +585,10 @@ impl DynamicDampening {
         } else {
             0.0
         };
-        
+
         self.base_factor * (-self.failure_decay * failure_rate).exp()
     }
-    
+
     /// Aktualisiert nach Transfer
     pub fn record_transfer(&mut self, success: bool) {
         self.stats.total_transfers += 1;
@@ -591,16 +605,16 @@ impl DynamicDampening {
 pub struct BoundaryGuard {
     /// Guard-ID
     pub id: LogicGuardId,
-    
+
     /// ECL-Code für Validierung
     pub ecl_code: String,
-    
+
     /// Erforderliche Credentials
     pub required_credentials: Vec<CredentialType>,
-    
+
     /// Minimaler Trust-Level
     pub min_trust: f64,
-    
+
     /// Compliance-Anforderungen
     pub compliance_requirements: Vec<ComplianceRequirement>,
 }
@@ -614,13 +628,13 @@ impl BoundaryGuard {
                 // GDPR-Äquivalenz prüfen
                 require(target_env.has_compliance("GDPR-equivalent") ||
                         target_env.has_compliance("GDPR"))
-                
+
                 // Minimaler Trust
                 require(source_trust.scalar() >= 0.6)
-                
+
                 // Sanktions-Check
                 require(!sanctions_list.contains(user.did))
-                
+
                 // Data Classification
                 require(data.classification != "RESTRICTED" ||
                         target_env.has_compliance("EU-adequacy"))
@@ -632,7 +646,7 @@ impl BoundaryGuard {
             ],
         }
     }
-    
+
     /// Healthcare-Shard: Medizinische Lizenz erforderlich
     pub fn healthcare_entry() -> Self {
         Self {
@@ -641,7 +655,7 @@ impl BoundaryGuard {
                 // Medizinische Lizenz prüfen
                 require(user.has_credential("medical-license") ||
                         user.has_credential("healthcare-professional"))
-                
+
                 // HIPAA/GDPR-Compliance
                 require(user.env.has_compliance("HIPAA") ||
                         user.env.has_compliance("GDPR"))
@@ -656,7 +670,7 @@ impl BoundaryGuard {
             ],
         }
     }
-    
+
     /// Validiert einen Übergang
     pub async fn validate(
         &self,
@@ -672,27 +686,27 @@ impl BoundaryGuard {
                 actual: source_trust.scalar(),
             });
         }
-        
+
         // 2. Credentials prüfen
         for cred_type in &self.required_credentials {
             if !context.has_credential(user, cred_type).await? {
                 return Err(GuardError::MissingCredential(cred_type.clone()));
             }
         }
-        
+
         // 3. Compliance prüfen
         for req in &self.compliance_requirements {
             if !target_env.has_compliance(req) {
                 return Err(GuardError::ComplianceMismatch(req.clone()));
             }
         }
-        
+
         // 4. ECL-Code ausführen
         let result = execute_ecl(&self.ecl_code, context).await?;
         if !result.success {
             return Err(GuardError::EclValidationFailed(result.error));
         }
-        
+
         Ok(())
     }
 }
@@ -701,13 +715,13 @@ impl BoundaryGuard {
 pub struct FunctorProperties {
     /// F(id_A) = id_F(A) (Identität erhalten)
     pub preserves_identity: bool,
-    
+
     /// F(g ∘ f) = F(g) ∘ F(f) (Komposition erhalten)
     pub preserves_composition: bool,
-    
+
     /// Ist dieser Funktor injektiv?
     pub injective: bool,
-    
+
     /// Ist dieser Funktor surjektiv?
     pub surjective: bool,
 }
@@ -724,14 +738,14 @@ pub async fn cross_shard_transfer(
     // 0. V0.3: Boundary Guard validieren
     let source_trust = source_shard.get_trust(agent)?;
     let target_env = get_virt_env(&target_shard.id)?;
-    
+
     functor.boundary_guard.validate(
         agent,
         &source_trust,
         &target_env,
         context,
     ).await.map_err(|e| ShardError::BoundaryGuardFailed(e))?;
-    
+
     // 1. Validiere Funktor-Eigenschaften (Axiom Q7)
     if !functor.properties.preserves_identity {
         return Err(ShardError::FunctorViolation("Identity not preserved"));
@@ -739,20 +753,20 @@ pub async fn cross_shard_transfer(
     if !functor.properties.preserves_composition {
         return Err(ShardError::FunctorViolation("Composition not preserved"));
     }
-    
+
     // 2. Objekt-Abbildung: Agent in Ziel-Kategorie
     let target_agent = funktor.object_mapping.map(agent)?;
-    
+
     // 3. Asset-Konversion
     let converted_asset = functor.value_conversion.convert(asset)?;
-    
+
     // 4. V0.3: Trust-Transformation mittels Matrix
     let transformed_trust = functor.trust_matrix.transform(&source_trust);
-    
+
     // 5. V0.3: Dynamische Dämpfung anwenden
     let dampening = functor.dynamic_dampening.current_factor();
     let propagated_trust = transformed_trust.scale(dampening);
-    
+
     // 6. HTLC-basierter Atomic Swap (V0.3: Saga Pattern)
     let lock_result = atomic_cross_bridge_swap(
         &source_shard.id,
@@ -761,15 +775,15 @@ pub async fn cross_shard_transfer(
         asset.amount,
         converted_asset.amount,
     ).await;
-    
+
     match lock_result {
         Ok(swap_receipt) => {
             // Success: Statistik aktualisieren
             functor.dynamic_dampening.record_transfer(true);
-            
+
             // Trust im Ziel-Shard setzen
             target_shard.update_trust(&target_agent, propagated_trust).await?;
-            
+
             Ok(CrossShardResult {
                 event_id: swap_receipt.event_id,
                 source_agent: agent.clone(),
@@ -799,7 +813,7 @@ pub async fn atomic_cross_bridge_swap(
     // 1. Phase: LOCK (Source Env)
     // Asset wird im Quell-Shard in HTLC gesperrt
     let lock_proof = lock_asset(source_bridge, user, amount_source).await?;
-    
+
     // 2. Phase: MINT/UNLOCK (Target Env)
     // Mit Lock-Proof wird im Ziel-Shard das Gegen-Asset freigegeben
     let mint_result = mint_asset(
@@ -808,7 +822,7 @@ pub async fn atomic_cross_bridge_swap(
         amount_target,
         &lock_proof,
     ).await;
-    
+
     match mint_result {
         Ok(receipt) => {
             // 3. Phase: COMMIT (Source Env)
@@ -837,33 +851,33 @@ pub async fn cross_shard_transfer_legacy(
     if !functor.properties.preserves_identity {
         return Err(ShardError::FunctorViolation("Identity not preserved"));
     }
-    
+
     // 2. Objekt-Abbildung
     let target_agent = functor.object_mapping.map(agent)?;
-    
+
     // 3. Asset-Konversion
     let converted_asset = functor.value_conversion.convert(asset)?;
-    
+
     // 4. Trust-Transformation
     let source_trust = source_shard.get_trust(agent)?;
     let propagated_trust = functor.trust_matrix.transform(&source_trust);
-    
+
     // 5. Zwei-Phasen-Commit (Atomic Cross-Shard)
     let phase1_source = source_shard.prepare_debit(agent, asset).await?;
     let phase1_target = target_shard.prepare_credit(&target_agent, &converted_asset).await?;
-    
+
     if !phase1_source.ready || !phase1_target.ready {
         rollback(&phase1_source, &phase1_target).await?;
         return Err(ShardError::PrepareFailed);
     }
-    
+
     // Commit
     let commit_source = source_shard.commit_debit(&phase1_source).await?;
     let commit_target = target_shard.commit_credit(&phase1_target).await?;
-    
+
     // 6. Trust im Ziel-Shard setzen
     target_shard.update_trust(&target_agent, propagated_trust).await?;
-    
+
     // 7. Cross-Shard Event erstellen
     let event = Event {
         event_type: EventType::CrossShardTransfer,
@@ -879,7 +893,7 @@ pub async fn cross_shard_transfer_legacy(
         realm: Some(source_shard.id.clone()),
         ..Default::default()
     };
-    
+
     Ok(CrossShardResult {
         event_id: submit_event(event).await?,
         source_agent: agent.clone(),
@@ -904,7 +918,7 @@ pub enum MasterSecret {
         entropy: [u8; 32],
         words: [String; 24],
     },
-    
+
     /// WebAuthn Passkey
     Passkey {
         credential_id: Vec<u8>,
@@ -917,13 +931,13 @@ pub enum MasterSecret {
 pub struct DerivationPaths {
     /// Erynoa Primary: m/44'/9999'/0'/0/0
     pub erynoa_primary: &'static str,
-    
+
     /// Ethereum/EVM: m/44'/60'/0'/0/0 (secp256k1)
     pub ethereum: &'static str,
-    
+
     /// Solana: m/44'/501'/0'/0' (Ed25519)
     pub solana: &'static str,
-    
+
     /// IOTA/MoveVM: m/44'/4218'/0'/0/0 (Ed25519)
     pub iota: &'static str,
 }
@@ -951,25 +965,25 @@ impl KeyDerivation {
         let seed = self.derive_seed(&self.paths.erynoa_primary);
         Ed25519Keypair::from_seed(&seed)
     }
-    
+
     /// Leitet secp256k1 Key für EVM-Chains ab
     pub fn derive_ethereum(&self) -> Secp256k1Keypair {
         let seed = self.derive_seed(&self.paths.ethereum);
         Secp256k1Keypair::from_seed(&seed)
     }
-    
+
     /// Leitet Ed25519 Key für Solana ab
     pub fn derive_solana(&self) -> Ed25519Keypair {
         let seed = self.derive_seed(&self.paths.solana);
         Ed25519Keypair::from_seed(&seed)
     }
-    
+
     /// Leitet Ed25519 Key für IOTA/MoveVM ab
     pub fn derive_iota(&self) -> Ed25519Keypair {
         let seed = self.derive_seed(&self.paths.iota);
         Ed25519Keypair::from_seed(&seed)
     }
-    
+
     /// Generiert DID aus primärem Key
     pub fn generate_did(&self) -> DID {
         let primary_key = self.derive_erynoa_primary();
@@ -990,13 +1004,13 @@ impl KeyDerivation {
 pub struct MultiChainWalletSet {
     /// Die primäre Erynoa DID
     pub erynoa_did: DID,
-    
+
     /// Chain-spezifische Wallet-Adressen
     pub wallets: HashMap<ChainId, ChainWallet>,
-    
+
     /// Aktueller Recovery-Status
     pub recovery_status: RecoveryStatus,
-    
+
     /// Erstellungszeitpunkt
     pub created_at: u64,
 }
@@ -1005,16 +1019,16 @@ pub struct MultiChainWalletSet {
 pub struct ChainWallet {
     /// Chain-Identifier
     pub chain: ChainId,
-    
+
     /// Wallet-Adresse (native Format)
     pub address: String,
-    
+
     /// Public Key (für Signatur-Verifikation)
     pub public_key: Vec<u8>,
-    
+
     /// Key-Typ
     pub key_type: KeyType,
-    
+
     /// Metadaten-Link zur Erynoa-DID
     pub did_link: DidLinkMethod,
 }
@@ -1041,10 +1055,10 @@ pub enum KeyType {
 pub enum DidLinkMethod {
     /// On-Chain Storage (z.B. Account-Metadaten)
     OnChainStorage { slot: u64 },
-    
+
     /// ENS/Naming System
     NamingSystem { name: String, resolver: String },
-    
+
     /// Signierte Attestation
     SignedAttestation { attestation: Vec<u8> },
 }
@@ -1056,7 +1070,7 @@ pub async fn create_multi_chain_wallets(
 ) -> Result<MultiChainWalletSet, WalletError> {
     let erynoa_did = derivation.generate_did();
     let mut wallets = HashMap::new();
-    
+
     for chain in chains {
         let wallet = match chain.chain_id {
             ChainId::ErynoaRoot => {
@@ -1070,7 +1084,7 @@ pub async fn create_multi_chain_wallets(
                     did_link: DidLinkMethod::OnChainStorage { slot: 0 },
                 }
             },
-            
+
             ChainId::Ethereum { chain_id } => {
                 let keypair = derivation.derive_ethereum();
                 let address = ethereum_address_from_pubkey(&keypair.public_key());
@@ -1082,7 +1096,7 @@ pub async fn create_multi_chain_wallets(
                     did_link: DidLinkMethod::OnChainStorage { slot: 0 },
                 }
             },
-            
+
             ChainId::Iota { ref network } => {
                 let keypair = derivation.derive_iota();
                 let address = iota_address_from_pubkey(&keypair.public_key());
@@ -1094,14 +1108,14 @@ pub async fn create_multi_chain_wallets(
                     did_link: DidLinkMethod::OnChainStorage { slot: 0 },
                 }
             },
-            
+
             // ... weitere Chains
             _ => continue,
         };
-        
+
         wallets.insert(chain.chain_id.clone(), wallet);
     }
-    
+
     Ok(MultiChainWalletSet {
         erynoa_did,
         wallets,
@@ -1168,7 +1182,7 @@ pub async fn create_multi_chain_wallets(
 pub enum RecoveryStatus {
     /// Keine Recovery konfiguriert (reine User-Kontrolle)
     None,
-    
+
     /// Recovery konfiguriert
     Configured {
         method: RecoveryMethod,
@@ -1177,7 +1191,7 @@ pub enum RecoveryStatus {
         timelock: Duration,
         activated_at: u64,
     },
-    
+
     /// Recovery im Gange
     InProgress {
         initiated_by: DID,
@@ -1191,10 +1205,10 @@ pub enum RecoveryStatus {
 pub enum RecoveryMethod {
     /// Social Recovery (Freunde/Familie)
     Social,
-    
+
     /// Staked Guardianship (Institutionen)
     Staked,
-    
+
     /// Multi-Sig (technisch)
     MultiSig,
 }
@@ -1209,12 +1223,12 @@ pub async fn activate_recovery(
     if !matches!(wallet_set.recovery_status, RecoveryStatus::None) {
         return Err(RecoveryError::AlreadyConfigured);
     }
-    
+
     // Validiere Guardians
     for guardian in &config.guardians {
         validate_guardian(guardian).await?;
     }
-    
+
     // Update-Event erstellen
     let event = Event {
         event_type: EventType::RecoveryActivation,
@@ -1228,9 +1242,9 @@ pub async fn activate_recovery(
         signature: user_signature.clone(),
         ..Default::default()
     };
-    
+
     submit_event(event).await?;
-    
+
     wallet_set.recovery_status = RecoveryStatus::Configured {
         method: config.method,
         guardians: config.guardians,
@@ -1238,7 +1252,7 @@ pub async fn activate_recovery(
         timelock: config.timelock,
         activated_at: now_ms(),
     };
-    
+
     Ok(())
 }
 
@@ -1254,16 +1268,16 @@ pub async fn execute_recovery(
         },
         _ => return Err(RecoveryError::NotConfigured),
     };
-    
+
     // 1. Threshold prüfen
     let valid_confirmations = guardian_confirmations.iter()
         .filter(|c| verify_guardian_confirmation(c, config.2))
         .count();
-    
+
     if valid_confirmations < *config.0 {
         return Err(RecoveryError::ThresholdNotMet);
     }
-    
+
     // 2. Timelock starten
     let recovery_event = Event {
         event_type: EventType::RecoveryInitiated,
@@ -1274,16 +1288,16 @@ pub async fn execute_recovery(
         },
         ..Default::default()
     };
-    
+
     submit_event(recovery_event).await?;
-    
+
     // 3. Nach Timelock: Key-Rotation durchführen
     // (Async: Wird von separatem Job nach Ablauf ausgeführt)
-    
+
     // 4. RightsTransfer-Event erstellen (nach Timelock)
     let new_derivation = KeyDerivation::from_secret(new_master_secret);
     let new_wallets = create_multi_chain_wallets(&new_derivation, &get_chain_configs()).await?;
-    
+
     let transfer_event = Event {
         event_type: EventType::RightsTransfer,
         actor: wallet_set.erynoa_did.clone(),
@@ -1295,9 +1309,9 @@ pub async fn execute_recovery(
         },
         ..Default::default()
     };
-    
+
     submit_event(transfer_event).await?;
-    
+
     Ok(RecoveryResult {
         old_did: wallet_set.erynoa_did.clone(),
         new_did: new_wallets.erynoa_did,
@@ -1313,15 +1327,15 @@ pub async fn execute_recovery(
 
 Die **Root-Environment** ist die globale Kategorie 𝒞_Root – das unveränderliche Fundament von Erynoa. Sie enthält:
 
-| Komponente | Beschreibung | Änderbar? |
-|------------|--------------|-----------|
-| Core Axioms | Die 112 Axiome des Fachkonzepts | Nein (nur durch H4-Prozess) |
-| DID Standard | EIP-001 Spezifikation | Nein (Append-Only Updates) |
-| Trust Vector | EIP-002 Spezifikation | Nein |
-| Event-DAG | EIP-003 Spezifikation | Nein |
-| Bayesian Algo | EIP-004 Spezifikation | Nein |
-| ECLVM Core | Deterministische VM für Policies | Nein |
-| Genesis State | Initiale Konfiguration | Nein |
+| Komponente    | Beschreibung                     | Änderbar?                   |
+| ------------- | -------------------------------- | --------------------------- |
+| Core Axioms   | Die 112 Axiome des Fachkonzepts  | Nein (nur durch H4-Prozess) |
+| DID Standard  | EIP-001 Spezifikation            | Nein (Append-Only Updates)  |
+| Trust Vector  | EIP-002 Spezifikation            | Nein                        |
+| Event-DAG     | EIP-003 Spezifikation            | Nein                        |
+| Bayesian Algo | EIP-004 Spezifikation            | Nein                        |
+| ECLVM Core    | Deterministische VM für Policies | Nein                        |
+| Genesis State | Initiale Konfiguration           | Nein                        |
 
 #### 2.2 Root-Env DID
 
@@ -1351,13 +1365,13 @@ Die **Root-Environment** ist die globale Kategorie 𝒞_Root – das unveränder
 pub struct RootEnvState {
     /// Genesis Block Hash (Identität der Root-Env)
     pub genesis_hash: [u8; 32],
-    
+
     /// Axiom-Set (112 Axiome)
     pub axioms: AxiomSet,
-    
+
     /// EIP Registry
     pub eips: HashMap<u8, EipSpec>,
-    
+
     /// Diese Felder sind UNVERÄNDERBAR
     pub frozen: bool,
 }
@@ -1367,7 +1381,7 @@ impl RootEnvState {
     pub fn update(&self, _update: RootUpdate) -> Result<(), RootEnvError> {
         Err(RootEnvError::Immutable)
     }
-    
+
     /// Einzige Ausnahme: H4-Prozess (Human Override)
     pub fn h4_override(&mut self, override_req: H4Override, signatures: &[H4Signature]) -> Result<(), RootEnvError> {
         // Erfordert 2/3 Supermajority aller Virt-Env Governances
@@ -1375,12 +1389,12 @@ impl RootEnvState {
         if !verify_h4_threshold(signatures) {
             return Err(RootEnvError::InsufficientH4Consensus);
         }
-        
+
         // Timelock: 1 Jahr Wartezeit
         if !verify_h4_timelock(&override_req) {
             return Err(RootEnvError::H4TimelockNotExpired);
         }
-        
+
         // Anwendung des Override
         self.apply_h4(override_req)
     }
@@ -1406,31 +1420,31 @@ Eine **Virtual Environment** ist eine souveräne Sub-Umgebung mit:
 pub struct VirtEnv {
     /// Eindeutige Identität (circle-Namespace)
     pub did: DID, // z.B. did:erynoa:circle:eu-2026
-    
+
     /// Übergeordnete Umgebung (Root oder Parent-Virt-Env)
     pub parent_env: DID,
-    
+
     /// Governance-Konfiguration
     pub governance: GovernanceConfig,
-    
+
     /// CBDC/Währungs-Bridge
     pub currency_bridge: Option<CurrencyBridge>,
-    
+
     /// Identitäts-Authorität
     pub identity_authority: IdentityAuthorityConfig,
-    
+
     /// Lokale Axiom-Erweiterungen (dürfen Root nicht widersprechen)
     pub local_axioms: Vec<LocalAxiom>,
-    
+
     /// Child-Envs (z.B. Bundesländer unter Deutschland)
     pub child_envs: Vec<DID>,
-    
+
     /// Inter-Env Agreements (Kooperationsverträge)
     pub agreements: Vec<InterEnvAgreement>,
-    
+
     /// Status
     pub status: VirtEnvStatus,
-    
+
     /// Bootstrap-Zeitpunkt
     pub bootstrapped_at: u64,
 }
@@ -1522,11 +1536,22 @@ pub enum VirtEnvStatus {
 
 ### 4. Bootstrapping-Prozess
 
-#### 4.1 Phasen
+#### 4.0 Bootstrapping-Modi
+
+| Modus     | Dauer      | Anwendung                              | Anforderungen                        |
+| --------- | ---------- | -------------------------------------- | ------------------------------------ |
+| **Short** | 30–60 Tage | Persönliche/kleine Envs (Family-Realm) | Basis-Governance                     |
+| **Long**  | 120 Tage   | Große Envs (EU, ASEAN)                 | CBDC-Integration, strenge Governance |
+
+**Short-Modus:** Für persönliche oder kleine Gruppen-Umgebungen, die keine CBDC-Integration benötigen. Vereinfachte Governance (z.B. Multi-Sig mit 2-3 Personen).
+
+**Long-Modus:** Für souveräne Entitäten (Staaten, Unionen) mit komplexer Governance, CBDC-Bridges und Identity-Authority-Integration.
+
+#### 4.1 Phasen (Long-Modus)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                      VIRT-ENV BOOTSTRAPPING                             │
+│                      VIRT-ENV BOOTSTRAPPING (Long-Modus)                │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
 │   PHASE 1: INTENTION (Tag 0)                                           │
@@ -1576,16 +1601,16 @@ pub enum VirtEnvStatus {
 pub struct BootstrapProcess {
     /// Initiator (muss high-trust sein)
     pub initiator: DID,
-    
+
     /// Ziel-Parent (meist Root)
     pub parent_env: DID,
-    
+
     /// Konfiguration
     pub config: VirtEnvConfig,
-    
+
     /// Aktuelle Phase
     pub phase: BootstrapPhase,
-    
+
     /// Checkpoint-Signaturen
     pub checkpoints: Vec<BootstrapCheckpoint>,
 }
@@ -1613,12 +1638,12 @@ impl BootstrapProcess {
         if trust.scalar() < BOOTSTRAP_TRUST_THRESHOLD {
             return Err(BootstrapError::InsufficientTrust);
         }
-        
+
         // Prüfe, ob Parent-Env existiert
         if !context.env_exists(&parent_env).await? {
             return Err(BootstrapError::ParentNotFound);
         }
-        
+
         // Erstelle Intent-Event
         let intent = BootstrapIntent {
             initiator: initiator.clone(),
@@ -1626,9 +1651,9 @@ impl BootstrapProcess {
             config: config.clone(),
             timestamp: now_ms(),
         };
-        
+
         let intent_hash = hash_intent(&intent);
-        
+
         Ok(Self {
             initiator,
             parent_env,
@@ -1637,7 +1662,7 @@ impl BootstrapProcess {
             checkpoints: vec![],
         })
     }
-    
+
     /// Governance Phase
     pub async fn setup_governance(
         &mut self,
@@ -1646,18 +1671,18 @@ impl BootstrapProcess {
     ) -> Result<(), BootstrapError> {
         // Validiere Governance-Struktur
         validate_governance(&governance)?;
-        
+
         // Multi-Sig Threshold erreicht?
         if signatures.len() < governance.initial_threshold {
             return Err(BootstrapError::InsufficientSignatures);
         }
-        
+
         self.phase = BootstrapPhase::GovernanceSetup { governance };
         self.add_checkpoint("governance_setup")?;
-        
+
         Ok(())
     }
-    
+
     /// CBDC Bridge Phase
     pub async fn setup_cbdc_bridge(
         &mut self,
@@ -1667,10 +1692,10 @@ impl BootstrapProcess {
         // Validiere Zentralbank-Signatur
         let central_bank_did = &bridge_config.issuer;
         verify_signature(central_bank_did, &bridge_config, &central_bank_signature)?;
-        
+
         // Deploy Bridge Contract
         let bridge_contract = deploy_bridge_contract(&bridge_config).await?;
-        
+
         let bridge = CurrencyBridge {
             currency: bridge_config.currency,
             issuer: central_bank_did.clone(),
@@ -1678,13 +1703,13 @@ impl BootstrapProcess {
             exchange_rate_oracle: bridge_config.oracle,
             compliance_layer: bridge_config.compliance,
         };
-        
+
         self.phase = BootstrapPhase::CbdcBridge { bridge: Some(bridge) };
         self.add_checkpoint("cbdc_bridge_setup")?;
-        
+
         Ok(())
     }
-    
+
     /// Local Axioms Phase
     pub async fn setup_local_axioms(
         &mut self,
@@ -1694,20 +1719,20 @@ impl BootstrapProcess {
         // Konsistenz-Check gegen Root-Axiome
         let root_axioms = context.get_root_axioms().await?;
         let consistency_proof = prove_axiom_consistency(&root_axioms, &axioms)?;
-        
+
         if consistency_proof.is_none() {
             return Err(BootstrapError::AxiomConflict);
         }
-        
-        self.phase = BootstrapPhase::LocalAxioms { 
-            axioms, 
-            consistency_proof: consistency_proof.unwrap() 
+
+        self.phase = BootstrapPhase::LocalAxioms {
+            axioms,
+            consistency_proof: consistency_proof.unwrap()
         };
         self.add_checkpoint("local_axioms_setup")?;
-        
+
         Ok(())
     }
-    
+
     /// Activation Phase
     pub async fn activate(
         &mut self,
@@ -1728,11 +1753,11 @@ impl BootstrapProcess {
             signature: vec![], // Wird später signiert
             parents: vec![context.get_latest_root_event().await?],
         };
-        
+
         let genesis_id = context.submit_event(genesis_event).await?;
-        
+
         self.phase = BootstrapPhase::Activation { genesis_event: genesis_id };
-        
+
         // Erstelle Virt-Env
         let virt_env = VirtEnv {
             did: self.config.did.clone(),
@@ -1746,10 +1771,10 @@ impl BootstrapProcess {
             status: VirtEnvStatus::Active,
             bootstrapped_at: now_ms(),
         };
-        
+
         // Registriere bei Parent
         context.register_child_env(&self.parent_env, &virt_env).await?;
-        
+
         Ok(virt_env)
     }
 }
@@ -1804,16 +1829,16 @@ impl BootstrapProcess {
 pub struct CurrencyBridge {
     /// Währung (ISO 4217)
     pub currency: String, // "EUR", "CNY", "USD", etc.
-    
+
     /// Issuer (Zentralbank DID)
     pub issuer: DID,
-    
+
     /// Bridge Contract Address
     pub bridge_contract: ContractAddress,
-    
+
     /// Exchange Rate Oracle (für Cross-CBDC)
     pub exchange_rate_oracle: Option<OracleConfig>,
-    
+
     /// Compliance Layer (AML/KYC)
     pub compliance_layer: ComplianceConfig,
 }
@@ -1822,19 +1847,19 @@ pub struct CurrencyBridge {
 pub struct BridgeContract {
     /// Wrapped Token Symbol
     pub token_symbol: String,  // "wEUR"
-    
+
     /// Total Supply (muss = Reserve sein)
     pub total_supply: u128,
-    
+
     /// Mint-Authority (nur Zentralbank)
     pub mint_authority: DID,
-    
+
     /// User Balances
     pub balances: HashMap<DID, u128>,
-    
+
     /// Pending Withdrawals
     pub pending_withdrawals: Vec<Withdrawal>,
-    
+
     /// Audit Trail
     pub audit_log: Vec<BridgeEvent>,
 }
@@ -1852,31 +1877,31 @@ impl BridgeContract {
         if caller != &self.mint_authority {
             return Err(BridgeError::Unauthorized);
         }
-        
+
         // Validiere Proof (Zentralbank-Signatur über Einzahlung)
         if !verify_mint_proof(&proof, &self.mint_authority) {
             return Err(BridgeError::InvalidProof);
         }
-        
+
         // Compliance-Check
         if !self.compliance_check(recipient, amount)? {
             return Err(BridgeError::ComplianceFailed);
         }
-        
+
         // Mint
         *self.balances.entry(recipient.clone()).or_insert(0) += amount;
         self.total_supply += amount;
-        
+
         self.audit_log.push(BridgeEvent::Mint {
             recipient: recipient.clone(),
             amount,
             proof_hash: hash(&proof),
             timestamp: now_ms(),
         });
-        
+
         Ok(())
     }
-    
+
     /// Burn (User initiiert Auszahlung)
     pub fn burn(
         &mut self,
@@ -1889,16 +1914,16 @@ impl BridgeContract {
         if balance < amount {
             return Err(BridgeError::InsufficientBalance);
         }
-        
+
         // Compliance-Check (AML)
         if !self.aml_check(caller, amount, &target_iban)? {
             return Err(BridgeError::AmlCheckFailed);
         }
-        
+
         // Burn
         *self.balances.get_mut(caller).unwrap() -= amount;
         self.total_supply -= amount;
-        
+
         // Pending Withdrawal erstellen
         let withdrawal = Withdrawal {
             id: generate_withdrawal_id(),
@@ -1908,19 +1933,19 @@ impl BridgeContract {
             status: WithdrawalStatus::Pending,
             created_at: now_ms(),
         };
-        
+
         self.pending_withdrawals.push(withdrawal.clone());
-        
+
         self.audit_log.push(BridgeEvent::Burn {
             user: caller.clone(),
             amount,
             withdrawal_id: withdrawal.id,
             timestamp: now_ms(),
         });
-        
+
         Ok(withdrawal.id)
     }
-    
+
     /// Transfer (innerhalb Erynoa)
     pub fn transfer(
         &mut self,
@@ -1932,10 +1957,10 @@ impl BridgeContract {
         if balance < amount {
             return Err(BridgeError::InsufficientBalance);
         }
-        
+
         *self.balances.get_mut(caller).unwrap() -= amount;
         *self.balances.entry(recipient.clone()).or_insert(0) += amount;
-        
+
         Ok(())
     }
 }
@@ -1950,13 +1975,13 @@ Für Cross-CBDC Transaktionen zwischen verschiedenen Virt-Envs:
 pub struct CrossCbdcExchange {
     /// Quell-Bridge (z.B. EU wEUR)
     pub source_bridge: DID,
-    
+
     /// Ziel-Bridge (z.B. China wCNY)
     pub target_bridge: DID,
-    
+
     /// Oracle für Exchange Rate
     pub rate_oracle: OracleConfig,
-    
+
     /// Liquidity Providers
     pub liquidity_pools: HashMap<(String, String), LiquidityPool>,
 }
@@ -1973,28 +1998,28 @@ impl CrossCbdcExchange {
     ) -> Result<ExchangeResult, ExchangeError> {
         // 1. Aktuellen Exchange Rate holen
         let rate = self.rate_oracle.get_rate(source_currency, target_currency).await?;
-        
+
         // 2. Ziel-Betrag berechnen
         let target_amount = (source_amount as f64 * rate) as u128;
-        
+
         // 3. Slippage prüfen
         if target_amount < min_target_amount {
             return Err(ExchangeError::SlippageExceeded);
         }
-        
+
         // 4. Liquidity prüfen
         let pool_key = (source_currency.to_string(), target_currency.to_string());
         let pool = self.liquidity_pools.get_mut(&pool_key)
             .ok_or(ExchangeError::NoLiquidity)?;
-        
+
         if pool.target_reserve < target_amount {
             return Err(ExchangeError::InsufficientLiquidity);
         }
-        
+
         // 5. Atomic Swap ausführen
         // Source Bridge: Burn source_amount wEUR
         // Target Bridge: Mint target_amount wCNY
-        
+
         let swap_result = atomic_cross_bridge_swap(
             &self.source_bridge,
             &self.target_bridge,
@@ -2002,7 +2027,7 @@ impl CrossCbdcExchange {
             source_amount,
             target_amount,
         ).await?;
-        
+
         Ok(ExchangeResult {
             source_amount,
             target_amount,
@@ -2060,22 +2085,22 @@ Das **Inter-Env Protocol** ermöglicht Zusammenarbeit zwischen verschiedenen Vir
 pub struct InterEnvAgreement {
     /// Agreement ID
     pub id: AgreementId,
-    
+
     /// Parteien
     pub parties: [DID; 2],  // Beide Virt-Envs
-    
+
     /// Typ des Agreements
     pub agreement_type: AgreementType,
-    
+
     /// Bedingungen
     pub terms: AgreementTerms,
-    
+
     /// Signaturen beider Governances
     pub signatures: [Signature; 2],
-    
+
     /// Status
     pub status: AgreementStatus,
-    
+
     /// Gültigkeit
     pub valid_from: u64,
     pub valid_until: Option<u64>,
@@ -2090,7 +2115,7 @@ pub enum AgreementType {
         /// Minimaler Trust für Anerkennung
         min_trust: f64,
     },
-    
+
     /// Währungs-Exchange
     CurrencyExchange {
         /// Erlaubte Währungspaare
@@ -2100,7 +2125,7 @@ pub enum AgreementType {
         /// Fee-Struktur
         fees: FeeStructure,
     },
-    
+
     /// Identity Recognition
     IdentityRecognition {
         /// Welche Credential-Typen werden anerkannt?
@@ -2108,7 +2133,7 @@ pub enum AgreementType {
         /// KYC-Level Mapping
         kyc_mapping: HashMap<u8, u8>,
     },
-    
+
     /// Full Association (alle oben)
     FullAssociation,
 }
@@ -2126,7 +2151,7 @@ pub fn calculate_cross_env_trust(
 ) -> CrossEnvTrust {
     // Basis-Trust in Source-Env
     let source_trust = source_env.get_trust(source_did);
-    
+
     match agreement {
         Some(agr) if matches!(agr.agreement_type, AgreementType::TrustRecognition { .. }) => {
             // Trust-Mapping anwenden
@@ -2139,11 +2164,11 @@ pub fn calculate_cross_env_trust(
                 },
                 _ => unreachable!(),
             };
-            
+
             let source_level = source_trust.to_level();
             let target_level = mapping.get(&source_level)
                 .unwrap_or(&TrustLevel::Unknown);
-            
+
             CrossEnvTrust::Recognized {
                 source_env: source_env.did.clone(),
                 source_trust: source_trust.scalar(),
@@ -2151,7 +2176,7 @@ pub fn calculate_cross_env_trust(
                 agreement_id: agr.id,
             }
         },
-        
+
         Some(agr) if matches!(agr.agreement_type, AgreementType::FullAssociation) => {
             // Full Association: Trust wird 1:1 übernommen (mit Dämpfung)
             CrossEnvTrust::Recognized {
@@ -2161,7 +2186,7 @@ pub fn calculate_cross_env_trust(
                 agreement_id: agr.id,
             }
         },
-        
+
         _ => {
             // Kein Agreement: Trust wird nicht anerkannt
             CrossEnvTrust::NotRecognized
@@ -2224,7 +2249,7 @@ pub fn prove_axiom_consistency(
             });
         }
     }
-    
+
     // 2. Prüfe gegen Parent
     for axiom in new_axioms {
         if let Some(conflict) = find_contradiction(parent_axioms, axiom) {
@@ -2234,7 +2259,7 @@ pub fn prove_axiom_consistency(
             });
         }
     }
-    
+
     // 3. Prüfe interne Konsistenz
     for (i, a1) in new_axioms.iter().enumerate() {
         for a2 in new_axioms.iter().skip(i + 1) {
@@ -2246,7 +2271,7 @@ pub fn prove_axiom_consistency(
             }
         }
     }
-    
+
     // 4. Generiere Proof (für Audit)
     Ok(ConsistencyProof {
         root_hash: root_axioms.hash(),
@@ -2307,31 +2332,31 @@ Ein **Shard** ist eine spezialisierte Sub-Kategorie 𝒞_Shard ⊂ 𝒞_VirtEnv 
 pub struct Shard {
     /// Shard-DID (im circle-Namespace)
     pub id: DID,
-    
+
     /// Parent (Virt-Env oder übergeordneter Shard)
     pub parent: DID,
-    
+
     /// Kategorie-Struktur
     pub category: Category,
-    
+
     /// Shard-Typ
     pub shard_type: ShardType,
-    
+
     /// Kontextuelle Trust-Gewichte (Axiom Q4)
     pub trust_weights: TrustWeights,
-    
+
     /// Settlement-Währung (CBDC-Token oder Standard)
     pub settlement: SettlementConfig,
-    
+
     /// Compliance-Anforderungen
     pub compliance: Vec<ComplianceRequirement>,
-    
+
     /// Lokale Axiome (Erweiterung von Parent)
     pub local_axioms: Vec<LocalAxiom>,
-    
+
     /// Funktoren zu anderen Shards
     pub functors: HashMap<DID, Functor>,
-    
+
     /// Objekte (Agenten in diesem Shard)
     pub members: HashSet<DID>,
 }
@@ -2359,17 +2384,17 @@ impl TrustWeights {
     pub fn finance() -> Self {
         Self { r: 0.15, i: 0.25, c: 0.10, p: 0.15, v: 0.10, omega: 0.25 }
     }
-    
+
     /// Energie-Shard: Zuverlässigkeit und Vorhersagbarkeit wichtiger
     pub fn energy() -> Self {
         Self { r: 0.25, i: 0.15, c: 0.10, p: 0.20, v: 0.15, omega: 0.15 }
     }
-    
+
     /// Healthcare-Shard: Integrität kritisch
     pub fn healthcare() -> Self {
         Self { r: 0.10, i: 0.30, c: 0.15, p: 0.10, v: 0.15, omega: 0.20 }
     }
-    
+
     /// Gaming-Shard: Kompetenz wichtiger
     pub fn gaming() -> Self {
         Self { r: 0.10, i: 0.10, c: 0.30, p: 0.10, v: 0.25, omega: 0.15 }
@@ -2387,16 +2412,16 @@ Ein **CBDC-Shard** ist ein spezialisierter Finance-Shard mit Bridge zu einer Zen
 pub struct CbdcShard {
     /// Basis-Shard
     pub shard: Shard,
-    
+
     /// CBDC-Token Konfiguration
     pub token: CbdcToken,
-    
+
     /// Bridge zu externer Zentralbank
     pub bridge: CbdcBridge,
-    
+
     /// Mint-Authority (nur Zentralbank)
     pub mint_authority: DID,
-    
+
     /// Compliance-Layer (AML/KYC)
     pub compliance: CbdcCompliance,
 }
@@ -2406,19 +2431,19 @@ pub struct CbdcShard {
 pub struct CbdcToken {
     /// Token-Symbol (z.B. "wEUR", "wCNY")
     pub symbol: String,
-    
+
     /// ISO 4217 Währungscode
     pub currency_code: String,
-    
+
     /// Dezimalstellen
     pub decimals: u8,
-    
+
     /// Total Supply (muss = Reserve bei Zentralbank sein)
     pub total_supply: u128,
-    
+
     /// Ist dieses Token 1:1 backed?
     pub fully_backed: bool,
-    
+
     /// Audit-Zyklus (wie oft wird Reserve geprüft?)
     pub audit_interval: Duration,
 }
@@ -2428,16 +2453,16 @@ pub struct CbdcToken {
 pub struct CbdcBridge {
     /// Bridge-Contract Adresse
     pub contract: ContractAddress,
-    
+
     /// Zentralbank-DID
     pub central_bank: DID,
-    
+
     /// Reserve-Proof Methode
     pub reserve_proof: ReserveProofMethod,
-    
+
     /// Exchange Rate Oracle (für Cross-CBDC)
     pub oracle: Option<OracleConfig>,
-    
+
     /// Compliance-Level
     pub compliance_level: ComplianceLevel,
 }
@@ -2449,13 +2474,13 @@ pub enum ReserveProofMethod {
         root_url: String,
         update_frequency: Duration,
     },
-    
+
     /// Attestation durch vertrauenswürdige Wirtschaftsprüfer
     AuditorAttestation {
         auditors: Vec<DID>,
         min_auditors: usize,
     },
-    
+
     /// On-Chain Reserve (z.B. bei Stablecoin)
     OnChainReserve {
         contract: ContractAddress,
@@ -2476,12 +2501,12 @@ pub async fn bootstrap_shard(
     if virt_env.status != VirtEnvStatus::Active {
         return Err(ShardError::ParentEnvNotActive);
     }
-    
+
     // 2. Validiere Governance-Signaturen
     if !virt_env.governance.verify_threshold(governance_signatures) {
         return Err(ShardError::InsufficientGovernance);
     }
-    
+
     // 3. Generiere Shard-Kategorie (Axiom Q6)
     let category = Category {
         id: config.did.clone(),
@@ -2496,13 +2521,13 @@ pub async fn bootstrap_shard(
         local_axioms: config.local_axioms.clone(),
         functors: HashMap::new(),
     };
-    
+
     // 4. Validiere Axiom-Konsistenz (A19: Monotonie)
     prove_axiom_consistency(
         &virt_env.local_axioms,
         &config.local_axioms,
     )?;
-    
+
     // 5. Generiere Inklusions-Funktor (𝒞_Shard → 𝒞_VirtEnv)
     let inclusion_functor = Functor {
         id: format!("incl_{}_{}", config.did, virt_env.did).into(),
@@ -2519,7 +2544,7 @@ pub async fn bootstrap_shard(
             surjective: false,
         },
     };
-    
+
     // 6. Settlement-Währung konfigurieren
     let settlement = match &config.shard_type {
         ShardType::Finance { cbdc_token, .. } => {
@@ -2531,14 +2556,14 @@ pub async fn bootstrap_shard(
         },
         _ => SettlementConfig::ParentCurrency(virt_env.currency_bridge.clone()),
     };
-    
+
     // 7. Erstelle Shard
     let shard = Shard {
         id: config.did,
         parent: virt_env.did.clone(),
         category,
         shard_type: config.shard_type,
-        trust_weights: config.trust_weights.unwrap_or_else(|| 
+        trust_weights: config.trust_weights.unwrap_or_else(||
             TrustWeights::for_shard_type(&config.shard_type)
         ),
         settlement,
@@ -2547,7 +2572,7 @@ pub async fn bootstrap_shard(
         functors: hashmap! { virt_env.did.clone() => inclusion_functor },
         members: HashSet::new(),
     };
-    
+
     // 8. Genesis-Event
     let event = Event {
         event_type: EventType::ShardGenesis,
@@ -2561,9 +2586,9 @@ pub async fn bootstrap_shard(
         realm: Some(virt_env.did.clone()),
         ..Default::default()
     };
-    
+
     submit_event(event).await?;
-    
+
     Ok(shard)
 }
 ```
@@ -2581,25 +2606,25 @@ pub async fn create_cross_shard_functor(
     // 1. Validiere, dass beide Shards in derselben Virt-Env sind
     //    ODER ein Inter-Env Agreement existiert
     let same_env = source_shard.parent == target_shard.parent;
-    
+
     if !same_env {
         let agreement = find_inter_env_agreement(
             &source_shard.parent,
             &target_shard.parent,
         ).await?;
-        
+
         if agreement.is_none() {
             return Err(FunctorError::NoInterEnvAgreement);
         }
     }
-    
+
     // 2. Generiere Objekt-Mapping
     let object_mapping = match &config.object_mapping {
         ObjectMappingConfig::Identity => ObjectMapping::Identity,
         ObjectMappingConfig::Project(fields) => ObjectMapping::Projection(fields.clone()),
         ObjectMappingConfig::Custom(fn_id) => ObjectMapping::Custom(fn_id.clone()),
     };
-    
+
     // 3. Generiere Wert-Konversion (für CBDC-Shards)
     let value_conversion = if let (
         SettlementConfig::Cbdc(source_token),
@@ -2615,14 +2640,14 @@ pub async fn create_cross_shard_functor(
     } else {
         ValueConversion::Identity
     };
-    
+
     // 4. Trust-Faktor berechnen
     let trust_factor = if same_env {
         config.trust_factor.unwrap_or(0.9)  // 10% Verlust bei Cross-Shard
     } else {
         config.trust_factor.unwrap_or(0.7)  // 30% Verlust bei Cross-Env
     };
-    
+
     // 5. Erstelle Funktor
     let functor = Functor {
         id: generate_functor_id(&source_shard.id, &target_shard.id),
@@ -2639,10 +2664,10 @@ pub async fn create_cross_shard_functor(
             surjective: config.surjective.unwrap_or(false),
         },
     };
-    
+
     // 6. Registriere Funktor in beiden Shards
     register_functor(&source_shard.id, &target_shard.id, &functor).await?;
-    
+
     Ok(functor)
 }
 ```
@@ -2667,10 +2692,18 @@ pub async fn create_cross_shard_functor(
     "category": {
       "objects": 150000,
       "morphisms": 12000000,
-      "functors": ["did:erynoa:circle:eu-energy-2026", "did:erynoa:circle:asean-trade-2026"]
+      "functors": [
+        "did:erynoa:circle:eu-energy-2026",
+        "did:erynoa:circle:asean-trade-2026"
+      ]
     },
     "trustWeights": {
-      "R": 0.15, "I": 0.25, "C": 0.10, "P": 0.15, "V": 0.10, "Ω": 0.25
+      "R": 0.15,
+      "I": 0.25,
+      "C": 0.1,
+      "P": 0.15,
+      "V": 0.1,
+      "Ω": 0.25
     },
     "settlement": {
       "type": "cbdc",
@@ -2687,9 +2720,9 @@ pub async fn create_cross_shard_functor(
       }
     },
     "compliance": [
-      {"type": "MiCA", "version": "1.0"},
-      {"type": "PSD2", "version": "2.0"},
-      {"type": "GDPR", "version": "2016/679"}
+      { "type": "MiCA", "version": "1.0" },
+      { "type": "PSD2", "version": "2.0" },
+      { "type": "GDPR", "version": "2016/679" }
     ],
     "localAxioms": [
       {
@@ -3052,17 +3085,17 @@ context.propose_agreement(agreement, &eu_governance_keys).await?;
 #### 9.2 TypeScript
 
 ```typescript
-import { VirtEnv, BootstrapProcess, CurrencyBridge } from '@erynoa/sdk';
+import { VirtEnv, BootstrapProcess, CurrencyBridge } from "@erynoa/sdk";
 
 // Virt-Env bootstrappen
 const bootstrap = await BootstrapProcess.initiate({
   initiator: euCommissionDid,
-  parentEnv: 'did:erynoa:circle:root',
+  parentEnv: "did:erynoa:circle:root",
   config: {
-    name: 'European Union',
-    did: 'did:erynoa:circle:eu-2026',
+    name: "European Union",
+    did: "did:erynoa:circle:eu-2026",
     governance: {
-      type: 'multi-sig-dao',
+      type: "multi-sig-dao",
       threshold: { numerator: 2, denominator: 3 },
       members: [euCommission, ecb, euParliament],
     },
@@ -3070,11 +3103,14 @@ const bootstrap = await BootstrapProcess.initiate({
 });
 
 // CBDC Bridge
-await bootstrap.setupCbdcBridge({
-  currency: 'EUR',
-  issuer: ecbDid,
-  oracle: 'https://ecb.europa.eu/rates',
-}, ecbSignature);
+await bootstrap.setupCbdcBridge(
+  {
+    currency: "EUR",
+    issuer: ecbDid,
+    oracle: "https://ecb.europa.eu/rates",
+  },
+  ecbSignature,
+);
 
 // Aktivieren
 const euEnv = await bootstrap.activate();
@@ -3083,11 +3119,59 @@ const euEnv = await bootstrap.activate();
 const result = await cbdcExchange.exchange({
   user: aliceDid,
   sourceAmount: 1000n,
-  sourceCurrency: 'EUR',
-  targetCurrency: 'SGD',
-  minTargetAmount: 1450n,  // Slippage protection
+  sourceCurrency: "EUR",
+  targetCurrency: "SGD",
+  minTargetAmount: 1450n, // Slippage protection
 });
 ```
+
+---
+
+## Praktischer Ablauf: IoT-Gerät in Shard
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    GERÄT-ONBOARDING IN ENERGY-SHARD                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  1. QR-SCAN                                                                 │
+│     ─────────                                                               │
+│     • User scannt QR-Code am Gerät (z.B. Solar-Panel)                      │
+│     • Master-DID erzeugt Sub-DID im `thing`-Namespace                      │
+│     • did:erynoa:thing:solar-panel-roof-a1                                 │
+│                                                                             │
+│  2. SHARD-JOIN                                                              │
+│     ──────────                                                              │
+│     • Join-Event: EU-Energy/Siemens-Shard                                  │
+│     • Shard-Regeln greifen: allowed_chains = ["iota"]                      │
+│     • Virtuelle IOTA-Adresse wird deterministisch erzeugt                  │
+│                                                                             │
+│  3. AUTONOME OPERATION                                                      │
+│     ────────────────────                                                    │
+│     • Gerät subscribed Shard-Events (z.B. Strompreise)                     │
+│     • Autonom: Einspeisen wenn Preis > Threshold                           │
+│     • Settlement: wEUR-Mikrozahlungen im Shard                             │
+│                                                                             │
+│  4. INTER-DEVICE KOOPERATION                                                │
+│     ──────────────────────────                                              │
+│     • Mutual Auth mit Batterie-System                                       │
+│     • Gemeinsamer Optimierungs-Algorithmus                                  │
+│     • Trust-Attestation bei erfolgreicher Kooperation                      │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Zusammenfassung der 3-Schichten-Architektur
+
+| Schicht      | Scope                   | Governance                   | Regeln                | Beispiel                       |
+| ------------ | ----------------------- | ---------------------------- | --------------------- | ------------------------------ |
+| **Root-Env** | Global                  | Unveränderlich (H4-Override) | 112 Axiome            | `did:erynoa:*:*`               |
+| **Virt-Env** | Souveräne Gruppe        | DAO / Multi-Sig              | Root + Local Axioms   | `did:erynoa:circle:eu-2026`    |
+| **Shard**    | Spezialisierter Bereich | Virt-Env-delegiert           | Parent + Shard-Axioms | `did:erynoa:circle:eu-finance` |
+
+**Kernprinzip:** Globale Neutralität durch Root, lokale Souveränität durch Virt-Envs, kontextuelle Spezialisierung durch Shards – verbunden durch kategorientheoretisch fundierte Funktoren mit Trust-Dämpfung und Trust-Rotation.
 
 ---
 
@@ -3096,51 +3180,61 @@ const result = await cbdcExchange.exchange({
 ### TV-1: Successful Bootstrap
 
 **Input:**
+
 - Initiator Trust: 0.9
 - Parent: Root-Env
 - Governance: 3-of-5 Multi-Sig
 
 **Expected:**
+
 - Bootstrap: Success
 - Status: Active nach allen Phasen
 
 ### TV-2: Failed Bootstrap (Low Trust)
 
 **Input:**
+
 - Initiator Trust: 0.3
 - Parent: Root-Env
 
 **Expected:**
+
 - Error: InsufficientTrust
 
 ### TV-3: Axiom Conflict
 
 **Input:**
+
 - Root Axiom: "Trust kann nie unter 0.3 fallen"
 - Local Axiom: "Trust kann auf 0 fallen bei Fraud"
 
 **Expected:**
+
 - Error: ContradictsRoot
 
 ### TV-4: Cross-Env Trust Recognition
 
 **Input:**
+
 - Source DID Trust: 0.85 (HighTrust in EU)
 - Agreement: TrustRecognition (HighTrust → Verified)
 
 **Expected:**
+
 - Target Trust Level: Verified
 - Source Trust Visible: 0.85
 
 ### TV-5: Cross-Shard Funktor (V0.2)
 
 **Input:**
+
 - Source Shard: EU-Finance (𝒞_EU_Finance)
 - Target Shard: EU-Energy (𝒞_EU_Energy)
 - Asset: 1000 wEUR
 - Funktor trust_factor: 0.9
 
 **Expected:**
+
 - Transfer: Success
 - Trust in Target: 0.9 × Source Trust
 - Asset: 1000 wEUR (Identity-Konversion)
@@ -3148,6 +3242,7 @@ const result = await cbdcExchange.exchange({
 ### TV-6: Cross-CBDC Funktor (V0.2)
 
 **Input:**
+
 - Source Shard: EU-Finance (wEUR)
 - Target Shard: ASEAN-Trade (wSGD)
 - Asset: 1000 wEUR
@@ -3155,6 +3250,7 @@ const result = await cbdcExchange.exchange({
 - Funktor trust_factor: 0.7
 
 **Expected:**
+
 - Transfer: Success
 - Trust in Target: 0.7 × Source Trust
 - Asset: 1450 wSGD (Exchange-Konversion)
@@ -3167,7 +3263,7 @@ const result = await cbdcExchange.exchange({
 - [EIP-002: Trust Vector 6D](./EIP-002-trust-vector-6d.md)
 - [EIP-003: Event-DAG](./EIP-003-event-dag-finality.md)
 - [EIP-004: Bayesian Trust](./EIP-004-bayesian-trust-update.md)
-- [Erynoa Fachkonzept V6.1](../FACHKONZEPT.md)
+- [Erynoa Fachkonzept V6.2](../FACHKONZEPT.md)
 - [Erynoa LOGIC.md – Realm-Axiome A18-A22](../LOGIC.md)
 - [Erynoa LOGIC.md – Quanten-Axiome Q6-Q8](../LOGIC.md)
 - [BIS CBDC Principles](https://www.bis.org/publ/othp33.htm)
@@ -3178,15 +3274,16 @@ const result = await cbdcExchange.exchange({
 
 ## Changelog
 
-| Version | Datum | Änderung |
-|---------|-------|----------|
-| 0.1 | 2026-01-29 | Initial Draft: Root-Env/Virt-Env Architecture, CBDC Bridges, Bootstrapping, Inter-Env Protocol |
-| 0.2 | 2026-01-29 | **Shard-Integration**: Kategorientheorie (Axiome Q6-Q8), Realm-Axiome (A18-A22), ShardTypes, CBDC-Shards, Cross-Shard Funktoren, Trust-Weights pro Shard, Shard-Bootstrapping, CLI-Erweiterungen |
-| 0.3 | 2026-02-01 | **Refined**: Unified Identity (BIP39/Passkey → Multi-Chain Wallets), Trust-Matrix (6x6 Transformation statt skalarer Dämpfung), Dynamic Dampening (Kybernetik E6), Boundary Guards (Logic Guards L1-L3), HTLC Atomic Swaps, Optional Recovery (nachträglich aktivierbar), RightsTransfer-Event |
+| Version | Datum      | Änderung                                                                                                                                                                                                                                                                                       |
+| ------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | 2026-01-29 | Initial Draft: Root-Env/Virt-Env Architecture, CBDC Bridges, Bootstrapping, Inter-Env Protocol                                                                                                                                                                                                 |
+| 0.2     | 2026-01-29 | **Shard-Integration**: Kategorientheorie (Axiome Q6-Q8), Realm-Axiome (A18-A22), ShardTypes, CBDC-Shards, Cross-Shard Funktoren, Trust-Weights pro Shard, Shard-Bootstrapping, CLI-Erweiterungen                                                                                               |
+| 0.3     | 2026-02-01 | **Refined**: Unified Identity (BIP39/Passkey → Multi-Chain Wallets), Trust-Matrix (6x6 Transformation statt skalarer Dämpfung), Dynamic Dampening (Kybernetik E6), Boundary Guards (Logic Guards L1-L3), HTLC Atomic Swaps, Optional Recovery (nachträglich aktivierbar), RightsTransfer-Event |
+| 0.4     | 2026-01-31 | **FACHKONZEPT V6.2 Sync**: Bootstrapping-Modi (Short/Long), Trust-Gewichtungs-Tabelle nach Shard-Typ, IoT-Gerät-Onboarding-Diagramm, 3-Schichten-Zusammenfassungs-Tabelle                                                                                                                      |
 
 ---
 
-*EIP-005: Virtualized Environment Architecture*
-*Version: 0.3 (Refined)*
-*Status: Draft*
-*Ebene: E2 (Emergenz) / E5 (Schutz) / E6 (Kybernetik)*
+_EIP-005: Virtualized Environment Architecture_
+_Version: 0.4 (FACHKONZEPT V6.2 Sync)_
+_Status: Draft_
+_Ebene: E2 (Emergenz) / E5 (Schutz) / E6 (Kybernetik)_

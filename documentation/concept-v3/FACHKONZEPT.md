@@ -1,9 +1,10 @@
-# Erynoa Fachkonzept V6.1
+# Erynoa Fachkonzept V6.2
 
-> **Version:** 6.1 – Probabilistische Kybernetische Architektur
+> **Version:** 6.2 – Probabilistische Kybernetische Architektur
 > **Datum:** Januar 2026
 > **Status:** Vollständiges Fachkonzept
 > **Grundlage:** 112 Axiome über 7 Ebenen
+> **Architektur:** 3-Schichten (Root-Env → Virt-Env → Shard)
 > **Leitprinzip:** Intelligenz im Dienste des Lebens
 
 ---
@@ -14,7 +15,13 @@ Erynoa ist ein dezentrales Ökosystem für vertrauensbasierte Interaktionen zwis
 
 Das Fundament von Erynoa bildet eine mathematische Systemgleichung, die beschreibt, wie der Gesamtwert des Systems aus den Beiträgen seiner Teilnehmer entsteht. Diese Formel ist nicht bloß eine abstrakte Beschreibung, sondern das operative Herzstück des Systems: Jede Transaktion, jede Interaktion, jede Governance-Entscheidung verändert die Parameter dieser Formel und damit den Zustand des gesamten Netzwerks.
 
-Die Architektur von Erynoa ist in sieben aufeinander aufbauenden Ebenen organisiert. Jede Ebene adressiert eine fundamentale Herausforderung verteilter Systeme. Die erste Ebene garantiert die Korrektheit grundlegender Operationen wie Identität und Kausalität. Die zweite Ebene ermöglicht emergente Intelligenz durch kollektive Validierung. Die dritte Ebene formalisiert Handlungen und Transaktionen. Die vierte Ebene definiert die Substanz des Systems in Form von Assets, Services und Credentials. Die fünfte Ebene schützt vor Degeneration und Machtkonzentration. Die sechste Ebene macht das System lebendig und anpassungsfähig durch kybernetische Feedback-Schleifen. Die siebte und höchste Ebene stellt sicher, dass das gesamte System dem menschlichen Gedeihen dient.
+Die räumliche Architektur von Erynoa basiert auf einer **kategorientheoretisch fundierten 3-Schichten-Hierarchie**:
+
+1. **Root-Environment (𝒞_Root):** Das globale, unveränderliche Fundament mit 112 Kernaxiomen. Alle DIDs starten hier mit maximaler Neutralität.
+2. **Virtual Environments (𝒞_VirtEnv):** Souveräne Sub-Umgebungen im `circle`-Namespace (EU, ASEAN, Konzerne) mit eigener Governance, Local Axioms und optionalen CBDC-Bridges.
+3. **Shards (𝒞_Shard):** Spezialisierte Bereiche innerhalb einer Virt-Env mit kontextuellen Trust-Gewichten und domänenspezifischen Regeln.
+
+Orthogonal dazu ist das System in sieben aufeinander aufbauenden **Axiom-Ebenen** organisiert. Jede Ebene adressiert eine fundamentale Herausforderung verteilter Systeme: Die erste Ebene garantiert die Korrektheit grundlegender Operationen wie Identität und Kausalität. Die zweite Ebene ermöglicht emergente Intelligenz durch kollektive Validierung. Die dritte Ebene formalisiert Handlungen und Transaktionen. Die vierte Ebene definiert die Substanz des Systems in Form von Assets, Services und Credentials. Die fünfte Ebene schützt vor Degeneration und Machtkonzentration. Die sechste Ebene macht das System lebendig und anpassungsfähig durch kybernetische Feedback-Schleifen. Die siebte und höchste Ebene stellt sicher, dass das gesamte System dem menschlichen Gedeihen dient.
 
 ---
 
@@ -86,7 +93,7 @@ Diese sechs Dimensionen werden zu einem Skalar kombiniert:
 
 W_scalar(s) = Σᵢ wᵢ · Wᵢ(s)
 
-Die Standardgewichte sind: w_R = 0.15, w_I = 0.15, w_C = 0.15, w_P = 0.10, w_V = 0.20, w_Ω = 0.25. Vigilance und Omega-Alignment sind höher gewichtet, weil sie die Systemgesundheit direkt beeinflussen.
+Die Standardgewichte sind: w*R = 0.15, w_I = 0.15, w_C = 0.15, w_P = 0.10, w_V = 0.20, w*Ω = 0.25. Vigilance und Omega-Alignment sind höher gewichtet, weil sie die Systemgesundheit direkt beeinflussen.
 
 Die **kausale Geschichte C(s)** ist der gerichtete azyklische Graph (DAG) aller Events, an denen der Agent beteiligt war. Die Formel verwendet ln|C(s)|, den natürlichen Logarithmus der Anzahl Events. Diese logarithmische Transformation hat wichtige Eigenschaften:
 
@@ -125,6 +132,7 @@ w(event, t) = exp(-γ · age(event))
 Dabei ist age(event) das Alter des Events in Tagen und γ der Zerfallskoeffizient. Für negative Events gilt γ_neg = 0.000633, was einer Halbwertszeit von 3 Jahren entspricht. Für positive Events gilt γ_pos = 0.000380, was einer Halbwertszeit von 5 Jahren entspricht.
 
 Diese Asymmetrie bedeutet:
+
 - Negative Events verlieren nach 3 Jahren die Hälfte ihres Gewichts
 - Positive Events verlieren nach 5 Jahren die Hälfte ihres Gewichts
 - Nach 21 Jahren (7 Halbwertszeiten) hat ein negatives Event weniger als 1% seines ursprünglichen Gewichts
@@ -140,13 +148,13 @@ Zusätzlich zur Hauptformel gilt eine fundamentale Nebenbedingung:
 
 Die Verifikationskosten dürfen 5% des Transaktionswerts nicht übersteigen. Diese Constraint wird durch ein Level-of-Detail-System (LoD) implementiert:
 
-| Transaktionswert | LoD-Level | Verifikation | Typische Kosten |
-|------------------|-----------|--------------|-----------------|
-| < 10€ | Minimal | Signatur only | < 0.01€ |
-| 10-100€ | Basic | Signatur + Auto-Check | 0.05-0.50€ |
-| 100-1000€ | Standard | + 1 Zeuge + Trust-Calc | 0.50-5€ |
-| 1000-10000€ | Enhanced | + 3 Zeugen + Full Calc | 5-50€ |
-| > 10000€ | Maximum | + 5 Zeugen + Due Diligence | bis 5% |
+| Transaktionswert | LoD-Level | Verifikation               | Typische Kosten |
+| ---------------- | --------- | -------------------------- | --------------- |
+| < 10€            | Minimal   | Signatur only              | < 0.01€         |
+| 10-100€          | Basic     | Signatur + Auto-Check      | 0.05-0.50€      |
+| 100-1000€        | Standard  | + 1 Zeuge + Trust-Calc     | 0.50-5€         |
+| 1000-10000€      | Enhanced  | + 3 Zeugen + Full Calc     | 5-50€           |
+| > 10000€         | Maximum   | + 5 Zeugen + Due Diligence | bis 5%          |
 
 Das LoD-Level wird automatisch basierend auf dem Transaktionswert gewählt. Parteien können manuell ein höheres Level anfordern, aber nicht unter das automatische Level gehen.
 
@@ -157,6 +165,7 @@ Eine weitere Nebenbedingung fordert menschliche Verständlichkeit:
 **∀ Blueprint B: ∃ NLD(B) ∧ ∃ FormalSpec(B) ∧ Equivalent(NLD, FormalSpec)**
 
 Für jeden Blueprint (Schema, Ontologie, Protokoll) muss existieren:
+
 - NLD: Natural Language Description (menschenlesbare Dokumentation)
 - FormalSpec: Formale Spezifikation (maschinenprüfbar)
 - Equivalence: Ein Nachweis, dass beide semantisch äquivalent sind
@@ -177,18 +186,18 @@ Die Grundlage jeder Interaktion in Erynoa ist die Identität. Das System verwend
 
 Die Namespaces kategorisieren die Art der Entität:
 
-| Namespace | Bedeutung | Beispiel |
-|-----------|-----------|----------|
-| self | Natürliche Person | did:erynoa:self:abc123 |
-| guild | Organisation | did:erynoa:guild:siemens-ag |
-| spirit | Autonomer Agent | did:erynoa:spirit:trading-bot-7 |
-| thing | Physisches Gerät | did:erynoa:thing:sensor-42 |
-| vessel | Fahrzeug | did:erynoa:vessel:ev-charger-1 |
-| source | Energiequelle | did:erynoa:source:solar-panel-a |
-| craft | Service | did:erynoa:craft:translation-api |
-| vault | Wallet | did:erynoa:vault:main-treasury |
-| pact | Vertrag | did:erynoa:pact:rental-2024-001 |
-| circle | Realm/Environment | did:erynoa:circle:energy-trading |
+| Namespace | Bedeutung         | Beispiel                         |
+| --------- | ----------------- | -------------------------------- |
+| self      | Natürliche Person | did:erynoa:self:abc123           |
+| guild     | Organisation      | did:erynoa:guild:siemens-ag      |
+| spirit    | Autonomer Agent   | did:erynoa:spirit:trading-bot-7  |
+| thing     | Physisches Gerät  | did:erynoa:thing:sensor-42       |
+| vessel    | Fahrzeug          | did:erynoa:vessel:ev-charger-1   |
+| source    | Energiequelle     | did:erynoa:source:solar-panel-a  |
+| craft     | Service           | did:erynoa:craft:translation-api |
+| vault     | Wallet            | did:erynoa:vault:main-treasury   |
+| pact      | Vertrag           | did:erynoa:pact:rental-2024-001  |
+| circle    | Realm/Environment | did:erynoa:circle:energy-trading |
 
 Diese Namespaces haben operative Bedeutung. Der Human-Alignment-Faktor H(s) = 2.0 gilt nur für self-Namespace-Entitäten mit gültigem HumanAuth-Credential. Die Governance-Regeln können unterschiedliche Stimmgewichte basierend auf dem Namespace definieren.
 
@@ -225,6 +234,7 @@ HumanAuth-Credentials beweisen, dass hinter einer DID ein biologischer Mensch st
 - **Web-of-Trust:** 3+ bereits verifizierte Menschen bürgen
 
 Ein HumanAuth-Credential enthält:
+
 - Die DID des Inhabers
 - Die Verifizierungsmethode
 - Den Issuer (z.B. Regierung, Bank, spezialisierter Provider)
@@ -249,6 +259,7 @@ Die Berechnung jeder Dimension folgt dem Bayesschen Paradigma:
 4. **Konfidenz:** Die Varianz der Posterior-Verteilung bestimmt die Konfidenz
 
 Diese Bayessche Modellierung hat Vorteile:
+
 - Sie handhabt Unsicherheit explizit
 - Sie konvergiert mit mehr Daten zur Wahrheit
 - Sie ist mathematisch begründet und nicht ad-hoc
@@ -261,6 +272,7 @@ Das Vertrauen entwickelt sich über Zeit nach der Gleichung:
 T(t+1) = T(t) · λ^Δt + Δ_events + Δ_attestations
 
 Dabei ist:
+
 - λ = 0.9997 (Zerfallsrate pro Tag, Halbwertszeit ≈ 6 Jahre ohne Aktivität)
 - Δt = Anzahl Tage seit letzter Aktualisierung
 - Δ_events = Summe der Trust-Änderungen durch eigene Events
@@ -278,6 +290,7 @@ Ein fundamentales Prinzip ist die Asymmetrie von Gewinn und Verlust. Die Formel 
 Mit k_neg / k_pos ≈ 3-5 ist Vertrauen zerstören 3-5x leichter als es aufzubauen.
 
 **Beispiel:** Ein Agent mit T = 0.8 und k_pos = 0.1, k_neg = 0.4:
+
 - Positives Event (significance = 1): Δ = 0.1 · 1 · 0.2 = +0.02 → T = 0.82
 - Negatives Event (significance = 1): Δ = 0.4 · 1 · 0.8 = -0.32 → T = 0.48
 
@@ -298,6 +311,7 @@ Bei mehreren Pfaden von A nach C wird der maximale Trust verwendet (optimistisch
 Für globale Rankings verwendet Erynoa eine Variante des EigenTrust-Algorithmus. Die Grundidee: Das Vertrauen, das A in B hat, ist nur so viel wert, wie viel das Netzwerk A vertraut.
 
 Der Algorithmus ist iterativ:
+
 1. Initialisiere alle Agenten mit gleichem globalem Trust
 2. Berechne für jeden Agenten den neuen Trust als gewichtete Summe der lokalen Trust-Bewertungen, gewichtet mit dem globalen Trust des Bewerters
 3. Normalisiere
@@ -314,38 +328,45 @@ Das Ergebnis ist ein globaler Trust-Vektor, der resistent gegen Sybil-Angriffe i
 TAT steht für Trust-Attested Transaction. Jede Transaktion durchläuft definierte Phasen:
 
 **SEEK:** Agent sucht Partner
+
 - Anfrage an Discovery-Service mit Kriterien (Fähigkeiten, min. Trust, max. Preis)
 - Discovery liefert personalisiertes Ranking basierend auf Systemgleichung
 - Ranking berücksichtigt: Trust, Fähigkeiten, Historie, Novelty-Bonus für Newcomer
 
 **PROPOSE:** Agent macht Angebot
+
 - Signiertes Dokument mit: Leistung, Preis, Zeitrahmen, Bedingungen
 - Referenz auf relevante Blueprints/Schemas
 - Optional: Ricardian Contract (Link zu menschenlesbarem PDF)
 
 **AGREE:** Gegenpartei akzeptiert
+
 - Signierte Bestätigung
 - Mit Matching beider Signaturen entsteht bindender Vertrag
 - Escrow wird eingerichtet (falls Zahlung involviert)
 
 **STREAM:** Durchführung
+
 - Kontinuierlicher Fortschritt wird attestiert
 - Mikrozahlungen fließen proportional zum Fortschritt
 - Meilensteine lösen größere Zahlungen aus
 
 **CLOSE:** Erfolgreicher Abschluss
+
 - Beide Parteien signieren Bestätigung
 - Finale Zahlung wird freigegeben
 - Positive Trust-Events werden generiert
 - Optionale Bewertungen
 
 **ABORT:** Abbruch
+
 - Eine oder beide Parteien brechen ab
 - Vordefinierte Kompensationsregeln greifen
 - Proportionale Erstattung basierend auf Fortschritt
 - Trust-Impact abhängig von Schuldfrage
 
 **DISPUTE:** Streitfall
+
 - Schiedsverfahren wird eingeleitet
 - Schiedsrichter werden basierend auf Trust und Expertise ausgewählt
 - Entscheidung basiert auf signierten Dokumenten und Events
@@ -356,12 +377,14 @@ TAT steht für Trust-Attested Transaction. Jede Transaktion durchläuft definier
 Erynoas Streaming-Modell minimiert Risiko für beide Seiten. Anstatt am Ende große Summen zu transferieren, fließen kontinuierlich kleine Beträge.
 
 **Beispiel:** 30-Tage-Projekt für 3000€
+
 - Tag 0: Auftraggeber hinterlegt 3000€ in Escrow
 - Tag 1-30: Jeden Tag werden 100€ freigegeben bei attestiertem Fortschritt
 - Tag 15: Auftraggeber bricht ab → 1500€ wurden gezahlt, 1500€ zurück
 - Niemand hat mehr als 100€ Risiko zu jedem Zeitpunkt
 
 Für physische Waren:
+
 - Käufer hinterlegt in Escrow
 - Versand-Nachweis: 10% werden freigegeben
 - Ankunft-Nachweis: 40% werden freigegeben
@@ -387,103 +410,305 @@ Events sind unveränderlich. Korrekturen erfolgen durch neue Events, die alte re
 
 Ein Event gilt als finalisiert, wenn es von mindestens k unabhängigen Zeugen bestätigt wurde. Die Anforderungen an k hängen vom LoD-Level ab:
 
-| LoD | k | Zusätzliche Anforderungen |
-|-----|---|--------------------------|
-| Minimal | 0 | Nur Signatur |
-| Basic | 1 | 1 automatischer Validator |
-| Standard | 2 | 2 unabhängige Zeugen |
-| Enhanced | 3 | 3 Zeugen, 2+ Regionen |
-| Maximum | 5 | 5 Zeugen, 3+ Regionen, 2+ HW-Hersteller |
+| LoD      | k   | Zusätzliche Anforderungen               |
+| -------- | --- | --------------------------------------- |
+| Minimal  | 0   | Nur Signatur                            |
+| Basic    | 1   | 1 automatischer Validator               |
+| Standard | 2   | 2 unabhängige Zeugen                    |
+| Enhanced | 3   | 3 Zeugen, 2+ Regionen                   |
+| Maximum  | 5   | 5 Zeugen, 3+ Regionen, 2+ HW-Hersteller |
 
 Die Anforderungen an geografische und Hardware-Diversität verhindern, dass ein kompromittierter Anbieter allein Events fälschen kann.
 
 ---
 
-## Teil V: Das Realm-System
+## Teil V: Die Virtualized Environment Architecture
 
-### Hierarchische Kontexträume
+Erynoa basiert auf einer **hierarchischen, kategorientheoretisch fundierten Struktur**, die globale Neutralität mit lokaler Souveränität verbindet. Im Zentrum stehen drei Schichten: **Root-Environment**, **Virtual Environments (Virt-Envs)** und **Shards**.
 
-Das Erynoa-Netzwerk ist in hierarchische Kontexträume (Realms) unterteilt. Ein Realm ist eine logische Partition mit eigenen Regeln, Governance und Semantik.
+### Architektur-Überblick
 
-Die Hierarchie:
 ```
-erynoa (root)
-├── finance
-│   ├── trading
-│   │   ├── crypto
-│   │   └── commodities
-│   ├── insurance
-│   └── lending
-├── energy
-│   ├── grid
-│   └── mobility
-├── healthcare
-└── entertainment
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         ROOT-ENVIRONMENT (𝒞_Root)                           │
+│                    Erynoa Protocol Foundation – 112 Axiome                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   ┌───────────────────────────────────────────────────────────────────┐    │
+│   │  VIRT-ENV: EU (did:erynoa:circle:eu-2026)                         │    │
+│   │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                │    │
+│   │  │ EU-DAO Gov  │  │ Digital EUR │  │  eIDAS 2.0  │                │    │
+│   │  └─────────────┘  └─────────────┘  └─────────────┘                │    │
+│   │                                                                    │    │
+│   │  ┌─────────────────────┐  ┌─────────────────────┐                 │    │
+│   │  │ SHARD: Finance      │  │ SHARD: Energy       │                 │    │
+│   │  │ • I/Ω hoch gewichtet│  │ • R/P hoch gewichtet│                 │    │
+│   │  │ • wEUR Settlement   │  │ • IOTA only         │                 │    │
+│   │  └─────────────────────┘  └─────────────────────┘                 │    │
+│   │                                                                    │    │
+│   │  ┌─────────────────────────────────────────────────────────────┐  │    │
+│   │  │ SUB-VIRT-ENV: Germany (did:erynoa:circle:de-2026)           │  │    │
+│   │  │  └── SHARD: Healthcare (Ärztekammer, GDPR+)                 │  │    │
+│   │  └─────────────────────────────────────────────────────────────┘  │    │
+│   └───────────────────────────────────────────────────────────────────┘    │
+│                                                                             │
+│   ┌───────────────────────────────────────────────────────────────────┐    │
+│   │  VIRT-ENV: ASEAN (did:erynoa:circle:asean-2026)                   │    │
+│   │  └── SHARD: Trade (Multi-FX Bridge, Regional Settlement)          │    │
+│   └───────────────────────────────────────────────────────────────────┘    │
+│                                                                             │
+│   ═══════════════ INTER-ENV PROTOCOL (IEP) ════════════════════════════    │
+│   Bilaterale Trust-Recognition • Currency-Exchange • Identity-Bridging     │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Jeder Realm kann eigene Axiome definieren, die die globalen Axiome erweitern, aber nicht verletzen. Beispiel für einen Healthcare-Realm:
+### 1. Root-Environment: Das globale Fundament
+
+Das Root-Environment ist die **oberste, unveränderliche Schicht** des Systems – vergleichbar mit einem neutralen "Betriebssystem" für alle Identitäten.
+
+**Funktion:**
+
+- Enthält die **112 Kernaxiome** (unveränderliche Grundregeln)
+- Definiert globale Standards: DID-Methode (`did:erynoa`), 6D-Trust-Vektor, Event-DAG, Multi-Chain-Anchoring
+- Alle neuen DIDs starten hier – maximale Neutralität und Freiheit
+- Keine lokalen Regeln – nur das gemeinsame Protokoll
+
+**Technische Merkmale:**
+
+- Unveränderlich (nur via H4-Override mit 1-Jahr-Timelock und Supermajority)
+- Primary Chain: IOTA (feeless, MoveVM) für Anchoring
+- Alle Events/DIDs sind von Root aus erreichbar (kausale Historie im DAG)
+
+**Mathematisch:** Das Root-Env ist die globale Kategorie $𝒞_{Root}$, wobei:
+
+- Objekte = alle DIDs im System
+- Morphismen = alle Transaktionen
+- Funktoren = strukturerhaltende Abbildungen zu Sub-Kategorien
+
+### 2. Virtual Environments: Souveräne Umgebungen
+
+Virt-Envs sind **souveräne Sub-Umgebungen** unter dem Root – sie ermöglichen Gruppen (Personen, Organisationen, Staaten) eigene Welten mit eigenen Regeln zu schaffen.
+
+**Funktion:**
+
+- **Souveränität:** Eigene Governance (DAO, Multi-Sig), eigene Regeln (Local Axioms), optionale CBDC-Bridges
+- **Erweiterung, nicht Widerspruch:** Local Axioms dürfen Root-Regeln nur ergänzen (Monotonie-Axiom A19)
+- **Inter-Env Protocol (IEP):** Bilaterale Agreements für Trust-Recognition, Currency-Exchange, Identity-Anerkennung
+
+**Bootstrapping-Modi:**
+
+| Modus     | Dauer      | Anwendung                              | Anforderungen                        |
+| --------- | ---------- | -------------------------------------- | ------------------------------------ |
+| **Short** | 30–60 Tage | Persönliche/kleine Envs (Family-Realm) | Basis-Governance                     |
+| **Long**  | 120 Tage   | Große Envs (EU, ASEAN)                 | CBDC-Integration, strenge Governance |
+
+**Technische Merkmale:**
+
+- Eigene DID im `circle`-Namespace: `did:erynoa:circle:eu-2026`
+- Governance-Config: Threshold, Members, Voting-Regeln
+- CBDC-Bridge: Mint/Burn-Mechanik mit Reserve-Proofs
+- Child-Envs: Rekursiv (z.B. Deutschland unter EU)
+
+**Mathematisch:** Eine Virt-Env ist eine Sub-Kategorie $𝒞_{VirtEnv} ⊂ 𝒞_{Root}$, die das Monotonie-Axiom erfüllt:
+
+$$rules(Parent) ⊆ rules(Child)$$
+
+**Beispiel ECL-Definition:**
 
 ```ecl
-realm healthcare {
-  // Strengere Zugangsbedingungen
-  require credential MedicalProfessional
-  
-  // Höheres LoD-Minimum
-  min_lod = "Enhanced"
-  
-  // Spezielle Datenschutzregeln
-  require patient_consent for data_access
-  
-  // Verstöße führen zu sofortigem Ausschluss
-  on_violation = "immediate_ban"
+virt_env eu_2026 {
+  governance {
+    type = "dao"
+    threshold = 0.66
+    members = [did:erynoa:guild:eu-commission, ...]
+  }
+
+  local_axioms {
+    // GDPR-Erweiterung
+    require data_processing_consent for personal_data
+
+    // Höheres LoD-Minimum
+    min_lod = "Standard"
+  }
+
+  cbdc_bridge {
+    token = "EUR"
+    reserve_proof = "ecb_attestation"
+    mint_authority = did:erynoa:guild:ecb
+  }
 }
+```
+
+### 3. Shards: Spezialisierte Bereiche
+
+Shards sind die **feinste Granularität** – spezialisierte Sub-Kategorien innerhalb einer Virt-Env, optimiert für bestimmte Anwendungen.
+
+**Funktion:**
+
+- **Kontextuelle Spezialisierung:** Eigene Trust-Gewichte (z.B. Integrity höher in Finance-Shard)
+- **Eigene Regeln:** Local Axioms für Auflagen (z.B. "Nur Transfers zu Verified-DIDs")
+- **Settlement:** Eigene Währung/Bridge (z.B. wEUR in Finance-Shard)
+- **Skalierung:** Peers können sich auf Shards spezialisieren → effizientere Validierung
+
+**Technische Merkmale:**
+
+- DID im `circle`-Namespace: `did:erynoa:circle:eu-finance-2026`
+- Trust-Weights: Kontextspezifische Gewichtung des 6D-Vektors
+- Funktoren: Brücken zu anderen Shards (Trust-Dämpfung, Value-Conversion)
+- Sub-Shards: Rekursiv (z.B. Banking unter Finance)
+
+**Trust-Gewichtung nach Shard-Typ:**
+
+| Shard-Typ      | R    | I    | C    | P    | V    | Ω    | Fokus                              |
+| -------------- | ---- | ---- | ---- | ---- | ---- | ---- | ---------------------------------- |
+| **Finance**    | 0.15 | 0.25 | 0.10 | 0.10 | 0.15 | 0.25 | Integrität & Compliance            |
+| **Energy**     | 0.25 | 0.10 | 0.15 | 0.25 | 0.15 | 0.10 | Zuverlässigkeit & Vorhersagbarkeit |
+| **Healthcare** | 0.15 | 0.30 | 0.20 | 0.10 | 0.10 | 0.15 | Integrität & Kompetenz             |
+| **Gaming**     | 0.10 | 0.10 | 0.35 | 0.15 | 0.15 | 0.15 | Kompetenz                          |
+
+**Beispiel ECL-Definition:**
+
+```ecl
+shard eu_energy {
+  parent = did:erynoa:circle:eu-2026
+
+  trust_weights {
+    reliability = 0.25
+    integrity = 0.10
+    competence = 0.15
+    predictability = 0.25
+    vigilance = 0.15
+    omega = 0.10
+  }
+
+  local_axioms {
+    // Nur IOTA für virtuelle Adressen (kostengünstig)
+    allowed_chains = ["iota"]
+
+    // Geräte müssen verifiziert sein
+    require credential DeviceCertified for thing_namespace
+  }
+
+  settlement {
+    token = "wEUR"
+    min_balance_for_participation = 0
+  }
+}
+```
+
+### 4. Interaktion zwischen den Schichten
+
+#### Funktoren (Strukturerhaltende Abbildungen)
+
+Transfers zwischen Kategorien (Virt-Envs/Shards) erfolgen über **Funktoren** mit:
+
+- **Trust-Dämpfung:** $β_{dynamic}(s_1, s_2) = β_{base} × exp(-λ × failure\_rate)$
+- **Trust-Rotation:** Kontextuelle Neugewichtung des 6D-Vektors via Transformations-Matrix
+
+```
+T_target = M × T_source
+
+Beispiel Gaming→Finance:
+┌     ┐   ┌                    ┐   ┌     ┐
+│ R'  │   │ 0.8  0    0    ... │   │ R   │
+│ I'  │ = │ 0    0.9  0    ... │ × │ I   │
+│ C'  │   │ 0    0    0.1  ... │   │ C   │
+│ ... │   │ ...            ... │   │ ... │
+└     ┘   └                    ┘   └     ┘
+```
+
+#### Boundary Guards (Logic Guards)
+
+Jeder Funktor hat einen **Boundary Guard** (Smart Contract in ECL):
+
+```ecl
+guard boundary_eu_to_asean {
+  // GDPR-Äquivalenz prüfen
+  require(target_env.has_compliance("GDPR-equivalent"))
+
+  // Minimaler Trust
+  require(source_trust.scalar() >= 0.6)
+
+  // Sanktions-Check
+  require(!sanctions_list.contains(user.did))
+}
+```
+
+#### Events und Peer-Spezialisierung
+
+- **Events:** Alle Aktionen (Join, Update, Transfer) als Events im DAG – kausal nachvollziehbar
+- **Peer-Spezialisierung:** Peers können nur bestimmte Virt-Envs/Shards validieren → Skalierung
+- **Cross-Chain:** Virtuelle Adressen (Account Abstraction) enforced Shard-Regeln on-chain
+
+### 5. Praktischer Ablauf: IoT-Gerät in Shard
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    GERÄT-ONBOARDING IN ENERGY-SHARD                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  1. QR-SCAN                                                                 │
+│     ─────────                                                               │
+│     • User scannt QR-Code am Gerät (z.B. Solar-Panel)                      │
+│     • Master-DID erzeugt Sub-DID im `thing`-Namespace                      │
+│     • did:erynoa:thing:solar-panel-roof-a1                                 │
+│                                                                             │
+│  2. SHARD-JOIN                                                              │
+│     ──────────                                                              │
+│     • Join-Event: EU-Energy/Siemens-Shard                                  │
+│     • Shard-Regeln greifen: allowed_chains = ["iota"]                      │
+│     • Virtuelle IOTA-Adresse wird deterministisch erzeugt                  │
+│                                                                             │
+│  3. AUTONOME OPERATION                                                      │
+│     ────────────────────                                                    │
+│     • Gerät subscribed Shard-Events (z.B. Strompreise)                     │
+│     • Autonom: Einspeisen wenn Preis > Threshold                           │
+│     • Settlement: wEUR-Mikrozahlungen im Shard                             │
+│                                                                             │
+│  4. INTER-DEVICE KOOPERATION                                                │
+│     ──────────────────────────                                              │
+│     • Mutual Auth mit Batterie-System                                       │
+│     • Gemeinsamer Optimierungs-Algorithmus                                  │
+│     • Trust-Attestation bei erfolgreicher Kooperation                      │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### ECL (Erynoa Configuration Language)
 
-ECL ist eine deterministische, sandboxed Sprache für Realm-Definitionen und Smart Contracts. Sie wird in der ECLVM (ECL Virtual Machine) ausgeführt.
+ECL ist eine deterministische, sandboxed Sprache für Virt-Env/Shard-Definitionen und Smart Contracts. Sie wird in der ECLVM ausgeführt.
 
-Eigenschaften:
+**Eigenschaften:**
+
 - **Deterministisch:** Gleiche Eingabe → gleiche Ausgabe, immer
 - **Terminierend:** Alle Programme terminieren (kein Turing-complete)
 - **Gas-metered:** Berechnung kostet proportional zur Komplexität
 - **Sandboxed:** Kein Zugriff auf externe Ressourcen
 
-ECL-Programme können:
+**ECL kann:**
+
 - Zugangsbedingungen definieren
 - Transaktionslogik implementieren
 - Events validieren
 - Trust-Modifikationen spezifizieren
+- Boundary Guards implementieren
 
-Sie können nicht:
+**ECL kann NICHT:**
+
 - Endlosschleifen erzeugen
 - Auf das Dateisystem zugreifen
 - Netzwerkanfragen machen
 - Zufallszahlen generieren
 
-### Cross-Realm-Interoperabilität
+### Zusammenfassung der Schichten
 
-Verschiedene Realms haben verschiedene Semantiken. Ein "Reputation Point" im Gaming-Realm bedeutet etwas anderes als im Finance-Realm.
+| Schicht      | Scope                   | Governance                   | Regeln                | Beispiel                       |
+| ------------ | ----------------------- | ---------------------------- | --------------------- | ------------------------------ |
+| **Root-Env** | Global                  | Unveränderlich (H4-Override) | 112 Axiome            | `did:erynoa:*:*`               |
+| **Virt-Env** | Souveräne Gruppe        | DAO / Multi-Sig              | Root + Local Axioms   | `did:erynoa:circle:eu-2026`    |
+| **Shard**    | Spezialisierter Bereich | Virt-Env-delegiert           | Parent + Shard-Axioms | `did:erynoa:circle:eu-finance` |
 
-Cross-Realm-Transfers erfordern Konversionsregeln, die in Bridge-Contracts definiert sind:
-
-```ecl
-bridge gaming_to_finance {
-  // 1000 Gaming-Reputation = 1 Finance-Trust-Point
-  conversion_rate = 0.001
-  
-  // Nur Competence-Dimension transferiert
-  dimensions = ["competence"]
-  
-  // Maximum pro Transfer
-  max_per_tx = 100
-  
-  // Cooling-off zwischen Transfers
-  min_interval = 7d
-}
-```
-
-Diese Bridges ermöglichen kontrollierte Wertübertragung zwischen Domänen, ohne die Semantik zu verwässern.
+**Kernprinzip:** Globale Neutralität durch Root, lokale Souveränität durch Virt-Envs, kontextuelle Spezialisierung durch Shards – verbunden durch kategorientheoretisch fundierte Funktoren.
 
 ---
 
@@ -494,29 +719,34 @@ Diese Bridges ermöglichen kontrollierte Wertübertragung zwischen Domänen, ohn
 Ein produktionsreifes System braucht Robustheit gegen reale Angriffe. Erynoa implementiert fünf Verteidigungslinien:
 
 **Layer 1: Fuzzy Interpretation**
+
 - Rohe Zahlen werden in qualitative Buckets übersetzt
 - Konfidenzintervalle werden kommuniziert
 - Hysterese verhindert Oszillation an Schwellwerten
 - Nutzer sehen "Verified (High Confidence)" statt "0.723456"
 
 **Layer 2: Reality Anchor**
+
 - Hardware-Binding durch Physical Unclonable Functions (PUFs)
 - Multi-Path-Witnessing erfordert geografische Diversität
 - Geo-Proofs verifizieren physische Präsenz
 - Supply-Chain-Trust für Hardware-Hersteller
 
 **Layer 3: Anti-Gaming**
+
 - EigenTrust erkennt Sybil-Cluster
 - Stake-at-Risk: Hohe Reputation erfordert hinterlegtes Kapital
 - Slashing bei nachgewiesenem Betrug
 - Collusion-Detection durch Netzwerkanalyse
 
 **Layer 4: Market Bootstrap**
+
 - Single-Player-Mode: Interne Nutzung ohne externes Netzwerk
 - Federated Genesis: Unternehmen verbinden ihre internen Netze
 - Retroactive Public Goods Funding: Belohnung für frühe Blueprint-Ersteller
 
 **Layer 5: Legal Wrapper**
+
 - Ricardian Contracts: Code + menschenlesbares PDF
 - Jurisdiction Binding: Rechtsstandort ist definiert
 - Controller Chain: Immer eine haftbare natürliche/juristische Person
@@ -526,21 +756,25 @@ Ein produktionsreifes System braucht Robustheit gegen reale Angriffe. Erynoa imp
 Über Robustheit hinaus strebt Erynoa Antifragilität an: Das System soll durch Stress stärker werden.
 
 **Anti-Calcification:**
+
 - Trust verfällt (Halbwertszeit 6 Jahre)
 - Novelty-Bonus für neue Partner (bis 3x)
 - Stagnation wird bestraft, Exploration belohnt
 
 **Hardware-Diversity:**
+
 - Kritische Events erfordern Zeugen von 3+ Herstellern
 - Geografische Verteilung (2+ Regionen)
 - Kein Single Point of Failure
 
 **Circuit Breakers:**
+
 - Maximale Trust-Änderung pro Stunde begrenzt (±10%)
 - Automatischer Cooldown bei hoher Volatilität
 - Dampening bei schnellen Änderungen
 
 **Post-Quantum Readiness:**
+
 - Hybride Signaturen (Ed25519 + Dilithium)
 - Key-Rotation-Protokoll mit Trust-Erhalt
 - Crypto-Agility: Algorithmen austauschbar
@@ -592,21 +826,25 @@ Diese vier Axiome haben Vorrang. Bei Konflikt zwischen Effizienz und Menschlichk
 ### Die drei Säulen
 
 **ERY (Semantic & Identity Layer)**
+
 - Verwaltet DIDs, Credentials, Schemas, Ontologien
 - Content-addressable Storage (CAS) für Blueprints
 - Semantic Index für Discovery
 
 **ECHO (Action & Execution Layer)**
+
 - Aktive Agenten führen Transaktionen durch
 - ECLVM führt Smart Contracts aus
 - Witness-Netzwerk attestiert Events
 
 **NOA (Truth & Finality Layer)**
+
 - Event-DAG speichert alle Geschichte
 - Konsens-Mechanismus für Finalität
 - Berechnung der Systemgleichung
 
 **NEXUS (Connection Layer)**
+
 - Bridges zu externen Systemen
 - APIs für Anwendungen
 - Routing zwischen Realms
@@ -620,6 +858,7 @@ datum_id = sha256(content)
 ```
 
 Vorteile:
+
 - Automatische Deduplizierung
 - Kryptographische Integritätsprüfung
 - Dezentrale Verfügbarkeit
@@ -632,6 +871,7 @@ Events werden in Merkle-Trees organisiert. Der Root-Hash fasst den Zustand zusam
 Das SDK abstrahiert die Komplexität in Schichten:
 
 **Core (Rust):**
+
 - Systemgleichung-Engine
 - Krypto-Modul (klassisch + post-quantum)
 - Storage-Engine (CAS)
@@ -639,6 +879,7 @@ Das SDK abstrahiert die Komplexität in Schichten:
 - Event-Engine
 
 **SDK API (Rust/TypeScript/Python/Go):**
+
 - Identity-Modul
 - Transaction-Modul
 - Trust-Modul
@@ -649,6 +890,7 @@ Das SDK abstrahiert die Komplexität in Schichten:
 
 **CLI:**
 Git-ähnliche Befehle für alle Operationen:
+
 ```bash
 erynoa init                    # Neue Identität
 erynoa seek "developer"        # Partner suchen
@@ -661,9 +903,25 @@ erynoa close                   # Abschluss
 
 ## Zusammenfassung
 
-Erynoa ist ein dezentrales Ökosystem für vertrauensbasierte Interaktionen. Es basiert auf einer Systemgleichung, die den Gesamtwert aus Aktivität, Vertrauen, Geschichte, Novelty, Human-Alignment und temporaler Gewichtung berechnet.
+Erynoa ist ein dezentrales Ökosystem für vertrauensbasierte Interaktionen zwischen Menschen, Maschinen und autonomen Agenten. Es basiert auf einer Systemgleichung, die den Gesamtwert aus Aktivität, Vertrauen, Geschichte, Novelty, Human-Alignment und temporaler Gewichtung berechnet.
 
-Das System ist in sieben Ebenen organisiert:
+### Die Architektur in drei Schichten
+
+```
+ROOT-ENVIRONMENT (𝒞_Root)          ← Globales Fundament (112 Axiome)
+    │
+    ├── VIRT-ENV (𝒞_VirtEnv)       ← Souveräne Umgebungen (Local Axioms)
+    │       │
+    │       └── SHARD (𝒞_Shard)    ← Spezialisierte Bereiche (Trust-Weights)
+```
+
+| Schicht      | Funktion                                                    | Governance         |
+| ------------ | ----------------------------------------------------------- | ------------------ |
+| **Root-Env** | Globale Neutralität, 112 Axiome, DID-Standard               | Unveränderlich     |
+| **Virt-Env** | Souveräne Gruppen (EU, ASEAN, Konzerne), CBDC-Bridges       | DAO / Multi-Sig    |
+| **Shard**    | Spezialisierung (Finance, Energy, Health), Trust-Gewichtung | Virt-Env-delegiert |
+
+### Die sieben Axiom-Ebenen
 
 1. **Fundament:** Identität, Kausalität, grundlegende Regeln (30 Axiome)
 2. **Emergenz:** Kollektive Intelligenz, Konsens (15 Axiome)
@@ -673,6 +931,13 @@ Das System ist in sieben Ebenen organisiert:
 6. **Kybernetik:** Feedback, Selbstregulation, Antifragilität (23 Axiome)
 7. **Humanismus:** Alignment, Verhältnismäßigkeit, Vergebung, Transparenz (4 Axiome)
 
+### Kernprinzipien
+
+- **Kategorientheorie:** Virt-Envs und Shards sind Sub-Kategorien mit strukturerhaltenden Funktoren
+- **Monotonie:** Child-Regeln erweitern Parent-Regeln, widersprechen ihnen aber nie
+- **Verhältnismäßigkeit:** LoD-System passt Verifikationsaufwand an Transaktionswert an
+- **Human-Alignment:** H(s)=2.0 für Menschen – das System dient dem Menschen, nicht umgekehrt
+
 Die Mathematik ist klassische Wahrscheinlichkeitstheorie und Statistik. Die Berechnung ist effizient und auf Standard-Hardware möglich. Die Modelle sind interpretierbar und erklärbar.
 
 Das Ziel ist eine vertrauenswürdige Infrastruktur für die dezentrale Gesellschaft – intelligent, gerecht, robust und menschlich.
@@ -681,19 +946,20 @@ Das Ziel ist eine vertrauenswürdige Infrastruktur für die dezentrale Gesellsch
 
 ## Anhang: Weiterführende Dokumente
 
-| Dokument | Beschreibung |
-|----------|--------------|
-| [WORLD-FORMULA.md](./WORLD-FORMULA.md) | Mathematische Spezifikation |
-| [LOGIC.md](./LOGIC.md) | Formale Logik und Axiome |
-| [CONSTITUTION.md](./CONSTITUTION.md) | Humanistische Verfassung |
-| [ROBUSTNESS-LAYER.md](./ROBUSTNESS-LAYER.md) | Robustheits-Architektur |
-| [SDK-ARCHITECTURE.md](./SDK-ARCHITECTURE.md) | SDK-Spezifikation |
-| [PROTOCOL.md](./PROTOCOL.md) | Protokoll-Details |
-| [CLI-REFERENCE.md](./CLI-REFERENCE.md) | CLI-Referenz |
+| Dokument                                                   | Beschreibung                         |
+| ---------------------------------------------------------- | ------------------------------------ |
+| [WORLD-FORMULA.md](./WORLD-FORMULA.md)                     | Mathematische Spezifikation          |
+| [LOGIC.md](./LOGIC.md)                                     | Formale Logik und Axiome             |
+| [CONSTITUTION.md](./CONSTITUTION.md)                       | Humanistische Verfassung             |
+| [ROBUSTNESS-LAYER.md](./ROBUSTNESS-LAYER.md)               | Robustheits-Architektur              |
+| [SDK-ARCHITECTURE.md](./SDK-ARCHITECTURE.md)               | SDK-Spezifikation                    |
+| [PROTOCOL.md](./PROTOCOL.md)                               | Protokoll-Details                    |
+| [CLI-REFERENCE.md](./CLI-REFERENCE.md)                     | CLI-Referenz                         |
+| [eips/EIP-005](./eips/EIP-005-virtualized-environments.md) | Virtualized Environment Architecture |
 
 ---
 
-*Erynoa Fachkonzept Version 6.1*
-*112 Axiome über 7 Ebenen*
-*Klassische Wahrscheinlichkeitstheorie, Bayessche Inferenz, Standard-Kryptographie*
-*"Das System existiert, um menschliches Gedeihen zu ermöglichen."*
+_Erynoa Fachkonzept Version 6.2_
+_112 Axiome über 7 Ebenen • 3-Schichten-Architektur (Root → Virt-Env → Shard)_
+_Kategorientheoretisch fundiert • Bayessche Inferenz • Standard-Kryptographie_
+_"Das System existiert, um menschliches Gedeihen zu ermöglichen."_

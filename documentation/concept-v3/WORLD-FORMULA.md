@@ -373,22 +373,41 @@
 
 ---
 
-## Teil IV: Die Realm-Gleichung
+## Teil IV: Die Virtualized Environment Gleichung
 
 ```
 ╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
 ║                                                                                                                                           ║
-║   EBENE 1: FUNDAMENTALE REALMS                                                                                                           ║
+║   3-SCHICHTEN-ARCHITEKTUR (Kategorientheoretisch)                                                                                        ║
+║                                                                                                                                           ║
+║                                                                                                                                           ║
+║       𝒞_Root                                    ← Root-Environment (112 Axiome, unveränderlich)                                         ║
+║           │                                                                                                                               ║
+║           ├── 𝒞_VirtEnv ⊂ 𝒞_Root               ← Virtual Environment (Souveräne Gruppe, circle-Namespace)                               ║
+║           │       │                                                                                                                       ║
+║           │       └── 𝒞_Shard ⊂ 𝒞_VirtEnv      ← Shard (Spezialisierter Bereich)                                                        ║
+║                                                                                                                                           ║
+║                                                                                                                                           ║
+║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
+║                                                                                                                                           ║
+║   EBENE 1: ROOT-ENVIRONMENT (𝒞_Root)                                                                                                     ║
+║                                                                                                                                           ║
+║       𝒞_Root = { 112 Axiome, DID-Standard, Trust-Vektor, Event-DAG }                                                                    ║
+║                                                                                                                                           ║
+║       • Globales Fundament, unveränderlich (nur H4-Override mit 1-Jahr-Timelock)                                                        ║
+║       • Primary Chain: IOTA (feeless, MoveVM)                                                                                           ║
+║       • Alle DIDs starten hier mit maximaler Neutralität                                                                                ║
+║                                                                                                                                           ║
+║   ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────   ║
+║                                                                                                                                           ║
+║   EBENE 2: VIRTUAL ENVIRONMENTS / REALMS (𝒞_VirtEnv)                                                                                    ║
 ║                                                                                                                                           ║
 ║                                                                                                                                           ║
 ║                                           R = { members, constraints, governance, parent? }                                              ║
 ║                                                                                                                                           ║
-║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
+║   "Ein Realm/Virt-Env ist ein abgegrenzter Kontext mit eigenen Regeln im circle-Namespace."                                             ║
 ║                                                                                                                                           ║
-║   "Ein Realm ist ein abgegrenzter Kontext mit eigenen Regeln."                                                                           ║
-║                                                                                                                                           ║
-║                                                                                                                                           ║
-║   HIERARCHIE:                                                                                                                            ║
+║   MONOTONIE (A19):                                                                                                                       ║
 ║                                                                                                                                           ║
 ║       (R ⊑ R') → (rules(R') ⊆ rules(R))                                                                                                 ║
 ║                                                                                                                                           ║
@@ -426,10 +445,18 @@
 ║                                                                                                                                           ║
 ║   ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────   ║
 ║                                                                                                                                           ║
-║   EBENE 2: SHARDS ALS REALM-PARTITIONEN                                                                                                 ║
+║   EBENE 3: SHARDS ALS SPEZIALISIERTE BEREICHE (𝒞_Shard)                                                                                 ║
 ║                                                                                                                                           ║
 ║                                                                                                                                           ║
-║                                           Σ ⊂ R     (Shard ist Teil eines Realms)                                                       ║
+║                                           Σ ⊂ R     (Shard ist Teil eines Realms/Virt-Env)                                              ║
+║                                                                                                                                           ║
+║                                                                                                                                           ║
+║   KONTEXTUELLE TRUST-GEWICHTUNG:                                                                                                        ║
+║                                                                                                                                           ║
+║       W_shard(s) = M_shard × W(s)    wobei M_shard eine 6×6 Transformations-Matrix ist                                                  ║
+║                                                                                                                                           ║
+║       Beispiel Finance-Shard: Integrity (I) und Omega (Ω) höher gewichtet                                                               ║
+║       Beispiel Energy-Shard:  Reliability (R) und Predictability (P) höher gewichtet                                                    ║
 ║                                                                                                                                           ║
 ║                                                                                                                                           ║
 ║   SEMANTISCHE SPEZIALISIERUNG:                                                                                                          ║
@@ -437,11 +464,6 @@
 ║       Σ ~> s  ↔  semantics(Σ) ∩ capabilities(s) ≠ ∅                                                                                     ║
 ║                                                                                                                                           ║
 ║       "Agenten wählen Shards, die zu ihrer Kompetenz passen."                                                                            ║
-║                                                                                                                                           ║
-║       Beispiele:                                                                                                                         ║
-║           Σ_energy  ~> Stromhändler-Agent     ✓                                                                                         ║
-║           Σ_health  ~> Arzt-Agent             ✓                                                                                         ║
-║           Σ_energy  ~> Arzt-Agent             ✗ (außer Generalist mit C > 0.8)                                                         ║
 ║                                                                                                                                           ║
 ║                                                                                                                                           ║
 ║   SCHLÜSSEL-AXIOME (E11-E12):                                                                                                           ║
@@ -454,6 +476,16 @@
 ║                                                                                                                                           ║
 ║       Shards erben ALLE Realm-Regeln (A19).                                                                                             ║
 ║       Ein Shard kann zusätzliche Regeln haben, aber nie weniger.                                                                        ║
+║                                                                                                                                           ║
+║   ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────   ║
+║                                                                                                                                           ║
+║   FUNKTOREN (Q7): Cross-Env/Cross-Shard Transfers                                                                                       ║
+║                                                                                                                                           ║
+║       F: 𝒞₁ → 𝒞₂    Strukturerhaltende Abbildung                                                                                        ║
+║                                                                                                                                           ║
+║       • Trust-Dämpfung: β_dynamic = β_base × exp(-λ × failure_rate)                                                                     ║
+║       • Trust-Rotation: T_target = M × T_source (6×6 Matrix)                                                                            ║
+║       • Boundary Guards: ECL-Code validiert Übergänge                                                                                   ║
 ║                                                                                                                                           ║
 ╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -3775,19 +3807,19 @@
 
 ## Weiterführende Dokumente
 
-| Bereich | Pfad |
-| --- | --- |
-| Formale Logik | [LOGIC.md](./LOGIC.md) |
-| Symbolreferenz | [LOGIC-SYMBOLS.md](./LOGIC-SYMBOLS.md) |
-| Beweis | [WORLD-FORMULA-PROOF.md](./WORLD-FORMULA-PROOF.md) |
-| Verfassung | [CONSTITUTION.md](./CONSTITUTION.md) |
-| Robustheit | [ROBUSTNESS-LAYER.md](./ROBUSTNESS-LAYER.md) |
-| SDK | [SDK-ARCHITECTURE.md](./SDK-ARCHITECTURE.md) |
-| Protokoll | [PROTOCOL.md](./PROTOCOL.md) |
+| Bereich        | Pfad                                               |
+| -------------- | -------------------------------------------------- |
+| Formale Logik  | [LOGIC.md](./LOGIC.md)                             |
+| Symbolreferenz | [LOGIC-SYMBOLS.md](./LOGIC-SYMBOLS.md)             |
+| Beweis         | [WORLD-FORMULA-PROOF.md](./WORLD-FORMULA-PROOF.md) |
+| Verfassung     | [CONSTITUTION.md](./CONSTITUTION.md)               |
+| Robustheit     | [ROBUSTNESS-LAYER.md](./ROBUSTNESS-LAYER.md)       |
+| SDK            | [SDK-ARCHITECTURE.md](./SDK-ARCHITECTURE.md)       |
+| Protokoll      | [PROTOCOL.md](./PROTOCOL.md)                       |
 
 ---
 
-*Erynoa Weltformel Version 6.0 – Humanistische Quanten-Kybernetische Gleichung.*
-*120 Axiome über 8 Ebenen: Fundament → Emergenz → Prozess → Objekt → Schutz → Kybernetik → Quanta → Humanismus.*
-*Korrektheit ermöglicht Intelligenz, Schutz verhindert Tyrannei, Kybernetik erzeugt Leben, Quanta ermöglicht Transzendenz, Humanismus stiftet Sinn.*
-*"Das System existiert, um menschliches Gedeihen zu ermöglichen. Nicht umgekehrt."*
+_Erynoa Weltformel Version 6.0 – Humanistische Quanten-Kybernetische Gleichung._
+_120 Axiome über 8 Ebenen: Fundament → Emergenz → Prozess → Objekt → Schutz → Kybernetik → Quanta → Humanismus._
+_Korrektheit ermöglicht Intelligenz, Schutz verhindert Tyrannei, Kybernetik erzeugt Leben, Quanta ermöglicht Transzendenz, Humanismus stiftet Sinn._
+_"Das System existiert, um menschliches Gedeihen zu ermöglichen. Nicht umgekehrt."_
