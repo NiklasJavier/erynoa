@@ -23,10 +23,13 @@
 //! ]
 //! ```
 
-use anyhow::anyhow;
-use crate::eclvm::ast::{BinaryOp, Expr, Literal, Policy, Program, Statement, TrustDim, UnaryOp};
+use crate::eclvm::ast::{
+    BinaryOp, DiagnosticCollector, Expr, ExprKind, Literal, Policy, Program, Statement,
+    StatementKind, TrustDim, UnaryOp,
+};
 use crate::eclvm::bytecode::{OpCode, TrustDimIndex, Value};
 use crate::error::{ApiError, Result};
+use anyhow::anyhow;
 
 /// Compiler für ECL zu Bytecode
 pub struct Compiler {
@@ -36,6 +39,8 @@ pub struct Compiler {
     symbols: std::collections::HashMap<String, usize>,
     /// Aktueller Stack-Offset
     stack_offset: usize,
+    /// Diagnostics Collector
+    diagnostics: DiagnosticCollector,
 }
 
 impl Compiler {
@@ -45,6 +50,7 @@ impl Compiler {
             bytecode: Vec::new(),
             symbols: std::collections::HashMap::new(),
             stack_offset: 0,
+            diagnostics: DiagnosticCollector::new(),
         }
     }
 
@@ -53,7 +59,53 @@ impl Compiler {
         for policy in &program.policies {
             self.compile_policy(policy)?;
         }
+
+        // Prüfe ob es Errors gab
+        if self.diagnostics.has_errors() {
+            let errors: Vec<String> = self
+                .diagnostics
+                .errors()
+                .map(|d| format!("{}: {}", d.code, d.message))
+                .collect();
+            return Err(ApiError::Internal(anyhow!(
+                "Compilation failed: {}",
+                errors.join(", ")
+            )));
+        }
+
         Ok(self.bytecode)
+    }
+
+    /// Kompiliere mit Diagnostics zurückgeben
+    pub fn compile_with_diagnostics(
+        mut self,
+        program: &Program,
+    ) -> (std::result::Result<Vec<OpCode>, ()>, DiagnosticCollector) {
+        for policy in &program.policies {
+            if let Err(e) = self.compile_policy(policy) {
+                self.diagnostics.error("E0100", e.to_string(), policy.span);
+            }
+        }
+
+        if self.diagnostics.has_errors() {
+            (Err(()), self.diagnostics)
+        } else {
+            (Ok(self.bytecode), self.diagnostics)
+        }
+    }
+
+    /// Hole Diagnostics
+    pub fn diagnostics(&self) -> &DiagnosticCollector {
+        &self.diagnostics
+    }
+
+    /// Kompiliere eine einzelne Expression zu Bytecode
+    /// (für REPL und Expression-Evaluation)
+    pub fn compile_expr(&mut self, expr: &Expr) -> Result<Vec<OpCode>> {
+        self.bytecode.clear();
+        self.compile_expr_internal(expr)?;
+        self.emit(OpCode::Return);
+        Ok(self.bytecode.clone())
     }
 
     /// Kompiliere einzelne Policy
@@ -69,9 +121,9 @@ impl Compiler {
 
     /// Kompiliere Statement
     fn compile_statement(&mut self, stmt: &Statement) -> Result<()> {
-        match stmt {
-            Statement::Require(expr, msg) => {
-                self.compile_expr(expr)?;
+        match &stmt.kind {
+            StatementKind::Require(expr, msg) => {
+                self.compile_expr_internal(expr)?;
                 if let Some(message) = msg {
                     self.emit(OpCode::PushConst(Value::String(message.clone())));
                     self.emit(OpCode::Require);
@@ -79,21 +131,21 @@ impl Compiler {
                     self.emit(OpCode::Assert);
                 }
             }
-            Statement::Let(name, expr) => {
-                self.compile_expr(expr)?;
+            StatementKind::Let(name, expr) => {
+                self.compile_expr_internal(expr)?;
                 self.symbols.insert(name.clone(), self.stack_offset);
                 self.stack_offset += 1;
             }
-            Statement::Emit(event) => {
+            StatementKind::Emit(event) => {
                 self.emit(OpCode::PushConst(Value::String(format!("emit:{}", event))));
                 self.emit(OpCode::Log);
             }
-            Statement::If {
+            StatementKind::If {
                 condition,
                 then_branch,
                 else_branch,
             } => {
-                self.compile_expr(condition)?;
+                self.compile_expr_internal(condition)?;
                 let jump_false = self.bytecode.len();
                 self.emit(OpCode::JumpIfFalse(0)); // Placeholder
 
@@ -119,22 +171,22 @@ impl Compiler {
                     self.bytecode[jump_false] = OpCode::JumpIfFalse(self.bytecode.len());
                 }
             }
-            Statement::Return(expr) => {
-                self.compile_expr(expr)?;
+            StatementKind::Return(expr) => {
+                self.compile_expr_internal(expr)?;
                 self.emit(OpCode::Return);
             }
         }
         Ok(())
     }
 
-    /// Kompiliere Expression
-    fn compile_expr(&mut self, expr: &Expr) -> Result<()> {
-        match expr {
-            Expr::Literal(lit) => {
+    /// Kompiliere Expression (interne Methode)
+    fn compile_expr_internal(&mut self, expr: &Expr) -> Result<()> {
+        match &expr.kind {
+            ExprKind::Literal(lit) => {
                 let value = self.literal_to_value(lit);
                 self.emit(OpCode::PushConst(value));
             }
-            Expr::Identifier(name) => {
+            ExprKind::Identifier(name) => {
                 if let Some(&offset) = self.symbols.get(name) {
                     let pick_idx = (self.stack_offset - offset - 1) as u8;
                     self.emit(OpCode::Pick(pick_idx));
@@ -143,28 +195,30 @@ impl Compiler {
                     self.emit(OpCode::PushConst(Value::DID(name.clone())));
                 }
             }
-            Expr::Binary { left, op, right } => {
-                self.compile_expr(left)?;
-                self.compile_expr(right)?;
+            ExprKind::Binary { left, op, right } => {
+                self.compile_expr_internal(left)?;
+                self.compile_expr_internal(right)?;
                 self.emit(self.binary_op_to_opcode(*op));
             }
-            Expr::Unary { op, operand } => {
-                self.compile_expr(operand)?;
+            ExprKind::Unary { op, operand } => {
+                self.compile_expr_internal(operand)?;
                 match op {
                     UnaryOp::Neg => self.emit(OpCode::Neg),
                     UnaryOp::Not => self.emit(OpCode::Not),
                 }
             }
-            Expr::Member { object, field } => {
-                self.compile_expr(object)?;
+            ExprKind::Member { object, field } => {
+                self.compile_expr_internal(object)?;
                 if field == "trust" {
                     self.emit(OpCode::LoadTrust);
                 } else {
+                    self.diagnostics
+                        .error("E0002", format!("Unknown field: {}", field), expr.span);
                     return Err(ApiError::Internal(anyhow!("Unknown field: {}", field)));
                 }
             }
-            Expr::TrustDim { vector, dimension } => {
-                self.compile_expr(vector)?;
+            ExprKind::TrustDim { vector, dimension } => {
+                self.compile_expr_internal(vector)?;
                 let idx = match dimension {
                     TrustDim::R => TrustDimIndex::R,
                     TrustDim::I => TrustDimIndex::I,
@@ -175,18 +229,30 @@ impl Compiler {
                 };
                 self.emit(OpCode::TrustDim(idx));
             }
-            Expr::Call { function, args } => {
+            ExprKind::Call { function, args } => {
                 for arg in args {
-                    self.compile_expr(arg)?;
+                    self.compile_expr_internal(arg)?;
                 }
                 match function.as_str() {
                     "credential" => self.emit(OpCode::HasCredential),
                     "balance" => self.emit(OpCode::GetBalance),
                     "timestamp" => self.emit(OpCode::GetTimestamp),
-                    _ => return Err(ApiError::Internal(anyhow!("Unknown function: {}", function))),
+                    _ => {
+                        self.diagnostics.error(
+                            "E0003",
+                            format!("Unknown function: {}", function),
+                            expr.span,
+                        );
+                        return Err(ApiError::Internal(anyhow!(
+                            "Unknown function: {}",
+                            function
+                        )));
+                    }
                 }
             }
-            Expr::Index { .. } => {
+            ExprKind::Index { .. } => {
+                self.diagnostics
+                    .error("E0004", "Index expressions not yet supported", expr.span);
                 return Err(ApiError::Internal(anyhow!(
                     "Index expressions not yet supported"
                 )));
@@ -238,7 +304,7 @@ impl Default for Compiler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::eclvm::ast::{Policy, Program, Span};
+    use crate::eclvm::ast::{Expr, Policy, Program, Span, Statement};
     use crate::eclvm::runtime::{host::StubHost, vm::ECLVM};
 
     #[test]
@@ -246,13 +312,14 @@ mod tests {
         // require true
         let policy = Policy {
             name: "test".into(),
-            body: vec![Statement::Require(Expr::Literal(Literal::Bool(true)), None)],
+            body: vec![Statement::require(Expr::literal(Literal::Bool(true)), None)],
             span: Span::default(),
         };
 
         let program = Program {
             policies: vec![policy],
             constants: Vec::new(),
+            span: Span::default(),
         };
 
         let bytecode = Compiler::new().compile(&program).unwrap();
@@ -273,12 +340,12 @@ mod tests {
         // require 5 > 3
         let policy = Policy {
             name: "test".into(),
-            body: vec![Statement::Require(
-                Expr::Binary {
-                    left: Box::new(Expr::Literal(Literal::Number(5.0))),
-                    op: BinaryOp::Gt,
-                    right: Box::new(Expr::Literal(Literal::Number(3.0))),
-                },
+            body: vec![Statement::require(
+                Expr::binary(
+                    Expr::literal(Literal::Number(5.0)),
+                    BinaryOp::Gt,
+                    Expr::literal(Literal::Number(3.0)),
+                ),
                 None,
             )],
             span: Span::default(),
@@ -287,6 +354,7 @@ mod tests {
         let program = Program {
             policies: vec![policy],
             constants: Vec::new(),
+            span: Span::default(),
         };
 
         let bytecode = Compiler::new().compile(&program).unwrap();
@@ -296,5 +364,25 @@ mod tests {
         let result = vm.run().unwrap();
 
         assert_eq!(result.value, Value::Bool(true));
+    }
+
+    #[test]
+    fn test_compile_with_diagnostics() {
+        let policy = Policy {
+            name: "test".into(),
+            body: vec![Statement::require(Expr::literal(Literal::Bool(true)), None)],
+            span: Span::default(),
+        };
+
+        let program = Program {
+            policies: vec![policy],
+            constants: Vec::new(),
+            span: Span::default(),
+        };
+
+        let (result, diagnostics) = Compiler::new().compile_with_diagnostics(&program);
+
+        assert!(result.is_ok());
+        assert!(!diagnostics.has_errors());
     }
 }

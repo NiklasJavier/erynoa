@@ -54,9 +54,12 @@
 
 pub mod ast;
 pub mod bytecode;
+#[cfg(feature = "cli")]
+pub mod cli;
 pub mod compiler;
 pub mod erynoa_host;
 pub mod mana;
+pub mod optimizer;
 pub mod parser;
 pub mod programmable_gateway;
 pub mod runtime;
@@ -64,8 +67,11 @@ pub mod stdlib;
 
 // Re-exports für einfachen Zugriff
 pub use bytecode::{OpCode, Value};
+#[cfg(feature = "cli")]
+pub use cli::{run_cli, Cli, Commands};
 pub use erynoa_host::{ErynoaHost, PolicyContext};
 pub use mana::{BandwidthTier, ManaAccount, ManaConfig, ManaManager, ManaStatus};
+pub use optimizer::{OptimizationStats, Optimizer};
 pub use programmable_gateway::{
     CompiledPolicy, GatewayDecision, ProgrammableGateway, StandardPolicies,
 };

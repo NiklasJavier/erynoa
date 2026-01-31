@@ -14,6 +14,11 @@ path = "src/lib.rs"
 name = "erynoa-api"
 path = "src/main.rs"
 
+[[bin]]
+name = "ecl"
+path = "src/bin/ecl.rs"
+required-features = ["cli"]
+
 [dependencies]
 # ============================================================================
 # ASYNC RUNTIME & WEB FRAMEWORK
@@ -68,6 +73,20 @@ thiserror = "1"
 anyhow = "1"
 
 # ============================================================================
+# PARSER (ECLVM DSL)
+# ============================================================================
+chumsky = "0.9"
+ariadne = "0.4"
+
+# ============================================================================
+# CLI (ECL REPL/Tool)
+# ============================================================================
+clap = { version = "4", features = ["derive"], optional = true }
+rustyline = { version = "14", optional = true }
+colored = { version = "2", optional = true }
+bincode = { version = "1", optional = true }
+
+# ============================================================================
 # UTILITIES
 # ============================================================================
 uuid = { version = "1", features = ["v4", "v7", "serde"] }
@@ -105,6 +124,7 @@ tikv-jemallocator = { version = "0.6", features = [
 default = []
 jemalloc = ["dep:tikv-jemallocator"]
 connect = []
+cli = ["dep:clap", "dep:rustyline", "dep:colored", "dep:bincode"]
 
 [build-dependencies]
 axum-connect-build = "0.3"

@@ -17,7 +17,6 @@ pub enum OpCode {
     // ═══════════════════════════════════════════════════════════════
     // Stack Manipulation
     // ═══════════════════════════════════════════════════════════════
-
     /// Lade einen konstanten Wert auf den Stack
     PushConst(Value),
 
@@ -36,7 +35,6 @@ pub enum OpCode {
     // ═══════════════════════════════════════════════════════════════
     // Arithmetik
     // ═══════════════════════════════════════════════════════════════
-
     /// Addition: a + b
     Add,
 
@@ -64,7 +62,6 @@ pub enum OpCode {
     // ═══════════════════════════════════════════════════════════════
     // Vergleiche
     // ═══════════════════════════════════════════════════════════════
-
     /// Gleichheit: a == b
     Eq,
 
@@ -86,7 +83,6 @@ pub enum OpCode {
     // ═══════════════════════════════════════════════════════════════
     // Logik
     // ═══════════════════════════════════════════════════════════════
-
     /// Logisches UND: a && b
     And,
 
@@ -99,7 +95,6 @@ pub enum OpCode {
     // ═══════════════════════════════════════════════════════════════
     // Control Flow
     // ═══════════════════════════════════════════════════════════════
-
     /// Unbedingter Sprung zu Adresse
     Jump(usize),
 
@@ -118,7 +113,6 @@ pub enum OpCode {
     // ═══════════════════════════════════════════════════════════════
     // TrustVector6D Operationen (Erynoa-spezifisch)
     // ═══════════════════════════════════════════════════════════════
-
     /// Extrahiere Dimension aus TrustVector: tv[dim]
     /// Stack: [TrustVector] → [Number]
     TrustDim(TrustDimIndex),
@@ -138,7 +132,6 @@ pub enum OpCode {
     // ═══════════════════════════════════════════════════════════════
     // Host Calls (Sandbox-Schnittstelle)
     // ═══════════════════════════════════════════════════════════════
-
     /// Lade Trust-Vektor für DID vom Host
     /// Stack: [DID] → [TrustVector]
     LoadTrust,
@@ -166,7 +159,6 @@ pub enum OpCode {
     // ═══════════════════════════════════════════════════════════════
     // Assertions & Guards
     // ═══════════════════════════════════════════════════════════════
-
     /// Assert: Wenn Top-of-Stack false, Execution abbrechen
     /// Stack: [Bool] → []
     Assert,
@@ -176,9 +168,71 @@ pub enum OpCode {
     Require,
 
     // ═══════════════════════════════════════════════════════════════
+    // Erweiterte Built-in Funktionen
+    // ═══════════════════════════════════════════════════════════════
+    /// Surprisal-Berechnung: S(p) = -log₂(p)
+    /// Stack: [Number(probability)] → [Number(surprisal)]
+    Surprisal,
+
+    /// Trust-Threshold Check: Prüfe ob alle Dimensionen >= threshold
+    /// Stack: [TrustVector, Number(threshold)] → [Bool]
+    TrustAboveThreshold,
+
+    /// Trust-Weighted Average: Gewichteter Durchschnitt mit Gewichten
+    /// Stack: [TrustVector, Array(6 weights)] → [Number]
+    TrustWeightedAvg,
+
+    /// Absolute Differenz zweier Trust-Vektoren (für Anomalie-Erkennung)
+    /// Stack: [TrustVector, TrustVector] → [Number]
+    TrustDistance,
+
+    /// String-Länge
+    /// Stack: [String] → [Number]
+    StrLen,
+
+    /// String-Vergleich (case-insensitive)
+    /// Stack: [String, String] → [Bool]
+    StrEqIgnoreCase,
+
+    /// String enthält Substring
+    /// Stack: [String, String] → [Bool]
+    StrContains,
+
+    /// Mathematische Funktionen
+    /// Stack: [Number] → [Number]
+    MathAbs,
+    MathSqrt,
+    MathFloor,
+    MathCeil,
+    MathRound,
+
+    /// Clamp: Begrenzt einen Wert auf [min, max]
+    /// Stack: [Number(value), Number(min), Number(max)] → [Number]
+    Clamp,
+
+    /// Lineare Interpolation: lerp(a, b, t) = a + t * (b - a)
+    /// Stack: [Number(a), Number(b), Number(t)] → [Number]
+    Lerp,
+
+    /// Zeitdifferenz in Sekunden
+    /// Stack: [Number(timestamp)] → [Number(seconds_since)]
+    TimeSince,
+
+    /// Prüfe ob Wert in Liste enthalten
+    /// Stack: [Value, Array] → [Bool]
+    Contains,
+
+    /// Array-Länge
+    /// Stack: [Array] → [Number]
+    ArrayLen,
+
+    /// Array-Element an Index
+    /// Stack: [Array, Number(index)] → [Value]
+    ArrayGet,
+
+    // ═══════════════════════════════════════════════════════════════
     // Programm-Ende
     // ═══════════════════════════════════════════════════════════════
-
     /// Programm beenden (Success)
     Halt,
 
@@ -235,6 +289,32 @@ impl OpCode {
             // Assertions
             OpCode::Assert => 3,
             OpCode::Require => 5,
+
+            // Erweiterte Built-ins
+            OpCode::Surprisal => 8,
+            OpCode::TrustAboveThreshold => 10,
+            OpCode::TrustWeightedAvg => 12,
+            OpCode::TrustDistance => 15,
+
+            // String-Operationen
+            OpCode::StrLen => 3,
+            OpCode::StrEqIgnoreCase => 5,
+            OpCode::StrContains => 8,
+
+            // Math-Operationen
+            OpCode::MathAbs => 2,
+            OpCode::MathSqrt => 5,
+            OpCode::MathFloor | OpCode::MathCeil | OpCode::MathRound => 3,
+            OpCode::Clamp => 4,
+            OpCode::Lerp => 5,
+
+            // Zeit
+            OpCode::TimeSince => 5,
+
+            // Array-Operationen
+            OpCode::Contains => 10,
+            OpCode::ArrayLen => 2,
+            OpCode::ArrayGet => 3,
 
             // Ende
             OpCode::Halt => 0,
@@ -358,13 +438,18 @@ impl std::fmt::Display for Value {
             Value::String(s) => write!(f, "\"{}\"", s),
             Value::DID(d) => write!(f, "did:{}", d),
             Value::TrustVector(tv) => {
-                write!(f, "[R:{:.2}, I:{:.2}, C:{:.2}, P:{:.2}, V:{:.2}, Ω:{:.2}]",
-                    tv[0], tv[1], tv[2], tv[3], tv[4], tv[5])
+                write!(
+                    f,
+                    "[R:{:.2}, I:{:.2}, C:{:.2}, P:{:.2}, V:{:.2}, Ω:{:.2}]",
+                    tv[0], tv[1], tv[2], tv[3], tv[4], tv[5]
+                )
             }
             Value::Array(a) => {
                 write!(f, "[")?;
                 for (i, v) in a.iter().enumerate() {
-                    if i > 0 { write!(f, ", ")?; }
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
                     write!(f, "{}", v)?;
                 }
                 write!(f, "]")
