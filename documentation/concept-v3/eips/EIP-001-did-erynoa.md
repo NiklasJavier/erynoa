@@ -17,6 +17,7 @@
 Diese Spezifikation definiert die `did:erynoa` DID-Methode für das Erynoa-Protokoll. Die Methode ermöglicht die Erstellung, Auflösung, Aktualisierung und Deaktivierung von dezentralen Identifikatoren für Menschen, Organisationen, autonome Agenten, physische Geräte und andere Entitäten innerhalb des Erynoa-Ökosystems.
 
 Die Methode ist W3C DID Core v1.0 konform und erweitert den Standard um:
+
 - 10 semantische Namespaces für verschiedene Entitätstypen
 - Controller-Chain für Haftungszuordnung bei autonomen Agenten
 - **Unified Identity (V0.4)**: Ein Master-Secret → alle Keys → eine Identität
@@ -99,13 +100,13 @@ Nutzer melden sich beim Erynoa-Peer mit **einem** Master-Secret an:
 
 ### Derivation Paths
 
-| Chain | Key-Typ | Derivation Path |
-|-------|---------|-----------------|
-| Erynoa (Primary) | Ed25519 | m/44'/9999'/0'/0/0 |
-| Ethereum/EVM | secp256k1 | m/44'/60'/0'/0/0 |
-| Solana | Ed25519 | m/44'/501'/0'/0' |
-| IOTA/MoveVM | Ed25519 | m/44'/4218'/0'/0/0 |
-| Sui | Ed25519 | m/44'/784'/0'/0/0 |
+| Chain            | Key-Typ   | Derivation Path    |
+| ---------------- | --------- | ------------------ |
+| Erynoa (Primary) | Ed25519   | m/44'/9999'/0'/0/0 |
+| Ethereum/EVM     | secp256k1 | m/44'/60'/0'/0/0   |
+| Solana           | Ed25519   | m/44'/501'/0'/0'   |
+| IOTA/MoveVM      | Ed25519   | m/44'/4218'/0'/0/0 |
+| Sui              | Ed25519   | m/44'/784'/0'/0/0  |
 
 ### DID-Document mit Multi-Chain Wallets
 
@@ -179,8 +180,8 @@ did:erynoa:<namespace>:<unique-identifier>
 
 ```abnf
 did-erynoa      = "did:erynoa:" namespace ":" unique-id
-namespace       = "self" / "guild" / "spirit" / "thing" / 
-                  "vessel" / "source" / "craft" / "vault" / 
+namespace       = "self" / "guild" / "spirit" / "thing" /
+                  "vessel" / "source" / "craft" / "vault" /
                   "pact" / "circle"
 unique-id       = 1*idchar
 idchar          = ALPHA / DIGIT / "-" / "_"
@@ -204,30 +205,32 @@ did:erynoa:circle:energy-trading-eu
 ### 2. Namespaces
 
 Die 10 Namespaces kategorisieren Entitäten semantisch. Der Namespace beeinflusst:
+
 - Den Human-Alignment-Faktor H(s)
 - Die erforderlichen Credentials
 - Die Governance-Stimmgewichte
 - Die Controller-Anforderungen
 - Die Recovery-Optionen
 
-| Namespace | Beschreibung | H(s) Basis | Controller erforderlich | Recovery |
-|-----------|--------------|------------|------------------------|----------|
-| `self` | Natürliche Person | 2.0* | Nein | Social/Institutional |
-| `guild` | Organisation (Unternehmen, Verein, DAO) | 1.0 | Nein | Multi-Sig |
-| `spirit` | Autonomer Agent (KI, Bot, Algorithmus) | 1.0 | **Ja** | Via Controller |
-| `thing` | Physisches Gerät (Sensor, Maschine) | 1.0 | **Ja** | Via Controller |
-| `vessel` | Fahrzeug (Auto, Drohne, Schiff) | 1.0 | **Ja** | Via Controller |
-| `source` | Energiequelle (Solar, Wind, Ladestation) | 1.0 | **Ja** | Via Controller |
-| `craft` | Service/Dienstleistung | 1.0 | Optional | Via Controller |
-| `vault` | Wallet/Vermögensspeicher | 1.0 | Optional | Multi-Sig |
-| `pact` | Vertrag/Vereinbarung | 1.0 | Nein | Via Parteien |
-| `circle` | Realm/Environment | 1.0 | Nein | Via Council |
+| Namespace | Beschreibung                             | H(s) Basis | Controller erforderlich | Recovery             |
+| --------- | ---------------------------------------- | ---------- | ----------------------- | -------------------- |
+| `self`    | Natürliche Person                        | 2.0\*      | Nein                    | Social/Institutional |
+| `guild`   | Organisation (Unternehmen, Verein, DAO)  | 1.0        | Nein                    | Multi-Sig            |
+| `spirit`  | Autonomer Agent (KI, Bot, Algorithmus)   | 1.0        | **Ja**                  | Via Controller       |
+| `thing`   | Physisches Gerät (Sensor, Maschine)      | 1.0        | **Ja**                  | Via Controller       |
+| `vessel`  | Fahrzeug (Auto, Drohne, Schiff)          | 1.0        | **Ja**                  | Via Controller       |
+| `source`  | Energiequelle (Solar, Wind, Ladestation) | 1.0        | **Ja**                  | Via Controller       |
+| `craft`   | Service/Dienstleistung                   | 1.0        | Optional                | Via Controller       |
+| `vault`   | Wallet/Vermögensspeicher                 | 1.0        | Optional                | Multi-Sig            |
+| `pact`    | Vertrag/Vereinbarung                     | 1.0        | Nein                    | Via Parteien         |
+| `circle`  | Realm/Environment                        | 1.0        | Nein                    | Via Council          |
 
-*H(s) = 2.0 nur mit gültigem HumanAuth-Credential
+\*H(s) = 2.0 nur mit gültigem HumanAuth-Credential
 
 #### 2.1 Namespace-Regeln
 
 **self:**
+
 - Reserviert für natürliche Personen
 - Kann HumanAuth-Credential erwerben für H(s) = 2.0
 - Keine Controller-Chain erforderlich
@@ -235,12 +238,14 @@ Die 10 Namespaces kategorisieren Entitäten semantisch. Der Namespace beeinfluss
 - Kann Sub-Identitäten aller Namespaces erstellen
 
 **guild:**
+
 - Für juristische Personen und Organisationen
 - Muss mindestens einen `self`-Controller haben (Vorstand, Geschäftsführer)
 - Kann Sub-Identitäten für Abteilungen, Projekte erstellen
 - Recovery via Multi-Sig der Controller
 
 **spirit:**
+
 - Für autonome Software-Agenten
 - **Muss** einen Controller haben (self oder guild)
 - Controller haftet für Handlungen des Agenten
@@ -248,26 +253,31 @@ Die 10 Namespaces kategorisieren Entitäten semantisch. Der Namespace beeinfluss
 - Recovery erfolgt via Controller
 
 **thing, vessel, source:**
+
 - Für physische Geräte und Maschinen
 - **Muss** einen Controller haben
 - Typischerweise von guild oder self kontrolliert
 - Recovery erfolgt via Controller
 
 **craft:**
+
 - Für Services und APIs
 - Controller optional, aber empfohlen
 
 **vault:**
+
 - Für Wallets und Vermögensspeicher
 - Controller optional, aber empfohlen für Enterprise
 - Multi-Sig für hohe Werte empfohlen
 
 **pact:**
+
 - Für Verträge zwischen Parteien
 - Automatisch erstellt bei AGREE-Phase
 - Controller sind die Vertragsparteien
 
 **circle:**
+
 - Für Realms und Environments
 - Controller ist der Realm-Council
 
@@ -306,12 +316,8 @@ Das DID-Dokument enthält die kryptographischen Materialien und Metadaten zur DI
       "status": "backup"
     }
   ],
-  "authentication": [
-    "did:erynoa:self:alice-2024-abc123#key-1"
-  ],
-  "assertionMethod": [
-    "did:erynoa:self:alice-2024-abc123#key-1"
-  ],
+  "authentication": ["did:erynoa:self:alice-2024-abc123#key-1"],
+  "assertionMethod": ["did:erynoa:self:alice-2024-abc123#key-1"],
   "keyAgreement": [
     {
       "id": "did:erynoa:self:alice-2024-abc123#key-agree-1",
@@ -427,33 +433,33 @@ Das DID-Dokument enthält die kryptographischen Materialien und Metadaten zur DI
 
 #### 3.2 Pflichtfelder
 
-| Feld | Beschreibung | Pflicht |
-|------|--------------|---------|
-| `@context` | JSON-LD Context | Ja |
-| `id` | Die DID | Ja |
-| `verificationMethod` | Min. 1 Schlüssel | Ja |
-| `authentication` | Authentifizierungs-Methode | Ja |
-| `erynoa.namespace` | Der Namespace | Ja |
-| `erynoa.created` | Erstellungszeitpunkt | Ja |
-| `erynoa.status` | active/deactivated | Ja |
-| `erynoa.anchors` | Min. 1 Chain-Anchor | Ja |
+| Feld                 | Beschreibung               | Pflicht |
+| -------------------- | -------------------------- | ------- |
+| `@context`           | JSON-LD Context            | Ja      |
+| `id`                 | Die DID                    | Ja      |
+| `verificationMethod` | Min. 1 Schlüssel           | Ja      |
+| `authentication`     | Authentifizierungs-Methode | Ja      |
+| `erynoa.namespace`   | Der Namespace              | Ja      |
+| `erynoa.created`     | Erstellungszeitpunkt       | Ja      |
+| `erynoa.status`      | active/deactivated         | Ja      |
+| `erynoa.anchors`     | Min. 1 Chain-Anchor        | Ja      |
 
 #### 3.3 Controller-Felder (für spirit, thing, vessel, source)
 
-| Feld | Beschreibung | Pflicht |
-|------|--------------|---------|
-| `controller` | Array von Controller-DIDs | Ja |
-| `erynoa.controllerChain` | Detaillierte Controller-Info | Ja |
-| `erynoa.controllerChain[].capabilities` | Berechtigungen | Ja |
+| Feld                                    | Beschreibung                 | Pflicht |
+| --------------------------------------- | ---------------------------- | ------- |
+| `controller`                            | Array von Controller-DIDs    | Ja      |
+| `erynoa.controllerChain`                | Detaillierte Controller-Info | Ja      |
+| `erynoa.controllerChain[].capabilities` | Berechtigungen               | Ja      |
 
 #### 3.4 Recovery-Felder mit Staked Guardianship (V0.3)
 
-| Feld | Beschreibung | Pflicht für self |
-|------|--------------|------------------|
-| `erynoa.recovery.method` | social/social-staked/institutional/multi-sig | Empfohlen |
-| `erynoa.recovery.threshold` | k von n Guardians | Ja, wenn method=social* |
-| `erynoa.recovery.guardians` | Array von Guardian-Objekten (erweitert) | Ja, wenn method=social* |
-| `erynoa.recovery.timelock` | Wartezeit für Recovery | Optional (default: 7d) |
+| Feld                        | Beschreibung                                 | Pflicht für self         |
+| --------------------------- | -------------------------------------------- | ------------------------ |
+| `erynoa.recovery.method`    | social/social-staked/institutional/multi-sig | Empfohlen                |
+| `erynoa.recovery.threshold` | k von n Guardians                            | Ja, wenn method=social\* |
+| `erynoa.recovery.guardians` | Array von Guardian-Objekten (erweitert)      | Ja, wenn method=social\* |
+| `erynoa.recovery.timelock`  | Wartezeit für Recovery                       | Optional (default: 7d)   |
 
 **Guardian-Objekt (V0.3 – erweitert):**
 
@@ -473,44 +479,44 @@ Das DID-Dokument enthält die kryptographischen Materialien und Metadaten zur DI
 }
 ```
 
-| Feld | Beschreibung | Pflicht |
-|------|--------------|---------|
-| `did` | DID des Guardians | Ja |
-| `role` | "personal" oder "institutional" | Ja |
-| `endorsement` | Staking-Details (nur für institutional) | Nein |
-| `endorsement.level` | KYC-Level (kyc-level-1/2/3, notarized) | Ja wenn endorsement |
-| `endorsement.stake` | Token- oder Reputations-Stake | Ja wenn endorsement |
-| `endorsement.liability` | none/partial/full | Ja wenn endorsement |
-| `endorsement.signature` | Guardian-Signatur über Endorsement | Ja wenn endorsement |
+| Feld                    | Beschreibung                            | Pflicht             |
+| ----------------------- | --------------------------------------- | ------------------- |
+| `did`                   | DID des Guardians                       | Ja                  |
+| `role`                  | "personal" oder "institutional"         | Ja                  |
+| `endorsement`           | Staking-Details (nur für institutional) | Nein                |
+| `endorsement.level`     | KYC-Level (kyc-level-1/2/3, notarized)  | Ja wenn endorsement |
+| `endorsement.stake`     | Token- oder Reputations-Stake           | Ja wenn endorsement |
+| `endorsement.liability` | none/partial/full                       | Ja wenn endorsement |
+| `endorsement.signature` | Guardian-Signatur über Endorsement      | Ja wenn endorsement |
 
 **trustDerived-Feld (V0.3):**
 
-| Feld | Beschreibung |
-|------|--------------|
-| `erynoa.trustDerived.sources` | Array der Trust-Quellen |
+| Feld                                     | Beschreibung                |
+| ---------------------------------------- | --------------------------- |
+| `erynoa.trustDerived.sources`            | Array der Trust-Quellen     |
 | `erynoa.trustDerived.sources[].guardian` | DID des bürgenden Guardians |
-| `erynoa.trustDerived.sources[].boost` | Trust-Boost (0-1) |
-| `erynoa.trustDerived.sources[].since` | Zeitpunkt des Stakings |
-| `erynoa.trustDerived.totalBoost` | Summe aller Boosts |
-| `erynoa.trustDerived.effectiveLevel` | Resultierendes Trust-Level |
+| `erynoa.trustDerived.sources[].boost`    | Trust-Boost (0-1)           |
+| `erynoa.trustDerived.sources[].since`    | Zeitpunkt des Stakings      |
+| `erynoa.trustDerived.totalBoost`         | Summe aller Boosts          |
+| `erynoa.trustDerived.effectiveLevel`     | Resultierendes Trust-Level  |
 
 #### 3.5 Privacy-Felder (V0.2)
 
-| Feld | Beschreibung | Default |
-|------|--------------|---------|
-| `erynoa.privacy.pairwiseEnabled` | Erlaubt Pairwise-DIDs | true |
-| `erynoa.privacy.selectiveDisclosure` | Erlaubt ZKP-basierte Disclosure | true |
+| Feld                                 | Beschreibung                    | Default |
+| ------------------------------------ | ------------------------------- | ------- |
+| `erynoa.privacy.pairwiseEnabled`     | Erlaubt Pairwise-DIDs           | true    |
+| `erynoa.privacy.selectiveDisclosure` | Erlaubt ZKP-basierte Disclosure | true    |
 
 #### 3.6 Optionale Felder
 
-| Feld | Beschreibung |
-|------|--------------|
-| `assertionMethod` | Für signierte Aussagen |
-| `keyAgreement` | Für verschlüsselte Kommunikation (DIDComm) |
-| `capabilityInvocation` | Für Capability-Delegierung |
-| `capabilityDelegation` | Für Delegierungs-Ketten |
-| `service` | Service-Endpoints mit Protokoll-Spezifikation |
-| `erynoa.trustInitial` | Initiale Trust-Werte |
+| Feld                   | Beschreibung                                  |
+| ---------------------- | --------------------------------------------- |
+| `assertionMethod`      | Für signierte Aussagen                        |
+| `keyAgreement`         | Für verschlüsselte Kommunikation (DIDComm)    |
+| `capabilityInvocation` | Für Capability-Delegierung                    |
+| `capabilityDelegation` | Für Delegierungs-Ketten                       |
+| `service`              | Service-Endpoints mit Protokoll-Spezifikation |
+| `erynoa.trustInitial`  | Initiale Trust-Werte                          |
 
 ### 4. CRUD-Operationen
 
@@ -623,6 +629,7 @@ Updates erfordern eine Signatur vom aktuellen Controller und verwenden **Optimis
 ```
 
 **Erlaubte Updates:**
+
 - Schlüssel hinzufügen/rotieren (Two-Step-Pattern empfohlen)
 - Service-Endpoints ändern
 - Controller hinzufügen/entfernen (mit Zustimmung)
@@ -630,6 +637,7 @@ Updates erfordern eine Signatur vom aktuellen Controller und verwenden **Optimis
 - Recovery-Guardians ändern (mit Timelock)
 
 **Verbotene Updates:**
+
 - Namespace ändern
 - DID-Identifier ändern
 - created-Timestamp ändern
@@ -724,26 +732,26 @@ Die Controller-Chain definiert die Haftungskette für autonome Entitäten.
 
 #### 5.2 Capabilities
 
-| Capability | Beschreibung |
-|------------|--------------|
-| `operate` | Kann im Namen der DID handeln |
-| `delegate` | Kann Sub-DIDs erstellen |
-| `revoke` | Kann die DID deaktivieren |
-| `update` | Kann das DID-Dokument ändern |
-| `transfer` | Kann Controller-Rechte übertragen |
-| `recover` | Kann Schlüssel-Recovery durchführen |
+| Capability | Beschreibung                        |
+| ---------- | ----------------------------------- |
+| `operate`  | Kann im Namen der DID handeln       |
+| `delegate` | Kann Sub-DIDs erstellen             |
+| `revoke`   | Kann die DID deaktivieren           |
+| `update`   | Kann das DID-Dokument ändern        |
+| `transfer` | Kann Controller-Rechte übertragen   |
+| `recover`  | Kann Schlüssel-Recovery durchführen |
 
 #### 5.3 Tiefe und H(s)-Faktor
 
 Die Tiefe der Controller-Chain beeinflusst den Human-Alignment-Faktor:
 
-| Tiefe | Beschreibung | H(s) |
-|-------|--------------|------|
-| 0 | DID ist selbst ein Mensch (self + HumanAuth) | 2.0 |
-| 1 | Direkter self-Controller | 1.5 |
-| 1 | Direkter guild-Controller mit self-Leitung | 1.3 |
-| 2 | guild → guild → self | 1.1 |
-| 3+ | Längere Ketten | 1.0 |
+| Tiefe | Beschreibung                                 | H(s) |
+| ----- | -------------------------------------------- | ---- |
+| 0     | DID ist selbst ein Mensch (self + HumanAuth) | 2.0  |
+| 1     | Direkter self-Controller                     | 1.5  |
+| 1     | Direkter guild-Controller mit self-Leitung   | 1.3  |
+| 2     | guild → guild → self                         | 1.1  |
+| 3+    | Längere Ketten                               | 1.0  |
 
 #### 5.4 Validierung
 
@@ -752,25 +760,25 @@ Bei jeder DID-Operation wird die Controller-Chain validiert:
 ```python
 def validate_controller_chain(did_document):
     namespace = did_document["erynoa"]["namespace"]
-    
+
     # Namespaces, die Controller benötigen
     requires_controller = ["spirit", "thing", "vessel", "source"]
-    
+
     if namespace in requires_controller:
         if "controller" not in did_document:
             raise ValidationError("Controller required for namespace: " + namespace)
-        
+
         for controller_did in did_document["controller"]:
             controller_doc = resolve(controller_did)
-            
+
             # Controller muss aktiv sein
             if controller_doc["erynoa"]["status"] != "active":
                 raise ValidationError("Controller is not active")
-            
+
             # Rekursiv prüfen bis zu self oder guild erreicht
             if controller_doc["erynoa"]["namespace"] not in ["self", "guild"]:
                 validate_controller_chain(controller_doc)
-    
+
     return True
 ```
 
@@ -790,11 +798,11 @@ DIDs werden auf mehreren Chains verankert für erhöhte Sicherheit.
 
 Für High-Value-DIDs können zusätzliche Anchors erstellt werden:
 
-| Chain | Use Case | Kosten | Priority |
-|-------|----------|--------|----------|
-| Ethereum L2 | DeFi-Integration, hoher Wert | ~0.10€ | 2 |
-| Solana | High-Speed Trading | ~0.001€ | 3 |
-| Polygon | Low-Cost, hohe Frequenz | ~0.01€ | 4 |
+| Chain       | Use Case                     | Kosten  | Priority |
+| ----------- | ---------------------------- | ------- | -------- |
+| Ethereum L2 | DeFi-Integration, hoher Wert | ~0.10€  | 2        |
+| Solana      | High-Speed Trading           | ~0.001€ | 3        |
+| Polygon     | Low-Cost, hohe Frequenz      | ~0.01€  | 4        |
 
 #### 6.3 Anchor-Struktur
 
@@ -915,11 +923,11 @@ client.update_did(confirmed_doc, &new_keypair).await?;
 
 #### 8.1 Öffentliche vs. Private DIDs
 
-| DID-Typ | Verwendung | Auf Ledger | Korrelierbar |
-|---------|------------|------------|--------------|
-| **Public DID** | Öffentliche Persona, Reputation | Ja | Ja |
-| **Pairwise DID** | Bilaterale Interaktionen | Optional | Nein |
-| **Blinded DID** | Anonyme Credentials | Nein | Nein |
+| DID-Typ          | Verwendung                      | Auf Ledger | Korrelierbar |
+| ---------------- | ------------------------------- | ---------- | ------------ |
+| **Public DID**   | Öffentliche Persona, Reputation | Ja         | Ja           |
+| **Pairwise DID** | Bilaterale Interaktionen        | Optional   | Nein         |
+| **Blinded DID**  | Anonyme Credentials             | Nein       | Nein         |
 
 #### 8.2 Pairwise-DIDs
 
@@ -938,6 +946,7 @@ Für Interaktionen, die keine öffentliche Reputation benötigen:
 ```
 
 **Eigenschaften:**
+
 - Wird nicht auf dem öffentlichen Ledger verankert
 - Nur für den spezifischen Peer verwendbar
 - Keine Korrelation mit öffentlicher DID möglich
@@ -982,9 +991,7 @@ Um Spam und Angriffe zu verhindern, verwenden Service-Endpoints DIDComm v2:
       "type": "DIDCommMessaging",
       "serviceEndpoint": {
         "uri": "https://agents.acme-trading.com/bot-7/didcomm",
-        "routingKeys": [
-          "did:erynoa:guild:acme-trading-gmbh#key-mediator"
-        ],
+        "routingKeys": ["did:erynoa:guild:acme-trading-gmbh#key-mediator"],
         "accept": ["didcomm/v2"]
       }
     }
@@ -1016,12 +1023,12 @@ Um Spam und Angriffe zu verhindern, verwenden Service-Endpoints DIDComm v2:
 
 #### 9.3 Kommunikations-Anforderungen
 
-| Anforderung | Beschreibung |
-|-------------|--------------|
-| `authentication` | "required" oder "optional" |
-| `encryption` | "required" (default) oder "optional" |
-| `protocol` | "didcomm/v2", "erynoa/v1", "https" |
-| `rateLimit` | Optional, gegen DDoS |
+| Anforderung      | Beschreibung                         |
+| ---------------- | ------------------------------------ |
+| `authentication` | "required" oder "optional"           |
+| `encryption`     | "required" (default) oder "optional" |
+| `protocol`       | "didcomm/v2", "erynoa/v1", "https"   |
+| `rateLimit`      | Optional, gegen DDoS                 |
 
 ### 10. Recovery (V0.2)
 
@@ -1102,12 +1109,12 @@ Neue DIDs starten mit neutralen Trust-Werten:
 ```json
 {
   "trustInitial": {
-    "R": 0.5,  // Reliability
-    "I": 0.5,  // Integrity
-    "C": 0.5,  // Competence
-    "P": 0.5,  // Predictability
-    "V": 0.5,  // Vigilance
-    "Ω": 0.5   // Omega-Alignment
+    "R": 0.5, // Reliability
+    "I": 0.5, // Integrity
+    "C": 0.5, // Competence
+    "P": 0.5, // Predictability
+    "V": 0.5, // Vigilance
+    "Ω": 0.5 // Omega-Alignment
   }
 }
 ```
@@ -1193,34 +1200,36 @@ client.complete_recovery(&did).await?;
 #### 12.3 SDK-Nutzung (TypeScript)
 
 ```typescript
-import { DID, DIDDocument, Namespace, RecoveryConfig } from '@erynoa/sdk';
+import { DID, DIDDocument, Namespace, RecoveryConfig } from "@erynoa/sdk";
 
 // DID erstellen mit Social Recovery
 const keypair = await Ed25519Keypair.generate();
-const did = new DID(Namespace.Self, 'alice-2024');
+const did = new DID(Namespace.Self, "alice-2024");
 
 const doc = new DIDDocument.Builder()
   .id(did)
   .verificationMethod(keypair.publicKey)
-  .recovery(RecoveryConfig.social({
-    threshold: 3,
-    guardians: [guardian1, guardian2, guardian3, guardian4, guardian5],
-    timelock: '7d'
-  }))
+  .recovery(
+    RecoveryConfig.social({
+      threshold: 3,
+      guardians: [guardian1, guardian2, guardian3, guardian4, guardian5],
+      timelock: "7d",
+    }),
+  )
   .build();
 
 const anchor = await client.createDID(doc, keypair);
 
 // Pairwise DID erstellen
 const pairwiseDid = await client.createPairwiseDID(did, peerDid, {
-  purpose: 'private-messaging'
+  purpose: "private-messaging",
 });
 
 // Two-Step Key Rotation
 const newKeypair = await Ed25519Keypair.generate();
 await client.addPendingKey(did, newKeypair.publicKey, keypair);
 // ... test new key ...
-await client.confirmKeyRotation(did, 'key-2', 'key-1', newKeypair);
+await client.confirmKeyRotation(did, "key-2", "key-1", newKeypair);
 ```
 
 #### 12.4 CLI-Nutzung
@@ -1263,6 +1272,7 @@ erynoa inspect did:erynoa:spirit:my-trading-bot --controller-chain
 ### TV-1: Minimale DID (self)
 
 **Input:**
+
 ```json
 {
   "namespace": "self",
@@ -1272,6 +1282,7 @@ erynoa inspect did:erynoa:spirit:my-trading-bot --controller-chain
 ```
 
 **Expected DID:**
+
 ```
 did:erynoa:self:alice-test-1
 ```
@@ -1279,6 +1290,7 @@ did:erynoa:self:alice-test-1
 ### TV-2: Agent mit Controller
 
 **Input:**
+
 ```json
 {
   "namespace": "spirit",
@@ -1289,6 +1301,7 @@ did:erynoa:self:alice-test-1
 ```
 
 **Expected Controller-Chain:**
+
 ```json
 {
   "controllerChain": [
@@ -1305,6 +1318,7 @@ did:erynoa:self:alice-test-1
 ### TV-3: Social Recovery (V0.2)
 
 **Input:**
+
 ```json
 {
   "did": "did:erynoa:self:alice-test-1",
@@ -1322,11 +1336,22 @@ did:erynoa:self:alice-test-1
 ### TV-4: Multi-Chain Conflict Resolution (V0.2)
 
 **Input:**
+
 ```json
 {
   "anchors": [
-    { "chain": "iota", "priority": 1, "timestamp": "2026-01-15T10:30:05Z", "versionId": "v2" },
-    { "chain": "ethereum", "priority": 2, "timestamp": "2026-01-15T10:30:03Z", "versionId": "v3" }
+    {
+      "chain": "iota",
+      "priority": 1,
+      "timestamp": "2026-01-15T10:30:05Z",
+      "versionId": "v2"
+    },
+    {
+      "chain": "ethereum",
+      "priority": 2,
+      "timestamp": "2026-01-15T10:30:03Z",
+      "versionId": "v3"
+    }
   ]
 }
 ```
@@ -1340,7 +1365,7 @@ did:erynoa:self:alice-test-1
 - [W3C DID Core Specification v1.0](https://www.w3.org/TR/did-core/)
 - [W3C DID Resolution](https://w3c-ccg.github.io/did-resolution/)
 - [DIDComm Messaging v2](https://identity.foundation/didcomm-messaging/spec/v2.0/)
-- [Erynoa Fachkonzept V6.1](../FACHKONZEPT.md)
+- [Erynoa Fachkonzept V6.2](../FACHKONZEPT.md)
 - [Erynoa Trust System](../FACHKONZEPT.md#teil-iii-das-vertrauenssystem)
 - [EIP-002: Trust Vector 6D](./EIP-002-trust-vector-6d.md)
 
@@ -1348,16 +1373,16 @@ did:erynoa:self:alice-test-1
 
 ## Changelog
 
-| Version | Datum | Änderung |
-|---------|-------|----------|
-| 0.1 | 2026-01-29 | Initial Draft |
-| 0.2 | 2026-01-29 | Social Recovery, Privacy (Pairwise DIDs), Service Endpoint Security (DIDComm), Concurrent Update Handling, Two-Step Key Rotation, Multi-Chain Conflict Resolution |
-| 0.3 | 2026-01-29 | **Staked Guardianship**: Institutional Guardians mit Token/Reputation-Staking, Trust-Vererbung (Cold-Start-Lösung), Slashing-Mechanik, trustDerived-Feld |
-| 0.4 | 2026-02-01 | **Unified Identity**: BIP39/Passkey Master-Secret, deterministische Multi-Chain Key-Derivation, multiChainWallets-Feld im DID-Document, Optional Recovery (initial deaktiviert), RightsTransfer-Event |
+| Version | Datum      | Änderung                                                                                                                                                                                              |
+| ------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | 2026-01-29 | Initial Draft                                                                                                                                                                                         |
+| 0.2     | 2026-01-29 | Social Recovery, Privacy (Pairwise DIDs), Service Endpoint Security (DIDComm), Concurrent Update Handling, Two-Step Key Rotation, Multi-Chain Conflict Resolution                                     |
+| 0.3     | 2026-01-29 | **Staked Guardianship**: Institutional Guardians mit Token/Reputation-Staking, Trust-Vererbung (Cold-Start-Lösung), Slashing-Mechanik, trustDerived-Feld                                              |
+| 0.4     | 2026-02-01 | **Unified Identity**: BIP39/Passkey Master-Secret, deterministische Multi-Chain Key-Derivation, multiChainWallets-Feld im DID-Document, Optional Recovery (initial deaktiviert), RightsTransfer-Event |
 
 ---
 
-*EIP-001: DID:erynoa Method Specification*
-*Version: 0.4*
-*Status: Draft*
-*Ebene: E1 (Fundament)*
+_EIP-001: DID:erynoa Method Specification_
+_Version: 0.4_
+_Status: Draft_
+_Ebene: E1 (Fundament)_

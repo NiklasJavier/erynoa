@@ -3,13 +3,13 @@
 > **EIP:** 005
 > **Titel:** Virtualized Environment Architecture (Root-Env / Virt-Env / Shards)
 > **Status:** Draft
-> **Version:** 0.4 (FACHKONZEPT V6.2 Sync)
+> **Version:** 0.5 (LOGIC V6.1 Sync)
 > **Typ:** Standard
 > **Ebene:** E2 (Emergenz) / E5 (Schutz) / E6 (Kybernetik)
 > **Erstellt:** Januar 2026
 > **Aktualisiert:** Februar 2026
 > **Abhängigkeiten:** EIP-001 (DID), EIP-002 (Trust), EIP-003 (Event-DAG), EIP-004 (Bayesian Trust)
-> **Axiom-Referenz:** A18-A22 (Realms), Q6-Q8 (Kategorientheorie), E4 (Shards), **L1-L3 (Logic Guards)**
+> **Axiom-Referenz:** A18-A22 (Realms), Q6-Q8 (Kategorientheorie), E4 (Shards), **L1-L3 (Logic Guards)**, **PR1-PR6 (Peer-Axiome)**
 
 ---
 
@@ -40,7 +40,7 @@ ROOT-ENV (𝒞_Root)
 
 **Kernkonzepte:**
 
-1. **Root-Environment (Root-Env)**: Die globale Kategorie 𝒞_Root mit den 112 Axiomen
+1. **Root-Environment (Root-Env)**: Die globale Kategorie 𝒞_Root mit den 126 Axiomen
 2. **Virtual Environments (Virt-Env)**: Sub-Kategorien im `circle`-Namespace (Axiom A18)
 3. **Shards**: Spezialisierte Sub-Kategorien innerhalb einer Virt-Env (Axiom E4)
 4. **CBDC-Shards**: Spezielle Shard-Typen mit Bridge-Funktoren zu externen Währungssystemen
@@ -1329,7 +1329,7 @@ Die **Root-Environment** ist die globale Kategorie 𝒞_Root – das unveränder
 
 | Komponente    | Beschreibung                     | Änderbar?                   |
 | ------------- | -------------------------------- | --------------------------- |
-| Core Axioms   | Die 112 Axiome des Fachkonzepts  | Nein (nur durch H4-Prozess) |
+| Core Axioms   | Die 126 Axiome des Fachkonzepts  | Nein (nur durch H4-Prozess) |
 | DID Standard  | EIP-001 Spezifikation            | Nein (Append-Only Updates)  |
 | Trust Vector  | EIP-002 Spezifikation            | Nein                        |
 | Event-DAG     | EIP-003 Spezifikation            | Nein                        |
@@ -1366,7 +1366,7 @@ pub struct RootEnvState {
     /// Genesis Block Hash (Identität der Root-Env)
     pub genesis_hash: [u8; 32],
 
-    /// Axiom-Set (112 Axiome)
+    /// Axiom-Set (126 Axiome)
     pub axioms: AxiomSet,
 
     /// EIP Registry
@@ -2204,7 +2204,7 @@ pub fn calculate_cross_env_trust(
 │                      AXIOM HIERARCHIE                                   │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
-│   EBENE 0: ROOT-AXIOME (112 Axiome)                                    │
+│   EBENE 0: ROOT-AXIOME (126 Axiome)                                    │
 │   ═══════════════════════════════════                                  │
 │   • Unveränderlich                                                      │
 │   • Gelten überall                                                      │
@@ -3167,7 +3167,7 @@ const result = await cbdcExchange.exchange({
 
 | Schicht      | Scope                   | Governance                   | Regeln                | Beispiel                       |
 | ------------ | ----------------------- | ---------------------------- | --------------------- | ------------------------------ |
-| **Root-Env** | Global                  | Unveränderlich (H4-Override) | 112 Axiome            | `did:erynoa:*:*`               |
+| **Root-Env** | Global                  | Unveränderlich (H4-Override) | 126 Axiome            | `did:erynoa:*:*`               |
 | **Virt-Env** | Souveräne Gruppe        | DAO / Multi-Sig              | Root + Local Axioms   | `did:erynoa:circle:eu-2026`    |
 | **Shard**    | Spezialisierter Bereich | Virt-Env-delegiert           | Parent + Shard-Axioms | `did:erynoa:circle:eu-finance` |
 
@@ -3264,8 +3264,9 @@ const result = await cbdcExchange.exchange({
 - [EIP-003: Event-DAG](./EIP-003-event-dag-finality.md)
 - [EIP-004: Bayesian Trust](./EIP-004-bayesian-trust-update.md)
 - [Erynoa Fachkonzept V6.2](../FACHKONZEPT.md)
-- [Erynoa LOGIC.md – Realm-Axiome A18-A22](../LOGIC.md)
-- [Erynoa LOGIC.md – Quanten-Axiome Q6-Q8](../LOGIC.md)
+- [Erynoa LOGIC.md V6.1 – Realm-Axiome A18-A22](../LOGIC.md)
+- [Erynoa LOGIC.md V6.1 – Quanten-Axiome Q6-Q8](../LOGIC.md)
+- [Erynoa LOGIC.md V6.1 – Peer-Axiome PR1-PR6](../LOGIC.md)
 - [BIS CBDC Principles](https://www.bis.org/publ/othp33.htm)
 - [Digital Euro Project](https://www.ecb.europa.eu/paym/digital_euro/)
 - [Category Theory (nLab)](https://ncatlab.org/nlab/show/category+theory)
@@ -3280,10 +3281,11 @@ const result = await cbdcExchange.exchange({
 | 0.2     | 2026-01-29 | **Shard-Integration**: Kategorientheorie (Axiome Q6-Q8), Realm-Axiome (A18-A22), ShardTypes, CBDC-Shards, Cross-Shard Funktoren, Trust-Weights pro Shard, Shard-Bootstrapping, CLI-Erweiterungen                                                                                               |
 | 0.3     | 2026-02-01 | **Refined**: Unified Identity (BIP39/Passkey → Multi-Chain Wallets), Trust-Matrix (6x6 Transformation statt skalarer Dämpfung), Dynamic Dampening (Kybernetik E6), Boundary Guards (Logic Guards L1-L3), HTLC Atomic Swaps, Optional Recovery (nachträglich aktivierbar), RightsTransfer-Event |
 | 0.4     | 2026-01-31 | **FACHKONZEPT V6.2 Sync**: Bootstrapping-Modi (Short/Long), Trust-Gewichtungs-Tabelle nach Shard-Typ, IoT-Gerät-Onboarding-Diagramm, 3-Schichten-Zusammenfassungs-Tabelle                                                                                                                      |
+| 0.5     | 2026-01-31 | **126 Axiome Sync**: Aktualisiert auf 126 Axiome (120 Basis + 6 Peer-Axiome PR1-PR6), Peer-Axiome Referenz in Header, LOGIC.md V6.1 Referenzen                                                                                                                                                 |
 
 ---
 
 _EIP-005: Virtualized Environment Architecture_
-_Version: 0.4 (FACHKONZEPT V6.2 Sync)_
+_Version: 0.5 (LOGIC V6.1 Sync)_
 _Status: Draft_
 _Ebene: E2 (Emergenz) / E5 (Schutz) / E6 (Kybernetik)_

@@ -1,7 +1,7 @@
 # Erynoa CLI Reference V6.0
 
 > Vollständige Befehlsreferenz für das Erynoa-Protokoll
-> Basierend auf Weltformel V6.0 mit 120 Axiomen über 8 Ebenen
+> Basierend auf Weltformel V6.0 mit 126 Axiomen über 8 Ebenen (inkl. 6 Peer-Axiome)
 > Humanistisch • Antifragil • Verhältnismäßig
 
 ---
@@ -47,6 +47,7 @@ human-auth         lod                amnesty            blueprint
 ## 1. Identitäts-Befehle
 
 ### `erynoa init`
+
 Erstellt eine neue Identität (DID) im System.
 
 ```bash
@@ -70,6 +71,7 @@ AXIOM-REFERENZ: A1-A5 (Identität), Q1 (Quanten-Zustand)
 ```
 
 ### `erynoa sub-identity`
+
 Verwaltet verschränkte Sub-Identitäten.
 
 ```bash
@@ -98,6 +100,7 @@ AXIOM-REFERENZ: A4 (Sub-Identitäten), Q3 (Verschränkung)
 ```
 
 ### `erynoa key`
+
 Verwaltet kryptographische Schlüssel.
 
 ```bash
@@ -126,6 +129,7 @@ AXIOM-REFERENZ: A3 (Schlüssel-Binding)
 ```
 
 ### `erynoa recover`
+
 Stellt Identität aus Backup wieder her.
 
 ```bash
@@ -142,6 +146,7 @@ BEISPIELE:
 ```
 
 ### `erynoa export`
+
 Exportiert Identitätsdaten.
 
 ```bash
@@ -162,6 +167,7 @@ BEISPIELE:
 ## 2. Daten-Befehle
 
 ### `erynoa add`
+
 Fügt Daten zum Staging-Bereich hinzu.
 
 ```bash
@@ -190,6 +196,7 @@ OUTPUT:
 ```
 
 ### `erynoa stage`
+
 Zeigt oder verwaltet den Staging-Bereich.
 
 ```bash
@@ -207,6 +214,7 @@ BEISPIELE:
 ```
 
 ### `erynoa unstage`
+
 Entfernt Daten aus dem Staging-Bereich.
 
 ```bash
@@ -218,6 +226,7 @@ BEISPIELE:
 ```
 
 ### `erynoa rm`
+
 Entfernt lokale Daten.
 
 ```bash
@@ -237,6 +246,7 @@ BEISPIELE:
 ## 3. Event-Befehle
 
 ### `erynoa commit`
+
 Erstellt ein neues Event aus staged Daten.
 
 ```bash
@@ -266,6 +276,7 @@ OUTPUT:
 ```
 
 ### `erynoa push`
+
 Propagiert lokale Events ins Netzwerk.
 
 ```bash
@@ -292,6 +303,7 @@ OUTPUT:
 ```
 
 ### `erynoa pull`
+
 Synchronisiert lokalen Zustand mit dem Netzwerk.
 
 ```bash
@@ -310,6 +322,7 @@ BEISPIELE:
 ```
 
 ### `erynoa status`
+
 Zeigt vollständigen Weltformel-Zustand.
 
 ```bash
@@ -339,6 +352,7 @@ OUTPUT:
 ```
 
 ### `erynoa log`
+
 Zeigt Event-Historie.
 
 ```bash
@@ -361,6 +375,7 @@ BEISPIELE:
 ```
 
 ### `erynoa diff`
+
 Zeigt Unterschiede zwischen Zuständen.
 
 ```bash
@@ -379,6 +394,7 @@ BEISPIELE:
 ```
 
 ### `erynoa show`
+
 Zeigt Details eines Events oder Datums.
 
 ```bash
@@ -400,6 +416,7 @@ BEISPIELE:
 ## 4. Transaktions-Befehle
 
 ### `erynoa seek`
+
 Sucht nach Transaktionspartnern.
 
 ```bash
@@ -427,6 +444,7 @@ OUTPUT:
 ```
 
 ### `erynoa propose`
+
 Erstellt ein Transaktionsangebot.
 
 ```bash
@@ -445,7 +463,7 @@ OPTIONS:
 BEISPIELE:
     erynoa propose did:erynoa:biz:supplier --amount "500 kWh" --price "125 EUR" --duration 30d --streaming
     erynoa propose did:erynoa:personal:freelancer --amount "40h" --price "4000 EUR" --escrow did:erynoa:service:escrow
-    
+
 AXIOM-REFERENZ: T1-T3 (SEEK, PROPOSE, AGREE), Q5 (Erfolgswahrscheinlichkeit)
 
 OUTPUT:
@@ -455,6 +473,7 @@ OUTPUT:
 ```
 
 ### `erynoa agree`
+
 Reagiert auf ein Transaktionsangebot.
 
 ```bash
@@ -472,11 +491,12 @@ BEISPIELE:
     erynoa agree proposal:sha3:abc --accept
     erynoa agree proposal:sha3:abc --reject --message "Preis zu hoch"
     erynoa agree proposal:sha3:abc --counter-price "110 EUR"
-    
+
 AXIOM-REFERENZ: T3 (AGREE)
 ```
 
 ### `erynoa stream`
+
 Verwaltet laufende Streaming-Transaktionen.
 
 ```bash
@@ -513,6 +533,7 @@ OUTPUT (status):
 ```
 
 ### `erynoa close`
+
 Schließt eine Transaktion ab.
 
 ```bash
@@ -531,6 +552,7 @@ AXIOM-REFERENZ: T5 (CLOSE), T6 (ATTEST)
 ```
 
 ### `erynoa abort`
+
 Bricht eine Transaktion ab.
 
 ```bash
@@ -549,6 +571,7 @@ AXIOM-REFERENZ: T7 (ABORT), A24 (Fair Settlement)
 ```
 
 ### `erynoa dispute`
+
 Eröffnet oder verwaltet einen Dispute.
 
 ```bash
@@ -580,6 +603,7 @@ AXIOM-REFERENZ: S9-S12 (Quality-Objectivity)
 ## 5. Shard-Befehle
 
 ### `erynoa shard`
+
 Verwaltet Shards (Kontext-Partitionen).
 
 ```bash
@@ -612,6 +636,7 @@ AXIOM-REFERENZ: A18-A22 (Realms), Q6 (Kategorien)
 ```
 
 ### `erynoa merge`
+
 Führt Cross-Shard-Transaktionen durch.
 
 ```bash
@@ -639,6 +664,7 @@ OUTPUT:
 ```
 
 ### `erynoa bridge`
+
 Verwaltet Realm-Brücken.
 
 ```bash
@@ -661,6 +687,7 @@ BEISPIELE:
 ## 6. Witness-Befehle
 
 ### `erynoa witness`
+
 Bezeugt ein Event als Wächter.
 
 ```bash
@@ -685,6 +712,7 @@ OUTPUT:
 ```
 
 ### `erynoa request-witness`
+
 Fordert Bezeugungen für ein Event an.
 
 ```bash
@@ -702,6 +730,7 @@ BEISPIELE:
 ```
 
 ### `erynoa attestations`
+
 Zeigt Attestationen für ein Event.
 
 ```bash
@@ -718,6 +747,7 @@ BEISPIELE:
 ```
 
 ### `erynoa verify`
+
 Verifiziert ein Event oder Datum.
 
 ```bash
@@ -746,6 +776,7 @@ OUTPUT:
 ## 7. Governance-Befehle
 
 ### `erynoa governance`
+
 Verwaltet Governance-Aktionen.
 
 ```bash
@@ -793,6 +824,7 @@ OUTPUT (vote):
 ```
 
 ### `erynoa vote`
+
 Kurzform für Abstimmung.
 
 ```bash
@@ -804,6 +836,7 @@ BEISPIELE:
 ```
 
 ### `erynoa veto`
+
 Kurzform für Veto.
 
 ```bash
@@ -814,6 +847,7 @@ BEISPIELE:
 ```
 
 ### `erynoa delegate`
+
 Delegiert Stimmrecht.
 
 ```bash
@@ -835,6 +869,7 @@ BEISPIELE:
 ## 8. Diagnose-Befehle
 
 ### `erynoa inspect`
+
 Inspiziert Objekte detailliert.
 
 ```bash
@@ -854,6 +889,7 @@ BEISPIELE:
 ```
 
 ### `erynoa blame`
+
 Ermittelt Herkunft von Daten.
 
 ```bash
@@ -869,6 +905,7 @@ BEISPIELE:
 ```
 
 ### `erynoa bisect`
+
 Binäre Suche nach problematischen Events.
 
 ```bash
@@ -889,6 +926,7 @@ BEISPIELE:
 ```
 
 ### `erynoa audit`
+
 Führt Sicherheits-Audit durch.
 
 ```bash
@@ -911,6 +949,7 @@ BEISPIELE:
 ## 9. Credential-Befehle
 
 ### `erynoa credential`
+
 Verwaltet Verifiable Credentials.
 
 ```bash
@@ -946,6 +985,7 @@ AXIOM-REFERENZ: C1-C4 (Credentials)
 ```
 
 ### `erynoa revoke`
+
 Widerruft ein Credential.
 
 ```bash
@@ -959,6 +999,7 @@ BEISPIELE:
 ```
 
 ### `erynoa present`
+
 Präsentiert ein Credential.
 
 ```bash
@@ -975,6 +1016,7 @@ BEISPIELE:
 ```
 
 ### `erynoa verify-credential`
+
 Verifiziert ein empfangenes Credential.
 
 ```bash
@@ -995,6 +1037,7 @@ BEISPIELE:
 ## 10. Asset-Befehle
 
 ### `erynoa mint`
+
 Erstellt ein neues AMO (Asset).
 
 ```bash
@@ -1015,6 +1058,7 @@ AXIOM-REFERENZ: O1-O5 (AMOs)
 ```
 
 ### `erynoa burn`
+
 Zerstört ein AMO.
 
 ```bash
@@ -1030,6 +1074,7 @@ BEISPIELE:
 ```
 
 ### `erynoa transfer`
+
 Transferiert ein Asset.
 
 ```bash
@@ -1046,6 +1091,7 @@ BEISPIELE:
 ```
 
 ### `erynoa balance`
+
 Zeigt Asset-Balancen.
 
 ```bash
@@ -1068,6 +1114,7 @@ BEISPIELE:
 ## 11. Konfigurations-Befehle
 
 ### `erynoa config`
+
 Verwaltet Konfiguration.
 
 ```bash
@@ -1097,6 +1144,7 @@ BEISPIELE:
 ```
 
 ### `erynoa profile`
+
 Verwaltet Profile (Konfigurationssets).
 
 ```bash
@@ -1117,6 +1165,7 @@ BEISPIELE:
 ```
 
 ### `erynoa alias`
+
 Verwaltet Befehlsaliase.
 
 ```bash
@@ -1138,6 +1187,7 @@ BEISPIELE:
 ## 12. Netzwerk-Befehle
 
 ### `erynoa remote`
+
 Verwaltet Realm-Verbindungen.
 
 ```bash
@@ -1157,6 +1207,7 @@ BEISPIELE:
 ```
 
 ### `erynoa sync`
+
 Synchronisiert mit allen Remotes.
 
 ```bash
@@ -1173,6 +1224,7 @@ BEISPIELE:
 ```
 
 ### `erynoa peers`
+
 Zeigt verbundene Peers.
 
 ```bash
@@ -1189,6 +1241,7 @@ BEISPIELE:
 ```
 
 ### `erynoa validators`
+
 Zeigt Validator-Informationen.
 
 ```bash
@@ -1260,6 +1313,7 @@ ERYNOA_NO_COLOR         Farbausgabe deaktivieren (1/0)
 ## Schnellstart-Beispiele
 
 ### Erste Schritte
+
 ```bash
 # Identität erstellen
 erynoa init --namespace personal --label "Max Mustermann"
@@ -1272,6 +1326,7 @@ erynoa status --brief
 ```
 
 ### Erste Transaktion
+
 ```bash
 # Partner suchen
 erynoa seek "freelance developer" --min-trust 0.6
@@ -1287,6 +1342,7 @@ erynoa close contract:sha3:... --rating 5
 ```
 
 ### Cross-Shard Transfer
+
 ```bash
 # Shards anzeigen
 erynoa shard list
@@ -1303,6 +1359,7 @@ erynoa merge --from gaming --to finance --amount "500 tokens"
 ## 13. Humanismus-Befehle (V6.0)
 
 ### human-auth – Human Authentication
+
 ```bash
 # Prüft ob DID ein verifizierter Mensch ist (H1)
 erynoa human-auth verify <did>
@@ -1319,6 +1376,7 @@ erynoa human-auth wot request --vouchers=3
 ```
 
 ### lod – Level of Detail
+
 ```bash
 # Berechnet empfohlenes Vertrauens-Level (H2)
 erynoa lod compute --value=5000
@@ -1336,6 +1394,7 @@ erynoa config set lod.min=standard
 ```
 
 ### amnesty – Vergebungs-System
+
 ```bash
 # Zeigt Amnestie-Status (H3)
 erynoa amnesty status
@@ -1354,6 +1413,7 @@ erynoa governance propose amnesty <did> --reason="..."
 ```
 
 ### blueprint – Semantische Verankerung
+
 ```bash
 # Prüft semantische Verankerung eines Blueprints (H4)
 erynoa blueprint validate <blueprint-id>
@@ -1374,7 +1434,7 @@ erynoa blueprint create --nld="./description.md" --spec="./spec.toml"
 
 ---
 
-*Erynoa CLI Reference V6.0*
-*Vollständige Befehlsreferenz basierend auf 120 Axiomen über 8 Ebenen*
-*Humanistisch • Antifragil • Verhältnismäßig*
-*"Das System existiert, um menschliches Gedeihen zu ermöglichen."*
+_Erynoa CLI Reference V6.0_
+_Vollständige Befehlsreferenz basierend auf 126 Axiomen über 8 Ebenen_
+_Humanistisch • Antifragil • Verhältnismäßig_
+_"Das System existiert, um menschliches Gedeihen zu ermöglichen."_

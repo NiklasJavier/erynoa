@@ -1,8 +1,8 @@
-# Erynoa Logik V6.0
+# Erynoa Logik V6.1
 
-> **Version:** 6.0 – Humanistische Weltformel-Logik
+> **Version:** 6.1 – Humanistische Weltformel-Logik mit Peer-Prozess-Axiomen
 > **Datum:** Januar 2026
-> **Status:** 120 Axiome über 8 Ebenen
+> **Status:** 126 Axiome über 8 Ebenen (inkl. 6 Peer-Axiome PR1-PR6)
 > **Paradigma:** Korrektheit → Intelligenz → Fairness → Leben → Transzendenz → Sinn
 
 ---
@@ -2113,15 +2113,15 @@
 ║                                                                                                                                           ║
 ║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
 ║                                                                                                                                           ║
-║   HAUPT-THEOREM: 120 AXIOME SIND INTERN KONSISTENT                                                                                      ║
+║   HAUPT-THEOREM: 126 AXIOME SIND INTERN KONSISTENT                                                                                      ║
 ║   ───────────────────────────────────────────────────                                                                                     ║
 ║                                                                                                                                           ║
-║   Aus Theorem 1-7 folgt:                                                                                                                 ║
+║   Aus Theorem 1-7 + Peer-Axiome folgt:                                                                                                  ║
 ║       ∀ axiom_pair (Aᵢ, Aⱼ) : ¬(Aᵢ ∧ Aⱼ → ⊥)                                                                                            ║
 ║                                                                                                                                           ║
 ║   "Keine zwei Axiome führen zu einem Widerspruch."                                                                                      ║
 ║                                                                                                                                           ║
-║   Die 120 Axiome bilden ein konsistentes formales System,                                                                               ║
+║   Die 126 Axiome (120 Basis + 6 Peer-Axiome) bilden ein konsistentes formales System,                                                                               ║
 ║   das KORREKTHEIT (E0), INTELLIGENZ (E1), HANDLUNG (E2), SUBSTANZ (E3),                                                                 ║
 ║   FAIRNESS (E4), LEBEN (E5), TRANSZENDENZ (E6) und SINN (E7) garantiert.                                                                ║
 ║                                                                                                                                           ║
@@ -2146,7 +2146,351 @@
 
 ---
 
-*Erynoa Logik Version 6.0 – Humanistische Weltformel-Logik.*
-*120 Axiome über 8 Ebenen: Fundament → Emergenz → Prozess → Objekt → Schutz → Kybernetik → Quanta → Humanismus.*
-*Korrektheit → Intelligenz → Fairness → Leben → Transzendenz → SINN.*
-*"Das System existiert, um menschliches Gedeihen zu ermöglichen. Nicht umgekehrt."*
+## XII. Ery Peer Prozess-Logik (Gateway & Composer)
+
+Der Ery Peer ist eine **automatisierte Zustandsmaschine**, die als Gateway und Composer fungiert. Diese Sektion formalisiert die logische Kette, wie ein Ery Peer Cross-Chain-Interaktionen verarbeitet.
+
+### Phase 1: Der Composer (Die Planungs-Logik)
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                                                                                                                           ║
+║   COMPOSER: ZUSTANDSÜBERFÜHRUNG VIA SOLVER                                                                                              ║
+║                                                                                                                                           ║
+║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
+║                                                                                                                                           ║
+║   LOGISCHES ZIEL:                                                                                                                        ║
+║   ───────────────                                                                                                                         ║
+║                                                                                                                                           ║
+║       Überführe Zustand Z₀ (User hat USDC auf Ethereum)                                                                                 ║
+║       in Zustand Z₁ (User hat Strom im EU-Shard),                                                                                       ║
+║       ohne dass der User die Zwischenschritte kennen muss.                                                                              ║
+║                                                                                                                                           ║
+║       Z₀ → Z₁  via  Saga(S₁, S₂, ..., Sₙ)                                                                                               ║
+║                                                                                                                                           ║
+║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
+║                                                                                                                                           ║
+║   1. INPUT (DER INTENT)                                                                                                                  ║
+║   ─────────────────────                                                                                                                   ║
+║                                                                                                                                           ║
+║       Der User sendet ein signiertes Paket:                                                                                             ║
+║                                                                                                                                           ║
+║       Intent = {                                                                                                                         ║
+║           goal:   "Kaufe 50 kWh im did:erynoa:circle:eu-energy",                                                                        ║
+║           budget: "Nutze maximal 100 USDC von 0xWallet... (Ethereum)",                                                                  ║
+║           auth:   Signature(master_key)  // EIP-001 kompatibel                                                                          ║
+║       }                                                                                                                                  ║
+║                                                                                                                                           ║
+║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
+║                                                                                                                                           ║
+║   2. AUFLÖSUNG DES ABHÄNGIGKEITSGRAPHEN                                                                                                 ║
+║   ─────────────────────────────────────────                                                                                               ║
+║                                                                                                                                           ║
+║       Der Peer analysiert die Anforderung und baut RÜCKWÄRTS einen Graphen auf:                                                         ║
+║                                                                                                                                           ║
+║       ┌─────────────────────────────────────────────────────────────────────────────┐                                                   ║
+║       │  DEPENDENCY GRAPH (rückwärts aufgelöst)                                     │                                                   ║
+║       ├─────────────────────────────────────────────────────────────────────────────┤                                                   ║
+║       │                                                                             │                                                   ║
+║       │   [GOAL: 50 kWh Strom im EU-Energy-Shard]                                   │                                                   ║
+║       │       ↑                                                                     │                                                   ║
+║       │       └── REQUIRES: EnergyToken                                             │                                                   ║
+║       │               ↑                                                             │                                                   ║
+║       │               └── REQUIRES: wEUR (Settlement-Währung des Shards)            │                                                   ║
+║       │                       ↑                                                     │                                                   ║
+║       │                       └── REQUIRES: wUSDC auf Erynoa                        │                                                   ║
+║       │                               ↑                                             │                                                   ║
+║       │                               └── REQUIRES: USDC auf Ethereum (verfügbar)   │                                                   ║
+║       │                                                                             │                                                   ║
+║       └─────────────────────────────────────────────────────────────────────────────┘                                                   ║
+║                                                                                                                                           ║
+║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
+║                                                                                                                                           ║
+║   3. ERGEBNIS: AUSFÜHRUNGSPLAN (SAGA)                                                                                                   ║
+║   ───────────────────────────────────                                                                                                     ║
+║                                                                                                                                           ║
+║       Saga = [                                                                                                                           ║
+║           S₁: { chain: "Ethereum",     action: "Lock USDC in Bridge-Contract" },                                                        ║
+║           S₂: { chain: "Erynoa Root",  action: "Mint wUSDC" },                                                                          ║
+║           S₃: { chain: "Erynoa DEX",   action: "Swap wUSDC → wEUR" },                                                                   ║
+║           S₄: { chain: "EU-Energy",    action: "Kaufe Strom" }                                                                          ║
+║       ]                                                                                                                                  ║
+║                                                                                                                                           ║
+║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
+║                                                                                                                                           ║
+║   4. SCHLÜSSEL-ABLEITUNG (JUST-IN-TIME)                                                                                                 ║
+║   ─────────────────────────────────────                                                                                                   ║
+║                                                                                                                                           ║
+║       Der Peer leitet LOKAL (im sicheren Speicher) die nötigen Signier-Schlüssel ab:                                                   ║
+║                                                                                                                                           ║
+║       master_secret ──┬──> derive(m/44'/60'/0'/0/0)  → secp256k1 (Ethereum)                                                             ║
+║                       ├──> derive(m/44'/9999'/0'/0/0) → Ed25519 (Erynoa Root)                                                           ║
+║                       └──> derive(m/44'/4218'/0'/0/0) → Ed25519 (IOTA/MoveVM)                                                           ║
+║                                                                                                                                           ║
+║       "Alle Schlüssel aus EINEM Master-Secret – keine externe Wallet nötig."                                                            ║
+║                                                                                                                                           ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+```
+
+### Phase 2: Das Gateway (Die Schutz-Logik)
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                                                                                                                           ║
+║   GATEWAY: SCHUTZ-LOGIK VOR EXEKUTION                                                                                                   ║
+║                                                                                                                                           ║
+║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
+║                                                                                                                                           ║
+║   Bevor der Peer den Saga-Plan ausführt, muss er für jeden Übergang                                                                     ║
+║   zwischen Systemen (Ethereum → Erynoa → Shard) als WÄCHTER fungieren.                                                                  ║
+║                                                                                                                                           ║
+║   Der Peer prüft ZWEI mathematische Bedingungen:                                                                                        ║
+║                                                                                                                                           ║
+║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
+║                                                                                                                                           ║
+║   BEDINGUNG 1: PRÄDIKATEN-LOGIK (BOUNDARY GUARDS)                                                                                       ║
+║   ─────────────────────────────────────────────────                                                                                       ║
+║                                                                                                                                           ║
+║   Jeder Raum (Shard/Virt-Env) hat eine EINTRITTSFUNKTION G(x) ∈ {true, false}.                                                          ║
+║   Der Peer lädt den ECL-Code des Ziel-Shards und SIMULIERT:                                                                             ║
+║                                                                                                                                           ║
+║       ┌───────────────────────────────────────────────────────────────────────────┐                                                     ║
+║       │  BOUNDARY GUARD EVALUATION für "EU-Energy-Shard"                          │                                                     ║
+║       ├───────────────────────────────────────────────────────────────────────────┤                                                     ║
+║       │                                                                           │                                                     ║
+║       │  INPUT:                                                                   │                                                     ║
+║       │      user_identity = did:erynoa:self:alice                                │                                                     ║
+║       │      user_trust    = W(alice) = (R=0.7, I=0.8, C=0.6, P=0.7, V=0.5, Ω=0.9)│                                                     ║
+║       │                                                                           │                                                     ║
+║       │  PRÜFUNGEN:                                                               │                                                     ║
+║       │      P₁: has_credential("Verified Human")?        → true                  │                                                     ║
+║       │      P₂: trust.reliability ≥ 0.6?                 → true (0.7 ≥ 0.6)      │                                                     ║
+║       │      P₃: ¬sanctions_list.contains(eth_address)?   → true                  │                                                     ║
+║       │      P₄: has_compliance("GDPR-equivalent")?       → true                  │                                                     ║
+║       │                                                                           │                                                     ║
+║       │  ERGEBNIS:                                                                │                                                     ║
+║       │      G(alice, EU-Energy) = P₁ ∧ P₂ ∧ P₃ ∧ P₄ = true                       │                                                     ║
+║       │                                                                           │                                                     ║
+║       │      → GATEWAY ÖFFNET SICH                                                │                                                     ║
+║       │                                                                           │                                                     ║
+║       └───────────────────────────────────────────────────────────────────────────┘                                                     ║
+║                                                                                                                                           ║
+║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
+║                                                                                                                                           ║
+║   BEDINGUNG 2: TRANSFORMATIONS-LOGIK (FUNKTOREN)                                                                                        ║
+║   ──────────────────────────────────────────────                                                                                          ║
+║                                                                                                                                           ║
+║   Wenn Werte (Geld/Daten) die Grenze überschreiten, müssen sie TRANSFORMIERT werden.                                                    ║
+║   Der Peer wendet die FUNKTOR-MATRIX an (Axiom Q7).                                                                                     ║
+║                                                                                                                                           ║
+║       SZENARIO: User kommt aus "Gaming-Kontext" in "Energie-Kontext".                                                                   ║
+║                                                                                                                                           ║
+║       LOGIK: Vertrauen ist NICHT universell.                                                                                            ║
+║              "Gaming-Skill" (Competence) ≠ "Energie-Kompetenz".                                                                         ║
+║                                                                                                                                           ║
+║       ┌─────────────────────────────────────────────────────────────────────────────────────────┐                                       ║
+║       │  TRUST-MATRIX-TRANSFORMATION: Gaming → Energy                                           │                                       ║
+║       ├─────────────────────────────────────────────────────────────────────────────────────────┤                                       ║
+║       │                                                                                         │                                       ║
+║       │      W_target = M × W_source                                                            │                                       ║
+║       │                                                                                         │                                       ║
+║       │      ┌     ┐   ┌                         ┐   ┌     ┐                                    │                                       ║
+║       │      │ R'  │   │ 0.8  0    0    0    0    0  │   │ R   │                                    │                                       ║
+║       │      │ I'  │   │ 0    0.9  0    0    0    0  │   │ I   │                                    │                                       ║
+║       │      │ C'  │ = │ 0    0    0.1  0    0    0  │ × │ C   │   ← Competence: 90% Verlust!       │                                       ║
+║       │      │ P'  │   │ 0    0    0    0.7  0    0  │   │ P   │                                    │                                       ║
+║       │      │ V'  │   │ 0    0    0    0    0.6  0  │   │ V   │                                    │                                       ║
+║       │      │ Ω'  │   │ 0    0    0    0    0    0.9│   │ Ω   │   ← Omega: 90% erhalten            │                                       ║
+║       │      └     ┘   └                         ┘   └     ┘                                    │                                       ║
+║       │                                                                                         │                                       ║
+║       │      EFFEKT:                                                                            │                                       ║
+║       │          Gaming-Skill (C=0.9) wird zu Energy-Skill (C'=0.09)                           │                                       ║
+║       │          Ehrlichkeit (I=0.8) bleibt erhalten (I'=0.72)                                 │                                       ║
+║       │                                                                                         │                                       ║
+║       │      WARUM? Es verhindert, dass jemand, der gut in Videospielen ist,                   │                                       ║
+║       │             automatisch als vertrauenswürdiger Stromhändler gilt.                      │                                       ║
+║       │                                                                                         │                                       ║
+║       └─────────────────────────────────────────────────────────────────────────────────────────┘                                       ║
+║                                                                                                                                           ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+```
+
+### Phase 3: Die Exekution (Die Transaktions-Logik)
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                                                                                                                           ║
+║   EXEKUTION: ATOMARE SAGA-AUSFÜHRUNG                                                                                                    ║
+║                                                                                                                                           ║
+║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
+║                                                                                                                                           ║
+║   Nachdem Planung und Prüfung erfolgreich waren, führt der Peer die Kette aus.                                                          ║
+║                                                                                                                                           ║
+║   1. ATOMARITÄT (SEQUENTIELLE BLOCKCHAIN-ÜBERWACHUNG)                                                                                   ║
+║   ───────────────────────────────────────────────────                                                                                     ║
+║                                                                                                                                           ║
+║       ┌─────────────────────────────────────────────────────────────────────────────────────────┐                                       ║
+║       │  SAGA EXECUTION FLOW                                                                    │                                       ║
+║       ├─────────────────────────────────────────────────────────────────────────────────────────┤                                       ║
+║       │                                                                                         │                                       ║
+║       │   [S₁] Ethereum: Lock USDC                                                              │                                       ║
+║       │       │                                                                                 │                                       ║
+║       │       ▼  WAIT for block confirmation (finality)                                         │                                       ║
+║       │       ✓                                                                                 │                                       ║
+║       │       │                                                                                 │                                       ║
+║       │   [S₂] Erynoa Root: Mint wUSDC (mit Lock-Proof)                                        │                                       ║
+║       │       │                                                                                 │                                       ║
+║       │       ▼  WAIT for DAG finality                                                          │                                       ║
+║       │       ✓                                                                                 │                                       ║
+║       │       │                                                                                 │                                       ║
+║       │   [S₃] Erynoa DEX: Swap wUSDC → wEUR                                                   │                                       ║
+║       │       │                                                                                 │                                       ║
+║       │       ▼  CHECK: Rate acceptable?                                                        │                                       ║
+║       │       ✓ / ✗                                                                             │                                       ║
+║       │       │                                                                                 │                                       ║
+║       │   [S₄] EU-Energy: Kaufe Strom                                                          │                                       ║
+║       │       │                                                                                 │                                       ║
+║       │       ▼  DONE                                                                           │                                       ║
+║       │       ✓                                                                                 │                                       ║
+║       │                                                                                         │                                       ║
+║       └─────────────────────────────────────────────────────────────────────────────────────────┘                                       ║
+║                                                                                                                                           ║
+║   2. ROLLBACK-SICHERHEIT (KOMPENSATIONS-LOGIK)                                                                                          ║
+║   ────────────────────────────────────────────                                                                                            ║
+║                                                                                                                                           ║
+║       Sollte ein Schritt Sᵢ fehlschlagen, nutzt der Peer Kompensations-Transaktionen:                                                   ║
+║                                                                                                                                           ║
+║       IF S₃ fails (z.B. Swap-Rate zu schlecht):                                                                                         ║
+║           EXECUTE compensate(S₂)  → Burn wUSDC, emit unlock-proof                                                                       ║
+║           EXECUTE compensate(S₁)  → Unlock USDC auf Ethereum                                                                            ║
+║           RETURN error("Swap rate exceeded slippage tolerance")                                                                         ║
+║                                                                                                                                           ║
+║       FORMAL (Saga-Pattern):                                                                                                            ║
+║           ∀ Sᵢ ∈ Saga : ∃ Cᵢ (Compensate) mit Cᵢ(Sᵢ(state)) = state                                                                    ║
+║                                                                                                                                           ║
+║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
+║                                                                                                                                           ║
+║   3. HTLC-BASIERTE CROSS-BRIDGE ATOMARITÄT                                                                                              ║
+║   ────────────────────────────────────────────                                                                                            ║
+║                                                                                                                                           ║
+║       Für Cross-Chain-Transfers verwendet der Peer Hash-Time-Locked-Contracts:                                                          ║
+║                                                                                                                                           ║
+║       PHASE 1: LOCK (Source Chain)                                                                                                      ║
+║           lock_proof = lock_asset(bridge_src, user, amount, hash(secret), timeout)                                                      ║
+║                                                                                                                                           ║
+║       PHASE 2: MINT/UNLOCK (Target Chain)                                                                                               ║
+║           mint_result = mint_asset(bridge_tgt, user, amount_converted, lock_proof)                                                      ║
+║                                                                                                                                           ║
+║       PHASE 3: COMMIT oder ROLLBACK                                                                                                     ║
+║           IF mint_result.success:                                                                                                       ║
+║               commit_burn(bridge_src, lock_proof.id)  → Assets permanent verbrannt                                                      ║
+║           ELSE:                                                                                                                          ║
+║               rollback_lock(bridge_src, lock_proof.id)  → Assets zurück an User                                                         ║
+║                                                                                                                                           ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+```
+
+### Zusammenfassung: Die Drei Rollen des Ery Peers
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                                                                                                                           ║
+║   DER ERY PEER ALS DREIFACHE INSTANZ                                                                                                    ║
+║                                                                                                                                           ║
+║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
+║                                                                                                                                           ║
+║   1. COMPILER (Composer)                                                                                                                ║
+║   ──────────────────────                                                                                                                  ║
+║                                                                                                                                           ║
+║       Übersetzt abstrakte Wünsche in Maschinenbefehle:                                                                                  ║
+║                                                                                                                                           ║
+║       "Ich will Strom"  →  [Lock(0x...), Mint(wUSDC), Swap(DEX), Buy(Energy)]                                                           ║
+║                                                                                                                                           ║
+║       INPUT:   Intent (Ziel + Budget + Autorisierung)                                                                                   ║
+║       OUTPUT:  Saga (Sequenz atomarer Transaktionen)                                                                                    ║
+║                                                                                                                                           ║
+║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
+║                                                                                                                                           ║
+║   2. JURIST (Gateway)                                                                                                                   ║
+║   ───────────────────                                                                                                                     ║
+║                                                                                                                                           ║
+║       Prüft, ob die Gesetze des Zielortes (ECL-Guards) den Eintritt erlauben:                                                           ║
+║                                                                                                                                           ║
+║       G(user, target) = ∧ᵢ Predicateᵢ(user.identity, user.trust, target.rules)                                                          ║
+║                                                                                                                                           ║
+║       INPUT:   User-DID + Trust-Vektor + Ziel-Shard-Regeln                                                                              ║
+║       OUTPUT:  {ALLOW, DENY} mit Begründung                                                                                             ║
+║                                                                                                                                           ║
+║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
+║                                                                                                                                           ║
+║   3. MATHEMATIKER (Funktor)                                                                                                             ║
+║   ─────────────────────────                                                                                                               ║
+║                                                                                                                                           ║
+║       Rechnet Vertrauenswerte korrekt um (Matrizen), damit System-Integrität gewahrt bleibt:                                            ║
+║                                                                                                                                           ║
+║       W_target = M_functor × W_source                                                                                                   ║
+║                                                                                                                                           ║
+║       INPUT:   Trust-Vektor + Transformations-Matrix des Funktors                                                                       ║
+║       OUTPUT:  Kontextuell angepasster Trust-Vektor                                                                                     ║
+║                                                                                                                                           ║
+║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
+║                                                                                                                                           ║
+║   RESULTAT: DETERMINISTISCH UND SICHER                                                                                                  ║
+║   ────────────────────────────────────────                                                                                                ║
+║                                                                                                                                           ║
+║       ∀ Intent I, ∀ User U:                                                                                                             ║
+║           process(I, U) = {                                                                                                             ║
+║               saga    := compose(I),           // Compiler                                                                              ║
+║               allowed := ∀ sᵢ ∈ saga : guard(U, sᵢ.target),   // Jurist                                                                 ║
+║               trust'  := transform(U.trust, saga),            // Mathematiker                                                           ║
+║               result  := IF allowed THEN execute(saga) ELSE DENY                                                                        ║
+║           }                                                                                                                             ║
+║                                                                                                                                           ║
+║       "Das System ist DETERMINISTISCH (gleiche Eingabe → gleiches Ergebnis)                                                             ║
+║        und SICHER (keine unautorisierten Übergänge möglich)."                                                                           ║
+║                                                                                                                                           ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+```
+
+### Formale Axiome für Ery Peer Prozess-Logik
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                                                                                                                           ║
+║   PEER-AXIOME (Erweiterung zu Ebene 3: Prozess-Logik)                                                                                   ║
+║                                                                                                                                           ║
+║   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════     ║
+║                                                                                                                                           ║
+║   AXIOM PR1 (INTENT-AUFLÖSUNG):                                                                                                         ║
+║       ∀ intent I : ∃! saga S = compose(I) mit |S| ≥ 1                                                                                   ║
+║       "Jeder gültige Intent wird zu genau einer Saga aufgelöst."                                                                        ║
+║                                                                                                                                           ║
+║   AXIOM PR2 (SAGA-ATOMARITÄT):                                                                                                          ║
+║       ∀ saga S = [s₁, ..., sₙ] : (∀ i : success(sᵢ)) ∨ (∀ i : compensated(sᵢ))                                                         ║
+║       "Eine Saga ist entweder vollständig erfolgreich oder vollständig kompensiert."                                                    ║
+║                                                                                                                                           ║
+║   AXIOM PR3 (GATEWAY-VOLLSTÄNDIGKEIT):                                                                                                  ║
+║       ∀ transition (src → tgt) : guard(user, tgt) muss evaluiert werden                                                                 ║
+║       "Kein Übergang ohne Gateway-Prüfung."                                                                                             ║
+║                                                                                                                                           ║
+║   AXIOM PR4 (FUNKTOR-KORREKTHEIT):                                                                                                      ║
+║       ∀ functor F : 𝒞₁ → 𝒞₂ : F(id_A) = id_F(A) ∧ F(g ∘ f) = F(g) ∘ F(f)                                                                ║
+║       "Funktoren erhalten Identität und Komposition (Axiom Q7)."                                                                        ║
+║                                                                                                                                           ║
+║   AXIOM PR5 (SCHLÜSSEL-ISOLATION):                                                                                                      ║
+║       ∀ key k derived from master : k existiert nur im lokalen Speicher des Peers                                                       ║
+║       "Abgeleitete Schlüssel verlassen niemals den sicheren Speicher."                                                                  ║
+║                                                                                                                                           ║
+║   AXIOM PR6 (TRUST-DÄMPFUNG):                                                                                                           ║
+║       ∀ cross-boundary transfer : W_target ≤ M × W_source mit ‖M‖ ≤ 1                                                                   ║
+║       "Trust kann bei Grenzüberschreitung nur sinken oder gleich bleiben, nie steigen."                                                 ║
+║                                                                                                                                           ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+```
+
+---
+
+_Erynoa Logik Version 6.1 – Humanistische Weltformel-Logik mit Peer-Prozess-Axiomen._
+_126 Axiome über 8 Ebenen: Fundament → Emergenz → Prozess → Objekt → Schutz → Kybernetik → Quanta → Humanismus + 6 Peer-Axiome (PR1-PR6)._
+_Korrektheit → Intelligenz → Fairness → Leben → Transzendenz → SINN._
+_"Das System existiert, um menschliches Gedeihen zu ermöglichen. Nicht umgekehrt."_

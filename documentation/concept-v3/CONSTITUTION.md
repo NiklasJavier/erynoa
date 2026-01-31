@@ -23,6 +23,7 @@
 ```
 
 Mit V5.2 haben wir ein **unzerstörbares** System geschaffen:
+
 - Antifragil gegen technische Angriffe
 - Robust gegen ökonomische Manipulation
 - Resilient gegen Hardware-Kompromittierung
@@ -73,6 +74,7 @@ Die Weltformel optimiert System-Intelligenz:
 ```
 
 **Problem:** Menschen sind:
+
 - Emotional (inkonsistente Entscheidungen)
 - Langsam (Millisekunden vs. Mikrosekunden)
 - Fehlbar (Trust-Verlust durch Irrtum)
@@ -136,10 +138,10 @@ Die Weltformel optimiert System-Intelligenz:
 pub struct HumanAlignmentFunctor {
     /// Multiplikator für Human-DIDs
     human_multiplier: f64,
-    
+
     /// Multiplikator für Human-Controlled DIDs
     controlled_multiplier: f64,
-    
+
     /// Basis-Multiplikator
     base_multiplier: f64,
 }
@@ -165,7 +167,7 @@ impl HumanAlignmentFunctor {
             self.base_multiplier
         }
     }
-    
+
     /// Prüft ob Agent ein Mensch ist (via HumanAuth Credential)
     fn is_human(&self, agent: &AgentState) -> bool {
         agent.credentials.iter().any(|c| {
@@ -174,7 +176,7 @@ impl HumanAlignmentFunctor {
             c.issuer_trust >= 0.8
         })
     }
-    
+
     /// Prüft ob Agent von einem Menschen kontrolliert wird
     fn has_human_controller(&self, agent: &AgentState) -> bool {
         if let Some(controller) = &agent.controller_chain {
@@ -191,16 +193,16 @@ impl HumanAlignmentFunctor {
 pub struct HumanAuthCredential {
     /// Credential ID
     pub id: CredentialId,
-    
+
     /// Verifizierungsmethode
     pub verification_method: HumanVerificationMethod,
-    
+
     /// Issuer (z.B. Regierung, Bank, biometrischer Provider)
     pub issuer: DID,
-    
+
     /// Gültigkeitsdauer
     pub valid_until: Timestamp,
-    
+
     /// KEIN personenbezogenes Datum gespeichert!
     /// Nur: "Ja, diese DID gehört einem echten Menschen"
     pub proof: HumanProof,
@@ -210,13 +212,13 @@ pub struct HumanAuthCredential {
 pub enum HumanVerificationMethod {
     /// Staatliche ID (eID, Reisepass)
     GovernmentID { country: String },
-    
+
     /// Biometrische Verifizierung
     Biometric { provider: String },
-    
+
     /// Video-Ident
     VideoIdent { provider: String },
-    
+
     /// Web of Trust (N Menschen bürgen)
     HumanWoT { vouchers: Vec<DID>, threshold: u32 },
 }
@@ -226,7 +228,7 @@ pub enum HumanVerificationMethod {
 pub struct HumanProof {
     /// ZK-Proof
     pub proof: Vec<u8>,
-    
+
     /// Öffentliche Eingabe: nur "is_human: true"
     pub public_input: bool,
 }
@@ -239,7 +241,7 @@ pub struct HumanProof {
 pub struct HumanInteractionQuota {
     /// Minimaler Anteil an Human-Interaktionen für Reputation-Wachstum
     min_human_interaction_ratio: f64,
-    
+
     /// Zeitfenster für Messung
     measurement_window: Duration,
 }
@@ -252,18 +254,18 @@ impl HumanInteractionQuota {
             measurement_window: Duration::days(30),
         }
     }
-    
+
     /// Prüft ob Agent die Quote erfüllt
     pub fn check(&self, agent: &AgentState) -> QuotaResult {
         let recent_interactions = agent.get_interactions_in_window(self.measurement_window);
-        
+
         let total = recent_interactions.len() as f64;
         let human_count = recent_interactions.iter()
             .filter(|i| i.counterparty_is_human)
             .count() as f64;
-        
+
         let ratio = if total > 0.0 { human_count / total } else { 0.0 };
-        
+
         QuotaResult {
             current_ratio: ratio,
             required_ratio: self.min_human_interaction_ratio,
@@ -272,7 +274,7 @@ impl HumanInteractionQuota {
             total_interactions: total as u64,
         }
     }
-    
+
     /// Berechnet Reputation-Penalty bei Unterschreitung
     pub fn compute_penalty(&self, result: &QuotaResult) -> f64 {
         if result.meets_quota {
@@ -353,19 +355,19 @@ pub enum TrustLoD {
     /// Minimal: Einfache Signatur, kein Witnessing
     /// Für: Mikrotransaktionen < 1€
     Minimal,
-    
+
     /// Basic: Signatur + bekannter Partner
     /// Für: Kleine Transaktionen 1-10€
     Basic,
-    
+
     /// Standard: Quanten-Trust + 1 Witness
     /// Für: Normale Transaktionen 10-1000€
     Standard,
-    
+
     /// Enhanced: Volle Quanten-Berechnung + 3 Witnesses
     /// Für: Größere Transaktionen 1000-10.000€
     Enhanced,
-    
+
     /// Maximum: Alles + ZK-Proofs + Hardware-Diversität
     /// Für: Kritische Transaktionen > 10.000€
     Maximum,
@@ -375,10 +377,10 @@ pub enum TrustLoD {
 pub struct ProportionalityEngine {
     /// Kosten-Faktor α (max Anteil am Transaktionswert)
     max_cost_ratio: f64,
-    
+
     /// Geschätzte Kosten pro LoD-Level (in €-Äquivalent)
     lod_costs: HashMap<TrustLoD, f64>,
-    
+
     /// Wert-Schwellenwerte
     thresholds: LoDThresholds,
 }
@@ -402,11 +404,11 @@ impl ProportionalityEngine {
             v if v < self.thresholds.enhanced_max => TrustLoD::Enhanced,
             _ => TrustLoD::Maximum,
         };
-        
+
         // 2. Prüfe Kosten-Verhältnismäßigkeit
         let cost = self.lod_costs.get(&value_based).unwrap_or(&0.0);
         let max_allowed_cost = transaction_value * self.max_cost_ratio;
-        
+
         // 3. Downgrade wenn zu teuer
         if *cost > max_allowed_cost {
             self.downgrade_to_affordable(transaction_value)
@@ -414,10 +416,10 @@ impl ProportionalityEngine {
             value_based
         }
     }
-    
+
     fn downgrade_to_affordable(&self, transaction_value: f64) -> TrustLoD {
         let max_cost = transaction_value * self.max_cost_ratio;
-        
+
         // Finde höchstes Level, das sich "lohnt"
         for lod in [TrustLoD::Enhanced, TrustLoD::Standard, TrustLoD::Basic, TrustLoD::Minimal] {
             if let Some(cost) = self.lod_costs.get(&lod) {
@@ -426,28 +428,28 @@ impl ProportionalityEngine {
                 }
             }
         }
-        
+
         TrustLoD::Minimal
     }
-    
+
     /// Berechnet den "Green Trust Score" (Effizienz)
     pub fn compute_green_score(&self, agent: &AgentState) -> GreenTrustScore {
         let transactions = agent.get_recent_transactions(Duration::days(30));
-        
+
         let mut total_value = 0.0;
         let mut total_cost = 0.0;
-        
+
         for tx in &transactions {
             total_value += tx.value;
             total_cost += tx.verification_cost;
         }
-        
+
         let efficiency = if total_cost > 0.0 {
             total_value / total_cost
         } else {
             f64::INFINITY
         };
-        
+
         GreenTrustScore {
             efficiency,
             total_value_created: total_value,
@@ -455,7 +457,7 @@ impl ProportionalityEngine {
             rating: self.efficiency_to_rating(efficiency),
         }
     }
-    
+
     fn efficiency_to_rating(&self, efficiency: f64) -> GreenRating {
         match efficiency {
             e if e > 100.0 => GreenRating::Excellent,
@@ -586,10 +588,10 @@ pub enum GreenRating {
 pub struct TemporalForgiveness {
     /// Vergessens-Konstante für negative Events (schneller)
     negative_decay: f64,
-    
+
     /// Vergessens-Konstante für positive Events (langsamer)
     positive_decay: f64,
-    
+
     /// Minimales Gewicht (nie ganz vergessen)
     min_weight: f64,
 }
@@ -608,28 +610,28 @@ impl TemporalForgiveness {
     /// Berechnet das zeitgewichtete Gewicht eines Events
     pub fn compute_weight(&self, event: &Event, now: Timestamp) -> f64 {
         let age_years = (now - event.timestamp).as_secs_f64() / (365.25 * 24.0 * 3600.0);
-        
+
         let decay_rate = if event.impact < 0.0 {
             self.negative_decay
         } else {
             self.positive_decay
         };
-        
+
         let weight = (-decay_rate * age_years).exp();
         weight.max(self.min_weight)
     }
-    
+
     /// Berechnet den zeitgewichteten Trust-Score
     pub fn compute_temporal_trust(&self, history: &[Event], now: Timestamp) -> f64 {
         let mut weighted_sum = 0.0;
         let mut weight_sum = 0.0;
-        
+
         for event in history {
             let weight = self.compute_weight(event, now);
             weighted_sum += event.impact * weight;
             weight_sum += weight;
         }
-        
+
         if weight_sum > 0.0 {
             weighted_sum / weight_sum
         } else {
@@ -648,20 +650,20 @@ pub struct AmnestySystem {
 pub struct AmnestyToken {
     /// Betroffene DID
     pub did: DID,
-    
+
     /// Art der Amnestie
     pub amnesty_type: AmnestyType,
-    
+
     /// Ausstellende Autorität
     pub issuer: AmnestyIssuer,
-    
+
     /// Begründung
     pub reason: String,
-    
+
     /// Gültigkeitszeitraum
     pub effective_from: Timestamp,
     pub effective_until: Option<Timestamp>,
-    
+
     /// Signaturen (Governance Multi-Sig)
     pub signatures: Vec<GovernanceSignature>,
 }
@@ -670,13 +672,13 @@ pub struct AmnestyToken {
 pub enum AmnestyType {
     /// Vollständiger Reset (alle negativen Events auf 0)
     FullReset,
-    
+
     /// Partieller Reset (nur bestimmte Events)
     PartialReset { event_ids: Vec<EventId> },
-    
+
     /// Gewichts-Override (Events zählen weniger)
     WeightOverride { factor: f64 },
-    
+
     /// "Fresh Start" (neue DID mit Trust-Transfer)
     FreshStart { new_did: DID, transfer_positive_only: bool },
 }
@@ -685,10 +687,10 @@ pub enum AmnestyType {
 pub enum AmnestyIssuer {
     /// Governance-Abstimmung
     Governance { proposal_id: ProposalId, vote_result: VoteResult },
-    
+
     /// Gerichtliche Anordnung (externe Jurisdiktion)
     Court { jurisdiction: String, case_reference: String },
-    
+
     /// Automatisch (nach X Jahren ohne Vorfall)
     Automatic { years_clean: u32 },
 }
@@ -697,7 +699,7 @@ impl AmnestySystem {
     /// Prüft ob Agent Anspruch auf automatische Amnestie hat
     pub fn check_automatic_amnesty(&self, agent: &AgentState) -> Option<AmnestyToken> {
         let years_since_last_negative = self.years_since_last_negative_event(agent);
-        
+
         // Nach 7 Jahren ohne negativen Vorfall: automatische Amnestie
         if years_since_last_negative >= 7.0 {
             Some(AmnestyToken {
@@ -713,12 +715,12 @@ impl AmnestySystem {
             None
         }
     }
-    
+
     /// Wendet Amnestie-Token an
     pub fn apply_amnesty(&self, token: &AmnestyToken, trust_engine: &mut TrustEngine) -> Result<(), AmnestyError> {
         // 1. Verifiziere Token
         self.verify_token(token)?;
-        
+
         // 2. Wende Amnestie an
         match &token.amnesty_type {
             AmnestyType::FullReset => {
@@ -736,10 +738,10 @@ impl AmnestySystem {
                 trust_engine.fresh_start(&token.did, new_did, *transfer_positive_only)?;
             }
         }
-        
+
         // 3. Protokolliere (Amnestie ist öffentlich, nicht die Gründe)
         self.log_amnesty(token);
-        
+
         Ok(())
     }
 }
@@ -816,13 +818,13 @@ impl AmnestySystem {
 pub struct AnchoredBlueprint {
     /// Technische Spezifikation
     pub spec: BlueprintSpec,
-    
+
     /// Menschenlesbare Beschreibung (Pflicht!)
     pub natural_language: NaturalLanguageDescription,
-    
+
     /// Formale Verifikation
     pub formal_verification: FormalVerification,
-    
+
     /// Audit-Trail
     pub audit: BlueprintAudit,
 }
@@ -831,19 +833,19 @@ pub struct AnchoredBlueprint {
 pub struct NaturalLanguageDescription {
     /// Titel
     pub title: String,
-    
+
     /// Zusammenfassung (max 500 Zeichen)
     pub summary: String,
-    
+
     /// Detaillierte Beschreibung
     pub description: String,
-    
+
     /// Sprachen (mindestens Englisch)
     pub languages: HashMap<Language, LocalizedDescription>,
-    
+
     /// Beispiele (menschenverständlich)
     pub examples: Vec<HumanReadableExample>,
-    
+
     /// Glossar (jeder technische Begriff erklärt)
     pub glossary: HashMap<String, String>,
 }
@@ -852,10 +854,10 @@ pub struct NaturalLanguageDescription {
 pub struct FormalVerification {
     /// Formale Spezifikation (z.B. in TLA+, Alloy, oder Erynoa-DSL)
     pub formal_spec: String,
-    
+
     /// Beweis der Korrektheit
     pub correctness_proof: Option<Proof>,
-    
+
     /// Semantische Äquivalenz zu NLD (LLM-verifiziert)
     pub equivalence_check: EquivalenceCheck,
 }
@@ -864,13 +866,13 @@ pub struct FormalVerification {
 pub struct EquivalenceCheck {
     /// Hat ein LLM-Auditor die Äquivalenz bestätigt?
     pub llm_verified: bool,
-    
+
     /// Welches Modell wurde verwendet?
     pub auditor_model: String,
-    
+
     /// Confidence Score
     pub confidence: f64,
-    
+
     /// Warnungen/Diskrepanzen
     pub warnings: Vec<String>,
 }
@@ -879,7 +881,7 @@ pub struct EquivalenceCheck {
 pub struct BlueprintValidator {
     /// LLM für Äquivalenz-Prüfung
     llm_auditor: LLMAuditor,
-    
+
     /// Formaler Verifizierer
     formal_verifier: FormalVerifier,
 }
@@ -889,16 +891,16 @@ impl BlueprintValidator {
     pub async fn validate(&self, blueprint: &AnchoredBlueprint) -> ValidationResult {
         let mut errors = Vec::new();
         let mut warnings = Vec::new();
-        
+
         // 1. Prüfe NLD-Vollständigkeit
         if blueprint.natural_language.summary.len() > 500 {
             errors.push("Summary exceeds 500 characters".into());
         }
-        
+
         if blueprint.natural_language.examples.is_empty() {
             warnings.push("No human-readable examples provided".into());
         }
-        
+
         // 2. Prüfe Glossar-Abdeckung
         let tech_terms = self.extract_technical_terms(&blueprint.spec);
         for term in &tech_terms {
@@ -906,34 +908,34 @@ impl BlueprintValidator {
                 warnings.push(format!("Technical term '{}' not in glossary", term));
             }
         }
-        
+
         // 3. LLM-Äquivalenz-Check
         let equivalence = self.llm_auditor.check_equivalence(
             &blueprint.natural_language,
             &blueprint.formal_verification.formal_spec,
         ).await?;
-        
+
         if !equivalence.is_equivalent {
             errors.push(format!(
                 "NLD and formal spec are not semantically equivalent: {}",
                 equivalence.reason
             ));
         }
-        
+
         if equivalence.confidence < 0.8 {
             warnings.push(format!(
                 "Low confidence in equivalence check: {:.0}%",
                 equivalence.confidence * 100.0
             ));
         }
-        
+
         // 4. Formale Verifikation (wenn Proof vorhanden)
         if let Some(proof) = &blueprint.formal_verification.correctness_proof {
             if !self.formal_verifier.verify(proof)? {
                 errors.push("Correctness proof is invalid".into());
             }
         }
-        
+
         ValidationResult {
             valid: errors.is_empty(),
             errors,
@@ -953,17 +955,17 @@ impl SemanticAnchorEnforcer {
     /// Prüft ob Blueprint die Verankerungs-Anforderungen erfüllt
     pub fn check_compliance(&self, blueprint_id: &BlueprintId) -> ComplianceStatus {
         let blueprint = self.get_blueprint(blueprint_id);
-        
+
         let has_nld = blueprint.natural_language.description.len() > 0;
         let has_glossary = !blueprint.natural_language.glossary.is_empty();
         let has_examples = !blueprint.natural_language.examples.is_empty();
         let is_verified = blueprint.formal_verification.equivalence_check.llm_verified;
-        
+
         let score = [has_nld, has_glossary, has_examples, is_verified]
             .iter()
             .filter(|&&b| b)
             .count();
-        
+
         match score {
             4 => ComplianceStatus::FullyCompliant,
             3 => ComplianceStatus::MostlyCompliant { missing: self.identify_missing(&blueprint) },
@@ -972,7 +974,7 @@ impl SemanticAnchorEnforcer {
             _ => unreachable!(),
         }
     }
-    
+
     /// Markiert nicht-compliant Blueprints als "deprecated"
     pub fn enforce_deadline(&self, now: Timestamp) -> EnforcementReport {
         if now < self.migration_deadline {
@@ -980,14 +982,14 @@ impl SemanticAnchorEnforcer {
                 remaining: self.migration_deadline - now,
             };
         }
-        
+
         // Nach Deadline: Nicht-compliant Blueprints werden deprecated
         let non_compliant = self.find_non_compliant_blueprints();
-        
+
         for blueprint_id in &non_compliant {
             self.mark_deprecated(blueprint_id);
         }
-        
+
         EnforcementReport::Enforced {
             deprecated_count: non_compliant.len(),
             blueprint_ids: non_compliant,
@@ -1080,7 +1082,9 @@ impl SemanticAnchorEnforcer {
 │   Ebene 1: EMERGENZ (E1-E15)             → Ermöglicht Intelligenz           │
 │   Ebene 0: FUNDAMENT (A1-A30)            → Garantiert Korrektheit           │
 │                                                                              │
-│   TOTAL: 120 Axiome über 8 Ebenen                                           │
+│   PEER-PROZESS: PR1-PR6                  → Gateway/Composer-Logik           │
+│                                                                              │
+│   TOTAL: 126 Axiome über 8 Ebenen (120 Basis + 6 Peer-Axiome)               │
 │                                                                              │
 │   ═══════════════════════════════════════════════════════════════════════   │
 │                                                                              │
@@ -1138,6 +1142,6 @@ impl SemanticAnchorEnforcer {
 
 ---
 
-*Erynoa Constitution V6.0*
-*Von Intelligenz zu Weisheit*
-*"The code is the easy part. The constitution is what will determine whether that civilization serves life — or consumes it."*
+_Erynoa Constitution V6.0_
+_Von Intelligenz zu Weisheit_
+_"The code is the easy part. The constitution is what will determine whether that civilization serves life — or consumes it."_

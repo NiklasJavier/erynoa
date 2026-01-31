@@ -3,7 +3,7 @@
 > **Version:** 6.2 – Probabilistische Kybernetische Architektur
 > **Datum:** Januar 2026
 > **Status:** Vollständiges Fachkonzept
-> **Grundlage:** 112 Axiome über 7 Ebenen
+> **Grundlage:** 126 Axiome über 8 Ebenen (inkl. 6 Peer-Axiome)
 > **Architektur:** 3-Schichten (Root-Env → Virt-Env → Shard)
 > **Leitprinzip:** Intelligenz im Dienste des Lebens
 
@@ -431,7 +431,7 @@ Erynoa basiert auf einer **hierarchischen, kategorientheoretisch fundierten Stru
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                         ROOT-ENVIRONMENT (𝒞_Root)                           │
-│                    Erynoa Protocol Foundation – 112 Axiome                  │
+│                    Erynoa Protocol Foundation – 126 Axiome                  │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │   ┌───────────────────────────────────────────────────────────────────┐    │
@@ -704,7 +704,7 @@ ECL ist eine deterministische, sandboxed Sprache für Virt-Env/Shard-Definitione
 
 | Schicht      | Scope                   | Governance                   | Regeln                | Beispiel                       |
 | ------------ | ----------------------- | ---------------------------- | --------------------- | ------------------------------ |
-| **Root-Env** | Global                  | Unveränderlich (H4-Override) | 112 Axiome            | `did:erynoa:*:*`               |
+| **Root-Env** | Global                  | Unveränderlich (H4-Override) | 126 Axiome            | `did:erynoa:*:*`               |
 | **Virt-Env** | Souveräne Gruppe        | DAO / Multi-Sig              | Root + Local Axioms   | `did:erynoa:circle:eu-2026`    |
 | **Shard**    | Spezialisierter Bereich | Virt-Env-delegiert           | Parent + Shard-Axioms | `did:erynoa:circle:eu-finance` |
 
@@ -908,7 +908,7 @@ Erynoa ist ein dezentrales Ökosystem für vertrauensbasierte Interaktionen zwis
 ### Die Architektur in drei Schichten
 
 ```
-ROOT-ENVIRONMENT (𝒞_Root)          ← Globales Fundament (112 Axiome)
+ROOT-ENVIRONMENT (𝔾_Root)          ← Globales Fundament (126 Axiome)
     │
     ├── VIRT-ENV (𝒞_VirtEnv)       ← Souveräne Umgebungen (Local Axioms)
     │       │
@@ -917,19 +917,22 @@ ROOT-ENVIRONMENT (𝒞_Root)          ← Globales Fundament (112 Axiome)
 
 | Schicht      | Funktion                                                    | Governance         |
 | ------------ | ----------------------------------------------------------- | ------------------ |
-| **Root-Env** | Globale Neutralität, 112 Axiome, DID-Standard               | Unveränderlich     |
+| **Root-Env** | Globale Neutralität, 126 Axiome, DID-Standard               | Unveränderlich     |
 | **Virt-Env** | Souveräne Gruppen (EU, ASEAN, Konzerne), CBDC-Bridges       | DAO / Multi-Sig    |
 | **Shard**    | Spezialisierung (Finance, Energy, Health), Trust-Gewichtung | Virt-Env-delegiert |
 
-### Die sieben Axiom-Ebenen
+### Die acht Axiom-Ebenen
 
 1. **Fundament:** Identität, Kausalität, grundlegende Regeln (30 Axiome)
 2. **Emergenz:** Kollektive Intelligenz, Konsens (15 Axiome)
 3. **Prozess:** Transaktionen, TAT-Lifecycle (13 Axiome)
 4. **Objekt:** Assets, Services, Credentials (9 Axiome)
 5. **Schutz:** Anti-Gaming, Anti-Calcification (18 Axiome)
-6. **Kybernetik:** Feedback, Selbstregulation, Antifragilität (23 Axiome)
-7. **Humanismus:** Alignment, Verhältnismäßigkeit, Vergebung, Transparenz (4 Axiome)
+6. **Kybernetik:** Feedback, Selbstregulation, Antifragilität (16 Axiome)
+7. **Quanten:** Superposition, Kategorientheorie, Topologie (15 Axiome)
+8. **Humanismus:** Alignment, Verhältnismäßigkeit, Vergebung, Transparenz (4 Axiome)
+
+**Zusätzlich:** 6 Peer-Prozess-Axiome (PR1-PR6) für Gateway/Composer-Logik
 
 ### Kernprinzipien
 
@@ -960,6 +963,6 @@ Das Ziel ist eine vertrauenswürdige Infrastruktur für die dezentrale Gesellsch
 ---
 
 _Erynoa Fachkonzept Version 6.2_
-_112 Axiome über 7 Ebenen • 3-Schichten-Architektur (Root → Virt-Env → Shard)_
-_Kategorientheoretisch fundiert • Bayessche Inferenz • Standard-Kryptographie_
+_126 Axiome über 8 Ebenen • 3-Schichten-Architektur (Root → Virt-Env → Shard)_
+_Kategorientheoretisch fundiert • Bayessche Inferenz • Peer-Prozess-Logik_
 _"Das System existiert, um menschliches Gedeihen zu ermöglichen."_

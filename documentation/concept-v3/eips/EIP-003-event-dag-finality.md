@@ -17,6 +17,7 @@
 Diese Spezifikation definiert den Event-DAG (Directed Acyclic Graph) und das Finality-System für das Erynoa-Protokoll. Der Event-DAG ist die kausale Datenstruktur, die alle Zustandsänderungen im Netzwerk aufzeichnet. Das Finality-System definiert, wann und wie Events als "endgültig" (unveränderbar) gelten.
 
 Kernkonzepte:
+
 - **Content-Addressable Events** – Events werden durch ihren Hash identifiziert
 - **Kausale Ordnung** – Events referenzieren ihre Vorgänger
 - **Progressive Finality** – Events durchlaufen Finality-Levels
@@ -55,28 +56,28 @@ Ein Event ist die atomare Einheit der Zustandsänderung im Erynoa-Netzwerk.
 pub struct Event {
     /// Eindeutige ID = SHA-256(canonical_serialize(self))
     pub id: EventId,
-    
+
     /// Event-Version (für zukünftige Upgrades)
     pub version: u8,
-    
+
     /// Typ des Events
     pub event_type: EventType,
-    
+
     /// DID des Actors, der das Event erstellt hat
     pub actor: DID,
-    
+
     /// Unix-Timestamp in Millisekunden
     pub timestamp: u64,
-    
+
     /// Referenzen auf Parent-Events (kausale Vorgänger)
     pub parents: Vec<EventId>,
-    
+
     /// Event-spezifische Payload
     pub payload: EventPayload,
-    
+
     /// Signatur des Actors über den Event-Body
     pub signature: Signature,
-    
+
     /// Optional: Realm-Kontext
     pub realm: Option<DID>,
 }
@@ -95,12 +96,12 @@ pub enum EventType {
     IdentityUpdate,
     IdentityDeactivate,
     IdentityRecover,
-    
+
     // === Trust (E2) ===
     TrustAttestation,
     TrustChallenge,
     TrustResponse,
-    
+
     // === Transaktion (E3) ===
     TransactionSeek,
     TransactionPropose,
@@ -109,41 +110,41 @@ pub enum EventType {
     TransactionClose,
     TransactionAbort,
     TransactionDispute,
-    
+
     // === Assets (E4) ===
     AssetCreate,
     AssetTransfer,
     AssetBurn,
-    
+
     // === Credentials (E4) ===
     CredentialIssue,
     CredentialPresent,
     CredentialRevoke,
-    
+
     // === Realm (E4) ===
     RealmCreate,
     RealmJoin,
     RealmLeave,
     RealmUpdate,
-    
+
     // === Governance (E5/E6) ===
     GovernancePropose,
     GovernanceVote,
     GovernanceExecute,
-    
+
     // === Witnessing ===
     WitnessAttestation,
     WitnessChallenge,
-    
+
     // === Anomalien (E6) ===
     AnomalyReport,
     AnomalyConfirm,
     AnomalyReject,
-    
+
     // === System ===
     Anchor,
     Checkpoint,
-    
+
     // === Custom ===
     Custom(String),
 }
@@ -163,7 +164,7 @@ pub enum EventPayload {
         changes: DIDDocumentPatch,
         previous_version: String,
     },
-    
+
     // Trust Events
     TrustAttestation {
         subject: DID,
@@ -172,7 +173,7 @@ pub enum EventPayload {
         evidence: Option<String>,
         context: Option<String>,
     },
-    
+
     // Transaction Events
     TransactionPropose {
         transaction_id: TransactionId,
@@ -196,7 +197,7 @@ pub enum EventPayload {
         outcome: TransactionOutcome,
         rating: Option<Rating>,
     },
-    
+
     // Asset Events
     AssetTransfer {
         asset_id: AssetId,
@@ -204,7 +205,7 @@ pub enum EventPayload {
         to: DID,
         amount: Amount,
     },
-    
+
     // Credential Events
     CredentialIssue {
         credential: VerifiableCredential,
@@ -213,14 +214,14 @@ pub enum EventPayload {
         credential_id: CredentialId,
         reason: String,
     },
-    
+
     // Witness Events
     WitnessAttestation {
         event_id: EventId,
         valid: bool,
         proof: WitnessProof,
     },
-    
+
     // Anchor Events
     Anchor {
         chain: String,
@@ -229,7 +230,7 @@ pub enum EventPayload {
         merkle_root: [u8; 32],
         events: Vec<EventId>,
     },
-    
+
     // Custom
     Custom(serde_json::Value),
 }
@@ -245,24 +246,24 @@ fn canonical_serialize(event: &Event) -> Vec<u8> {
     // 2. Maps nach Schlüssel sortiert
     // 3. Keine optionalen Felder wenn None
     // 4. CBOR-Encoding (RFC 8949)
-    
+
     let mut encoder = CborEncoder::new();
     encoder.write_u8(event.version);
     encoder.write_string(&event.event_type.to_string());
     encoder.write_string(&event.actor.to_string());
     encoder.write_u64(event.timestamp);
-    
+
     // Parents sortiert
     let mut parents = event.parents.clone();
     parents.sort();
     encoder.write_array(&parents);
-    
+
     encoder.write_value(&event.payload);
-    
+
     if let Some(realm) = &event.realm {
         encoder.write_string(&realm.to_string());
     }
-    
+
     encoder.finish()
 }
 
@@ -310,15 +311,15 @@ Der Event-DAG ist ein gerichteter azyklischer Graph mit folgenden Eigenschaften:
 
 #### 2.2 DAG-Regeln
 
-| Regel | Beschreibung |
-|-------|--------------|
-| **R1: Azyklizität** | Keine Zyklen: Wenn E₁ → E₂, dann ¬(E₂ → E₁) |
-| **R2: Genesis** | Genau ein Event ohne Parents (Genesis) |
-| **R3: Erreichbarkeit** | Jedes Event ist von Genesis erreichbar |
-| **R4: Parent-Existenz** | Alle referenzierten Parents müssen existieren |
-| **R5: Parent-Finalität** | Parents müssen mindestens "Attested" sein |
-| **R6: Zeitordnung** | timestamp(child) > max(timestamp(parents)) |
-| **R7: Actor-Kausalität** | Eigene Events sind transitiv verknüpft |
+| Regel                    | Beschreibung                                  |
+| ------------------------ | --------------------------------------------- |
+| **R1: Azyklizität**      | Keine Zyklen: Wenn E₁ → E₂, dann ¬(E₂ → E₁)   |
+| **R2: Genesis**          | Genau ein Event ohne Parents (Genesis)        |
+| **R3: Erreichbarkeit**   | Jedes Event ist von Genesis erreichbar        |
+| **R4: Parent-Existenz**  | Alle referenzierten Parents müssen existieren |
+| **R5: Parent-Finalität** | Parents müssen mindestens "Attested" sein     |
+| **R6: Zeitordnung**      | timestamp(child) > max(timestamp(parents))    |
+| **R7: Actor-Kausalität** | Eigene Events sind transitiv verknüpft        |
 
 #### 2.3 Datenstruktur
 
@@ -326,22 +327,22 @@ Der Event-DAG ist ein gerichteter azyklischer Graph mit folgenden Eigenschaften:
 pub struct EventDAG {
     /// Event-Storage (Content-Addressable)
     events: HashMap<EventId, Event>,
-    
+
     /// Forward-Edges: Parent → Children
     children: HashMap<EventId, HashSet<EventId>>,
-    
+
     /// Finality-Status pro Event
     finality: HashMap<EventId, FinalityLevel>,
-    
+
     /// Genesis-Event
     genesis: EventId,
-    
+
     /// Aktuelle "Tips" (Events ohne Kinder)
     tips: HashSet<EventId>,
-    
+
     /// Events pro Actor (für schnelle Abfrage)
     actor_events: HashMap<DID, Vec<EventId>>,
-    
+
     /// Anchor-Index
     anchors: HashMap<EventId, Vec<AnchorInfo>>,
 }
@@ -351,16 +352,16 @@ impl EventDAG {
     pub fn add_event(&mut self, event: Event) -> Result<EventId, DAGError> {
         // 1. ID berechnen
         let id = compute_event_id(&event);
-        
+
         // 2. Validierung
         self.validate_event(&event)?;
-        
+
         // 3. DAG-Regeln prüfen
         self.check_dag_rules(&event)?;
-        
+
         // 4. Einfügen
         self.events.insert(id, event.clone());
-        
+
         // 5. Edges aktualisieren
         for parent_id in &event.parents {
             self.children.entry(*parent_id)
@@ -368,27 +369,27 @@ impl EventDAG {
                 .insert(id);
             self.tips.remove(parent_id);
         }
-        
+
         self.tips.insert(id);
-        
+
         // 6. Actor-Index aktualisieren
         self.actor_events.entry(event.actor.clone())
             .or_default()
             .push(id);
-        
+
         // 7. Initial Finality = Pending
         self.finality.insert(id, FinalityLevel::Pending);
-        
+
         Ok(id)
     }
-    
+
     /// Kausale Ordnung prüfen
     pub fn happened_before(&self, e1: EventId, e2: EventId) -> bool {
         // BFS von e2 rückwärts
         let mut visited = HashSet::new();
         let mut queue = VecDeque::new();
         queue.push_back(e2);
-        
+
         while let Some(current) = queue.pop_front() {
             if current == e1 {
                 return true;
@@ -403,12 +404,12 @@ impl EventDAG {
         }
         false
     }
-    
+
     /// Gemeinsamer Vorfahre (für Merge)
     pub fn common_ancestor(&self, e1: EventId, e2: EventId) -> Option<EventId> {
         let ancestors_1 = self.all_ancestors(e1);
         let ancestors_2 = self.all_ancestors(e2);
-        
+
         // Jüngster gemeinsamer Vorfahre
         ancestors_1.intersection(&ancestors_2)
             .max_by_key(|id| self.events.get(*id).map(|e| e.timestamp))
@@ -457,13 +458,13 @@ Events durchlaufen progressive Finality-Levels:
 pub enum FinalityLevel {
     /// Event signiert, aber noch keine Witnesses
     Pending = 0,
-    
+
     /// Von k unabhängigen Witnesses bestätigt
     Attested = 1,
-    
+
     /// Auf Primary Chain (IOTA) verankert
     Anchored = 2,
-    
+
     /// Tiefe d auf Chain erreicht (effektiv irreversibel)
     Final = 3,
 }
@@ -471,19 +472,19 @@ pub enum FinalityLevel {
 #[derive(Clone, Debug)]
 pub struct FinalityState {
     pub level: FinalityLevel,
-    
+
     /// Witnesses, die dieses Event bestätigt haben
     pub witnesses: Vec<WitnessAttestation>,
-    
+
     /// Anzahl unabhängiger Witnesses
     pub witness_count: u32,
-    
+
     /// Anchor-Informationen (wenn anchored/final)
     pub anchor: Option<AnchorInfo>,
-    
+
     /// Tiefe seit Verankerung (Blocks)
     pub depth: Option<u64>,
-    
+
     /// Zeitpunkt des Level-Wechsels
     pub level_timestamps: HashMap<FinalityLevel, u64>,
 }
@@ -497,19 +498,19 @@ impl EventDAG {
     pub fn update_finality(&mut self, event_id: EventId) -> Result<FinalityLevel, FinalityError> {
         let current = self.finality.get(&event_id)
             .ok_or(FinalityError::EventNotFound)?;
-        
+
         match current {
             FinalityLevel::Pending => {
                 // Check: Genug Witnesses?
                 let witnesses = self.get_witnesses(event_id);
                 let required = self.get_required_witnesses(event_id);
-                
+
                 if self.count_independent_witnesses(&witnesses) >= required {
                     self.finality.insert(event_id, FinalityLevel::Attested);
                     return Ok(FinalityLevel::Attested);
                 }
             }
-            
+
             FinalityLevel::Attested => {
                 // Check: Auf Chain verankert?
                 if let Some(anchor) = self.anchors.get(&event_id) {
@@ -519,14 +520,14 @@ impl EventDAG {
                     }
                 }
             }
-            
+
             FinalityLevel::Anchored => {
                 // Check: Tiefe erreicht?
                 if let Some(anchor) = self.anchors.get(&event_id) {
                     if let Some(iota_anchor) = anchor.iter().find(|a| a.chain == "iota") {
                         let current_block = self.get_current_block("iota")?;
                         let depth = current_block - iota_anchor.block;
-                        
+
                         if depth >= FINALITY_DEPTH {
                             self.finality.insert(event_id, FinalityLevel::Final);
                             return Ok(FinalityLevel::Final);
@@ -534,12 +535,12 @@ impl EventDAG {
                     }
                 }
             }
-            
+
             FinalityLevel::Final => {
                 // Bereits final, nichts zu tun
             }
         }
-        
+
         Ok(*current)
     }
 }
@@ -578,10 +579,10 @@ pub struct WitnessAttestation {
     pub timestamp: u64,
     pub valid: bool,
     pub signature: Signature,
-    
+
     // Für Diversitäts-Prüfung
     pub metadata: WitnessMetadata,
-    
+
     // V0.2: Data Availability Nachweis
     pub data_availability: DataAvailabilityProof,
 }
@@ -592,7 +593,7 @@ pub struct WitnessMetadata {
     pub hardware_manufacturer: String,  // z.B. "Intel", "AMD", "ARM"
     pub software_version: String,
     pub ip_prefix: String,       // /24 Prefix für IP-Diversität
-    
+
     // V0.2: Remote Attestation (kryptographischer Hardware-Nachweis)
     pub hardware_attestation: Option<HardwareAttestation>,
 }
@@ -602,19 +603,19 @@ pub struct WitnessMetadata {
 pub struct HardwareAttestation {
     /// Art der Attestierung
     pub attestation_type: AttestationType,
-    
+
     /// Der kryptographische Beweis
     pub proof: Vec<u8>,
-    
+
     /// Öffentlicher Schlüssel des TEE/TPM
     pub endorsement_key: Vec<u8>,
-    
+
     /// Zertifikatskette zum Hersteller-Root
     pub certificate_chain: Vec<Vec<u8>>,
-    
+
     /// Zeitstempel der Attestierung
     pub attestation_time: u64,
-    
+
     /// Hash der ausgeführten Software (PCR values)
     pub software_measurements: Vec<[u8; 32]>,
 }
@@ -626,30 +627,30 @@ pub enum AttestationType {
         quote: Vec<u8>,
         ias_report: Option<Vec<u8>>,  // Intel Attestation Service
     },
-    
+
     /// AMD SEV-SNP Attestation
     AmdSevSnp {
         report: Vec<u8>,
         vcek_cert: Vec<u8>,
     },
-    
+
     /// ARM TrustZone Attestation
     ArmTrustZone {
         token: Vec<u8>,
     },
-    
+
     /// TPM 2.0 Remote Attestation
     Tpm2 {
         quote: Vec<u8>,
         pcr_values: Vec<[u8; 32]>,
         aik_cert: Vec<u8>,
     },
-    
+
     /// AWS Nitro Enclave Attestation
     AwsNitro {
         attestation_document: Vec<u8>,
     },
-    
+
     /// Keine Hardware-Attestierung (nur für LoD < Maximum)
     None,
 }
@@ -659,13 +660,13 @@ pub enum AttestationType {
 pub struct DataAvailabilityProof {
     /// Hash des vollständigen Event-Bodies
     pub event_hash: EventId,
-    
+
     /// Nachweis, dass Witness die Daten gespeichert hat
     pub storage_commitment: [u8; 32],
-    
+
     /// Zeitraum, für den die Daten verfügbar gehalten werden
     pub retention_until: u64,
-    
+
     /// Replikations-Nachweis (für LoD: Maximum)
     pub replication_proofs: Vec<ReplicationProof>,
 }
@@ -682,19 +683,19 @@ fn count_independent_witnesses(witnesses: &[WitnessAttestation]) -> u32 {
     let mut manufacturers = HashSet::new();
     let mut ip_prefixes = HashSet::new();
     let mut count = 0;
-    
+
     for w in witnesses {
         // Neuer Witness zählt nur, wenn er Diversität hinzufügt
         let new_region = regions.insert(&w.metadata.region);
         let new_manufacturer = manufacturers.insert(&w.metadata.hardware_manufacturer);
         let new_ip = ip_prefixes.insert(&w.metadata.ip_prefix);
-        
+
         // Mindestens eines muss neu sein
         if new_region || new_manufacturer || new_ip {
             count += 1;
         }
     }
-    
+
     count
 }
 
@@ -712,10 +713,10 @@ fn validate_hardware_attestation(
             _ => {}
         }
     }
-    
+
     // Zertifikatskette verifizieren
     verify_certificate_chain(&attestation.certificate_chain)?;
-    
+
     // Attestierungs-Proof verifizieren
     match &attestation.attestation_type {
         AttestationType::IntelSGX { quote, ias_report } => {
@@ -730,7 +731,7 @@ fn validate_hardware_attestation(
         // ... weitere Typen
         _ => {}
     }
-    
+
     Ok(())
 }
 ```
@@ -739,13 +740,13 @@ fn validate_hardware_attestation(
 
 Für höhere LoD-Levels (V0.2: mit Hardware-Attestierung):
 
-| LoD | Witnesses | Regionen | HW-Hersteller | HW-Attestierung |
-|-----|-----------|----------|---------------|-----------------|
-| Minimal | 0 | - | - | Nein |
-| Basic | 1 | 1 | 1 | Nein |
-| Standard | 2 | 1 | 1 | Nein |
-| Enhanced | 3 | 2+ | 1 | Optional |
-| Maximum | 5 | 3+ | 2+ | **Pflicht** |
+| LoD      | Witnesses | Regionen | HW-Hersteller | HW-Attestierung |
+| -------- | --------- | -------- | ------------- | --------------- |
+| Minimal  | 0         | -        | -             | Nein            |
+| Basic    | 1         | 1        | 1             | Nein            |
+| Standard | 2         | 1        | 1             | Nein            |
+| Enhanced | 3         | 2+       | 1             | Optional        |
+| Maximum  | 5         | 3+       | 2+            | **Pflicht**     |
 
 ```rust
 fn validate_witness_diversity(
@@ -755,31 +756,31 @@ fn validate_witness_diversity(
     let regions: HashSet<_> = witnesses.iter()
         .map(|w| &w.metadata.region)
         .collect();
-    
+
     let manufacturers: HashSet<_> = witnesses.iter()
         .map(|w| &w.metadata.hardware_manufacturer)
         .collect();
-    
+
     let (min_regions, min_manufacturers) = match lod {
         LevelOfDetail::Enhanced => (2, 1),
         LevelOfDetail::Maximum => (3, 2),
         _ => (1, 1),
     };
-    
+
     if regions.len() < min_regions {
         return Err(DiversityError::InsufficientRegions {
             required: min_regions,
             found: regions.len(),
         });
     }
-    
+
     if manufacturers.len() < min_manufacturers {
         return Err(DiversityError::InsufficientManufacturers {
             required: min_manufacturers,
             found: manufacturers.len(),
         });
     }
-    
+
     // V0.2: Hardware-Attestierung für Maximum LoD
     if lod == LevelOfDetail::Maximum {
         let attested_count = witnesses.iter()
@@ -788,7 +789,7 @@ fn validate_witness_diversity(
                 Some(AttestationType::None) | None
             ))
             .count();
-        
+
         if attested_count < witnesses.len() {
             return Err(DiversityError::HardwareAttestationRequired {
                 required: witnesses.len(),
@@ -796,7 +797,7 @@ fn validate_witness_diversity(
             });
         }
     }
-    
+
     Ok(())
 }
 ```
@@ -846,10 +847,10 @@ fn validate_data_availability(
         LevelOfDetail::Enhanced => (3, 90),
         LevelOfDetail::Maximum => (5, 365),
     };
-    
+
     let min_retention_ms = min_retention_days as u64 * 24 * 60 * 60 * 1000;
     let now = now_ms();
-    
+
     let valid_da_proofs: Vec<_> = witnesses.iter()
         .filter(|w| {
             // Prüfe: Event-Hash stimmt überein
@@ -860,14 +861,14 @@ fn validate_data_availability(
             verify_storage_commitment(&w.data_availability.storage_commitment, event_id)
         })
         .collect();
-    
+
     if valid_da_proofs.len() < min_witnesses {
         return Err(DataAvailabilityError::InsufficientReplicas {
             required: min_witnesses,
             found: valid_da_proofs.len(),
         });
     }
-    
+
     // Für Maximum LoD: Zusätzliche DHT-Replikation erforderlich
     if lod == LevelOfDetail::Maximum {
         for proof in &valid_da_proofs {
@@ -876,7 +877,7 @@ fn validate_data_availability(
             }
         }
     }
-    
+
     Ok(())
 }
 
@@ -886,7 +887,7 @@ async fn retrieve_event(event_id: EventId) -> Result<Event, RetrievalError> {
     if let Some(event) = local_cache.get(&event_id) {
         return Ok(event);
     }
-    
+
     // 2. Witnesses abfragen
     let witnesses = get_witnesses_for_event(event_id).await?;
     for witness in witnesses {
@@ -898,12 +899,12 @@ async fn retrieve_event(event_id: EventId) -> Result<Event, RetrievalError> {
             }
         }
     }
-    
+
     // 3. DHT-Fallback
     if let Ok(event) = dht.get(event_id).await {
         return Ok(event);
     }
-    
+
     Err(RetrievalError::EventNotAvailable(event_id))
 }
 ```
@@ -984,20 +985,20 @@ impl RateLimiter {
     ) -> Result<(), RateLimitError> {
         let max_per_minute = BASE_RATE + TRUST_MULTIPLIER * trust_score;
         let bucket = self.get_or_create_bucket(actor, max_per_minute);
-        
+
         // Refill tokens based on time passed
         let now = now_ms();
         let elapsed = now - bucket.last_refill;
         bucket.tokens = (bucket.tokens + elapsed as f64 * bucket.refill_rate)
             .min(bucket.max_tokens);
         bucket.last_refill = now;
-        
+
         // Check if we have a token
         if bucket.tokens >= 1.0 {
             bucket.tokens -= 1.0;
             return Ok(());
         }
-        
+
         // Low-trust alternative: Proof of Work
         if trust_score < 0.3 {
             if let Some(pow) = pow_proof {
@@ -1006,12 +1007,12 @@ impl RateLimiter {
                 }
             }
         }
-        
+
         Err(RateLimitError::TooManyRequests {
             retry_after_ms: (1.0 / bucket.refill_rate) as u64,
         })
     }
-    
+
     fn get_or_create_bucket(&mut self, actor: &DID, max_per_minute: f64) -> &mut TokenBucket {
         self.buckets.entry(actor.clone()).or_insert_with(|| {
             TokenBucket {
@@ -1037,12 +1038,12 @@ fn verify_pow(pow: &ProofOfWork, required_difficulty: u8) -> bool {
     hasher.update(&pow.event_hash);
     hasher.update(&pow.nonce.to_le_bytes());
     let hash = hasher.finalize();
-    
+
     // Count leading zero bits
     let leading_zeros = hash.iter()
         .take_while(|&&b| b == 0)
         .count() * 8;
-    
+
     leading_zeros >= required_difficulty as usize
 }
 ```
@@ -1092,13 +1093,13 @@ Statt klassischer Merkle-Trees verwendet Erynoa **Merkle Mountain Ranges (MMR)**
 pub struct MerkleMountainRange {
     /// Alle Blätter (Event-Hashes)
     leaves: Vec<[u8; 32]>,
-    
+
     /// Peaks der "Berge" (perfect binary trees)
     peaks: Vec<[u8; 32]>,
-    
+
     /// Höhe jedes Peaks
     peak_heights: Vec<u32>,
-    
+
     /// Gesamtzahl Blätter
     size: u64,
 }
@@ -1112,81 +1113,81 @@ impl MerkleMountainRange {
             size: 0,
         }
     }
-    
+
     /// Fügt neues Event hinzu (O(log n))
     pub fn append(&mut self, event_hash: [u8; 32]) -> u64 {
         self.leaves.push(event_hash);
         self.size += 1;
-        
+
         let mut current_hash = event_hash;
         let mut current_height = 0;
-        
+
         // Merge mit vorherigen Peaks gleicher Höhe
-        while !self.peaks.is_empty() && 
+        while !self.peaks.is_empty() &&
               *self.peak_heights.last().unwrap() == current_height {
             let left_peak = self.peaks.pop().unwrap();
             self.peak_heights.pop();
-            
+
             current_hash = sha256_pair(&left_peak, &current_hash);
             current_height += 1;
         }
-        
+
         self.peaks.push(current_hash);
         self.peak_heights.push(current_height);
-        
+
         self.size - 1  // Return index
     }
-    
+
     /// Berechnet MMR-Root (O(peaks) = O(log n))
     pub fn root(&self) -> [u8; 32] {
         if self.peaks.is_empty() {
             return [0u8; 32];
         }
-        
+
         // Bag all peaks from right to left
         let mut root = *self.peaks.last().unwrap();
         for peak in self.peaks.iter().rev().skip(1) {
             root = sha256_pair(peak, &root);
         }
-        
+
         root
     }
-    
+
     /// Erstellt Proof für Event an Index
     pub fn proof(&self, index: u64) -> MerkleProof {
         let mut path = Vec::new();
         let mut current_index = index;
         let mut current_size = self.size;
         let mut peak_offset = 0;
-        
+
         // Finde den Peak, der dieses Blatt enthält
         for (peak_idx, &height) in self.peak_heights.iter().enumerate() {
             let peak_size = 1u64 << height;
-            
+
             if current_index < peak_size {
                 // Proof innerhalb dieses Peaks
                 self.proof_within_peak(&mut path, current_index, height);
-                
+
                 // Füge andere Peaks zum Proof hinzu
                 for (other_idx, &other_peak) in self.peaks.iter().enumerate() {
                     if other_idx != peak_idx {
                         path.push(MerkleNode {
                             hash: other_peak,
-                            position: if other_idx < peak_idx { 
-                                Position::Left 
-                            } else { 
-                                Position::Right 
+                            position: if other_idx < peak_idx {
+                                Position::Left
+                            } else {
+                                Position::Right
                             },
                         });
                     }
                 }
                 break;
             }
-            
+
             current_index -= peak_size;
             peak_offset += peak_size;
         }
-        
+
         MerkleProof {
             event_id: self.leaves[index as usize],
             root: self.root(),
@@ -1195,7 +1196,7 @@ impl MerkleMountainRange {
             total_events: self.size,
         }
     }
-    
+
     fn proof_within_peak(&self, path: &mut Vec<MerkleNode>, index: u64, height: u32) {
         // Standard Merkle-Tree Proof innerhalb eines "Berges"
         // ... implementation details
@@ -1239,16 +1240,16 @@ Für Backwards-Kompatibilität wird auch der klassische Merkle-Tree unterstützt
 pub struct MerkleProof {
     /// Das Event, für das der Proof gilt
     pub event_id: EventId,
-    
+
     /// Der Merkle-Root (verankert auf Chain)
     pub root: [u8; 32],
-    
+
     /// Proof-Pfad
     pub path: Vec<MerkleNode>,
-    
+
     /// Index des Events im Tree
     pub index: u64,
-    
+
     /// Gesamtzahl Events im Tree
     pub total_events: u64,
 }
@@ -1269,14 +1270,14 @@ impl MerkleProof {
     /// Verifiziert den Proof
     pub fn verify(&self, event_id: EventId) -> bool {
         let mut current_hash = event_id;
-        
+
         for node in &self.path {
             current_hash = match node.position {
                 Position::Left => sha256_pair(&node.hash, &current_hash),
                 Position::Right => sha256_pair(&current_hash, &node.hash),
             };
         }
-        
+
         current_hash == self.root
     }
 }
@@ -1298,16 +1299,16 @@ Periodisch werden Checkpoint-Events erstellt:
 pub struct Checkpoint {
     /// Checkpoint-Nummer
     pub sequence: u64,
-    
+
     /// Merkle-Root aller Events seit letztem Checkpoint
     pub merkle_root: [u8; 32],
-    
+
     /// Anzahl Events in diesem Checkpoint
     pub event_count: u64,
-    
+
     /// Referenz auf vorherigen Checkpoint
     pub previous: Option<EventId>,
-    
+
     /// Timestamp-Range
     pub start_time: u64,
     pub end_time: u64,
@@ -1317,13 +1318,13 @@ impl EventDAG {
     /// Erstellt einen Checkpoint
     pub fn create_checkpoint(&mut self) -> Result<EventId, CheckpointError> {
         let events_since_last = self.get_events_since_last_checkpoint();
-        
+
         if events_since_last.is_empty() {
             return Err(CheckpointError::NoNewEvents);
         }
-        
+
         let merkle_root = compute_merkle_root(&events_since_last);
-        
+
         let checkpoint = Checkpoint {
             sequence: self.checkpoint_count + 1,
             merkle_root,
@@ -1332,7 +1333,7 @@ impl EventDAG {
             start_time: events_since_last.first().unwrap().timestamp,
             end_time: events_since_last.last().unwrap().timestamp,
         };
-        
+
         let event = Event {
             version: 1,
             event_type: EventType::Checkpoint,
@@ -1343,7 +1344,7 @@ impl EventDAG {
             signature: self.sign_checkpoint(&checkpoint),
             realm: None,
         };
-        
+
         self.add_event(event)
     }
 }
@@ -1392,25 +1393,25 @@ impl EventDAG {
 pub struct AnchorInfo {
     /// Blockchain-Name
     pub chain: String,
-    
+
     /// Netzwerk (mainnet, testnet)
     pub network: String,
-    
+
     /// Transaktions-ID auf der Chain
     pub tx_id: String,
-    
+
     /// Block-Nummer
     pub block: u64,
-    
+
     /// Block-Timestamp
     pub timestamp: u64,
-    
+
     /// Merkle-Root der verankerten Events
     pub merkle_root: [u8; 32],
-    
+
     /// Liste der verankerten Event-IDs
     pub events: Vec<EventId>,
-    
+
     /// Contract-Adresse (falls applicable)
     pub contract: Option<String>,
 }
@@ -1435,7 +1436,7 @@ impl EventDAG {
             events: events.clone(),
             contract: None,
         };
-        
+
         let event = Event {
             version: 1,
             event_type: EventType::Anchor,
@@ -1452,9 +1453,9 @@ impl EventDAG {
             signature: self.sign_anchor(&anchor_info),
             realm: None,
         };
-        
+
         let anchor_id = self.add_event(event)?;
-        
+
         // Finality auf Anchored setzen
         for event_id in &events {
             self.finality.insert(*event_id, FinalityLevel::Anchored);
@@ -1462,7 +1463,7 @@ impl EventDAG {
                 .or_default()
                 .push(anchor_info.clone());
         }
-        
+
         Ok(anchor_id)
     }
 }
@@ -1491,15 +1492,15 @@ impl IOTAAnchor {
             )
             .sign(&self.wallet)
             .await?;
-        
+
         let result = self.client.submit_transaction(tx).await?;
-        
+
         Ok(AnchorResult {
             tx_id: result.tx_id,
             block: result.block,
         })
     }
-    
+
     /// Prüft Finality-Tiefe
     pub async fn check_depth(&self, block: u64) -> Result<u64, IOTAError> {
         let current = self.client.get_current_block().await?;
@@ -1522,28 +1523,28 @@ impl EventDAG {
                 .collect())
             .unwrap_or_default()
     }
-    
+
     /// Events in Zeitraum
     pub fn events_in_range(&self, start: u64, end: u64) -> Vec<&Event> {
         self.events.values()
             .filter(|e| e.timestamp >= start && e.timestamp <= end)
             .collect()
     }
-    
+
     /// Events nach Typ
     pub fn events_by_type(&self, event_type: EventType) -> Vec<&Event> {
         self.events.values()
             .filter(|e| e.event_type == event_type)
             .collect()
     }
-    
+
     /// Kausale Historie eines Events
     pub fn causal_history(&self, event_id: EventId) -> Vec<EventId> {
         let mut history = Vec::new();
         let mut visited = HashSet::new();
         let mut queue = VecDeque::new();
         queue.push_back(event_id);
-        
+
         while let Some(current) = queue.pop_front() {
             if visited.insert(current) {
                 history.push(current);
@@ -1554,17 +1555,17 @@ impl EventDAG {
                 }
             }
         }
-        
+
         history
     }
-    
+
     /// Kausale Zukunft eines Events
     pub fn causal_future(&self, event_id: EventId) -> Vec<EventId> {
         let mut future = Vec::new();
         let mut visited = HashSet::new();
         let mut queue = VecDeque::new();
         queue.push_back(event_id);
-        
+
         while let Some(current) = queue.pop_front() {
             if visited.insert(current) {
                 future.push(current);
@@ -1575,7 +1576,7 @@ impl EventDAG {
                 }
             }
         }
-        
+
         future
     }
 }
@@ -1591,7 +1592,7 @@ impl EventDAG {
             .map(|v| v.len() as u64)
             .unwrap_or(0)
     }
-    
+
     /// Events für Trust-Berechnung (nur finalisierte)
     pub fn trust_relevant_events(&self, actor: &DID) -> Vec<&Event> {
         self.events_by_actor(actor)
@@ -1600,8 +1601,8 @@ impl EventDAG {
                 let id = compute_event_id(e);
                 matches!(
                     self.finality.get(&id),
-                    Some(FinalityLevel::Attested) 
-                    | Some(FinalityLevel::Anchored) 
+                    Some(FinalityLevel::Attested)
+                    | Some(FinalityLevel::Anchored)
                     | Some(FinalityLevel::Final)
                 )
             })
@@ -1626,10 +1627,10 @@ impl SyncProtocol {
         // 1. Tips austauschen
         let local_tips = self.dag.read().tips.clone();
         let remote_tips = self.request_tips(peer).await?;
-        
+
         // 2. Fehlende Events identifizieren
         let missing = self.identify_missing(&local_tips, &remote_tips).await?;
-        
+
         // 3. Events anfordern
         let mut received = 0;
         for event_id in missing {
@@ -1638,10 +1639,10 @@ impl SyncProtocol {
                 received += 1;
             }
         }
-        
+
         Ok(SyncStats { received })
     }
-    
+
     /// Push: Neues Event an Peers propagieren
     pub async fn broadcast_event(&self, event: &Event) -> Result<(), BroadcastError> {
         for peer in &self.peers {
@@ -1667,12 +1668,12 @@ impl EventDAG {
         if self.happened_before(e2, e1) {
             return Ordering::Greater;
         }
-        
+
         // Parallele Events: Deterministisches Ordering
         // 1. Timestamp
         let t1 = self.events.get(&e1).map(|e| e.timestamp).unwrap_or(0);
         let t2 = self.events.get(&e2).map(|e| e.timestamp).unwrap_or(0);
-        
+
         match t1.cmp(&t2) {
             Ordering::Equal => {
                 // 2. Event-ID (lexikographisch)
@@ -1832,11 +1833,11 @@ println!("Event submitted: {:?}", event_id);
 loop {
     let finality = client.get_finality(event_id).await?;
     println!("Finality: {:?}", finality.level);
-    
+
     if finality.level >= FinalityLevel::Anchored {
         break;
     }
-    
+
     tokio::time::sleep(Duration::from_secs(5)).await;
 }
 
@@ -1853,14 +1854,14 @@ println!("Event has {} ancestors", history.len());
 #### 11.2 TypeScript
 
 ```typescript
-import { EventDAG, Event, EventType, FinalityLevel } from '@erynoa/sdk';
+import { EventDAG, Event, EventType, FinalityLevel } from "@erynoa/sdk";
 
 // Event erstellen
 const event = await Event.builder()
   .eventType(EventType.TransactionPropose)
   .actor(myDid)
   .payload({
-    transactionId: 'tx-001',
+    transactionId: "tx-001",
     counterparty: bobDid,
     terms: terms,
   })
@@ -1899,7 +1900,9 @@ console.log(`Proof valid: ${isValid}`);
   "event_type": "TrustAttestation",
   "actor": "did:erynoa:self:alice",
   "timestamp": 1706540400000,
-  "parents": ["0x1111111111111111111111111111111111111111111111111111111111111111"],
+  "parents": [
+    "0x1111111111111111111111111111111111111111111111111111111111111111"
+  ],
   "payload": {
     "subject": "did:erynoa:self:bob",
     "dimension": "R",
@@ -1953,7 +1956,7 @@ t=120s: IOTA block 110 (depth=10)         → Final
 
 ## Referenzen
 
-- [Erynoa Fachkonzept V6.1](../FACHKONZEPT.md)
+- [Erynoa Fachkonzept V6.2](../FACHKONZEPT.md)
 - [EIP-001: DID:erynoa](./EIP-001-did-erynoa.md)
 - [EIP-002: Trust Vector 6D](./EIP-002-trust-vector-6d.md)
 - [EIP-004: Bayesian Trust Update](./EIP-004-bayesian-trust-update.md)
@@ -1966,14 +1969,14 @@ t=120s: IOTA block 110 (depth=10)         → Final
 
 ## Changelog
 
-| Version | Datum | Änderung |
-|---------|-------|----------|
-| 0.1 | 2026-01-29 | Initial Draft |
-| 0.2 | 2026-01-29 | Hardware-Attestierung (TPM/SGX/Nitro), Data Availability Policy, Trust-basiertes Rate-Limiting, Merkle Mountain Range (MMR) |
+| Version | Datum      | Änderung                                                                                                                    |
+| ------- | ---------- | --------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | 2026-01-29 | Initial Draft                                                                                                               |
+| 0.2     | 2026-01-29 | Hardware-Attestierung (TPM/SGX/Nitro), Data Availability Policy, Trust-basiertes Rate-Limiting, Merkle Mountain Range (MMR) |
 
 ---
 
-*EIP-003: Event-DAG & Finality Specification*
-*Version: 0.2*
-*Status: Draft*
-*Ebene: E1 (Fundament)*
+_EIP-003: Event-DAG & Finality Specification_
+_Version: 0.2_
+_Status: Draft_
+_Ebene: E1 (Fundament)_

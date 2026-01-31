@@ -66,19 +66,19 @@ Jede Komponente ist ein Wert zwischen 0 (kein Vertrauen) und 1 (volles Vertrauen
 pub struct TrustVector {
     /// Reliability: Anteil erfüllter Verpflichtungen
     pub r: f64,
-    
+
     /// Integrity: Konsistenz zwischen Aussagen und Fakten
     pub i: f64,
-    
+
     /// Competence: Qualität der Leistungen
     pub c: f64,
-    
+
     /// Predictability: Verhaltenskonsistenz über Zeit
     pub p: f64,
-    
+
     /// Vigilance: Korrektheit bei Anomalie-Meldungen
     pub v: f64,
-    
+
     /// Omega-Alignment: Regelkonformität
     pub omega: f64,
 }
@@ -145,14 +145,14 @@ Mit α = 2 (Beta-Prior-Parameter).
 
 **Beobachtbare Events:**
 
-| Event-Typ | Impact auf R |
-|-----------|--------------|
-| TAT CLOSE (erfolgreich) | +1 fulfilled |
-| TAT ABORT (durch Agent) | +1 total, 0 fulfilled |
-| Deadline eingehalten | +1 fulfilled |
-| Deadline verpasst | +1 total, 0 fulfilled |
-| Service online | +0.1 fulfilled (pro Tag) |
-| Service offline | +0.1 total, 0 fulfilled |
+| Event-Typ               | Impact auf R             |
+| ----------------------- | ------------------------ |
+| TAT CLOSE (erfolgreich) | +1 fulfilled             |
+| TAT ABORT (durch Agent) | +1 total, 0 fulfilled    |
+| Deadline eingehalten    | +1 fulfilled             |
+| Deadline verpasst       | +1 total, 0 fulfilled    |
+| Service online          | +0.1 fulfilled (pro Tag) |
+| Service offline         | +0.1 total, 0 fulfilled  |
 
 **Beispiel:**
 
@@ -182,13 +182,13 @@ I(s) = (verified_true_statements + α) / (total_verifiable_statements + 2α)
 
 **Beobachtbare Events:**
 
-| Event-Typ | Impact auf I |
-|-----------|--------------|
-| Attestation bestätigt | +1 verified_true |
-| Attestation widerlegt | +1 total, 0 verified |
-| Self-Report korrekt | +1 verified_true |
-| Self-Report falsch | +1 total, 0 verified |
-| Credential verifiziert | +0.5 verified_true |
+| Event-Typ                      | Impact auf I         |
+| ------------------------------ | -------------------- |
+| Attestation bestätigt          | +1 verified_true     |
+| Attestation widerlegt          | +1 total, 0 verified |
+| Self-Report korrekt            | +1 verified_true     |
+| Self-Report falsch             | +1 total, 0 verified |
+| Credential verifiziert         | +0.5 verified_true   |
 | Credential widerrufen (Betrug) | +2 total, 0 verified |
 
 **Gewichtung nach Schwere:**
@@ -204,7 +204,7 @@ enum IntegrityEventWeight {
 **Beispiel:**
 
 ```
-Agent hat 200 Aussagen gemacht, 190 wurden verifiziert, 
+Agent hat 200 Aussagen gemacht, 190 wurden verifiziert,
 8 waren Minor-Fehler, 2 waren Significant.
 
 verified_true = 190
@@ -229,12 +229,12 @@ Wobei `weight_i = trust(reviewer_i)` – gewichtet nach Vertrauen in den Reviewe
 
 **Beobachtbare Events:**
 
-| Event-Typ | Rating-Range | Gewicht |
-|-----------|--------------|---------|
-| Peer-Review (5-Sterne) | [0, 1] | T(reviewer) |
-| TAT-Outcome-Rating | [0, 1] | T(counterparty) |
-| Automatischer Qualitäts-Check | [0, 1] | 0.5 (fixed) |
-| Credential von Experte | 0.9 (fixed) | T(issuer) |
+| Event-Typ                     | Rating-Range | Gewicht         |
+| ----------------------------- | ------------ | --------------- |
+| Peer-Review (5-Sterne)        | [0, 1]       | T(reviewer)     |
+| TAT-Outcome-Rating            | [0, 1]       | T(counterparty) |
+| Automatischer Qualitäts-Check | [0, 1]       | 0.5 (fixed)     |
+| Credential von Experte        | 0.9 (fixed)  | T(issuer)       |
 
 **Bayessche Modellierung:**
 
@@ -273,12 +273,12 @@ Mit k = 10 als Skalierungsfaktor.
 
 **Verhaltensmetriken:**
 
-| Metrik | Beschreibung | Erwarteter Bereich |
-|--------|--------------|-------------------|
-| Response Time | Antwortzeit auf Anfragen | [0s, ∞) |
-| Transaction Rate | Transaktionen pro Tag | [0, ∞) |
-| Online Hours | Stunden online pro Tag | [0, 24] |
-| Rejection Rate | Ablehnungsrate von Anfragen | [0, 1] |
+| Metrik           | Beschreibung                | Erwarteter Bereich |
+| ---------------- | --------------------------- | ------------------ |
+| Response Time    | Antwortzeit auf Anfragen    | [0s, ∞)            |
+| Transaction Rate | Transaktionen pro Tag       | [0, ∞)             |
+| Online Hours     | Stunden online pro Tag      | [0, 24]            |
+| Rejection Rate   | Ablehnungsrate von Anfragen | [0, 1]             |
 
 **Berechnung der Varianz:**
 
@@ -288,14 +288,14 @@ fn calculate_predictability(observations: &[BehaviorSnapshot]) -> f64 {
     if n < 10.0 {
         return 0.5; // Nicht genug Daten
     }
-    
+
     let metrics = [
         normalized_variance(&observations, |o| o.response_time),
         normalized_variance(&observations, |o| o.transaction_rate),
         normalized_variance(&observations, |o| o.online_hours),
         normalized_variance(&observations, |o| o.rejection_rate),
     ];
-    
+
     let avg_variance = metrics.iter().sum::<f64>() / 4.0;
     1.0 / (1.0 + 10.0 * avg_variance)
 }
@@ -326,13 +326,13 @@ V(s) = (correct_reports + α) / (total_reports + 2α)
 
 **Beobachtbare Events:**
 
-| Event-Typ | Impact auf V |
-|-----------|--------------|
-| Anomalie gemeldet → bestätigt | +1 correct |
-| Anomalie gemeldet → widerlegt | +1 total, 0 correct |
-| Anomalie nicht gemeldet → entdeckt | -0.5 (Penalty) |
-| False Positive | +1 total, 0 correct |
-| True Positive (kritisch) | +2 correct |
+| Event-Typ                          | Impact auf V        |
+| ---------------------------------- | ------------------- |
+| Anomalie gemeldet → bestätigt      | +1 correct          |
+| Anomalie gemeldet → widerlegt      | +1 total, 0 correct |
+| Anomalie nicht gemeldet → entdeckt | -0.5 (Penalty)      |
+| False Positive                     | +1 total, 0 correct |
+| True Positive (kritisch)           | +2 correct          |
 
 **Wichtung nach Schweregrad:**
 
@@ -374,13 +374,13 @@ V = (45 + 2) / (50 + 4) = 47 / 54 ≈ 0.870
 
 **Beobachtbare Events:**
 
-| Event-Typ | Impact auf Ω |
-|-----------|--------------|
-| Aktion innerhalb Policy | +1 compliant |
-| Policy-Verstoß (minor) | +1 total, 0 compliant |
-| Policy-Verstoß (major) | +5 total, 0 compliant |
-| Governance-Teilnahme | +0.5 compliant |
-| Governance-Sabotage | +10 total, 0 compliant |
+| Event-Typ               | Impact auf Ω           |
+| ----------------------- | ---------------------- |
+| Aktion innerhalb Policy | +1 compliant           |
+| Policy-Verstoß (minor)  | +1 total, 0 compliant  |
+| Policy-Verstoß (major)  | +5 total, 0 compliant  |
+| Governance-Teilnahme    | +0.5 compliant         |
+| Governance-Sabotage     | +10 total, 0 compliant |
 
 **Ebenen der Regelkonformität:**
 
@@ -388,13 +388,13 @@ V = (45 + 2) / (50 + 4) = 47 / 54 ≈ 0.870
 enum ComplianceLevel {
     /// Globale Erynoa-Axiome (E1-E7)
     GlobalAxioms,
-    
+
     /// Realm-spezifische Regeln
     RealmRules,
-    
+
     /// Bilaterale Vereinbarungen
     ContractTerms,
-    
+
     /// Empfohlene Best Practices
     BestPractices,
 }
@@ -437,14 +437,14 @@ W_scalar(s) = Σ(wᵢ × Wᵢ(s))
 
 #### 3.2 Default-Gewichte
 
-| Dimension | Gewicht | Begründung |
-|-----------|---------|------------|
-| R | 0.15 | Grundlegende Zuverlässigkeit |
-| I | 0.15 | Kernvertrauen |
-| C | 0.15 | Leistungsqualität |
-| P | 0.10 | Stabilität |
-| V | 0.20 | Aktive Netzwerkbeteiligung |
-| Ω | 0.25 | Systemgesundheit |
+| Dimension | Gewicht | Begründung                   |
+| --------- | ------- | ---------------------------- |
+| R         | 0.15    | Grundlegende Zuverlässigkeit |
+| I         | 0.15    | Kernvertrauen                |
+| C         | 0.15    | Leistungsqualität            |
+| P         | 0.10    | Stabilität                   |
+| V         | 0.20    | Aktive Netzwerkbeteiligung   |
+| Ω         | 0.25    | Systemgesundheit             |
 
 **Summe:** 1.0
 
@@ -456,11 +456,11 @@ Verschiedene Realms können unterschiedliche Gewichte definieren:
 {
   "realm": "did:erynoa:circle:finance-trading",
   "trust_weights": {
-    "R": 0.20,
+    "R": 0.2,
     "I": 0.25,
     "C": 0.15,
     "P": 0.15,
-    "V": 0.10,
+    "V": 0.1,
     "Ω": 0.15
   }
 }
@@ -470,8 +470,8 @@ Verschiedene Realms können unterschiedliche Gewichte definieren:
 {
   "realm": "did:erynoa:circle:creative-arts",
   "trust_weights": {
-    "R": 0.10,
-    "I": 0.10,
+    "R": 0.1,
+    "I": 0.1,
     "C": 0.35,
     "P": 0.05,
     "V": 0.15,
@@ -503,7 +503,7 @@ impl TrustWeights {
             omega: 0.25,
         }
     }
-    
+
     pub fn validate(&self) -> Result<(), ValidationError> {
         let sum = self.r + self.i + self.c + self.p + self.v + self.omega;
         if (sum - 1.0).abs() > 0.001 {
@@ -585,11 +585,11 @@ confidence = 1 - (upper_95 - lower_95) / 2
 ```
 
 | Beobachtungen | 95%-CI Breite | Konfidenz |
-|---------------|---------------|-----------|
-| 10 | 0.45 | 0.78 |
-| 50 | 0.20 | 0.90 |
-| 200 | 0.10 | 0.95 |
-| 1000 | 0.05 | 0.98 |
+| ------------- | ------------- | --------- |
+| 10            | 0.45          | 0.78      |
+| 50            | 0.20          | 0.90      |
+| 200           | 0.10          | 0.95      |
+| 1000          | 0.05          | 0.98      |
 
 ---
 
@@ -604,7 +604,7 @@ pub fn update_trust_vector(
     config: &TrustConfig,
 ) -> TrustVector {
     let mut updated = current.clone();
-    
+
     match event.event_type {
         EventType::TransactionClose { success } => {
             if success {
@@ -613,7 +613,7 @@ pub fn update_trust_vector(
                 updated.r = bayesian_update(current.r, 0.0, config.r_params);
             }
         }
-        
+
         EventType::AttestationVerified { correct } => {
             if correct {
                 updated.i = bayesian_update(current.i, 1.0, config.i_params);
@@ -621,20 +621,20 @@ pub fn update_trust_vector(
                 updated.i = bayesian_update(current.i, 0.0, config.i_params);
             }
         }
-        
+
         EventType::PeerReview { rating, reviewer_trust } => {
             updated.c = weighted_bayesian_update(
-                current.c, 
-                rating, 
+                current.c,
+                rating,
                 reviewer_trust,
                 config.c_params
             );
         }
-        
+
         EventType::BehaviorObserved { snapshot } => {
             updated.p = update_predictability(current.p, snapshot);
         }
-        
+
         EventType::AnomalyReport { correct, severity } => {
             let weight = severity.weight();
             if correct {
@@ -643,7 +643,7 @@ pub fn update_trust_vector(
                 updated.v = bayesian_update(current.v, 0.0, config.v_params);
             }
         }
-        
+
         EventType::PolicyAction { compliant, level } => {
             let weight = level.weight();
             if compliant {
@@ -655,23 +655,23 @@ pub fn update_trust_vector(
                 updated.omega = updated.omega.max(0.0);
             }
         }
-        
+
         _ => {}
     }
-    
+
     // Floor-Garantie (niemand fällt unter 0.3)
     updated.apply_floor(config.trust_floor);
-    
+
     updated
 }
 
 fn bayesian_update(current: f64, observation: f64, params: &BayesParams) -> f64 {
     let alpha = current * params.pseudo_count;
     let beta = (1.0 - current) * params.pseudo_count;
-    
+
     let new_alpha = alpha + observation * params.observation_weight;
     let new_beta = beta + (1.0 - observation) * params.observation_weight;
-    
+
     new_alpha / (new_alpha + new_beta)
 }
 ```
@@ -719,7 +719,7 @@ Mit λ = 0.9997 pro Tag (Halbwertszeit ≈ 6 Jahre).
 ```rust
 fn apply_decay(trust: &mut TrustVector, days_inactive: u64) {
     let decay_factor = 0.9997_f64.powi(days_inactive as i32);
-    
+
     trust.r = 0.5 + (trust.r - 0.5) * decay_factor;
     trust.i = 0.5 + (trust.i - 0.5) * decay_factor;
     trust.c = 0.5 + (trust.c - 0.5) * decay_factor;
@@ -754,13 +754,13 @@ impl TrustVector {
 
 Der skalare Trust-Wert wird in qualitative Level übersetzt:
 
-| Level | Score-Range | Beschreibung |
-|-------|-------------|--------------|
-| Unknown | Konfidenz < 0.5 | Nicht genug Daten |
-| Caution | [0.0, 0.4) | Vorsicht empfohlen |
-| Neutral | [0.4, 0.6) | Durchschnittlich |
-| Verified | [0.6, 0.8) | Gute Reputation |
-| HighTrust | [0.8, 1.0] | Exzellente Reputation |
+| Level     | Score-Range     | Beschreibung          |
+| --------- | --------------- | --------------------- |
+| Unknown   | Konfidenz < 0.5 | Nicht genug Daten     |
+| Caution   | [0.0, 0.4)      | Vorsicht empfohlen    |
+| Neutral   | [0.4, 0.6)      | Durchschnittlich      |
+| Verified  | [0.6, 0.8)      | Gute Reputation       |
+| HighTrust | [0.8, 1.0]      | Exzellente Reputation |
 
 #### 6.2 Hysterese
 
@@ -769,7 +769,7 @@ Um Oszillationen an Schwellwerten zu verhindern:
 ```rust
 fn determine_level(score: f64, previous_level: TrustLevel) -> TrustLevel {
     const HYSTERESIS: f64 = 0.05;
-    
+
     let thresholds = match previous_level {
         TrustLevel::Caution => (0.0, 0.4 + HYSTERESIS),
         TrustLevel::Neutral => (0.4 - HYSTERESIS, 0.6 + HYSTERESIS),
@@ -777,7 +777,7 @@ fn determine_level(score: f64, previous_level: TrustLevel) -> TrustLevel {
         TrustLevel::HighTrust => (0.8 - HYSTERESIS, 1.0),
         TrustLevel::Unknown => (0.0, 1.0),
     };
-    
+
     if score < thresholds.0 {
         previous_level.downgrade()
     } else if score > thresholds.1 {
@@ -793,37 +793,37 @@ fn determine_level(score: f64, previous_level: TrustLevel) -> TrustLevel {
 ```rust
 pub fn explain_trust(vector: &TrustVector, confidence: &TrustConfidence) -> String {
     let mut explanations = vec![];
-    
+
     if vector.r > 0.8 && confidence.r > 0.7 {
         explanations.push("Sehr zuverlässig bei der Erfüllung von Zusagen");
     } else if vector.r < 0.5 {
         explanations.push("Hat Schwierigkeiten, Zusagen einzuhalten");
     }
-    
+
     if vector.i > 0.9 {
         explanations.push("Höchste Integrität – Aussagen werden stets verifiziert");
     } else if vector.i < 0.6 {
         explanations.push("Einige Aussagen konnten nicht verifiziert werden");
     }
-    
+
     if vector.c > 0.8 {
         explanations.push("Überdurchschnittliche Kompetenz in seinem Bereich");
     }
-    
+
     if vector.p < 0.5 {
         explanations.push("Unvorhersagbares Verhalten – Vorsicht empfohlen");
     }
-    
+
     if vector.v > 0.7 {
         explanations.push("Aktiver Wächter – meldet Anomalien zuverlässig");
     }
-    
+
     if vector.omega > 0.95 {
         explanations.push("Vorbildliche Regelkonformität");
     } else if vector.omega < 0.7 {
         explanations.push("Hat wiederholt gegen Regeln verstoßen");
     }
-    
+
     explanations.join(". ")
 }
 ```
@@ -913,7 +913,7 @@ GET /v1/trust/{did}
   "scalar": 0.847,
   "level": "HighTrust",
   "confidence": 0.89,
-  "confidence_interval_95": [0.79, 0.90],
+  "confidence_interval_95": [0.79, 0.9],
   "last_updated": "2026-01-29T14:30:00Z"
 }
 ```
@@ -974,24 +974,29 @@ println!("Erklärung: {}", explanation);
 #### 10.2 TypeScript
 
 ```typescript
-import { TrustVector, TrustWeights, TrustLevel } from '@erynoa/sdk';
+import { TrustVector, TrustWeights, TrustLevel } from "@erynoa/sdk";
 
 // Trust abfragen
-const did = 'did:erynoa:spirit:trading-bot-7';
+const did = "did:erynoa:spirit:trading-bot-7";
 const trust = await client.getTrust(did);
 
-console.log('Trust-Vektor:', trust.vector);
-console.log('Skalar:', trust.scalar);
-console.log('Level:', TrustLevel[trust.level]);
+console.log("Trust-Vektor:", trust.vector);
+console.log("Skalar:", trust.scalar);
+console.log("Level:", TrustLevel[trust.level]);
 
 // Dimensionen einzeln prüfen
 if (trust.vector.I > 0.9 && trust.confidence.I > 0.8) {
-  console.log('Hohe Integrität mit hoher Konfidenz');
+  console.log("Hohe Integrität mit hoher Konfidenz");
 }
 
 // Mit Realm-spezifischen Gewichten
 const financeWeights: TrustWeights = {
-  R: 0.20, I: 0.25, C: 0.15, P: 0.15, V: 0.10, Ω: 0.15
+  R: 0.2,
+  I: 0.25,
+  C: 0.15,
+  P: 0.15,
+  V: 0.1,
+  Ω: 0.15,
 };
 
 const financeScore = trust.vector.toScalar(financeWeights);
@@ -1044,7 +1049,12 @@ erynoa trust did:erynoa:spirit:trading-bot-7 --explain
 
 ```json
 {
-  "R": 0.5, "I": 0.5, "C": 0.5, "P": 0.5, "V": 0.5, "Ω": 0.5,
+  "R": 0.5,
+  "I": 0.5,
+  "C": 0.5,
+  "P": 0.5,
+  "V": 0.5,
+  "Ω": 0.5,
   "scalar": 0.5,
   "level": "Neutral",
   "confidence": 0.2
@@ -1082,6 +1092,7 @@ erynoa trust did:erynoa:spirit:trading-bot-7 --explain
 ### TV-4: Staked Guardian Trust-Boost (V0.2)
 
 **Input:**
+
 - Neuer Agent (alle Dimensionen = 0.5)
 - Guardian: did:erynoa:guild:sparkasse (T = 0.9)
 - Stake: 500 ERY (stake_factor ≈ 0.3)
@@ -1112,6 +1123,7 @@ T_effective = T_base + boost
 ### TV-5: Guardian Slashing (V0.2)
 
 **Input:**
+
 - Guardian bürgt für Scammer (Full Liability, 500 ERY)
 - Scammer begeht Major Fraud (severity = 0.8)
 
@@ -1137,7 +1149,7 @@ T_effective = T_base + boost
 
 ## Referenzen
 
-- [Erynoa Fachkonzept V6.1](../FACHKONZEPT.md)
+- [Erynoa Fachkonzept V6.2](../FACHKONZEPT.md)
 - [EIP-001: DID:erynoa](./EIP-001-did-erynoa.md)
 - [EIP-004: Bayesian Trust Update](./EIP-004-bayesian-trust-update.md)
 - [EigenTrust Paper](https://nlp.stanford.edu/pubs/eigentrust.pdf)
@@ -1147,14 +1159,14 @@ T_effective = T_base + boost
 
 ## Changelog
 
-| Version | Datum | Änderung |
-|---------|-------|----------|
-| 0.1 | 2026-01-29 | Initial Draft |
-| 0.2 | 2026-01-29 | **Staked Guardianship Integration**: Trust-Vererbung durch institutionelle Guardians, Slashing-Test-Vektoren, Referenz auf EIP-004 |
+| Version | Datum      | Änderung                                                                                                                           |
+| ------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 0.1     | 2026-01-29 | Initial Draft                                                                                                                      |
+| 0.2     | 2026-01-29 | **Staked Guardianship Integration**: Trust-Vererbung durch institutionelle Guardians, Slashing-Test-Vektoren, Referenz auf EIP-004 |
 
 ---
 
-*EIP-002: Trust Vector 6D Specification*
-*Version: 0.2*
-*Status: Draft*
-*Ebene: E1/E2 (Fundament/Emergenz)*
+_EIP-002: Trust Vector 6D Specification_
+_Version: 0.2_
+_Status: Draft_
+_Ebene: E1/E2 (Fundament/Emergenz)_

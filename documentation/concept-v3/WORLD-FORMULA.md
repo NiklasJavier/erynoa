@@ -381,7 +381,7 @@
 ║   3-SCHICHTEN-ARCHITEKTUR (Kategorientheoretisch)                                                                                        ║
 ║                                                                                                                                           ║
 ║                                                                                                                                           ║
-║       𝒞_Root                                    ← Root-Environment (112 Axiome, unveränderlich)                                         ║
+║       𝒞_Root                                    ← Root-Environment (126 Axiome, unveränderlich)                                         ║
 ║           │                                                                                                                               ║
 ║           ├── 𝒞_VirtEnv ⊂ 𝒞_Root               ← Virtual Environment (Souveräne Gruppe, circle-Namespace)                               ║
 ║           │       │                                                                                                                       ║
@@ -392,7 +392,7 @@
 ║                                                                                                                                           ║
 ║   EBENE 1: ROOT-ENVIRONMENT (𝒞_Root)                                                                                                     ║
 ║                                                                                                                                           ║
-║       𝒞_Root = { 112 Axiome, DID-Standard, Trust-Vektor, Event-DAG }                                                                    ║
+║       𝒞_Root = { 126 Axiome, DID-Standard, Trust-Vektor, Event-DAG }                                                                    ║
 ║                                                                                                                                           ║
 ║       • Globales Fundament, unveränderlich (nur H4-Override mit 1-Jahr-Timelock)                                                        ║
 ║       • Primary Chain: IOTA (feeless, MoveVM)                                                                                           ║
@@ -3819,7 +3819,7 @@
 
 ---
 
-_Erynoa Weltformel Version 6.0 – Humanistische Quanten-Kybernetische Gleichung._
-_120 Axiome über 8 Ebenen: Fundament → Emergenz → Prozess → Objekt → Schutz → Kybernetik → Quanta → Humanismus._
+_Erynoa Weltformel Version 6.1 – Humanistische Quanten-Kybernetische Gleichung mit Peer-Prozess-Logik._
+_126 Axiome über 8 Ebenen: Fundament → Emergenz → Prozess → Objekt → Schutz → Kybernetik → Quanta → Humanismus + 6 Peer-Axiome (PR1-PR6)._
 _Korrektheit ermöglicht Intelligenz, Schutz verhindert Tyrannei, Kybernetik erzeugt Leben, Quanta ermöglicht Transzendenz, Humanismus stiftet Sinn._
 _"Das System existiert, um menschliches Gedeihen zu ermöglichen. Nicht umgekehrt."_

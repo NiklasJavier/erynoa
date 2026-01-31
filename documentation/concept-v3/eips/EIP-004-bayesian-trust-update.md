@@ -18,6 +18,7 @@
 Diese Spezifikation definiert den **Bayesian Trust Update Algorithm** für das Erynoa-Protokoll. Der Algorithmus beschreibt, wie der 6-dimensionale Trust-Vektor W(s) basierend auf Events, Attestationen und **Staked Guardianship** aktualisiert wird.
 
 Kernkonzepte:
+
 - **Bayessche Inferenz** – Trust als Wahrscheinlichkeitsverteilung, nicht als Zahl
 - **Prior-Posterior-Update** – Jedes Event aktualisiert den Prior zum Posterior
 - **Konfidenzintervalle** – Explizite Unsicherheitsmodellierung
@@ -54,6 +55,7 @@ Wᵢ(s) ~ Beta(αᵢ, βᵢ)
 ```
 
 Die Beta-Verteilung hat zwei Parameter:
+
 - **α** ("Erfolge" + Prior): Je höher, desto mehr positive Evidenz
 - **β** ("Misserfolge" + Prior): Je höher, desto mehr negative Evidenz
 
@@ -63,10 +65,10 @@ Die Beta-Verteilung hat zwei Parameter:
 pub struct TrustDimension {
     /// "Erfolge" + Prior
     pub alpha: f64,
-    
+
     /// "Misserfolge" + Prior
     pub beta: f64,
-    
+
     /// Abgeleitete Werte (cached)
     pub expected_value: f64,      // α / (α + β)
     pub variance: f64,            // αβ / ((α+β)²(α+β+1))
@@ -78,14 +80,14 @@ impl TrustDimension {
     pub fn neutral() -> Self {
         Self::from_params(2.0, 2.0)
     }
-    
+
     /// Erstellt aus α und β
     pub fn from_params(alpha: f64, beta: f64) -> Self {
         let sum = alpha + beta;
         let expected = alpha / sum;
         let variance = (alpha * beta) / (sum * sum * (sum + 1.0));
         let ci_width = Self::confidence_interval_width(alpha, beta);
-        
+
         Self {
             alpha,
             beta,
@@ -94,7 +96,7 @@ impl TrustDimension {
             confidence: 1.0 - ci_width,
         }
     }
-    
+
     /// 95% Konfidenzintervall-Breite
     fn confidence_interval_width(alpha: f64, beta: f64) -> f64 {
         let dist = Beta::new(alpha, beta).unwrap();
@@ -102,14 +104,14 @@ impl TrustDimension {
         let upper = dist.inverse_cdf(0.975);
         upper - lower
     }
-    
+
     /// Bayessches Update
     pub fn update(&mut self, success: f64, weight: f64) {
         self.alpha += success * weight;
         self.beta += (1.0 - success) * weight;
         self.recalculate();
     }
-    
+
     fn recalculate(&mut self) {
         let sum = self.alpha + self.beta;
         self.expected_value = self.alpha / sum;
@@ -132,13 +134,13 @@ pub struct TrustState {
     pub p: TrustDimension,  // Predictability
     pub v: TrustDimension,  // Vigilance
     pub omega: TrustDimension, // Omega-Alignment
-    
+
     /// Staked Guardianship (V0.3)
     pub derived_trust: Option<DerivedTrust>,
-    
+
     /// Letzte Aktualisierung
     pub last_updated: u64,
-    
+
     /// Anzahl Events in der Historie
     pub event_count: u64,
 }
@@ -148,16 +150,16 @@ pub struct TrustState {
 pub struct DerivedTrust {
     /// Quelle des abgeleiteten Trusts
     pub source: DID,
-    
+
     /// Boost-Faktor (typisch 0.2-0.3)
     pub boost_factor: f64,
-    
+
     /// Gestakter Betrag (ERY Tokens oder Reputation Points)
     pub stake: StakeAmount,
-    
+
     /// Zeitpunkt des Stakings
     pub staked_at: u64,
-    
+
     /// Liability-Level
     pub liability: LiabilityLevel,
 }
@@ -243,19 +245,19 @@ pub fn calculate_effective_trust(
     visited: &mut HashSet<DID>,  // V0.2: Loop Detection
 ) -> TrustState {
     let mut effective = base_trust.clone();
-    
+
     // V0.2: LOOP DETECTION - Verhindert A→B→A Zyklen
     if visited.contains(subject) {
         // Zyklus erkannt! Kein Trust-Boost für zirkuläre Referenzen
         return effective;
     }
     visited.insert(subject.clone());
-    
+
     // V0.2: DEPTH LIMIT - Verhindert zu lange Ketten
     if visited.len() > MAX_TRUST_CHAIN_DEPTH {
         return effective;
     }
-    
+
     // Sortiere Guardians nach Trust (beste zuerst)
     let mut sorted_guardians: Vec<_> = guardians.iter()
         .filter(|g| g.endorsement.is_some())
@@ -267,22 +269,22 @@ pub fn calculate_effective_trust(
         let tb = guardian_trust_cache.get(&b.did).map(|t| t.scalar()).unwrap_or(0.0);
         tb.partial_cmp(&ta).unwrap_or(Ordering::Equal)
     });
-    
+
     // Nimm nur die Top-3
     let top_guardians = sorted_guardians.iter().take(MAX_GUARDIANS_FOR_BOOST);
-    
+
     let mut total_boost = TrustBoost::zero();
-    
+
     for guardian in top_guardians {
         if let Some(endorsement) = &guardian.endorsement {
             let guardian_trust = guardian_trust_cache.get(&guardian.did)
                 .expect("Guardian trust must be cached");
-            
+
             let stake_factor = match &endorsement.stake {
                 StakeAmount::Tokens(amount) => calculate_token_stake_factor(*amount),
                 StakeAmount::ReputationPoints(pct) => *pct,
             };
-            
+
             // Boost für jede Dimension
             let boost = TrustBoost {
                 r: INHERITANCE_DAMPING * guardian_trust.r.expected_value * stake_factor,
@@ -292,11 +294,11 @@ pub fn calculate_effective_trust(
                 v: INHERITANCE_DAMPING * guardian_trust.v.expected_value * stake_factor,
                 omega: INHERITANCE_DAMPING * guardian_trust.omega.expected_value * stake_factor,
             };
-            
+
             total_boost = total_boost.add(&boost);
         }
     }
-    
+
     // Addiere Boost (mit Ceiling bei 0.95)
     effective.r.expected_value = (base_trust.r.expected_value + total_boost.r).min(0.95);
     effective.i.expected_value = (base_trust.i.expected_value + total_boost.i).min(0.95);
@@ -304,7 +306,7 @@ pub fn calculate_effective_trust(
     effective.p.expected_value = (base_trust.p.expected_value + total_boost.p).min(0.95);
     effective.v.expected_value = (base_trust.v.expected_value + total_boost.v).min(0.95);
     effective.omega.expected_value = (base_trust.omega.expected_value + total_boost.omega).min(0.95);
-    
+
     // Markiere abgeleiteten Trust
     if !sorted_guardians.is_empty() {
         effective.derived_trust = Some(DerivedTrust {
@@ -315,7 +317,7 @@ pub fn calculate_effective_trust(
             liability: sorted_guardians[0].endorsement.as_ref().unwrap().liability.clone(),
         });
     }
-    
+
     effective
 }
 
@@ -324,7 +326,7 @@ fn calculate_token_stake_factor(tokens: u64) -> f64 {
     let log_tokens = (tokens as f64).ln();
     let log_100 = 100_f64.ln();
     let log_10000 = 10000_f64.ln();
-    
+
     ((log_tokens - log_100) / (log_10000 - log_100) * 0.6 + 0.3)
         .clamp(0.1, 1.0)
 }
@@ -344,7 +346,7 @@ pub fn detect_circular_endorsement(
 ) -> Option<CircularChain> {
     let mut visited = HashSet::new();
     let mut path = Vec::new();
-    
+
     fn dfs(
         current: &DID,
         target: &DID,
@@ -355,24 +357,24 @@ pub fn detect_circular_endorsement(
         if current == target && !path.is_empty() {
             return Some(CircularChain { dids: path.clone() });
         }
-        
+
         if visited.contains(current) {
             return None;
         }
-        
+
         visited.insert(current.clone());
         path.push(current.clone());
-        
+
         for guardian in graph.get_guardians(current) {
             if let Some(chain) = dfs(&guardian, target, graph, visited, path) {
                 return Some(chain);
             }
         }
-        
+
         path.pop();
         None
     }
-    
+
     dfs(subject, subject, endorsement_graph, &mut visited, &mut path)
 }
 
@@ -386,15 +388,15 @@ pub fn validate_endorsement(
     if graph.get_guardians(new_guardian).contains(ward) {
         return Err(EndorsementError::DirectCircularReference);
     }
-    
+
     // 2. Prüfe auf indirekte Zyklen
     let mut test_graph = graph.clone();
     test_graph.add_edge(new_guardian, ward);
-    
+
     if detect_circular_endorsement(ward, &test_graph).is_some() {
         return Err(EndorsementError::IndirectCircularReference);
     }
-    
+
     Ok(())
 }
 ```
@@ -418,7 +420,7 @@ pub fn validate_endorsement(
 pub enum GuardianshipVisibility {
     /// Vollständig öffentlich (Guardian-DID sichtbar)
     Public,
-    
+
     /// Privat mit ZK-Proof (nur "ist gebürgt von Tier-1 Bank" sichtbar)
     Private {
         /// ZK-Proof: "Guardian ist in Set {Tier1Banks}" ohne zu verraten welche
@@ -448,12 +450,12 @@ pub fn generate_guardianship_proof(
     // 1. X ist in tier_membership_list
     // 2. X hat für mich gebürgt
     // OHNE X zu verraten
-    
+
     let circuit = GuardianshipMembershipCircuit::new(
         guardian,
         tier_membership_list,
     );
-    
+
     circuit.prove()
 }
 
@@ -616,16 +618,16 @@ pub fn reveal_guardianship(
 pub struct SlashingEvent {
     /// Der Übeltäter
     pub offender: DID,
-    
+
     /// Der Tatbestand
     pub offense: OffenseType,
-    
+
     /// Schwere (0-1)
     pub severity: f64,
-    
+
     /// Betroffene Trust-Dimension
     pub dimension: TrustDimension,
-    
+
     /// Beweis-Events
     pub evidence: Vec<EventId>,
 }
@@ -646,11 +648,11 @@ pub fn process_slashing(
     // 1. Offender bestrafen
     let offender_trust = trust_db.get_mut(&slashing.offender)?;
     let offender_delta = apply_offense_to_trust(offender_trust, slashing);
-    
+
     // 2. Guardians identifizieren und slashen
     let guardians = get_staked_guardians(&slashing.offender)?;
     let mut guardian_deltas = Vec::new();
-    
+
     for guardian in guardians {
         if let Some(endorsement) = &guardian.endorsement {
             let liability_factor = match endorsement.liability {
@@ -658,30 +660,30 @@ pub fn process_slashing(
                 LiabilityLevel::Partial => 0.25,
                 LiabilityLevel::Full => 1.0,
             };
-            
+
             if liability_factor > 0.0 {
                 let guardian_trust = trust_db.get_mut(&guardian.did)?;
-                
+
                 let stake_factor = match &endorsement.stake {
                     StakeAmount::Tokens(amount) => calculate_token_stake_factor(*amount),
                     StakeAmount::ReputationPoints(pct) => *pct,
                 };
-                
+
                 // Slashing-Betrag berechnen
                 let slash_amount = liability_factor * slashing.severity * stake_factor * 0.1;
-                
+
                 // Primär Integrity betroffen (Guardian hat falsch gebürgt)
                 guardian_trust.i.update(0.0, slash_amount * guardian_trust.i.alpha);
-                
+
                 // Sekundär Reliability (Guardian ist weniger zuverlässig)
                 guardian_trust.r.update(0.0, slash_amount * 0.5 * guardian_trust.r.alpha);
-                
+
                 guardian_deltas.push(GuardianSlashResult {
                     guardian: guardian.did.clone(),
                     delta_i: -slash_amount,
                     delta_r: -slash_amount * 0.5,
                 });
-                
+
                 // Token-Stake verbrennen (falls applicable)
                 if let StakeAmount::Tokens(amount) = &endorsement.stake {
                     let burn_amount = (*amount as f64 * slashing.severity) as u64;
@@ -690,12 +692,12 @@ pub fn process_slashing(
             }
         }
     }
-    
+
     // 3. Chain Reaction: Alle von diesem Guardian gebürgten User
     for guardian_delta in &guardian_deltas {
         propagate_trust_change(&guardian_delta.guardian, trust_db)?;
     }
-    
+
     Ok(SlashingResult {
         offender: slashing.offender.clone(),
         offender_delta,
@@ -706,19 +708,19 @@ pub fn process_slashing(
 fn propagate_trust_change(guardian: &DID, trust_db: &mut TrustDatabase) -> Result<(), Error> {
     // Finde alle Users, die von diesem Guardian gebürgt wurden
     let dependents = find_dependents(guardian)?;
-    
+
     for dependent in dependents {
         // Recalculate effective trust
         let base_trust = trust_db.get(&dependent)?;
         let guardians = get_staked_guardians(&dependent)?;
         let guardian_cache = build_guardian_cache(&guardians, trust_db)?;
-        
+
         let new_effective = calculate_effective_trust(&base_trust, &guardians, &guardian_cache);
-        
+
         // Update derived trust
         trust_db.update_derived(&dependent, new_effective.derived_trust)?;
     }
-    
+
     Ok(())
 }
 ```
@@ -735,7 +737,7 @@ pub fn apply_event(
     context: &EventContext,
 ) -> TrustDelta {
     let mut delta = TrustDelta::zero();
-    
+
     match &event.payload {
         // === Transaktionen ===
         EventPayload::TransactionClose { outcome, .. } => {
@@ -744,7 +746,7 @@ pub fn apply_event(
                     // Reliability: Verpflichtung erfüllt
                     trust.r.update(1.0, 1.0);
                     delta.r = trust.r.expected_value - delta.r;
-                    
+
                     // Omega: Regelkonform
                     trust.omega.update(1.0, 0.5);
                 }
@@ -760,20 +762,20 @@ pub fn apply_event(
                 }
             }
         }
-        
+
         EventPayload::TransactionAbort { reason, blamed, .. } => {
             if *blamed {
                 trust.r.update(0.0, 2.0);
                 trust.p.update(0.0, 1.0);  // Unvorhersagbar
             }
         }
-        
+
         // === Attestationen ===
         EventPayload::TrustAttestation { subject, dimension, value, .. } => {
             // Attester muss vertrauenswürdig sein
             let attester_trust = context.attester_trust.unwrap_or(0.5);
             let weight = attester_trust * 0.5;  // Gedämpft
-            
+
             match dimension {
                 TrustDimensionType::Reliability => trust.r.update(*value, weight),
                 TrustDimensionType::Integrity => trust.i.update(*value, weight),
@@ -783,7 +785,7 @@ pub fn apply_event(
                 TrustDimensionType::OmegaAlignment => trust.omega.update(*value, weight),
             }
         }
-        
+
         // === Integrität ===
         EventPayload::CredentialVerified { valid, .. } => {
             if *valid {
@@ -793,7 +795,7 @@ pub fn apply_event(
                 trust.i.update(0.0, 10.0);
             }
         }
-        
+
         // === Vigilance ===
         EventPayload::AnomalyReport { confirmed, severity, .. } => {
             if *confirmed {
@@ -803,29 +805,29 @@ pub fn apply_event(
                 trust.v.update(0.0, 0.5);
             }
         }
-        
+
         // === Governance ===
         EventPayload::GovernanceVote { .. } => {
             // Teilnahme an Governance ist positiv
             trust.omega.update(1.0, 0.3);
         }
-        
+
         EventPayload::GovernancePropose { accepted, .. } => {
             if *accepted {
                 trust.c.update(1.0, 1.0);  // Kompetenter Vorschlag
                 trust.omega.update(1.0, 0.5);
             }
         }
-        
+
         _ => {}
     }
-    
+
     // Trust-Floor anwenden
     apply_trust_floor(trust, TRUST_FLOOR);
-    
+
     trust.last_updated = event.timestamp;
     trust.event_count += 1;
-    
+
     delta
 }
 
@@ -896,13 +898,13 @@ const MS_PER_DAY: u64 = 24 * 60 * 60 * 1000;
 
 pub fn apply_decay(trust: &mut TrustState, now: u64) {
     let days_since_update = (now - trust.last_updated) / MS_PER_DAY;
-    
+
     if days_since_update == 0 {
         return;
     }
-    
+
     let decay = DECAY_FACTOR_PER_DAY.powi(days_since_update as i32);
-    
+
     // Decay Richtung 0.5 (Neutral)
     trust.r.expected_value = 0.5 + (trust.r.expected_value - 0.5) * decay;
     trust.i.expected_value = 0.5 + (trust.i.expected_value - 0.5) * decay;
@@ -910,7 +912,7 @@ pub fn apply_decay(trust: &mut TrustState, now: u64) {
     trust.p.expected_value = 0.5 + (trust.p.expected_value - 0.5) * decay;
     trust.v.expected_value = 0.5 + (trust.v.expected_value - 0.5) * decay;
     trust.omega.expected_value = 0.5 + (trust.omega.expected_value - 0.5) * decay;
-    
+
     // Auch Konfidenz sinkt (Unsicherheit steigt)
     let confidence_decay = decay.sqrt();
     trust.r.confidence *= confidence_decay;
@@ -919,7 +921,7 @@ pub fn apply_decay(trust: &mut TrustState, now: u64) {
     trust.p.confidence *= confidence_decay;
     trust.v.confidence *= confidence_decay;
     trust.omega.confidence *= confidence_decay;
-    
+
     trust.last_updated = now;
 }
 ```
@@ -939,7 +941,7 @@ pub fn temporal_weight(event_age_days: u64, is_negative: bool) -> f64 {
     } else {
         DECAY_HALF_LIFE_POSITIVE_YEARS * 365.0
     };
-    
+
     let gamma = (0.5_f64).ln() / half_life_days;
     (gamma * event_age_days as f64).exp()
 }
@@ -953,7 +955,7 @@ pub fn temporal_weight(event_age_days: u64, is_negative: bool) -> f64 {
 pub fn interpret_trust(trust: &TrustState) -> TrustInterpretation {
     let scalar = trust.scalar();
     let confidence = trust.average_confidence();
-    
+
     // Niedrige Konfidenz überschreibt Score
     if confidence < 0.5 {
         return TrustInterpretation {
@@ -963,16 +965,16 @@ pub fn interpret_trust(trust: &TrustState) -> TrustInterpretation {
             explanation: "Nicht genug Daten für verlässliche Einschätzung".into(),
         };
     }
-    
+
     let level = match scalar {
         s if s < 0.4 => TrustLevel::Caution,
         s if s < 0.6 => TrustLevel::Neutral,
         s if s < 0.8 => TrustLevel::Verified,
         _ => TrustLevel::HighTrust,
     };
-    
+
     let explanation = generate_explanation(trust, level);
-    
+
     TrustInterpretation {
         level,
         scalar,
@@ -983,7 +985,7 @@ pub fn interpret_trust(trust: &TrustState) -> TrustInterpretation {
 
 fn generate_explanation(trust: &TrustState, level: TrustLevel) -> String {
     let mut parts = Vec::new();
-    
+
     // Herausragende Dimensionen
     if trust.r.expected_value > 0.85 {
         parts.push("Sehr zuverlässig bei Zusagen");
@@ -994,7 +996,7 @@ fn generate_explanation(trust: &TrustState, level: TrustLevel) -> String {
     if trust.v.expected_value > 0.7 {
         parts.push("Aktiver Wächter");
     }
-    
+
     // Schwächen
     if trust.p.expected_value < 0.5 {
         parts.push("Unvorhersagbares Verhalten");
@@ -1002,12 +1004,12 @@ fn generate_explanation(trust: &TrustState, level: TrustLevel) -> String {
     if trust.omega.expected_value < 0.7 {
         parts.push("Gelegentliche Regelverstöße");
     }
-    
+
     // Guardian-Boost
     if let Some(derived) = &trust.derived_trust {
         parts.push(&format!("Gebürgt von {}", derived.source));
     }
-    
+
     parts.join(". ")
 }
 ```
@@ -1027,8 +1029,12 @@ POST /v1/trust/{did}/calculate
   "include_derived": true,
   "include_confidence": true,
   "weights": {
-    "R": 0.15, "I": 0.15, "C": 0.15,
-    "P": 0.10, "V": 0.20, "Ω": 0.25
+    "R": 0.15,
+    "I": 0.15,
+    "C": 0.15,
+    "P": 0.1,
+    "V": 0.2,
+    "Ω": 0.25
   }
 }
 ```
@@ -1044,7 +1050,7 @@ POST /v1/trust/{did}/calculate
       "I": { "value": 0.78, "alpha": 82, "beta": 23, "confidence": 0.85 },
       "C": { "value": 0.55, "alpha": 28, "beta": 23, "confidence": 0.61 },
       "P": { "value": 0.72, "alpha": 36, "beta": 14, "confidence": 0.68 },
-      "V": { "value": 0.50, "alpha": 5, "beta": 5, "confidence": 0.35 },
+      "V": { "value": 0.5, "alpha": 5, "beta": 5, "confidence": 0.35 },
       "Ω": { "value": 0.82, "alpha": 95, "beta": 21, "confidence": 0.88 }
     },
     "derived": {
@@ -1054,13 +1060,17 @@ POST /v1/trust/{did}/calculate
       "totalBoost": 0.135
     },
     "effective": {
-      "R": 0.785, "I": 0.905, "C": 0.685,
-      "P": 0.855, "V": 0.635, "Ω": 0.935
+      "R": 0.785,
+      "I": 0.905,
+      "C": 0.685,
+      "P": 0.855,
+      "V": 0.635,
+      "Ω": 0.935
     },
     "scalar": 0.812,
     "level": "HighTrust",
     "confidence": 0.68,
-    "confidence_interval_95": [0.72, 0.90]
+    "confidence_interval_95": [0.72, 0.9]
   },
   "interpretation": {
     "level": "HighTrust",
@@ -1156,7 +1166,7 @@ client.endorse(&my_guild_did, &alice_did, endorsement, &keypair).await?;
 #### 9.2 TypeScript
 
 ```typescript
-import { TrustState, Endorsement, LiabilityLevel } from '@erynoa/sdk';
+import { TrustState, Endorsement, LiabilityLevel } from "@erynoa/sdk";
 
 // Trust berechnen
 const trust = await client.getTrust(aliceDid, { includeDerived: true });
@@ -1166,11 +1176,16 @@ console.log(`Effective: ${trust.effective.scalar}`);
 console.log(`Boost: +${trust.derived.totalBoost}`);
 
 // Als Guardian bürgen
-await client.endorse(myGuildDid, aliceDid, {
-  level: 'kyc-level-3',
-  stake: { type: 'tokens', amount: 500 },
-  liability: LiabilityLevel.Full,
-}, keypair);
+await client.endorse(
+  myGuildDid,
+  aliceDid,
+  {
+    level: "kyc-level-3",
+    stake: { type: "tokens", amount: 500 },
+    liability: LiabilityLevel.Full,
+  },
+  keypair,
+);
 ```
 
 ---
@@ -1185,7 +1200,12 @@ await client.endorse(myGuildDid, aliceDid, {
 
 ```json
 {
-  "R": 0.5, "I": 0.5, "C": 0.5, "P": 0.5, "V": 0.5, "Ω": 0.5,
+  "R": 0.5,
+  "I": 0.5,
+  "C": 0.5,
+  "P": 0.5,
+  "V": 0.5,
+  "Ω": 0.5,
   "scalar": 0.5,
   "confidence": 0.2
 }
@@ -1194,6 +1214,7 @@ await client.endorse(myGuildDid, aliceDid, {
 ### TV-2: Guardian-Boost
 
 **Input:**
+
 - Base Trust: all 0.5
 - Guardian: T = 0.9, Stake = 500 ERY (stake_factor ≈ 0.3)
 
@@ -1208,6 +1229,7 @@ T_effective = 0.5 + 0.081 = 0.581
 ### TV-3: Slashing
 
 **Input:**
+
 - Offender begeht Fraud (severity = 0.8)
 - Guardian hat Full Liability, 500 ERY staked
 
@@ -1222,6 +1244,7 @@ Guardian-Integrity sinkt um 2.4%.
 ### TV-4: Circular Reference Detection (V0.2)
 
 **Input:**
+
 - Bank A bürgt für Bank B
 - Bank B versucht, für Bank A zu bürgen
 
@@ -1235,6 +1258,7 @@ Message: "Cannot create endorsement: A↔B cycle detected"
 ### TV-5: Private Guardianship (V0.2)
 
 **Input:**
+
 - Guardian: Sparkasse (Tier2Institutional)
 - Visibility: Private
 
@@ -1242,11 +1266,13 @@ Message: "Cannot create endorsement: A↔B cycle detected"
 
 ```json
 {
-  "guardians": [{
-    "visibility": "private",
-    "tier": "Tier2Institutional",
-    "zkProof": "z8aGdRnI..."
-  }]
+  "guardians": [
+    {
+      "visibility": "private",
+      "tier": "Tier2Institutional",
+      "zkProof": "z8aGdRnI..."
+    }
+  ]
 }
 ```
 
@@ -1262,20 +1288,20 @@ Guardian-DID ist NICHT öffentlich sichtbar.
 - [EIP-006: Slashing & Dispute Resolution](./EIP-006-slashing-dispute.md) [Planned]
 - [Bayesian Inference (Wikipedia)](https://en.wikipedia.org/wiki/Bayesian_inference)
 - [Beta Distribution](https://en.wikipedia.org/wiki/Beta_distribution)
-- [Erynoa Fachkonzept V6.1](../FACHKONZEPT.md)
+- [Erynoa Fachkonzept V6.2](../FACHKONZEPT.md)
 
 ---
 
 ## Changelog
 
-| Version | Datum | Änderung |
-|---------|-------|----------|
-| 0.1 | 2026-01-29 | Initial Draft mit Staked Guardianship |
-| 0.2 | 2026-01-29 | **Loop Detection**: Circular Reference Protection (PageRank-ähnlich), **Privacy**: ZK-Proofs für Guardianship, Selective Disclosure, **Trust-Chain Depth Limit**: Max 5 Stufen |
+| Version | Datum      | Änderung                                                                                                                                                                       |
+| ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0.1     | 2026-01-29 | Initial Draft mit Staked Guardianship                                                                                                                                          |
+| 0.2     | 2026-01-29 | **Loop Detection**: Circular Reference Protection (PageRank-ähnlich), **Privacy**: ZK-Proofs für Guardianship, Selective Disclosure, **Trust-Chain Depth Limit**: Max 5 Stufen |
 
 ---
 
-*EIP-004: Bayesian Trust Update Algorithm*
-*Version: 0.2*
-*Status: Draft*
-*Ebene: E2 (Emergenz)*
+_EIP-004: Bayesian Trust Update Algorithm_
+_Version: 0.2_
+_Status: Draft_
+_Ebene: E2 (Emergenz)_
