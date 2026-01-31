@@ -199,9 +199,9 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('backend/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-registry-rust${{ steps.rust-info.outputs.version }}-${{ hashFiles('backend/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-registry-
+            ${{ runner.os }}-cargo-registry-rust${{ steps.rust-info.outputs.version }}-
 
   # ============================================================================
   # Stage 2: Backend Builds (Depends on Rust Setup)
@@ -224,6 +224,10 @@ jobs:
         with:
           targets: x86_64-unknown-linux-gnu
 
+      - name: Get Rust version
+        id: rust-version
+        run: echo "version=$(rustc --version | cut -d' ' -f2)" >> $GITHUB_OUTPUT
+
       - name: Install mold linker
         run: |
           MOLD_VERSION="2.34.1"
@@ -243,10 +247,10 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             backend/target/
-          key: ${{ runner.os }}-cargo-ecl-${{ hashFiles('backend/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-ecl-rust${{ steps.rust-version.outputs.version }}-${{ hashFiles('backend/Cargo.lock') }}
           restore-keys: |
+            ${{ runner.os }}-cargo-ecl-rust${{ steps.rust-version.outputs.version }}-
             ${{ runner.os }}-cargo-ecl-
-            ${{ runner.os }}-cargo-
 
       - name: Build ECL CLI (Release)
         working-directory: backend
@@ -291,6 +295,10 @@ jobs:
         with:
           targets: x86_64-unknown-linux-gnu
 
+      - name: Get Rust version
+        id: rust-version
+        run: echo "version=$(rustc --version | cut -d' ' -f2)" >> $GITHUB_OUTPUT
+
       - name: Install mold linker
         run: |
           MOLD_VERSION="2.34.1"
@@ -313,10 +321,10 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             backend/target/
-          key: ${{ runner.os }}-cargo-api-${{ hashFiles('backend/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-api-rust${{ steps.rust-version.outputs.version }}-${{ hashFiles('backend/Cargo.lock') }}
           restore-keys: |
+            ${{ runner.os }}-cargo-api-rust${{ steps.rust-version.outputs.version }}-
             ${{ runner.os }}-cargo-api-
-            ${{ runner.os }}-cargo-
 
       - name: Build Backend API (Release)
         working-directory: backend

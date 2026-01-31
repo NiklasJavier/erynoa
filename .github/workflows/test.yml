@@ -36,6 +36,10 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Get Rust version
+        id: rust-version
+        run: echo "version=$(rustc --version | cut -d' ' -f2)" >> $GITHUB_OUTPUT
+
       - name: Install mold linker
         run: |
           MOLD_VERSION="2.34.1"
@@ -58,10 +62,10 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             backend/target/
-          key: ${{ runner.os }}-cargo-test-${{ hashFiles('backend/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-test-rust${{ steps.rust-version.outputs.version }}-${{ hashFiles('backend/Cargo.lock') }}
           restore-keys: |
+            ${{ runner.os }}-cargo-test-rust${{ steps.rust-version.outputs.version }}-
             ${{ runner.os }}-cargo-test-
-            ${{ runner.os }}-cargo-
 
       # Unit Tests (lib)
       - name: Run unit tests

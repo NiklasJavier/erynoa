@@ -38,6 +38,10 @@ jobs:
         with:
           components: rustfmt, clippy
 
+      - name: Get Rust version
+        id: rust-version
+        run: echo "version=$(rustc --version | cut -d' ' -f2)" >> $GITHUB_OUTPUT
+
       - name: Install mold linker
         run: |
           MOLD_VERSION="2.34.1"
@@ -57,10 +61,10 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             backend/target/
-          key: ${{ runner.os }}-cargo-ci-${{ hashFiles('backend/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-ci-rust${{ steps.rust-version.outputs.version }}-${{ hashFiles('backend/Cargo.lock') }}
           restore-keys: |
+            ${{ runner.os }}-cargo-ci-rust${{ steps.rust-version.outputs.version }}-
             ${{ runner.os }}-cargo-ci-
-            ${{ runner.os }}-cargo-
 
       - name: Check formatting
         working-directory: backend
