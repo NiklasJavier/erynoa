@@ -2,20 +2,23 @@
 
 # Erynoa
 
-**Kybernetisches Protokoll für die Maschinenökonomie**
+**Dezentrales Vertrauen für Menschen, Organisationen und KI-Agenten**
 
 [![Rust](https://img.shields.io/badge/Rust-1.75+-orange?style=flat-square&logo=rust)](https://www.rust-lang.org/)
 [![SvelteKit](https://img.shields.io/badge/SvelteKit-2.0-FF3E00?style=flat-square&logo=svelte)](https://kit.svelte.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![Nix](https://img.shields.io/badge/Nix-Flakes-5277C3?style=flat-square&logo=nixos)](https://nixos.org/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+[![Logic](https://img.shields.io/badge/Axioms-28%20Kern--Axiome-blueviolet?style=flat-square)](documentation/concept-v4/LOGIC.md)
 
 <pre>
 ┌─────────────────────────────────────────────────────────────────┐
 │                                                                 │
-│   "Ein Protokoll, das Maschinen befähigt, eigenständig zu       │
-│    handeln, zu verhandeln und voneinander zu lernen –           │
-│    mit mathematisch fundiertem Vertrauen."                      │
+│   "Ein axiomatisch fundiertes System für dezentrales            │
+│    Vertrauen – mathematisch garantiert, human-aligned,          │
+│    manipulationsresistent."                                     │
+│                                                                 │
+│   𝔼 = Σ 𝔸(s) · σ⃗( ‖𝕎(s)‖ · ln|ℂ(s)| · 𝒮(s) ) · Ĥ(s) · w(s,t)  │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 </pre>
@@ -28,36 +31,49 @@
 
 ## 🧠 Was ist Erynoa?
 
-Erynoa ist ein **dezentrales Protokoll**, das autonomen Agenten ermöglicht, vertrauensbasierte Transaktionen ohne zentrale Vermittler durchzuführen.
+Erynoa ist ein **axiomatisch fundiertes, dezentrales System** für Vertrauen zwischen Menschen, Organisationen und KI-Agenten. Es basiert auf **28 formal definierten Kern-Axiomen**, die zusammen eine vollständige und widerspruchsfreie Logik für dezentrale Kooperation bilden.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│                         DIE DREI SPHÄREN                                    │
+│                      ERYNOA V4.1 – KERNKONZEPTE                             │
 │                                                                             │
-│                              ┌─────────┐                                    │
-│                              │  ECHO   │                                    │
-│                              │ Emergent│  ← Agenten, Verhandlung            │
-│                              │  Swarm  │                                    │
-│                              └────┬────┘                                    │
-│                                   │                                         │
-│               ┌───────────────────┼───────────────────┐                     │
-│               │                   │                   │                     │
-│               ▼                   │                   ▼                     │
-│        ┌─────────────┐            │            ┌─────────────┐              │
-│        │     ERY     │◀───────────┴───────────▶│     NOA     │              │
-│        │  Semantic   │                         │   Causal    │              │
-│        │   Lattice   │                         │   Ledger    │              │
-│        └─────────────┘                         └─────────────┘              │
-│              ↑                                        ↑                     │
-│       Semantik, Trust                         Finalität, Wahrheit           │
+│   ┌─────────────────────────────────────────────────────────────────────┐   │
+│   │                        REALM-HIERARCHIE (Κ1)                        │   │
+│   │                                                                     │   │
+│   │              ROOT-REALM (Universelle Axiome Κ1-Κ28)                 │   │
+│   │                           │                                         │   │
+│   │            ┌──────────────┼──────────────┐                          │   │
+│   │            ▼              ▼              ▼                          │   │
+│   │      VIRTUAL-REALM  VIRTUAL-REALM  VIRTUAL-REALM                    │   │
+│   │      (Knowledge)    (Finance)      (Governance)                     │   │
+│   │            │              │              │                          │   │
+│   │         ┌──┴──┐        ┌──┴──┐        ┌──┴──┐                       │   │
+│   │         ▼     ▼        ▼     ▼        ▼     ▼                       │   │
+│   │     Partition  ...  Partition  ...  Partition  ...                  │   │
+│   │                                                                     │   │
+│   └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
+│   ┌───────────────────────┐  ┌───────────────────────┐                      │
+│   │   TRUST-VEKTOR 𝕎      │  │   WELTFORMEL 𝔼        │                      │
+│   │   6-dimensional:      │  │                       │                      │
+│   │   • Reliability       │  │   𝔼 = Σ 𝔸·σ⃗(𝕎·𝒮)·Ĥ·w  │                      │
+│   │   • Integrity         │  │                       │                      │
+│   │   • Competence        │  │   Trust-gedämpfte     │                      │
+│   │   • Prestige          │  │   Surprisal + Human-  │                      │
+│   │   • Vigilance         │  │   Alignment-Faktor    │                      │
+│   │   • Omega (Axiom-Treue)│  │                       │                      │
+│   └───────────────────────┘  └───────────────────────┘                      │
 │                                                                             │
+│   EIGENSCHAFTEN:                                                            │
+│   ✓ Dezentral (P2P)        ✓ Skalierbar (Milliarden Entitäten)             │
+│   ✓ Human-Aligned (Ĥ)      ✓ Formal Verifiziert (TLA+)                     │
+│   ✓ Anti-Gaming            ✓ Asymmetrische Trust-Dynamik                   │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-> 📖 **Mehr erfahren:** [Navigator](documentation/concept-v3/Fachkonzept.md) · [Roadmap](documentation/ROADMAP.md)
+> 📖 **Mehr erfahren:** [Fachkonzept](documentation/concept-v4/FACHKONZEPT.md) · [Logic V4.1](documentation/concept-v4/LOGIC.md) · [System-Architektur](documentation/concept-v4/SYSTEM-ARCHITECTURE.md)
 
 ---
 
@@ -105,80 +121,38 @@ just dev
 
 ## 📖 Dokumentation
 
-Die Dokumentation ist in zwei Bereiche unterteilt:
+### 🧠 Konzept & Protokoll (V4.1)
 
-```
-documentation/
-├── ROADMAP.md            # 🗺️ Strategische Roadmap
-│
-├── concept-v2/           # 🧠 Protokoll & Konzept (v2.1)
-│   ├── 00-navigator.md   # ⭐ Start hier – 7-Schichten-Navigator
-│   │
-│   ├── anker/            # Schicht 1: Identität (ERY)
-│   │   ├── identity-first.md
-│   │   ├── did-erynoa.md
-│   │   ├── sub-identities.md
-│   │   ├── credentials.md
-│   │   └── dacs.md
-│   │
-│   ├── schema/           # Schicht 2: Wissen (ERY)
-│   │   ├── semantic-index.md
-│   │   ├── blueprints.md
-│   │   ├── standards.md
-│   │   └── ontologie.md
-│   │
-│   ├── metrik/           # Schicht 3: Vertrauen (ERY)
-│   │   ├── trust-vectors.md
-│   │   ├── karma-engine.md
-│   │   ├── attestations.md
-│   │   └── reputation.md
-│   │
-│   ├── sphaere/          # Schicht 4: Räume (ERY+ECHO)
-│   │   ├── environments.md
-│   │   ├── governance.md
-│   │   ├── discovery.md
-│   │   └── constraints.md
-│   │
-│   ├── impuls/           # Schicht 5: Handlung (ECHO)
-│   │   ├── agent-modell.md
-│   │   ├── intent.md
-│   │   ├── policy.md
-│   │   ├── negotiation.md
-│   │   ├── wallet.md
-│   │   ├── eclvm.md
-│   │   └── cybernetic-loop.md
-│   │
-│   ├── chronik/          # Schicht 6: Beweis (NOA)
-│   │   ├── noa-ledger.md
-│   │   ├── amo.md
-│   │   ├── logic-guards.md
-│   │   ├── streaming.md
-│   │   └── finality.md
-│   │
-│   ├── nexus/            # Schicht 7: Netzwerk (NOA)
-│   │   ├── multi-chain.md
-│   │   ├── bridges.md
-│   │   └── routing.md
-│   │
-│   └── appendix/         # Referenz
-│       ├── glossar.md
-│       ├── ecl-referenz.md
-│       └── anwendungen.md
-│
-└── system/               # 🛠️ Plattform & Entwicklung
-    ├── readme.md
-    ├── essential_guide.md
-    ├── guides/
-    ├── setup/
-    ├── reference/
-    └── development/
-```
+| Dokument                                                                     | Beschreibung                                              |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------- |
+| **[📋 Fachkonzept](documentation/concept-v4/FACHKONZEPT.md)**                | **Fließtext-Übersicht** – Vision, Konzepte, Use Cases     |
+| **[🔢 LOGIC.md](documentation/concept-v4/LOGIC.md)**                         | **28 Kern-Axiome + 4 Unter-Axiome** – Formale Logik       |
+| **[🏗️ System-Architektur](documentation/concept-v4/SYSTEM-ARCHITECTURE.md)** | **Implementierbare Architektur** – 4 Schichten, Rust-Code |
 
-### 🗺️ Roadmap
+<details>
+<summary><strong>📊 Axiom-Übersicht (Κ1-Κ28)</strong></summary>
 
-| Dokument                                   | Beschreibung                                             |
-| ------------------------------------------ | -------------------------------------------------------- |
-| **[🗺️ Roadmap](documentation/ROADMAP.md)** | **Strategischer Entwicklungsplan** – 4 Phasen, 3-4 Jahre |
+| Kategorie                  | Axiome          | Beschreibung                                  |
+| -------------------------- | --------------- | --------------------------------------------- |
+| **Kategorien-Algebra**     | Κ1              | Regelvererbung in Realm-Hierarchie            |
+| **Trust-Algebra**          | Κ2-Κ5           | 6D-Vektor, Asymmetrie, Kombination            |
+| **Identität & Delegation** | Κ6-Κ8           | DIDs, Capability-basierte Delegation          |
+| **Kausalität & Finalität** | Κ9-Κ12          | DAG-Struktur, Finalitätsspektrum              |
+| **Wert & Atomizität**      | Κ13-Κ14         | Wert-Äquivalenz, Saga-Pattern                 |
+| **Weltformel**             | Κ15a-d, Κ16-Κ17 | 𝔼-Berechnung, Human-Alignment, Temporal       |
+| **Konsens & Schutz**       | Κ18-Κ21         | Partition-Wahrheit, Anti-Degeneration         |
+| **Peer-Logik**             | Κ22-Κ24         | Intent→Saga, Gateway Guards                   |
+| **System-Garantien**       | Κ25-Κ28         | Determinismus, Offenheit, Verhältnismäßigkeit |
+
+</details>
+
+### 🗺️ Roadmap & Archiv
+
+| Dokument                                   | Beschreibung                   |
+| ------------------------------------------ | ------------------------------ |
+| **[🗺️ Roadmap](documentation/ROADMAP.md)** | Strategischer Entwicklungsplan |
+| [Concept V2](documentation/concept-v2/)    | Archiv: 7-Schichten-Navigator  |
+| [Concept V3](documentation/concept-v3/)    | Archiv: EIPs, Protocol Spec    |
 
 ### 🛠️ System-Dokumentation
 
@@ -193,6 +167,29 @@ documentation/
 | [Style Guide](documentation/system/development/style-guide.md)    | Code-Stil                       |
 | [Testing](documentation/system/development/testing.md)            | Test-Strategien                 |
 | [TODOs](documentation/system/development/todos.md)                | Offene Aufgaben                 |
+
+### 📁 Dokumentations-Struktur
+
+```
+documentation/
+├── ROADMAP.md                    # 🗺️ Strategische Roadmap
+│
+├── concept-v4/                   # 🧠 AKTUELL: Unified Logic Framework V4.1
+│   ├── FACHKONZEPT.md           # ⭐ Fließtext für Stakeholder
+│   ├── LOGIC.md                  # ⭐ 28 Kern-Axiome + Weltformel
+│   └── SYSTEM-ARCHITECTURE.md    # ⭐ Implementierbare Architektur
+│
+├── concept-v3/                   # 📦 Archiv: EIPs, Protocol Spec
+├── concept-v2/                   # 📦 Archiv: 7-Schichten-Navigator
+│
+└── system/                       # 🛠️ Plattform & Entwicklung
+    ├── readme.md
+    ├── essential_guide.md
+    ├── guides/
+    ├── setup/
+    ├── reference/
+    └── development/
+```
 
 ---
 
@@ -260,7 +257,9 @@ erynoa/
 │   └── docs/             # Documentation Site
 │
 ├── documentation/        # 📖 Dokumentation
-│   ├── concept-v2/       # 🧠 Protokoll & Konzept (7 Schichten)
+│   ├── concept-v4/       # 🧠 Unified Logic Framework V4.1
+│   ├── concept-v3/       # 📦 Archiv
+│   ├── concept-v2/       # 📦 Archiv
 │   └── system/           # 🛠️ Plattform & Entwicklung
 │
 ├── infra/                # 🏗 Infrastructure
@@ -327,6 +326,9 @@ just --list
 
 ### ✅ Implementiert
 
+- ✅ **Unified Logic Framework V4.1** (28 Kern-Axiome)
+- ✅ **Weltformel V2.0** mit Trust-gedämpfter Surprisal
+- ✅ **System-Architektur** (4-Schichten, formal verifiziert)
 - ✅ Connect-RPC API (Protobuf)
 - ✅ Monorepo mit pnpm & Turborepo
 - ✅ SvelteKit Frontends (Svelte 5)
@@ -338,6 +340,9 @@ just --list
 
 ### 🔄 In Arbeit
 
+- Event Engine (DAG-Struktur)
+- Trust Engine (6D-Vektor)
+- P2P Networking (libp2p)
 - Frontend Tests
 - Weitere Details: [TODOs](documentation/system/development/todos.md)
 
