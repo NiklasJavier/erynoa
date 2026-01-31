@@ -1,0 +1,604 @@
+# =============================================================================
+# Erynoa Build & Release Pipeline
+# =============================================================================
+# Baut das komplette Erynoa-System:
+# - ECL CLI Tool (Rust, Feature-gated)
+# - Backend API Server (Rust, Axum)
+# - Frontends (SvelteKit → Static Files)
+# - Unified Binary mit eingebetteten Frontends
+# =============================================================================
+
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "Create release artifacts"
+        required: false
+        default: false
+        type: boolean
+
+env:
+  CARGO_TERM_COLOR: always
+  SQLX_OFFLINE: true
+  PNPM_VERSION: "9"
+  RUST_BACKTRACE: 1
+  # Optimierte Compiler-Flags
+  CARGO_INCREMENTAL: 0
+  CARGO_NET_RETRY: 10
+  RUSTUP_MAX_RETRIES: 10
+
+# Concurrency: Cancel redundant runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================================
+  # Stage 1: Parallel Build Preparation
+  # ============================================================================
+
+  # --------------------------------------------------------------------------
+  # 1a. Frontend Build (Parallel)
+  # --------------------------------------------------------------------------
+  build-frontends:
+    name: Build Frontends
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: "pnpm-lock.yaml"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Cache Turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-build-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-build-${{ hashFiles('pnpm-lock.yaml') }}-
+            ${{ runner.os }}-turbo-build-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Buf
+        uses: bufbuild/buf-setup-action@v1
+        with:
+          version: latest
+
+      - name: Generate Protobuf types
+        run: buf generate
+
+      - name: Build all frontends (Turborepo)
+        run: pnpm run build
+        env:
+          NODE_ENV: production
+
+      # Sammle alle Frontend-Builds in einer einheitlichen Struktur
+      - name: Collect frontend builds
+        run: |
+          mkdir -p dist/frontend
+
+          # Console App
+          if [ -d "frontend/console/build" ]; then
+            cp -r frontend/console/build dist/frontend/console
+            echo "✅ Console: $(du -sh dist/frontend/console | cut -f1)"
+          else
+            echo "⚠️ Console build not found"
+          fi
+
+          # Docs App
+          if [ -d "frontend/docs/build" ]; then
+            cp -r frontend/docs/build dist/frontend/docs
+            echo "✅ Docs: $(du -sh dist/frontend/docs | cut -f1)"
+          else
+            echo "⚠️ Docs build not found"
+          fi
+
+          # Platform App
+          if [ -d "frontend/platform/build" ]; then
+            cp -r frontend/platform/build dist/frontend/platform
+            echo "✅ Platform: $(du -sh dist/frontend/platform | cut -f1)"
+          else
+            echo "⚠️ Platform build not found"
+          fi
+
+          echo ""
+          echo "📦 Total frontend size: $(du -sh dist/frontend | cut -f1)"
+
+          # Verify structure
+          echo ""
+          echo "📁 Frontend structure:"
+          find dist/frontend -type f | head -20
+
+      - name: Upload frontend artifacts
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-builds
+          path: dist/frontend/
+          retention-days: 7
+          compression-level: 9
+
+  # --------------------------------------------------------------------------
+  # 1b. Rust Toolchain Setup (Parallel)
+  # --------------------------------------------------------------------------
+  setup-rust:
+    name: Setup Rust Toolchain
+    runs-on: ubuntu-latest
+    outputs:
+      rust-version: ${{ steps.rust-info.outputs.version }}
+      mold-available: ${{ steps.install-mold.outputs.mold_available }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Get Rust version
+        id: rust-info
+        run: |
+          echo "version=$(rustc --version | cut -d' ' -f2)" >> $GITHUB_OUTPUT
+          rustc --version
+          cargo --version
+
+      - name: Install mold linker
+        id: install-mold
+        run: |
+          MOLD_VERSION="2.34.1"
+
+          # Download and install mold
+          cd /tmp
+          wget -q "https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz"
+          tar -xzf "mold-${MOLD_VERSION}-x86_64-linux.tar.gz"
+          sudo cp "mold-${MOLD_VERSION}-x86_64-linux/bin/mold" /usr/local/bin/mold
+          sudo chmod +x /usr/local/bin/mold
+          rm -rf "mold-${MOLD_VERSION}-x86_64-linux"*
+
+          # Verify
+          if mold --version &>/dev/null; then
+            echo "mold_available=true" >> $GITHUB_OUTPUT
+            echo "✅ mold $(mold --version)"
+          else
+            echo "mold_available=false" >> $GITHUB_OUTPUT
+            echo "⚠️ mold installation failed"
+          fi
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('backend/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-registry-
+
+  # ============================================================================
+  # Stage 2: Backend Builds (Depends on Rust Setup)
+  # ============================================================================
+
+  # --------------------------------------------------------------------------
+  # 2a. Build ECL CLI
+  # --------------------------------------------------------------------------
+  build-ecl-cli:
+    name: Build ECL CLI
+    runs-on: ubuntu-latest
+    needs: setup-rust
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Install mold linker
+        run: |
+          MOLD_VERSION="2.34.1"
+          cd /tmp
+          wget -q "https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz"
+          tar -xzf "mold-${MOLD_VERSION}-x86_64-linux.tar.gz"
+          sudo cp "mold-${MOLD_VERSION}-x86_64-linux/bin/mold" /usr/local/bin/mold
+          sudo chmod +x /usr/local/bin/mold
+          rm -rf "mold-${MOLD_VERSION}-x86_64-linux"*
+
+      - name: Restore Cargo cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            backend/target/
+          key: ${{ runner.os }}-cargo-ecl-${{ hashFiles('backend/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-ecl-
+            ${{ runner.os }}-cargo-
+
+      - name: Build ECL CLI (Release)
+        working-directory: backend
+        run: |
+          echo "🔧 Building ECL CLI with feature 'cli'..."
+          cargo build --release --bin ecl --features cli
+
+          # Verify binary
+          ./target/release/ecl --version || echo "Binary built successfully"
+
+          # Binary info
+          ls -lh target/release/ecl
+          file target/release/ecl
+
+      - name: Strip binary
+        working-directory: backend
+        run: |
+          strip target/release/ecl
+          echo "📦 Stripped size: $(ls -lh target/release/ecl | awk '{print $5}')"
+
+      - name: Upload ECL CLI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecl-linux-x86_64
+          path: backend/target/release/ecl
+          retention-days: 7
+
+  # --------------------------------------------------------------------------
+  # 2b. Build Backend API Server
+  # --------------------------------------------------------------------------
+  build-backend-api:
+    name: Build Backend API
+    runs-on: ubuntu-latest
+    needs: setup-rust
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Install mold linker
+        run: |
+          MOLD_VERSION="2.34.1"
+          cd /tmp
+          wget -q "https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz"
+          tar -xzf "mold-${MOLD_VERSION}-x86_64-linux.tar.gz"
+          sudo cp "mold-${MOLD_VERSION}-x86_64-linux/bin/mold" /usr/local/bin/mold
+          sudo chmod +x /usr/local/bin/mold
+          rm -rf "mold-${MOLD_VERSION}-x86_64-linux"*
+
+      - name: Install Protobuf compiler
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
+      - name: Restore Cargo cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            backend/target/
+          key: ${{ runner.os }}-cargo-api-${{ hashFiles('backend/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-api-
+            ${{ runner.os }}-cargo-
+
+      - name: Build Backend API (Release)
+        working-directory: backend
+        run: |
+          echo "🔧 Building erynoa-api with Connect-RPC..."
+          cargo build --release --bin erynoa-api --features connect
+
+          # Binary info
+          ls -lh target/release/erynoa-api
+          file target/release/erynoa-api
+
+      - name: Strip binary
+        working-directory: backend
+        run: |
+          strip target/release/erynoa-api
+          echo "📦 Stripped size: $(ls -lh target/release/erynoa-api | awk '{print $5}')"
+
+      - name: Upload Backend API artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: erynoa-api-linux-x86_64
+          path: backend/target/release/erynoa-api
+          retention-days: 7
+
+  # ============================================================================
+  # Stage 3: Assembly & Packaging
+  # ============================================================================
+
+  package-release:
+    name: Package Release
+    runs-on: ubuntu-latest
+    needs: [build-frontends, build-ecl-cli, build-backend-api]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Assemble release package
+        run: |
+          mkdir -p release/bin
+          mkdir -p release/static
+          mkdir -p release/config
+
+          echo "📦 Assembling release package..."
+
+          # Binaries
+          cp artifacts/ecl-linux-x86_64/ecl release/bin/
+          cp artifacts/erynoa-api-linux-x86_64/erynoa-api release/bin/
+          chmod +x release/bin/*
+
+          # Frontend static files (served by Rust backend)
+          if [ -d "artifacts/frontend-builds" ]; then
+            cp -r artifacts/frontend-builds/* release/static/
+            echo "✅ Frontend files copied"
+          fi
+
+          # Config templates
+          cp backend/config/base.toml release/config/
+          cp backend/config/production.toml release/config/
+
+          # Summary
+          echo ""
+          echo "📁 Release structure:"
+          find release -type f | sort
+          echo ""
+          echo "📊 Sizes:"
+          echo "  ECL CLI:      $(ls -lh release/bin/ecl | awk '{print $5}')"
+          echo "  Backend API:  $(ls -lh release/bin/erynoa-api | awk '{print $5}')"
+          echo "  Static files: $(du -sh release/static | cut -f1)"
+          echo "  Total:        $(du -sh release | cut -f1)"
+
+      - name: Create release archive
+        run: |
+          VERSION="${GITHUB_REF_NAME:-dev}"
+          ARCHIVE_NAME="erynoa-${VERSION}-linux-x86_64"
+
+          # Create tarball
+          tar -czvf "${ARCHIVE_NAME}.tar.gz" -C release .
+
+          # Create SHA256 checksum
+          sha256sum "${ARCHIVE_NAME}.tar.gz" > "${ARCHIVE_NAME}.tar.gz.sha256"
+
+          echo "📦 Archive: ${ARCHIVE_NAME}.tar.gz"
+          echo "📏 Size: $(ls -lh ${ARCHIVE_NAME}.tar.gz | awk '{print $5}')"
+          cat "${ARCHIVE_NAME}.tar.gz.sha256"
+
+      - name: Upload release package
+        uses: actions/upload-artifact@v4
+        with:
+          name: erynoa-release-linux-x86_64
+          path: |
+            erynoa-*.tar.gz
+            erynoa-*.tar.gz.sha256
+          retention-days: 30
+
+  # ============================================================================
+  # Stage 4: Docker Image (Optional, on tags only)
+  # ============================================================================
+
+  build-docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: [build-frontends, build-ecl-cli, build-backend-api]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Prepare Docker context
+        run: |
+          mkdir -p docker-context/bin
+          mkdir -p docker-context/static
+          mkdir -p docker-context/config
+
+          # Copy binaries
+          cp artifacts/erynoa-api-linux-x86_64/erynoa-api docker-context/bin/
+          cp artifacts/ecl-linux-x86_64/ecl docker-context/bin/
+          chmod +x docker-context/bin/*
+
+          # Copy frontends
+          cp -r artifacts/frontend-builds/* docker-context/static/
+
+          # Copy config
+          cp backend/config/base.toml docker-context/config/
+          cp backend/config/production.toml docker-context/config/
+
+      - name: Create Dockerfile
+        run: |
+          cat > docker-context/Dockerfile << 'EOF'
+          # =============================================================================
+          # Erynoa Production Image
+          # =============================================================================
+          # Minimal runtime image with pre-built binaries and static frontends
+          # =============================================================================
+
+          FROM gcr.io/distroless/cc-debian12:nonroot
+
+          # Labels
+          LABEL org.opencontainers.image.title="Erynoa"
+          LABEL org.opencontainers.image.description="Erynoa Platform Server"
+          LABEL org.opencontainers.image.source="https://github.com/erynoa/erynoa"
+
+          # Copy binaries
+          COPY bin/erynoa-api /usr/local/bin/erynoa-api
+          COPY bin/ecl /usr/local/bin/ecl
+
+          # Copy static frontend files
+          COPY static/ /app/static/
+
+          # Copy config
+          COPY config/ /app/config/
+
+          # Working directory
+          WORKDIR /app
+
+          # Expose ports
+          EXPOSE 8080
+
+          # Run as non-root
+          USER nonroot:nonroot
+
+          # Health check
+          HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+            CMD ["/usr/local/bin/erynoa-api", "health"]
+
+          # Default command
+          ENTRYPOINT ["/usr/local/bin/erynoa-api"]
+          CMD ["serve", "--static-dir=/app/static"]
+          EOF
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix=
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: docker-context
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+  # ============================================================================
+  # Stage 5: Release (on tags only)
+  # ============================================================================
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [package-release]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download release package
+        uses: actions/download-artifact@v4
+        with:
+          name: erynoa-release-linux-x86_64
+          path: release/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
+          generate_release_notes: true
+          files: |
+            release/erynoa-*.tar.gz
+            release/erynoa-*.tar.gz.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ============================================================================
+  # Summary
+  # ============================================================================
+
+  build-summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [build-frontends, build-ecl-cli, build-backend-api, package-release]
+    if: always()
+
+    steps:
+      - name: Generate Summary
+        run: |
+          echo "# 🚀 Erynoa Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Build Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontends | ${{ needs.build-frontends.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| ECL CLI | ${{ needs.build-ecl-cli.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend API | ${{ needs.build-backend-api.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Package | ${{ needs.package-release.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Ref:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **SHA:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Workflow:** ${{ github.workflow }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Run:** #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY

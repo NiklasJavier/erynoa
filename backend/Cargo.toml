@@ -33,6 +33,8 @@ tower-http = { version = "0.6", features = [
     "compression-zstd",
     "timeout",
     "request-id",
+    "fs",               # Static file serving für Frontends
+    "set-header",       # Cache-Control headers für static assets
 ] }
 
 # ============================================================================

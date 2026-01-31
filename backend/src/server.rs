@@ -1,6 +1,6 @@
 //! Server module - Application startup and state management
 
-use crate::api::create_router;
+use crate::api::{create_router, create_static_router, StaticConfig};
 use crate::config::Settings;
 use crate::local::DecentralizedStorage;
 use anyhow::Result;
@@ -37,6 +37,11 @@ pub struct Server {
 impl Server {
     /// Build the application from settings
     pub async fn build(settings: Settings) -> Result<Self> {
+        Self::build_with_static(settings, None).await
+    }
+
+    /// Build the application with optional static file serving
+    pub async fn build_with_static(settings: Settings, static_dir: Option<&str>) -> Result<Self> {
         tracing::info!(
             env = %settings.application.environment.as_str(),
             "🏗️  Building server..."
@@ -53,7 +58,32 @@ impl Server {
             started_at: Some(Instant::now()),
         };
 
-        let router = create_router(state);
+        // API Router
+        let api_router = create_router(state);
+
+        // Kombiniere API mit optionalem Static File Serving
+        let router = if let Some(dir) = static_dir {
+            let static_config = StaticConfig::new(dir);
+            let static_router = create_static_router(&static_config);
+
+            if static_config.is_available() {
+                tracing::info!(
+                    path = %dir,
+                    "📁 Static file serving enabled"
+                );
+                // Static routes haben niedrigere Priorität als API
+                api_router.merge(static_router)
+            } else {
+                tracing::warn!(
+                    path = %dir,
+                    "⚠️  Static directory not found - serving API only"
+                );
+                api_router
+            }
+        } else {
+            api_router
+        };
+
         let addr = format!(
             "{}:{}",
             settings.application.host, settings.application.port
