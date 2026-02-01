@@ -379,8 +379,8 @@ impl From<crate::peer::saga_composer::CompositionError> for ApiError {
     }
 }
 
-impl From<crate::domain::did::DIDError> for ApiError {
-    fn from(err: crate::domain::did::DIDError) -> Self {
+impl From<crate::domain::IdentityError> for ApiError {
+    fn from(err: crate::domain::IdentityError) -> Self {
         ApiError::DIDError(err.to_string())
     }
 }

@@ -136,7 +136,7 @@ pub async fn register_passkey(
     let public_key_hex = hex::encode(&public_key_bytes);
 
     // Parse DID to validate format
-    let did_result: Result<crate::domain::did::DID, _> = request.did.parse();
+    let did_result: Result<crate::domain::DID, _> = request.did.parse();
     if did_result.is_err() {
         return (
             StatusCode::BAD_REQUEST,

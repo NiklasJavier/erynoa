@@ -2,7 +2,7 @@
 //!
 //! Kerntypen für das Erynoa-Protokoll gemäß V4.1 Axiomen.
 //!
-//! ## Architektur (Phase 6 Finalisierung)
+//! ## Architektur (Phase 6 - Finalisiert)
 //!
 //! ```text
 //! ┌─────────────────────────────────────────────────────────────────────┐
@@ -30,35 +30,17 @@
 //! - [`TrustVector6D`]: Kompakter 6D Trust-Vektor (24 Bytes)
 //! - [`Cost`]: Kosten-Algebra (Gas × Mana × Trust-Risk)
 //!
-//! ## Migration v0.3.0
+//! ## v0.3.0 (Februar 2026)
 //!
-//! Die alten Module (did, event, trust, realm, saga, formula) sind deprecated.
-//! Für Abwärtskompatibilität werden sie noch geladen, aber alle neuen Typen
-//! sollten über `unified` verwendet werden.
+//! Alte Legacy-Module wurden entfernt. Alle Typen sind jetzt in `unified/`.
 
 // ============================================================================
-// Unified Data Model (Primär)
+// Unified Data Model (Single Source of Truth)
 // ============================================================================
 pub mod unified;
 
 // ============================================================================
-// Legacy Module (Deprecated - für Abwärtskompatibilität)
-// ============================================================================
-#[allow(deprecated)]
-pub mod did;
-#[allow(deprecated)]
-pub mod event;
-#[allow(deprecated)]
-pub mod formula;
-#[allow(deprecated)]
-pub mod realm;
-#[allow(deprecated)]
-pub mod saga;
-#[allow(deprecated)]
-pub mod trust;
-
-// ============================================================================
-// Re-Exports aus Unified (Empfohlen)
+// Re-Exports aus Unified
 // ============================================================================
 
 // Primitives
