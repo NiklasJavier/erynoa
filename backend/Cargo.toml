@@ -124,11 +124,32 @@ tikv-jemallocator = { version = "0.6", features = [
 ], optional = true }
 blake3 = "1.8.3"
 
+# ============================================================================
+# DEZENTRALE P2P-NETZWERK-SCHICHT (libp2p)
+# ============================================================================
+libp2p = { version = "0.54", features = [
+    "tokio",
+    "tcp",
+    "noise",
+    "yamux",
+    "gossipsub",
+    "kad",
+    "mdns",
+    "request-response",
+    "identify",
+    "ping",
+    "macros",
+    "serde",
+    "ed25519",
+], optional = true }
+futures = { version = "0.3", optional = true }
+
 [features]
 default = []
 jemalloc = ["dep:tikv-jemallocator"]
 connect = []
 cli = ["dep:clap", "dep:rustyline", "dep:colored", "dep:bincode"]
+p2p = ["dep:libp2p", "dep:futures"]
 
 [build-dependencies]
 axum-connect-build = "0.3"
