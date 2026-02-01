@@ -1,10 +1,11 @@
 # Unified Data Model (UDM) – Erynoa Datenarchitektur
 
-> **Version:** 1.0.0
+> **Version:** 1.1.0
 > **Datum:** Februar 2026
-> **Status:** Architectural Specification
-> **Basis:** IPS-01-imp.md (Mathematisches Logik-Modell)
+> **Status:** Architectural Specification (Production-Ready)
+> **Basis:** IPS-01-imp.md v1.2.0 (Mathematisches Logik-Modell)
 > **Ziel:** Zukunftssichere, optimierte Datenstrukturen für alle Erynoa-Subsysteme
+> **Rust-Strategie:** Result<T,E> Pattern (keine Monad-Transformer)
 
 ---
 
@@ -18,6 +19,102 @@ mathematischen IPS-Modell. Die Strukturen sind auf folgende Ziele optimiert:
 3. **Konsistenz**: Einheitliche Patterns über alle Subsysteme
 4. **Erweiterbarkeit**: Plugin-fähig, Schema-Evolution ohne Breaking Changes
 5. **Beweisbarkeit**: Mathematische Invarianten aus IPS-Modell prüfbar
+6. **Praktikabilität**: Idiomatic Rust ohne akademischen Boilerplate (Result<T,E>)
+
+---
+
+## 0. Rust-Implementierungs-Strategie (IPS v1.2.0)
+
+### 0.1 Monadische Abstraktion ohne Transformer-Boilerplate
+
+Die IPS-Monade ℳ wird in Rust **nicht** durch explizite Monad-Transformer implementiert
+(kein mtl-style), sondern durch das idiomatische `Result<T,E>` Pattern:
+
+```
+ℳ_VM   ≅ Result<T, VmError>
+ℳ_S    ≅ Result<T, StorageError>
+ℳ_P    ≅ Result<T, P2PError>
+```
+
+Die monadischen Gesetze werden durch die `?`-Operator-Semantik erfüllt:
+
+- `return a` ≡ `Ok(a)`
+- `m >>= f` ≡ `m.and_then(f)`
+
+### 0.2 ExecutionContext Pattern
+
+```rust
+/// Execution-Context kapselt alle Seiteneffekte (entspricht IPS-Monade ℳ)
+pub struct ExecutionContext {
+    pub state: WorldState,
+    pub gas_remaining: u64,
+    pub mana_remaining: u64,
+    pub trust_context: TrustContext,
+    pub emitted_events: Vec<Event>,  // Writer-Aspekt
+}
+
+impl ExecutionContext {
+    /// Monadische bind-Operation über Result + Context-Mutation
+    pub fn execute<T, F>(&mut self, op: F) -> Result<T, ExecutionError>
+    where
+        F: FnOnce(&mut Self) -> Result<T, ExecutionError>
+    {
+        if self.gas_remaining == 0 {
+            return Err(ExecutionError::GasExhausted);
+        }
+        op(self)
+    }
+
+    pub fn consume_gas(&mut self, amount: u64) -> Result<(), ExecutionError> {
+        if self.gas_remaining < amount {
+            return Err(ExecutionError::GasExhausted);
+        }
+        self.gas_remaining -= amount;
+        Ok(())
+    }
+
+    pub fn emit(&mut self, event: Event) {
+        self.emitted_events.push(event);
+    }
+}
+
+/// Unifizierte Fehler-Hierarchie (ℳ_VM + ℳ_S + ℳ_P)
+#[derive(Debug, Clone)]
+pub enum ExecutionError {
+    // VM-Errors (ℳ_VM)
+    GasExhausted,
+    StackOverflow,
+    PolicyViolation(String),
+
+    // Storage-Errors (ℳ_S)
+    SchemaViolation(String),
+    AccessDenied,
+    StoreFull,
+
+    // P2P-Errors (ℳ_P)
+    ConnectionFailed(String),
+    TrustGateBlocked { required: f32, actual: f32 },
+    TopicNotSubscribed(String),
+}
+```
+
+### 0.3 Adjunktions-basierte Core ↔ ECLVM Übersetzung
+
+Die Adjunktion F ⊣ G (IPS §VII.2) garantiert verlustfreie Übersetzung:
+
+```rust
+/// Linker Adjunkt F: Core → ECLVM (Embedding)
+pub trait CoreToEclvm {
+    fn embed(&self) -> EclvmValue;
+}
+
+/// Rechter Adjunkt G: ECLVM → Core (Interpretation)
+pub trait EclvmToCore: Sized {
+    fn interpret(value: &EclvmValue) -> Result<Self, InterpretError>;
+}
+
+// Zig-Zag Identity: interpret(embed(x)) ≅ x
+```
 
 ---
 
@@ -635,6 +732,55 @@ pub enum TrustUpdateReason {
     AnomalyDetected,
     SystemAdjustment,
     // Future: Custom(u16)
+}
+```
+
+### 2.3 Informationsverlust-Modelle (IPS §IV.1 - NEU in v1.2.0)
+
+Der Erhaltungssatz `ℐ(B) ≤ ℐ(A) + ℐ(f) - ℐ_loss(f)` wird für alle Kanaltypen modelliert:
+
+| Kanal-Typ       | ℐ_loss                  | Beispiel                     |
+| --------------- | ----------------------- | ---------------------------- |
+| Deterministisch | ≈ 0 (< 2⁻⁵²)            | ECLVM Execution              |
+| Noisy (P2P)     | H(M) × packet_loss_rate | Gossipsub (0.1-5% Verlust)   |
+| Verlustfrei     | 0                       | LZ4/Zstd Kompression         |
+| Aggregierend    | log₂(events_collapsed)  | Snapshots                    |
+| Cold Storage    | H(Detail) - H(Summary)  | Archive (Merkle-Root bleibt) |
+
+```rust
+/// Informationsverlust-Tracking
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct InformationLoss {
+    pub channel: LossChannel,
+    pub loss_bits: f64,
+    pub remaining_bits: f64,
+    pub timestamp: TemporalCoord,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum LossChannel {
+    Deterministic,
+    P2PNetwork { packet_loss_rate: u16 },  // ×10000
+    LosslessCompression,
+    EventPruning,
+    SnapshotAggregation,
+    ColdStorageArchive,
+}
+
+/// Kompression mit Merkle-Root Preservation Garantie
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CompressionRecord {
+    pub original_size: u64,
+    pub compressed_size: u64,
+    pub loss_type: CompressionLossType,
+    pub merkle_root: [u8; 32],  // GARANTIE: Bleibt verifizierbar
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompressionLossType {
+    Lossless,
+    Aggregated { events_collapsed: u64 },
+    Archived { retention_days: u32 },
 }
 ```
 
@@ -1839,9 +1985,104 @@ pub enum DeploymentStatus {
 
 ---
 
-## IX. P2P-Nachrichten
+## IX. P2P-Nachrichten (Erweitert gem. IPS v1.2.0)
 
-### 9.1 Message-Struktur
+### 9.1 Erweiterte libp2p-Protokoll-Architektur
+
+**Protokoll-Stack (vollständig mit IPS v1.2.0 Erweiterungen):**
+
+| Protokoll    | Morphismus  | Funktion                  | Status  |
+| ------------ | ----------- | ------------------------- | ------- |
+| gossipsub    | π_gossip    | Pub/Sub für Events        | Core    |
+| kademlia     | π_dht       | DHT-Lookup                | Core    |
+| relay        | π_relay     | NAT-Traversal             | Core    |
+| rendezvous   | π_rdv       | Peer-Discovery            | Core    |
+| dcutr        | π_holepunch | Direct Connection Upgrade | Core    |
+| **autonat**  | π_autonat   | NAT-Detection             | **NEU** |
+| **identify** | π_identify  | Protocol Negotiation      | **NEU** |
+| **ping**     | π_ping      | Liveness Check            | **NEU** |
+
+**Protokoll-Abhängigkeiten (Initialisierungsreihenfolge):**
+
+1. T\_\* (Transport) → 2. π_identify → 3. π_autonat → 4. π_relay/π_holepunch → 5. π_dht → 6. π_rdv → 7. π_gossip
+
+```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[repr(u8)]
+pub enum P2PProtocol {
+    Gossipsub = 0x01,
+    Kademlia = 0x02,
+    Relay = 0x03,
+    Rendezvous = 0x04,
+    Dcutr = 0x05,
+    AutoNat = 0x06,   // NEU: NAT-Detection
+    Identify = 0x07,  // NEU: Protocol Negotiation
+    Ping = 0x08,      // NEU: Liveness
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum NatStatus {
+    Public,   // Direkt erreichbar
+    Private,  // Relay erforderlich
+    Unknown,
+}
+```
+
+### 9.2 τ-Variabilität durch Netzwerk-Conditions (IPS §V.2)
+
+Die Sync-Konvergenz-Zeit τ variiert mit Netzwerkbedingungen:
+
+**Formel:** `τ_actual = τ_base × V(conditions)`
+
+wobei `V(c) = (1 + congestion) × (1 + partition_risk) × jitter_factor` ∈ [0.5, 3.0]
+
+| Szenario   | V(c) | τ_actual (1K Events) | τ_actual (10M Events) |
+| ---------- | ---- | -------------------- | --------------------- |
+| Datacenter | 0.5  | ~6 sec               | ~14 sec               |
+| Internet   | 1.0  | ~12 sec              | ~28 sec               |
+| Mobile/Sat | 2.0  | ~24 sec              | ~56 sec               |
+| Hostile    | 3.0  | ~36 sec              | ~84 sec               |
+
+```rust
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+pub struct NetworkConditions {
+    pub congestion: f32,       // ∈ [0, 0.5]
+    pub partition_risk: f32,   // ∈ [0, 0.3]
+    pub jitter_factor: f32,    // ∈ [0.8, 1.5]
+}
+
+impl NetworkConditions {
+    pub const OPTIMAL: Self = Self { congestion: 0.0, partition_risk: 0.0, jitter_factor: 0.8 };
+    pub const NORMAL: Self = Self { congestion: 0.1, partition_risk: 0.05, jitter_factor: 1.0 };
+    pub const DEGRADED: Self = Self { congestion: 0.3, partition_risk: 0.15, jitter_factor: 1.3 };
+    pub const HOSTILE: Self = Self { congestion: 0.5, partition_risk: 0.3, jitter_factor: 1.5 };
+
+    pub fn variability_factor(&self) -> f32 {
+        ((1.0 + self.congestion) * (1.0 + self.partition_risk) * self.jitter_factor)
+            .clamp(0.5, 3.0)
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SyncTiming {
+    pub tau_base_ms: u64,
+    pub conditions: NetworkConditions,
+    pub safety_margin: f32,
+}
+
+impl SyncTiming {
+    pub fn actual_tau_ms(&self) -> u64 {
+        (self.tau_base_ms as f32 * self.conditions.variability_factor() * self.safety_margin) as u64
+    }
+
+    /// Timeout mit exponential backoff
+    pub fn timeout_with_backoff(&self, attempt: u32) -> u64 {
+        self.actual_tau_ms() * 2_u64.pow(attempt.min(5))
+    }
+}
+```
+
+### 9.3 Message-Struktur
 
 ```rust
 /// P2P-Nachricht
@@ -2499,6 +2740,7 @@ pub enum InvariantViolation {
 | **Konsistenz**     | Unified Cost-Algebra, Shared Primitives                    |
 | **Erweiterbar**    | Enum-Varianten mit Future-Slots, Custom-Payloads           |
 | **Beweisbar**      | Compile-Time Size Checks, Runtime Invariant Checker        |
+| **Praktikabel**    | Result<T,E> Pattern, keine Monad-Transformer               |
 
 ### Axiom-Mapping
 
@@ -2511,14 +2753,45 @@ pub enum InvariantViolation {
 | Κ15a-d  | `WorldFormulaContribution`, `Surprisal`   |
 | Κ22-Κ24 | `Intent`, `Saga`, `SagaStep`              |
 
+### IPS v1.2.0 Alignment (NEU)
+
+| IPS-Konzept                  | UDM-Implementation                               |
+| ---------------------------- | ------------------------------------------------ |
+| Monade ℳ                     | `ExecutionContext` + `Result<T, ExecutionError>` |
+| Adjunktion F ⊣ G             | `CoreToEclvm` / `EclvmToCore` Traits             |
+| τ-Variabilität               | `NetworkConditions` + `SyncTiming`               |
+| ℐ_loss (Informationsverlust) | `InformationLoss` + `CompressionRecord`          |
+| libp2p-Erweiterungen         | `P2PProtocol::AutoNat/Identify/Ping`             |
+
 ### Nächste Schritte
 
-1. **Codegen**: Generiere `backend/src/domain/unified/` Modul aus diesem Spec
+1. **Codegen**: Generiere `backend/src/domain/unified/` Modul aus diesem Spec ✓
 2. **Migration**: Migriere bestehende Typen auf neue Strukturen
 3. **Tests**: Property-based Tests für Invarianten
 4. **Benchmarks**: Verifiziere Performance-Annahmen
 5. **Documentation**: API-Docs mit Axiom-Referenzen
+6. **IPS-Sync**: Automatisierte Konsistenzprüfung UDM ↔ IPS
+
+---
+
+## XVI. Changelog
+
+| Version | Datum   | Änderungen                                                            |
+| ------- | ------- | --------------------------------------------------------------------- |
+| 1.0.0   | 2025-02 | Initial: Unified Data Model basierend auf IPS-01-imp.md v1.0.0        |
+| 1.1.0   | 2025-02 | **Alignment mit IPS v1.2.0:**                                         |
+|         |         | - §0: Rust-Implementierungs-Strategie (Result<T,E> statt Transformer) |
+|         |         | - §0.2: ExecutionContext Pattern für monadische Seiteneffekte         |
+|         |         | - §0.3: Adjunktions-basierte Core ↔ ECLVM Übersetzung                 |
+|         |         | - §2.3: Informationsverlust-Modelle (ℐ_loss für alle Kanaltypen)      |
+|         |         | - §2.3: CompressionRecord mit Merkle-Root Preservation Garantie       |
+|         |         | - §IX.1: Erweiterte libp2p-Protokolle (autonat, identify, ping)       |
+|         |         | - §IX.1: Protokoll-Abhängigkeiten und Initialisierungsreihenfolge     |
+|         |         | - §IX.2: τ-Variabilität durch NetworkConditions mit V(c) ∈ [0.5, 3.0] |
+|         |         | - §IX.2: SyncTiming mit exponential backoff                           |
+|         |         | - §XV: Design-Prinzip "Praktikabel" + IPS v1.2.0 Alignment-Tabelle    |
 
 ---
 
 _Dieses Dokument ist die autoritative Referenz für alle Erynoa-Datenstrukturen._
+_Synchronisiert mit IPS-01-imp.md v1.2.0._
