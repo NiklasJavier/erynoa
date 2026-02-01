@@ -17,7 +17,7 @@
 //! - Invarianten-Prüfungen
 
 use crate::core::engine::event_gas;
-use crate::domain::unified::{Cost, FinalityLevel as UnifiedFinalityLevel};
+use crate::domain::unified::{Cost, FinalityLevel as UnifiedFinalityLevel, UniversalId};
 use crate::domain::{Event, EventId, FinalityLevel, DID};
 use crate::execution::{ExecutionContext, ExecutionError, ExecutionResult};
 use std::collections::{HashMap, HashSet};
@@ -200,7 +200,7 @@ impl EventEngine {
     }
 
     /// Hole alle Events eines Authors
-    pub fn get_events_by_author(&self, author: &DID) -> Vec<&Event> {
+    pub fn get_events_by_author(&self, author: &UniversalId) -> Vec<&Event> {
         self.events
             .values()
             .filter(|e| &e.author == author)
@@ -209,7 +209,7 @@ impl EventEngine {
 
     /// Berechne kausale Geschichte |ℂ(s)| für ein Subject
     pub fn causal_history_size(&self, did: &DID) -> u64 {
-        self.get_events_by_author(did).len() as u64
+        self.get_events_by_author(&did.id).len() as u64
     }
 
     /// Κ10: Update Finalitätslevel

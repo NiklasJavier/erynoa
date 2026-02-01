@@ -32,7 +32,7 @@ use std::collections::HashMap;
 use std::sync::RwLock;
 use std::time::{Duration, Instant};
 
-use crate::domain::trust::TrustVector6D;
+use crate::domain::TrustVector6D;
 use crate::error::Result;
 
 /// Mana-Konfiguration
@@ -78,16 +78,16 @@ pub struct ManaAccount {
     regen_rate: u64,
     /// Letztes Update
     last_update: Instant,
-    /// Trust-Snapshot bei letzter Berechnung
-    trust_snapshot: f64,
+    /// Trust-Snapshot bei letzter Berechnung (f32 für unified TrustVector6D Kompatibilität)
+    trust_snapshot: f32,
 }
 
 impl ManaAccount {
     /// Erstelle neuen Account basierend auf Trust
     pub fn new(trust: &TrustVector6D, config: &ManaConfig) -> Self {
-        let reliability = trust.r; // R-Dimension für Bandwidth
-        let max = calculate_max_mana(reliability, config);
-        let regen_rate = calculate_regen_rate(reliability, config);
+        let reliability = trust.r; // R-Dimension für Bandwidth (f32)
+        let max = calculate_max_mana(reliability as f64, config);
+        let regen_rate = calculate_regen_rate(reliability as f64, config);
 
         Self {
             current: max, // Starte voll aufgeladen
@@ -114,8 +114,8 @@ impl ManaAccount {
         // 2. Trust-Änderung prüfen (nur bei signifikanter Änderung)
         let reliability = trust.r;
         if (reliability - self.trust_snapshot).abs() > 0.05 {
-            self.max = calculate_max_mana(reliability, config);
-            self.regen_rate = calculate_regen_rate(reliability, config);
+            self.max = calculate_max_mana(reliability as f64, config);
+            self.regen_rate = calculate_regen_rate(reliability as f64, config);
             self.trust_snapshot = reliability;
 
             // Bei Trust-Verlust: current auf neues max cappen

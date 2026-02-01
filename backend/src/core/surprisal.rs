@@ -7,6 +7,7 @@
 //! - **Κ15a (Trust-gedämpfte Surprisal)**: `𝒮(s) = ‖𝕎(s)‖² · ℐ(s)`
 //! - **Κ15d (Approximation)**: Count-Min Sketch für ℐ
 
+use crate::domain::unified::TemporalCoord;
 use crate::domain::{Event, Surprisal, TrustVector6D};
 use std::collections::HashMap;
 
@@ -72,8 +73,10 @@ impl SurprisalCalculator {
         let norm = trust.weighted_norm(&[1.0; 6]);
 
         Surprisal {
-            raw_surprisal: raw,
+            raw_bits: raw,
             trust_norm: norm,
+            event_id: None,
+            computed_at: TemporalCoord::default(),
         }
     }
 
@@ -102,7 +105,7 @@ impl SurprisalCalculator {
     fn event_to_key(&self, event: &Event) -> Vec<u8> {
         // Kombiniere Author + Payload-Typ + relevante Felder
         let mut key = Vec::new();
-        key.extend(event.author.to_uri().as_bytes());
+        key.extend(event.author.to_hex().as_bytes());
         key.extend(self.event_type_key(event).as_bytes());
         key
     }
@@ -128,10 +131,8 @@ impl SurprisalCalculator {
             EventPayload::Vote { .. } => "vote".to_string(),
             EventPayload::SagaStep { action, .. } => format!("saga:{}", action),
             EventPayload::Custom { event_type, .. } => format!("custom:{}", event_type),
-            EventPayload::Witness {
-                attestation_type, ..
-            } => format!("witness:{}", attestation_type),
-            EventPayload::AnchorConfirm { anchor_type, .. } => format!("anchor:{}", anchor_type),
+            EventPayload::Witness { .. } => "witness".to_string(),
+            EventPayload::AnchorConfirm { anchor_system, .. } => format!("anchor:{}", anchor_system),
             EventPayload::TrustUpdate { dimension, .. } => format!("trust_update:{:?}", dimension),
         }
     }

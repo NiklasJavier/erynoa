@@ -697,7 +697,7 @@ impl PrefixBuilder {
         Self {
             realm_id: realm_id.to_hex(),
             store_type: StoreType::Personal,
-            owner_did: Some(owner_did.unique_id.clone()),
+            owner_did: Some(owner_did.id.to_hex()),
             store_name: store_name.to_string(),
         }
     }

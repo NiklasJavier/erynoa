@@ -9,8 +9,8 @@
 //! - **Pattern**: Verdächtige Muster (z.B. Wash-Trading)
 //! - **Trust**: Plötzliche Trust-Änderungen
 
-use crate::domain::{Event, EventPayload, DID};
-use chrono::{DateTime, Duration, Utc};
+use crate::domain::unified::{TemporalCoord, UniversalId};
+use crate::domain::{Event, EventPayload};
 use std::collections::{HashMap, VecDeque};
 use thiserror::Error;
 
@@ -43,9 +43,9 @@ pub enum Severity {
 pub struct Anomaly {
     pub anomaly_type: AnomalyType,
     pub severity: Severity,
-    pub subject: DID,
+    pub subject: UniversalId,
     pub description: String,
-    pub detected_at: DateTime<Utc>,
+    pub detected_at: TemporalCoord,
     pub related_events: Vec<String>,
 }
 
@@ -79,20 +79,23 @@ pub type AnomalyResult<T> = Result<T, AnomalyError>;
 /// └──────────────────────────────────────────────────────────────┘
 /// ```
 pub struct AnomalyDetector {
-    /// Event-Historie pro DID (für Velocity-Check)
-    event_history: HashMap<DID, VecDeque<DateTime<Utc>>>,
+    /// Event-Historie pro UniversalId (für Velocity-Check)
+    event_history: HashMap<UniversalId, VecDeque<u32>>,  // Lamport-Zeiten
 
-    /// Betrags-Statistiken pro DID
-    amount_stats: HashMap<DID, AmountStats>,
+    /// Betrags-Statistiken pro UniversalId
+    amount_stats: HashMap<UniversalId, AmountStats>,
 
     /// Transfer-Graph (für Pattern-Detection)
-    transfer_graph: HashMap<DID, Vec<(DID, u64, DateTime<Utc>)>>,
+    transfer_graph: HashMap<UniversalId, Vec<(UniversalId, u64, u32)>>,  // (target, amount, lamport)
 
     /// Erkannte Anomalien
     anomalies: Vec<Anomaly>,
 
     /// Konfiguration
     config: AnomalyConfig,
+
+    /// Aktueller Lamport für Zeit-Referenz
+    current_lamport: u32,
 }
 
 /// Konfiguration für AnomalyDetector
@@ -169,6 +172,7 @@ impl AnomalyDetector {
             transfer_graph: HashMap::new(),
             anomalies: Vec::new(),
             config,
+            current_lamport: 0,
         }
     }
 
@@ -177,9 +181,17 @@ impl AnomalyDetector {
         Self::new(AnomalyConfig::default())
     }
 
+    /// Setze aktuellen Lamport-Zeitstempel
+    pub fn set_current_lamport(&mut self, lamport: u32) {
+        self.current_lamport = lamport;
+    }
+
     /// Analysiere Event und prüfe auf Anomalien
     pub fn analyze_event(&mut self, event: &Event) -> Vec<Anomaly> {
         let mut detected = Vec::new();
+
+        // Update current lamport from event
+        self.current_lamport = event.coord.lamport().max(self.current_lamport);
 
         // Velocity-Check
         if let Some(anomaly) = self.check_velocity(&event.author) {
@@ -205,43 +217,24 @@ impl AnomalyDetector {
         detected
     }
 
-    /// Prüfe Velocity (Events pro Zeit)
-    fn check_velocity(&self, did: &DID) -> Option<Anomaly> {
-        let history = self.event_history.get(did)?;
-        let now = Utc::now();
+    /// Prüfe Velocity (Events pro Zeit - basierend auf Lamport-Differenz)
+    fn check_velocity(&self, id: &UniversalId) -> Option<Anomaly> {
+        let history = self.event_history.get(id)?;
 
-        // Events in letzter Minute
-        let minute_ago = now - Duration::minutes(1);
-        let events_last_minute = history.iter().filter(|&&t| t > minute_ago).count();
+        // Events in letzten ~60 Lamport-Einheiten (approx. 1 Minute)
+        let threshold_lamport = self.current_lamport.saturating_sub(60);
+        let events_recent = history.iter().filter(|&&t| t > threshold_lamport).count();
 
-        if events_last_minute > self.config.max_events_per_minute {
+        if events_recent > self.config.max_events_per_minute {
             return Some(Anomaly {
                 anomaly_type: AnomalyType::HighVelocity,
                 severity: Severity::High,
-                subject: did.clone(),
+                subject: id.clone(),
                 description: format!(
-                    "{} events in last minute (max: {})",
-                    events_last_minute, self.config.max_events_per_minute
+                    "High velocity: {} events in recent window (max: {})",
+                    events_recent, self.config.max_events_per_minute
                 ),
-                detected_at: now,
-                related_events: vec![],
-            });
-        }
-
-        // Events in letzter Stunde
-        let hour_ago = now - Duration::hours(1);
-        let events_last_hour = history.iter().filter(|&&t| t > hour_ago).count();
-
-        if events_last_hour > self.config.max_events_per_hour {
-            return Some(Anomaly {
-                anomaly_type: AnomalyType::HighVelocity,
-                severity: Severity::Medium,
-                subject: did.clone(),
-                description: format!(
-                    "{} events in last hour (max: {})",
-                    events_last_hour, self.config.max_events_per_hour
-                ),
-                detected_at: now,
+                detected_at: TemporalCoord::now(self.current_lamport, &UniversalId::NULL),
                 related_events: vec![],
             });
         }
@@ -294,7 +287,7 @@ impl AnomalyDetector {
                     mean,
                     z_score
                 ),
-                detected_at: Utc::now(),
+                detected_at: TemporalCoord::now(self.current_lamport, &UniversalId::NULL),
                 related_events: vec![event.id.to_string()],
             });
         }
@@ -315,7 +308,7 @@ impl AnomalyDetector {
         self.transfer_graph.entry(from.clone()).or_default().push((
             to.clone(),
             amount,
-            event.timestamp,
+            event.coord.lamport(),
         ));
 
         // Prüfe auf Kreisläufe: A → B → C → A
@@ -326,12 +319,13 @@ impl AnomalyDetector {
         }
 
         // Suche nach Rückfluss zu `from`
-        let hour_ago = Utc::now() - Duration::hours(1);
+        // Approximiere "letzte Stunde" als 3600 Lamport-Ticks (1 Tick ≈ 1 Sekunde)
+        let lamport_hour_ago = self.current_lamport.saturating_sub(3600);
         let recent_to_from = self
             .transfer_graph
             .values()
             .flat_map(|t| t.iter())
-            .filter(|(target, _, time)| target == from && *time > hour_ago)
+            .filter(|(target, _, lamport)| target == from && *lamport > lamport_hour_ago)
             .count();
 
         // Wenn viele Rückflüsse, verdächtig
@@ -344,7 +338,7 @@ impl AnomalyDetector {
                     "Circular transfer pattern detected: {} return transfers in last hour",
                     recent_to_from
                 ),
-                detected_at: Utc::now(),
+                detected_at: TemporalCoord::now(self.current_lamport, &UniversalId::NULL),
                 related_events: vec![event.id.to_string()],
             });
         }
@@ -359,7 +353,7 @@ impl AnomalyDetector {
             .entry(event.author.clone())
             .or_insert_with(VecDeque::new);
 
-        history.push_back(event.timestamp);
+        history.push_back(event.coord.lamport());
 
         // Limitiere Größe
         while history.len() > self.config.history_size {
@@ -372,11 +366,11 @@ impl AnomalyDetector {
         &self.anomalies
     }
 
-    /// Hole Anomalien für eine DID
-    pub fn get_anomalies_for_did(&self, did: &DID) -> Vec<&Anomaly> {
+    /// Hole Anomalien für eine UniversalId
+    pub fn get_anomalies_for_subject(&self, subject: &UniversalId) -> Vec<&Anomaly> {
         self.anomalies
             .iter()
-            .filter(|a| &a.subject == did)
+            .filter(|a| &a.subject == subject)
             .collect()
     }
 
@@ -438,7 +432,7 @@ mod tests {
             ..Default::default()
         });
 
-        let alice = DID::new_self(b"alice");
+        let alice = UniversalId::new_v4();
         let mut found_velocity_anomaly = false;
 
         // 10 Events in kurzer Zeit (mehr als max_events_per_minute)
@@ -476,8 +470,8 @@ mod tests {
             ..Default::default()
         });
 
-        let alice = DID::new_self(b"alice");
-        let bob = DID::new_self(b"bob");
+        let alice = UniversalId::new_v4();
+        let bob = UniversalId::new_v4();
 
         // Normale Transfers (Mittelwert ~100, Std ~10)
         for i in 0..20 {

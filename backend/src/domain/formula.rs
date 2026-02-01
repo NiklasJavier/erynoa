@@ -228,7 +228,7 @@ impl WorldFormulaContribution {
 
         // ‖𝕎(s)‖_w
         let weights = self.context.weights();
-        let trust_norm = self.trust.weighted_norm(&weights);
+        let trust_norm = self.trust.weighted_norm(&weights) as f64;
 
         // ln|ℂ(s)|
         let log_history = (self.causal_history_size.max(1) as f64).ln();

@@ -39,6 +39,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::domain::did::DID as LegacyDID;
 use crate::domain::DID;
 use crate::eclvm::runtime::host::{HostInterface, HostStoreValue, StoreContext};
 use crate::error::Result;
@@ -183,8 +184,9 @@ impl ErynoaHost {
 
 impl HostInterface for ErynoaHost {
     fn get_trust_vector(&self, did: &str) -> Result<[f64; 6]> {
-        // Parse DID
-        let did_parsed = DID::from_str(did).unwrap_or_else(|_| DID::new_self(b"unknown"));
+        // Parse DID (Legacy DID für TrustStore Kompatibilität)
+        let did_parsed =
+            LegacyDID::from_str(did).unwrap_or_else(|_| LegacyDID::new_self("unknown"));
 
         // Hole aggregierte Reputation für diese DID
         match self.storage.trust.compute_reputation(&did_parsed) {
@@ -212,8 +214,8 @@ impl HostInterface for ErynoaHost {
     }
 
     fn resolve_did(&self, did: &str) -> Result<bool> {
-        // Parse DID
-        let did_parsed = match DID::from_str(did) {
+        // Parse DID (Legacy DID für IdentityStore Kompatibilität)
+        let did_parsed = match LegacyDID::from_str(did) {
             Ok(d) => d,
             Err(_) => return Ok(false),
         };

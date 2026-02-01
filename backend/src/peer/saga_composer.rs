@@ -144,7 +144,7 @@ impl SagaComposer {
         // Prüfe Constraints
         self.validate_constraints(&steps, &intent.constraints)?;
 
-        Ok(Saga::from_intent(intent, steps))
+        Ok(Saga::from_intent(intent, steps, 0))
     }
 
     /// Komponiere Transfer-Saga
@@ -439,13 +439,14 @@ impl SagaComposer {
                         )));
                     }
                 }
-                Constraint::MaxCost { amount, .. } => {
+                Constraint::MaxCost { amount, cost, .. } => {
                     // Berechne geschätzte Kosten
                     let estimated_cost = steps.len() as u64 * 10; // Vereinfacht: 10 pro Step
-                    if estimated_cost > *amount {
+                    let max_amount = amount.unwrap_or(cost.gas);
+                    if estimated_cost > max_amount {
                         return Err(CompositionError::InsufficientBudget {
                             need: estimated_cost,
-                            have: *amount,
+                            have: max_amount,
                         });
                     }
                 }
@@ -479,12 +480,13 @@ impl SagaComposer {
             format!(
                 "Gateway check for {} crossing {} → {}",
                 did.to_uri(),
-                from_realm,
-                to_realm
+                from_realm.to_hex(),
+                to_realm.to_hex()
             ),
             SagaAction::GatewayCheck {
-                did: did.clone(),
+                subject: did.id.clone(),
                 target_realm: to_realm.clone(),
+                required_trust: 0.0, // Default - kein spezifischer Trust benötigt
             },
         )
         .with_realm_crossing(from_realm, to_realm);

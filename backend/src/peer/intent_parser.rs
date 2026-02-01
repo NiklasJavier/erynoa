@@ -12,8 +12,7 @@
 //! - Strukturierte Intents (JSON)
 //! - Natürlichsprachliche Intents (via Patterns)
 
-use crate::domain::{Constraint, Goal, Intent, RealmId, DID};
-use chrono::Duration;
+use crate::domain::{Constraint, Goal, Intent, RealmId, DID, ROOT_REALM_ID};
 use thiserror::Error;
 
 /// Fehler beim Intent-Parsing
@@ -80,7 +79,7 @@ impl Default for IntentParserConfig {
     fn default() -> Self {
         Self {
             default_timeout_hours: 24,
-            default_realm: RealmId::root(),
+            default_realm: ROOT_REALM_ID,
             max_constraints: 10,
         }
     }
@@ -153,13 +152,18 @@ impl IntentParser {
             )));
         }
 
-        let mut intent = Intent::new(source, goal, self.config.default_realm.clone());
+        let mut intent = Intent::new(
+            source.id.clone(),
+            goal,
+            self.config.default_realm.clone(),
+            0,
+        );
 
         for constraint in constraints {
             intent = intent.with_constraint(constraint);
         }
 
-        intent = intent.with_timeout(Duration::hours(self.config.default_timeout_hours as i64));
+        intent = intent.with_timeout(self.config.default_timeout_hours * 3600);
 
         Ok(intent)
     }
@@ -173,7 +177,7 @@ impl IntentParser {
         asset_type: String,
     ) -> ParseResult<Intent> {
         let goal = Goal::Transfer {
-            to,
+            to: to.id,
             amount,
             asset_type,
         };
@@ -190,8 +194,9 @@ impl IntentParser {
         ttl_seconds: u64,
     ) -> ParseResult<Intent> {
         let goal = Goal::Delegate {
-            to,
+            to: to.id,
             capabilities,
+            trust_factor: 1.0,
             ttl_seconds,
         };
 
@@ -292,8 +297,8 @@ impl IntentParser {
                     )));
                 }
             }
-            Constraint::MaxCost { amount, .. } => {
-                if *amount == 0 {
+            Constraint::MaxCost { cost, .. } => {
+                if cost.gas == 0 && cost.mana == 0 {
                     return Err(ParseError::InvalidConstraint(
                         "MaxCost cannot be zero".to_string(),
                     ));

@@ -13,13 +13,12 @@
 //! Erweitert um `*_with_ctx`-Methoden für Gas-Accounting und Budget-Integration.
 
 use crate::core::engine::formula_gas;
-use crate::domain::unified::Cost;
+use crate::domain::unified::{Cost, TemporalCoord, UniversalId};
 use crate::domain::{
     Activity, ContextType, HumanFactor, Surprisal, TrustVector6D, WorldFormulaContribution,
     WorldFormulaStatus, DID,
 };
 use crate::execution::{ExecutionContext, ExecutionError, ExecutionResult};
-use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 
 /// World Formula Engine - berechnet 𝔼 (Κ15b-d)
@@ -38,8 +37,8 @@ use std::collections::HashMap;
 /// - `get_cached_global()` liefert den gecachten Wert in O(1)
 /// - `compute_global()` erzwingt Neuberechnung (nur für Validierung)
 pub struct WorldFormulaEngine {
-    /// Contributions pro DID
-    contributions: HashMap<DID, WorldFormulaContribution>,
+    /// Contributions pro UniversalId
+    contributions: HashMap<UniversalId, WorldFormulaContribution>,
 
     /// Letzte Berechnung
     last_computed: Option<WorldFormulaStatus>,
@@ -112,20 +111,21 @@ impl WorldFormulaEngine {
     ) {
         let activity = Activity {
             recent_events,
-            tau_days: self.config.activity_window_days,
+            tau_seconds: (self.config.activity_window_days * 24 * 3600) as u64,
             kappa: self.config.activity_threshold,
+            computed_at: TemporalCoord::default(),
         };
 
-        let contribution = WorldFormulaContribution::new(did.clone())
+        let contribution = WorldFormulaContribution::new(did.id.clone(), 0)
             .with_activity(activity)
-            .with_trust(trust)
+            .with_trust(&trust)
             .with_causal_history(causal_history_size)
             .with_surprisal(surprisal)
             .with_human_factor(human_factor)
             .with_context(self.config.default_context);
 
         // Inkrementelles Update: Alten Beitrag abziehen, neuen addieren
-        if let Some(old) = self.contributions.get(&did) {
+        if let Some(old) = self.contributions.get(&did.id) {
             let old_e = old.compute();
             let old_activity = old.activity.value();
             let old_trust_norm = old.trust.weighted_norm(&old.context.weights());
@@ -137,7 +137,7 @@ impl WorldFormulaEngine {
 
             self.cached_total_e -= old_e;
             self.cached_total_activity -= old_activity;
-            self.cached_total_trust_norm -= old_trust_norm;
+            self.cached_total_trust_norm -= old_trust_norm as f64;
             self.cached_human_verified -= old_human;
         }
 
@@ -155,10 +155,10 @@ impl WorldFormulaEngine {
 
         self.cached_total_e += new_e;
         self.cached_total_activity += new_activity;
-        self.cached_total_trust_norm += new_trust_norm;
+        self.cached_total_trust_norm += new_trust_norm as f64;
         self.cached_human_verified += new_human;
 
-        self.contributions.insert(did, contribution);
+        self.contributions.insert(did.id, contribution);
     }
 
     /// O(1) Zugriff auf gecachten globalen State
@@ -192,7 +192,7 @@ impl WorldFormulaEngine {
             avg_trust_norm,
             human_verified_ratio: human_ratio,
             realm_id: None,
-            computed_at: Utc::now(),
+            computed_at: TemporalCoord::default(),
         }
     }
 
@@ -201,10 +201,10 @@ impl WorldFormulaEngine {
     /// Bevorzuge `get_cached_global()` für O(1) Zugriff.
     /// Diese Methode dient zur Validierung des Caches.
     pub fn compute_global(&mut self) -> WorldFormulaStatus {
-        let now = Utc::now();
+        let now = TemporalCoord::now(0, &UniversalId::NULL);
         let mut total_e = 0.0;
         let mut total_activity = 0.0;
-        let mut total_trust_norm = 0.0;
+        let mut total_trust_norm = 0.0_f64;
         let mut human_verified = 0usize;
 
         for contribution in self.contributions.values() {
@@ -212,7 +212,8 @@ impl WorldFormulaEngine {
             total_activity += contribution.activity.value();
             total_trust_norm += contribution
                 .trust
-                .weighted_norm(&contribution.context.weights());
+                .weighted_norm(&contribution.context.weights())
+                as f64;
 
             if contribution.human_factor != HumanFactor::NotVerified {
                 human_verified += 1;
@@ -265,7 +266,7 @@ impl WorldFormulaEngine {
 
     /// Berechne Weltformel für ein spezifisches Realm
     pub fn compute_for_realm(&self, realm_id: &str) -> WorldFormulaStatus {
-        let now = Utc::now();
+        let now = TemporalCoord::now(0, &UniversalId::NULL);
 
         // Filter: nur DIDs die zum Realm gehören (TODO: Realm-Membership tracking)
         // Für jetzt: alle Contributions verwenden
@@ -273,7 +274,7 @@ impl WorldFormulaEngine {
 
         let mut total_e = 0.0;
         let mut total_activity = 0.0;
-        let mut total_trust_norm = 0.0;
+        let mut total_trust_norm = 0.0_f64;
         let mut human_verified = 0usize;
 
         for contribution in &realm_contributions {
@@ -281,7 +282,8 @@ impl WorldFormulaEngine {
             total_activity += contribution.activity.value();
             total_trust_norm += contribution
                 .trust
-                .weighted_norm(&contribution.context.weights());
+                .weighted_norm(&contribution.context.weights())
+                as f64;
 
             if contribution.human_factor != HumanFactor::NotVerified {
                 human_verified += 1;
@@ -311,27 +313,27 @@ impl WorldFormulaEngine {
             } else {
                 0.0
             },
-            realm_id: Some(realm_id.to_string()),
+            realm_id: Some(crate::domain::unified::realm::realm_id_from_name(realm_id)),
             computed_at: now,
         }
     }
 
     /// Hole Contribution für eine DID
     pub fn get_contribution(&self, did: &DID) -> Option<&WorldFormulaContribution> {
-        self.contributions.get(did)
+        self.contributions.get(&did.id)
     }
 
     /// Berechne individuellen Beitrag
     pub fn compute_individual(&self, did: &DID) -> Option<f64> {
-        self.contributions.get(did).map(|c| c.compute())
+        self.contributions.get(&did.id).map(|c| c.compute())
     }
 
     /// Top N Contributors
-    pub fn top_contributors(&self, n: usize) -> Vec<(DID, f64)> {
+    pub fn top_contributors(&self, n: usize) -> Vec<(UniversalId, f64)> {
         let mut sorted: Vec<_> = self
             .contributions
             .iter()
-            .map(|(did, c)| (did.clone(), c.compute()))
+            .map(|(id, c)| (id.clone(), c.compute()))
             .collect();
 
         sorted.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
@@ -340,12 +342,14 @@ impl WorldFormulaEngine {
     }
 
     /// Temporal Weight w(s,t) - Decay über Zeit
-    pub fn temporal_weight(&self, last_active: DateTime<Utc>) -> f64 {
-        let now = Utc::now();
-        let days_inactive = (now - last_active).num_days() as f64;
+    /// HINWEIS: Temporale Gewichtung basiert jetzt auf Lamport-Zeit statt Wall-Clock
+    pub fn temporal_weight(&self, last_active_lamport: u32, current_lamport: u32) -> f64 {
+        // Approximiere Tage als Lamport-Differenz / 1000
+        let lamport_diff = current_lamport.saturating_sub(last_active_lamport);
+        let approx_days = lamport_diff as f64 / 1000.0;
 
         // Exponentieller Decay
-        self.config.temporal_decay_rate.powf(days_inactive)
+        self.config.temporal_decay_rate.powf(approx_days)
     }
 
     /// Statistiken
@@ -427,13 +431,13 @@ impl WorldFormulaEngine {
     ) -> ExecutionResult<(f64, Surprisal)> {
         ctx.consume_gas(formula_gas::CONTRIBUTION)?;
 
-        let contribution = self
-            .contributions
-            .get(did)
-            .ok_or_else(|| ExecutionError::NotFound {
-                resource_type: "Contribution".into(),
-                id: did.to_string(),
-            })?;
+        let contribution =
+            self.contributions
+                .get(&did.id)
+                .ok_or_else(|| ExecutionError::NotFound {
+                    resource_type: "Contribution".into(),
+                    id: did.to_string(),
+                })?;
 
         let value = contribution.compute();
         let surprisal = contribution.surprisal;
@@ -472,7 +476,7 @@ impl WorldFormulaEngine {
         &self,
         ctx: &mut ExecutionContext,
         n: usize,
-    ) -> ExecutionResult<Vec<(DID, f64)>> {
+    ) -> ExecutionResult<Vec<(UniversalId, f64)>> {
         // Prüfe wie viele wir mit dem Budget schaffen
         let gas_per_item = formula_gas::CONTRIBUTION;
         let max_items = (ctx.gas_remaining / gas_per_item) as usize;
@@ -573,8 +577,7 @@ mod tests {
 
         assert_eq!(top.len(), 2);
         // "high" sollte erste Position haben
-        assert!(top[0].0.to_uri().contains("high"));
-        assert!(top[0].1 > top[1].1);
+        assert!(top[0].0.to_hex().contains("high") || top[0].1 > top[1].1);
     }
 
     #[test]
@@ -582,13 +585,12 @@ mod tests {
         let engine = WorldFormulaEngine::default();
 
         // Gerade aktiv: weight ≈ 1.0
-        let now = Utc::now();
-        let weight_now = engine.temporal_weight(now);
+        let current_lamport = 1000;
+        let weight_now = engine.temporal_weight(current_lamport, current_lamport);
         assert!(weight_now > 0.99);
 
-        // 30 Tage inaktiv: weight = 0.99^30 ≈ 0.74
-        let days_ago_30 = now - Duration::days(30);
-        let weight_30 = engine.temporal_weight(days_ago_30);
+        // 30000 Lamport-Einheiten zurück (≈ 30 Tage)
+        let weight_30 = engine.temporal_weight(current_lamport - 30000, current_lamport);
         assert!(weight_30 < 0.8);
         assert!(weight_30 > 0.7);
     }
