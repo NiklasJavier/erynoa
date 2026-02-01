@@ -225,7 +225,7 @@ mod tests {
 
         // 100 Entitäten mit je 1.0 Power
         for i in 0..100 {
-            ac.set_power(DID::new_self(&format!("user{}", i)), 1.0);
+            ac.set_power(DID::new_self(format!("user{}", i).as_bytes()), 1.0);
         }
 
         // √100 / 100^0.25 = 10 / 3.16 ≈ 3.16
@@ -239,7 +239,7 @@ mod tests {
 
         // 10 normale User
         for i in 0..10 {
-            ac.set_power(DID::new_self(&format!("user{}", i)), 1.0);
+            ac.set_power(DID::new_self(format!("user{}", i).as_bytes()), 1.0);
         }
 
         // 1 Whale mit viel Power
@@ -263,7 +263,7 @@ mod tests {
 
         // 10 kleine User
         for i in 0..9 {
-            ac.set_power(DID::new_self(&format!("small{}", i)), 1.0);
+            ac.set_power(DID::new_self(format!("small{}", i).as_bytes()), 1.0);
         }
 
         // 1 großer User hat mehr als 50%
@@ -309,7 +309,7 @@ mod tests {
 
         // Perfekte Gleichheit
         for i in 0..10 {
-            ac.set_power(DID::new_self(&format!("equal{}", i)), 10.0);
+            ac.set_power(DID::new_self(format!("equal{}", i).as_bytes()), 10.0);
         }
         assert!(ac.gini_coefficient().abs() < 0.01);
 
@@ -317,7 +317,7 @@ mod tests {
         let mut ac2 = AntiCalcification::default();
         ac2.set_power(DID::new_self(b"rich"), 99.0);
         for i in 0..99 {
-            ac2.set_power(DID::new_self(&format!("poor{}", i)), 0.01);
+            ac2.set_power(DID::new_self(format!("poor{}", i).as_bytes()), 0.01);
         }
         assert!(ac2.gini_coefficient() > 0.9);
     }

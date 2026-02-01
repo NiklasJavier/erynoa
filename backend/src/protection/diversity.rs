@@ -340,8 +340,8 @@ mod tests {
         // Verschiedene DID-Typen
         dm.observe_did(&DID::new_self(b"alice"));
         dm.observe_did(&DID::new_self(b"bob"));
-        dm.observe_did(&DID::new_guild("guild1"));
-        dm.observe_did(&DID::new_guild("guild2"));
+        dm.observe_did(&DID::new_guild(b"guild1"));
+        dm.observe_did(&DID::new_guild(b"guild2"));
 
         let stats = dm.stats();
         let did_stats = stats.dimensions.get("did_type").unwrap();

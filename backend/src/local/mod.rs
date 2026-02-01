@@ -264,7 +264,7 @@ pub mod test_utils {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::did::DIDNamespace;
+    use crate::domain::DIDNamespace;
 
     #[test]
     fn test_decentralized_storage_temporary() {

@@ -585,7 +585,7 @@ mod tests {
         let engine = WorldFormulaEngine::default();
 
         // Gerade aktiv: weight ≈ 1.0
-        let current_lamport = 1000;
+        let current_lamport = 50000;
         let weight_now = engine.temporal_weight(current_lamport, current_lamport);
         assert!(weight_now > 0.99);
 
@@ -703,8 +703,8 @@ mod tests {
         // Mehrere Contributors
         for i in 0..10 {
             engine.update_contribution(
-                DID::new_self(&format!("user{}", i)),
-                TrustVector6D::new(0.5 + (i as f64 * 0.05), 0.5, 0.5, 0.5, 0.5, 0.5),
+                DID::new_self(format!("user{}", i).as_bytes()),
+                TrustVector6D::new(0.5 + (i as f32 * 0.05), 0.5, 0.5, 0.5, 0.5, 0.5),
                 10 + i as u64,
                 100,
                 Surprisal::default(),

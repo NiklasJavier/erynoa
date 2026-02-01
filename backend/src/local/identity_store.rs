@@ -10,7 +10,7 @@ use rand::rngs::OsRng;
 use serde::{Deserialize, Serialize};
 
 use super::KvStore;
-use crate::domain::did::{DIDNamespace, DID};
+use crate::domain::{DIDNamespace, DID};
 
 /// Gespeicherte Identität
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -98,8 +98,8 @@ impl IdentityStore {
         let public_key_hex = hex::encode(verifying_key.as_bytes());
         let private_key_hex = hex::encode(signing_key.to_bytes());
 
-        // DID erstellen (basierend auf Public Key, erste 16 Zeichen als unique_id)
-        let did = DID::new(namespace, &public_key_hex[..16]);
+        // DID erstellen (basierend auf Public Key bytes)
+        let did = DID::new(namespace, verifying_key.as_bytes());
 
         let identity = StoredIdentity {
             did: did.clone(),
@@ -165,7 +165,7 @@ impl IdentityStore {
         let public_key_hex = hex::encode(verifying_key.as_bytes());
         let private_key_hex = hex::encode(signing_key.to_bytes());
 
-        let did = DID::new(namespace, &public_key_hex[..16]);
+        let did = DID::new(namespace, verifying_key.as_bytes());
 
         let identity = StoredIdentity {
             did: did.clone(),
@@ -353,7 +353,9 @@ impl IdentityStore {
             .parse::<DIDNamespace>()
             .unwrap_or(DIDNamespace::Self_);
 
-        let did = DID::new(namespace, &credential.public_key_hex[..16]);
+        // Parse public key hex to bytes
+        let pk_bytes = hex::decode(&credential.public_key_hex).unwrap_or_default();
+        let did = DID::new(namespace, &pk_bytes);
 
         let identity = StoredIdentity {
             did: did.clone(),
@@ -455,6 +457,7 @@ impl IdentityStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::DIDNamespace;
 
     fn create_test_store() -> IdentityStore {
         let folder = tempfile::tempdir().unwrap();

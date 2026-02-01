@@ -7,8 +7,7 @@ use fjall::Keyspace;
 use serde::{Deserialize, Serialize};
 
 use super::KvStore;
-use crate::domain::did::DID;
-use crate::domain::trust::TrustVector6D;
+use crate::domain::{DIDNamespace, TrustVector6D, DID};
 
 /// Trust-Beziehung zwischen zwei Subjekten
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -143,13 +142,13 @@ impl TrustStore {
             return Ok(TrustVector6D::default());
         }
 
-        // Summe aller eingehenden Trusts
-        let mut sum_r = 0.0;
-        let mut sum_i = 0.0;
-        let mut sum_c = 0.0;
-        let mut sum_p = 0.0;
-        let mut sum_v = 0.0;
-        let mut sum_o = 0.0;
+        // Summe aller eingehenden Trusts (f32 für unified TrustVector6D)
+        let mut sum_r = 0.0f32;
+        let mut sum_i = 0.0f32;
+        let mut sum_c = 0.0f32;
+        let mut sum_p = 0.0f32;
+        let mut sum_v = 0.0f32;
+        let mut sum_o = 0.0f32;
 
         for stored in &incoming {
             sum_r += stored.trust.r;
@@ -161,7 +160,7 @@ impl TrustStore {
         }
 
         // Normalisieren
-        let count = incoming.len() as f64;
+        let count = incoming.len() as f32;
         Ok(TrustVector6D::new(
             sum_r / count,
             sum_i / count,
@@ -203,7 +202,6 @@ impl TrustStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::did::DIDNamespace;
 
     fn create_test_store() -> TrustStore {
         let folder = tempfile::tempdir().unwrap();
@@ -215,8 +213,8 @@ mod tests {
     fn test_put_get() {
         let store = create_test_store();
 
-        let alice = DID::new(DIDNamespace::Self_, "alice");
-        let bob = DID::new(DIDNamespace::Self_, "bob");
+        let alice = DID::new(DIDNamespace::Self_, b"alice");
+        let bob = DID::new(DIDNamespace::Self_, b"bob");
         let trust = TrustVector6D::new(0.8, 0.9, 0.7, 0.6, 0.5, 0.95);
 
         store.put(alice.clone(), bob.clone(), trust).unwrap();
@@ -230,9 +228,9 @@ mod tests {
     fn test_outgoing_incoming() {
         let store = create_test_store();
 
-        let alice = DID::new(DIDNamespace::Self_, "alice");
-        let bob = DID::new(DIDNamespace::Self_, "bob");
-        let charlie = DID::new(DIDNamespace::Self_, "charlie");
+        let alice = DID::new(DIDNamespace::Self_, b"alice");
+        let bob = DID::new(DIDNamespace::Self_, b"bob");
+        let charlie = DID::new(DIDNamespace::Self_, b"charlie");
 
         let trust = TrustVector6D::new(0.8, 0.9, 0.7, 0.6, 0.5, 0.95);
 
@@ -251,9 +249,9 @@ mod tests {
     fn test_reputation() {
         let store = create_test_store();
 
-        let alice = DID::new(DIDNamespace::Self_, "alice");
-        let bob = DID::new(DIDNamespace::Self_, "bob");
-        let charlie = DID::new(DIDNamespace::Self_, "charlie");
+        let alice = DID::new(DIDNamespace::Self_, b"alice");
+        let bob = DID::new(DIDNamespace::Self_, b"bob");
+        let charlie = DID::new(DIDNamespace::Self_, b"charlie");
 
         // Bob bekommt Trust von Alice (0.8) und Charlie (0.6)
         store

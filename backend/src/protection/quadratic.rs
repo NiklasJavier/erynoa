@@ -484,7 +484,7 @@ mod tests {
 
         // 10 kleine Voter mit je 100 Credits
         for i in 0..10 {
-            let did = DID::new_self(&format!("small{}", i));
+            let did = DID::new_self(format!("small{}", i).as_bytes());
             gov.register_voter(did.clone());
             // Jeder kleine Voter bekommt 100 Credits (100 initial + 0 extra)
             // Also 100 Credits = 10 Stimmen möglich
@@ -503,7 +503,7 @@ mod tests {
 
         // Jeder kleine Voter: √100 = 10 Stimmen für 100 Credits
         for i in 0..10 {
-            let did = DID::new_self(&format!("small{}", i));
+            let did = DID::new_self(format!("small{}", i).as_bytes());
             gov.vote(&proposal.id, did, VoteDirection::Against, 10)
                 .unwrap();
         }

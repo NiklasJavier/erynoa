@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use super::KvStore;
-use crate::domain::did::DID;
+use crate::domain::DID;
 
 /// Content Identifier (CID) - SHA-256 Hash
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -221,7 +221,7 @@ impl ContentStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::did::DIDNamespace;
+    use crate::domain::DIDNamespace;
 
     fn create_test_store() -> ContentStore {
         let folder = tempfile::tempdir().unwrap();
@@ -272,7 +272,7 @@ mod tests {
     fn test_by_creator() {
         let store = create_test_store();
 
-        let alice = DID::new(DIDNamespace::Self_, "alice");
+        let alice = DID::new(DIDNamespace::Self_, b"alice");
 
         store
             .put(

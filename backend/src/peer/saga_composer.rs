@@ -24,7 +24,7 @@
 
 use crate::domain::{
     Constraint, Goal, Intent, RealmId, Saga, SagaAction, SagaCompensation, SagaStep, UniversalId,
-    DID,
+    DID, ROOT_REALM_ID,
 };
 use thiserror::Error;
 
@@ -521,13 +521,14 @@ mod tests {
         let bob = DID::new_self(b"bob");
 
         let intent = Intent::new(
-            alice.clone(),
+            alice.id.clone(),
             Goal::Transfer {
-                to: bob.clone(),
+                to: bob.id.clone(),
                 amount: 100,
                 asset_type: "ERY".to_string(),
             },
-            RealmId::root(),
+            ROOT_REALM_ID,
+            0,
         );
 
         let saga = composer.compose(&intent).unwrap();
@@ -555,13 +556,15 @@ mod tests {
         let bob = DID::new_self(b"bob");
 
         let intent = Intent::new(
-            alice.clone(),
+            alice.id.clone(),
             Goal::Delegate {
-                to: bob.clone(),
+                to: bob.id.clone(),
                 capabilities: vec!["transfer".to_string()],
+                trust_factor: 1.0,
                 ttl_seconds: 86400,
             },
-            RealmId::root(),
+            ROOT_REALM_ID,
+            0,
         );
 
         let saga = composer.compose(&intent).unwrap();
@@ -576,13 +579,14 @@ mod tests {
         let bob = DID::new_self(b"bob");
 
         let intent = Intent::new(
-            alice.clone(),
+            alice.id.clone(),
             Goal::Transfer {
-                to: bob,
+                to: bob.id.clone(),
                 amount: 100,
                 asset_type: "ERY".to_string(),
             },
-            RealmId::root(),
+            ROOT_REALM_ID,
+            0,
         )
         .with_constraint(Constraint::MaxCost {
             cost: Cost::default(),
@@ -605,13 +609,14 @@ mod tests {
         let bob = DID::new_self(b"bob");
 
         let intent = Intent::new(
-            alice.clone(),
+            alice.id.clone(),
             Goal::Transfer {
-                to: bob,
+                to: bob.id.clone(),
                 amount: 100,
                 asset_type: "ERY".to_string(),
             },
-            RealmId::root(),
+            ROOT_REALM_ID,
+            0,
         );
 
         let saga = composer.compose(&intent).unwrap();

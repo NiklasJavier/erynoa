@@ -337,7 +337,7 @@ impl BandwidthTier {
 mod tests {
     use super::*;
 
-    fn trust_with_r(r: f64) -> TrustVector6D {
+    fn trust_with_r(r: f32) -> TrustVector6D {
         TrustVector6D::new(r, 0.5, 0.5, 0.5, 0.5, 0.5)
     }
 

@@ -7,7 +7,7 @@ use fjall::Keyspace;
 use serde::{Deserialize, Serialize};
 
 use super::KvStore;
-use crate::domain::event::{Event, EventId, FinalityLevel};
+use crate::domain::{Event, EventId, FinalityLevel};
 
 /// Persistiertes Event mit Metadaten
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -178,9 +178,7 @@ impl EventStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::did::DIDNamespace;
-    use crate::domain::event::EventPayload;
-    use crate::domain::DID;
+    use crate::domain::{DIDNamespace, EventPayload, DID};
 
     fn create_test_store() -> EventStore {
         let folder = tempfile::tempdir().unwrap();
@@ -189,7 +187,7 @@ mod tests {
     }
 
     fn create_test_event() -> Event {
-        let author = DID::new(DIDNamespace::Self_, "test123");
+        let author = DID::new(DIDNamespace::Self_, b"test123");
         Event::genesis(author.clone(), "test-pubkey-123".to_string())
     }
 
@@ -216,7 +214,7 @@ mod tests {
         store.put(genesis.clone()).unwrap();
 
         // Child Event mit Genesis als Parent
-        let author = DID::new(DIDNamespace::Self_, "test456");
+        let author = DID::new(DIDNamespace::Self_, b"test456");
         let child = Event::new(
             author.clone(),
             EventPayload::Attest {

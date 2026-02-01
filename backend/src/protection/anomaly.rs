@@ -80,13 +80,13 @@ pub type AnomalyResult<T> = Result<T, AnomalyError>;
 /// ```
 pub struct AnomalyDetector {
     /// Event-Historie pro UniversalId (für Velocity-Check)
-    event_history: HashMap<UniversalId, VecDeque<u32>>,  // Lamport-Zeiten
+    event_history: HashMap<UniversalId, VecDeque<u32>>, // Lamport-Zeiten
 
     /// Betrags-Statistiken pro UniversalId
     amount_stats: HashMap<UniversalId, AmountStats>,
 
     /// Transfer-Graph (für Pattern-Detection)
-    transfer_graph: HashMap<UniversalId, Vec<(UniversalId, u64, u32)>>,  // (target, amount, lamport)
+    transfer_graph: HashMap<UniversalId, Vec<(UniversalId, u64, u32)>>, // (target, amount, lamport)
 
     /// Erkannte Anomalien
     anomalies: Vec<Anomaly>,
@@ -424,6 +424,7 @@ pub struct AnomalyStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::DID;
 
     #[test]
     fn test_velocity_detection() {
@@ -432,18 +433,19 @@ mod tests {
             ..Default::default()
         });
 
-        let alice = UniversalId::new_v4();
+        let alice = DID::new_self(b"alice");
         let mut found_velocity_anomaly = false;
 
         // 10 Events in kurzer Zeit (mehr als max_events_per_minute)
         for _ in 0..10 {
             let event = Event::new(
-                alice.clone(),
+                alice.id.clone(),
+                vec![],
                 EventPayload::Custom {
                     event_type: "test".to_string(),
-                    data: serde_json::Value::Null,
+                    data: vec![],
                 },
-                vec![],
+                0,
             );
 
             let anomalies = detector.analyze_event(&event);
@@ -470,35 +472,37 @@ mod tests {
             ..Default::default()
         });
 
-        let alice = UniversalId::new_v4();
-        let bob = UniversalId::new_v4();
+        let alice = DID::new_self(b"alice");
+        let bob = DID::new_self(b"bob");
 
         // Normale Transfers (Mittelwert ~100, Std ~10)
         for i in 0..20 {
             let amount = 90 + (i % 3) * 10; // 90, 100, 110, wiederholend
             let event = Event::new(
-                alice.clone(),
+                alice.id.clone(),
+                vec![],
                 EventPayload::Transfer {
-                    from: alice.clone(),
-                    to: bob.clone(),
+                    from: alice.id.clone(),
+                    to: bob.id.clone(),
                     amount,
                     asset_type: "ERY".to_string(),
                 },
-                vec![],
+                0,
             );
             detector.analyze_event(&event);
         }
 
         // Extrem riesiger Transfer (1000× normal) - muss anomal sein
         let big_event = Event::new(
-            alice.clone(),
+            alice.id.clone(),
+            vec![],
             EventPayload::Transfer {
-                from: alice.clone(),
-                to: bob.clone(),
+                from: alice.id.clone(),
+                to: bob.id.clone(),
                 amount: 1_000_000, // 1M statt 100
                 asset_type: "ERY".to_string(),
             },
-            vec![],
+            0,
         );
 
         let anomalies = detector.analyze_event(&big_event);
