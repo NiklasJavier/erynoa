@@ -122,6 +122,7 @@ tower_governor = "0.4"
 tikv-jemallocator = { version = "0.6", features = [
     "background_threads",
 ], optional = true }
+blake3 = "1.8.3"
 
 [features]
 default = []

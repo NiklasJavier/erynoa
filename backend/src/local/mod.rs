@@ -14,8 +14,14 @@
 //! │ identities  │   events    │    trust    │   content   │    realm_storage    │
 //! │ (DIDs,Keys) │  (DAG)      │ (Vektoren)  │  (CAS)      │  (Dynamische Stores)│
 //! └─────────────┴─────────────┴─────────────┴─────────────┴─────────────────────┘
+//!                                    │
+//!                    ┌───────────────┴───────────────┐
+//!                    │      Blueprint Marketplace     │
+//!                    │   (Dezentraler Template-Store) │
+//!                    └───────────────────────────────┘
 //! ```
 
+pub mod blueprint_marketplace;
 mod content_store;
 mod event_store;
 mod identity_store;
@@ -23,6 +29,37 @@ mod kv_store;
 pub mod realm_storage;
 mod trust_store;
 
+pub use blueprint_marketplace::{
+    // Blueprint-Typen
+    Blueprint,
+    BlueprintBuilder,
+    BlueprintCategory,
+    BlueprintDeployment,
+    BlueprintId,
+    BlueprintLicense,
+    // Marketplace
+    BlueprintMarketplace,
+    BlueprintPolicy,
+    BlueprintRating,
+    BlueprintSaga,
+    // Metriken & Stats
+    BlueprintStats,
+    BlueprintStore,
+    CreatorAnalytics,
+    DeploymentResult,
+    MarketplaceConfig,
+    MarketplaceStats,
+    NoveltyCalculator,
+    PolicyType,
+    // Ergebnisse
+    PublishResult,
+    RatingResult,
+    SagaAction,
+    SagaStep,
+    SearchQuery,
+    SearchResult,
+    SemVer,
+};
 pub use content_store::{ContentId, ContentMetadata, ContentStore, StoredContent};
 pub use event_store::{EventStore, StoredEvent};
 pub use identity_store::{IdentityStore, StoredIdentity};
