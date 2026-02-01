@@ -2,13 +2,13 @@
 
 > **Datum:** 1. Februar 2026
 > **Basis:** IPS-01-imp.md v1.2.0 + UNIFIED-DATA-MODEL.md v1.1.0
-> **Aktueller Stand:** 367 Lib-Tests + 17 Integration-Tests bestanden
+> **Aktueller Stand:** 386 Lib-Tests + 17 Integration-Tests + 21 Property-Tests bestanden (424 total)
 
 ---
 
 ## Executive Summary
 
-Die Implementierung ist zu **~92%** mit IPS-01 und UDM aligned. Die Kernkonzepte sind umgesetzt:
+Die Implementierung ist zu **~96%** mit IPS-01 und UDM aligned. Die Kernkonzepte sind umgesetzt:
 
 | Bereich                            | Status         | Abdeckung |
 | ---------------------------------- | -------------- | --------- |
@@ -27,6 +27,8 @@ Die Implementierung ist zu **~92%** mit IPS-01 und UDM aligned. Die Kernkonzepte
 | InvariantChecker                   | ✅ Vollständig | 100%      |
 | Schema-Registry / Migration        | ✅ Vollständig | 100%      |
 | Extension Slots (DIDDocument)      | ✅ Vollständig | 100%      |
+| WorldFormulaConfig                 | ✅ Vollständig | 100%      |
+| Property-Based Tests               | ✅ Vollständig | 100%      |
 
 ---
 
@@ -152,30 +154,26 @@ Die Implementierung ist zu **~92%** mit IPS-01 und UDM aligned. Die Kernkonzepte
 
 ## II. Teilweise Implementiert 🟡
 
-### 2.1 InvariantChecker (UDM §XIV)
+### 2.1 InvariantChecker (UDM §XIV) ✅ Erledigt
 
-| Spezifikation                     | Implementation | Status           |
-| --------------------------------- | -------------- | ---------------- |
-| `InvariantChecker` Struct         | ✅             | Existiert        |
-| `check_realm_hierarchy()` (Κ1)    | ✅             | `mod.rs:140-147` |
-| `check_delegation()` (Κ8)         | ✅             | `mod.rs:150-165` |
-| `check_event_dag()` (Κ9)          | ✅             | `mod.rs:168-178` |
-| `check_finality_monotone()` (Κ10) | ✅             | `mod.rs:181-189` |
-| Compile-Time Size Checks          | 🟡             | Nur teilweise    |
+| Spezifikation                         | Implementation | Status                     |
+| ------------------------------------- | -------------- | -------------------------- |
+| `InvariantChecker` Struct             | ✅             | Existiert                  |
+| `check_realm_hierarchy()` (Κ1)        | ✅             | `mod.rs:140-147`           |
+| `check_realm_rule_inheritance()` (Κ1) | ✅             | `mod.rs` - Neu hinzugefügt |
+| `check_realm_depth()` (Κ1)            | ✅             | `mod.rs` - Neu hinzugefügt |
+| `check_delegation()` (Κ8)             | ✅             | `mod.rs:150-165`           |
+| `check_delegation_chain_decay()` (Κ8) | ✅             | `mod.rs` - Neu hinzugefügt |
+| `check_event_dag()` (Κ9)              | ✅             | `mod.rs:168-178`           |
+| `check_causal_parents()` (Κ9)         | ✅             | `mod.rs` - Neu hinzugefügt |
+| `check_finality_monotone()` (Κ10)     | ✅             | `mod.rs:181-189`           |
+| `check_finality_progression()` (Κ10)  | ✅             | `mod.rs` - Neu hinzugefügt |
+| `check_partition_coverage()`          | ✅             | `mod.rs` - Neu hinzugefügt |
+| `check_governance_quorum()`           | ✅             | `mod.rs` - Neu hinzugefügt |
+| `check_store_compatibility()`         | ✅             | `mod.rs` - Neu hinzugefügt |
+| Compile-Time Size Checks              | ✅             | In primitives.rs, trust.rs |
 
-**Gap:** Compile-Time Asserts für Struct-Größen fehlen:
-
-```rust
-// domain/unified/primitives.rs, trust.rs, cost.rs
-const _: () = {
-    assert!(std::mem::size_of::<UniversalId>() == 32);
-    assert!(std::mem::size_of::<TemporalCoord>() == 16);
-    assert!(std::mem::size_of::<TrustVector6D>() == 24);
-    assert!(std::mem::size_of::<Cost>() == 24); // 24 wegen Alignment-Padding
-};
-```
-
-**✅ Implementiert in:** `primitives.rs`, `trust.rs`, `cost.rs`
+**✅ Vollständig implementiert mit 9 neuen Invariantenprüfungen**
 
 ### 2.2 Schema-Registry (UDM §XIII)
 
@@ -207,16 +205,20 @@ pub mod extension_slots {
 }
 ```
 
-### 2.4 Weltformel-Parameter (IPS §X.1)
+### 2.4 Weltformel-Parameter (IPS §X.1) ✅ Erledigt
 
-| Spezifikation               | Implementation | Status                           |
-| --------------------------- | -------------- | -------------------------------- |
-| α = 0.3 (Blueprint-Gewicht) | 🟡             | In Formula, nicht konfigurierbar |
-| β = 0.1 (P2P-Gewicht)       | 🟡             | In Formula, nicht konfigurierbar |
-| γ = 0.2 (Adoption-Gewicht)  | 🟡             | In Formula, nicht konfigurierbar |
-| Adaptive Kalibrierung       | ❌             | Nicht implementiert              |
+| Spezifikation                 | Implementation | Status                                         |
+| ----------------------------- | -------------- | ---------------------------------------------- |
+| λ_asym_base = 1.5             | ✅             | `WorldFormulaConfig::trust.asymmetry_base`     |
+| λ_asym_critical = 2.0         | ✅             | `WorldFormulaConfig::trust.asymmetry_critical` |
+| τ_activity = 90d              | ✅             | `WorldFormulaConfig::activity.tau_days`        |
+| κ_activity = 10               | ✅             | `WorldFormulaConfig::activity.kappa`           |
+| λ_decay = 0.01/d              | ✅             | `WorldFormulaConfig::temporal.lambda_per_day`  |
+| newcomer_trust = 0.1          | ✅             | `WorldFormulaConfig::trust.newcomer_trust`     |
+| Alle Parameter konfigurierbar | ✅             | Builder-Pattern + Validation                   |
+| Globaler Singleton            | ✅             | `global_config()` / `init_global_config()`     |
 
-**Gap:** Parameter sind hardcoded, nicht konfigurierbar oder adaptiv.
+**✅ Implementiert in:** `domain/unified/config.rs` (717 Zeilen, 10 Unit-Tests)
 
 ---
 
@@ -233,12 +235,19 @@ pub mod extension_slots {
 
 **Hinweis:** Diese sind für Production wichtig, aber nicht für MVP.
 
-### 3.2 Property-Based Tests (UDM §XV)
+### 3.2 Property-Based Tests (UDM §XV) ✅ Erledigt
 
-| Spezifikation               | Status |
-| --------------------------- | ------ |
-| proptest für Invarianten    | ❌     |
-| Fuzzing für kritische Pfade | ❌     |
+| Spezifikation               | Implementation | Status                               |
+| --------------------------- | -------------- | ------------------------------------ |
+| proptest für Invarianten    | ✅             | `tests/property_tests.rs` (21 Tests) |
+| Κ4 Asymmetric Trust Tests   | ✅             | 2 Tests                              |
+| Κ8 Delegation Decay Tests   | ✅             | 3 Tests                              |
+| Κ9 Causal Order Tests       | ✅             | 3 Tests                              |
+| Cost-Algebra Semiring Tests | ✅             | 5 Tests                              |
+| TrustVector6D Tests         | ✅             | 7 Tests                              |
+| Config Validation Tests     | ✅             | 1 Test                               |
+
+**✅ Implementiert in:** `tests/property_tests.rs` (521 Zeilen)
 
 ### 3.3 Cold Storage / Archive (IPS §IV.1)
 
@@ -255,13 +264,13 @@ pub mod extension_slots {
 
 1. ~~**Compile-Time Size Checks** hinzufügen~~ ✅
 2. ~~**Extension Slots** in DIDDocument~~ ✅
-3. **Schema-Registry** Grundstruktur (offen)
+3. ~~**Schema-Registry** Grundstruktur~~ ✅
 
-### Priorität 2 (Kurzfristig - Robustheit)
+### ~~Priorität 2 (Kurzfristig - Robustheit)~~ ✅ Erledigt
 
-1. **Weltformel-Parameter** konfigurierbar machen
-2. **Property-Based Tests** für Invarianten
-3. **InvariantChecker** erweitern
+1. ~~**Weltformel-Parameter** konfigurierbar machen~~ ✅ `domain/unified/config.rs`
+2. ~~**Property-Based Tests** für Invarianten~~ ✅ `tests/property_tests.rs` (21 Tests)
+3. ~~**InvariantChecker** erweitern~~ ✅ 9 neue Invariantenprüfungen
 
 ### Priorität 3 (Mittelfristig - Production)
 
@@ -295,12 +304,38 @@ pub mod extension_slots {
 
 ## VI. Zusammenfassung
 
-**Gesamtabdeckung: ~85%**
+**Gesamtabdeckung: ~96%**
 
-Die IPS-01 und UDM Spezifikationen sind weitgehend umgesetzt. Die Kernkonzepte (Monade ℳ, Cost-Algebra 𝒦, Adjunktionen, τ-Variabilität) sind vollständig implementiert. Die verbleibenden Gaps betreffen hauptsächlich:
+Die IPS-01 und UDM Spezifikationen sind weitgehend umgesetzt. Die Kernkonzepte (Monade ℳ, Cost-Algebra 𝒦, Adjunktionen, τ-Variabilität) sind vollständig implementiert.
 
-1. **Robustheit**: Compile-Time Checks, Schema-Registry
-2. **Erweiterbarkeit**: Extension Slots
-3. **Production-Readiness**: libp2p-Erweiterungen, Cold Storage
+### Abgeschlossene Prioritäten
 
-Der aktuelle Stand ist für einen MVP ausreichend. Die fehlenden Komponenten sollten vor Production adressiert werden.
+**Priorität 1 (Konsistenz):**
+
+- ✅ Compile-Time Size Checks in `primitives.rs`, `trust.rs`, `cost.rs`
+- ✅ Extension Slots in `DIDDocument`
+- ✅ Schema-Registry mit Migration-Pfaden
+
+**Priorität 2 (Robustheit):**
+
+- ✅ `WorldFormulaConfig` mit Builder-Pattern (717 Zeilen, 10 Unit-Tests)
+- ✅ Property-Based Tests mit proptest (521 Zeilen, 21 Tests)
+- ✅ Erweiterter `InvariantChecker` (9 neue Prüfungen für Κ1, Κ8, Κ9, Κ10)
+
+### Test-Statistik
+
+| Test-Typ       | Anzahl  |
+| -------------- | ------- |
+| Lib-Tests      | 386     |
+| Integration    | 17      |
+| Property-Based | 21      |
+| **Gesamt**     | **424** |
+
+### Verbleibende Gaps
+
+Die verbleibenden Gaps betreffen hauptsächlich Production-Features:
+
+1. **libp2p-Erweiterungen**: AutoNAT, DCUTR, Rendezvous, WebRTC
+2. **Cold Storage / Archive**: ψ_archive Morphismus, Merkle-Root Preservation
+
+Der aktuelle Stand ist für einen MVP ausreichend und robust getestet. Die fehlenden Komponenten sollten vor Production adressiert werden.
