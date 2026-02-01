@@ -10,7 +10,7 @@
 //! - **Cost-Algebra**: Semiring-Eigenschaften
 
 use erynoa_api::domain::unified::{
-    Cost, InvariantChecker, TemporalCoord, TrustDimension, TrustVector6D, UniversalId,
+    Cost, InvariantChecker, TemporalCoord, TrustDimension, TrustVector6D,
 };
 use proptest::prelude::*;
 
@@ -54,6 +54,7 @@ fn cost_strategy() -> impl Strategy<Value = Cost> {
 }
 
 /// Strategie für TemporalCoord
+#[allow(dead_code)]
 fn temporal_coord_strategy() -> impl Strategy<Value = TemporalCoord> {
     (
         0u64..1_000_000u64, // wall_time

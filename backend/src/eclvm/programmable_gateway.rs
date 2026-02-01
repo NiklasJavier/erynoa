@@ -358,6 +358,7 @@ impl StandardPolicies {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::realm_id_from_name;
     use crate::eclvm::runtime::host::StubHost;
 
     #[allow(dead_code)]

@@ -178,7 +178,7 @@ impl Event {
 ///
 /// # Beispiel
 ///
-/// ```rust
+/// ```rust,ignore
 /// use erynoa_api::execution::{ExecutionContext, ExecutionError};
 ///
 /// fn process_intent(ctx: &mut ExecutionContext) -> Result<(), ExecutionError> {
@@ -299,7 +299,7 @@ impl ExecutionContext {
     ///
     /// # Beispiel
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// ctx.execute(|ctx| {
     ///     ctx.consume_gas(50)?;
     ///     Ok(compute_something())

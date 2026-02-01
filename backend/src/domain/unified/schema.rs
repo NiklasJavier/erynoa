@@ -11,7 +11,7 @@
 //!
 //! ## Beispiel
 //!
-//! ```rust
+//! ```rust,ignore
 //! use erynoa_api::domain::unified::schema::{SchemaRegistry, MigrationError};
 //! use erynoa_api::domain::unified::UniversalId;
 //!

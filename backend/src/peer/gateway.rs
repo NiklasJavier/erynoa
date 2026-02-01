@@ -452,6 +452,7 @@ pub struct JoinResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::{realm_id_from_name, ROOT_REALM_ID};
 
     fn setup_gateway() -> GatewayGuard {
         let mut guard = GatewayGuard::default();

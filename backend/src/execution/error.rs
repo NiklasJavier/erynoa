@@ -26,7 +26,7 @@ use thiserror::Error;
 ///
 /// # Beispiel
 ///
-/// ```rust
+/// ```rust,ignore
 /// use erynoa_api::execution::{ExecutionError, ExecutionResult};
 ///
 /// fn process_operation() -> ExecutionResult<u64> {

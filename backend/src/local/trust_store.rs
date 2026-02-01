@@ -202,6 +202,7 @@ impl TrustStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::DIDNamespace;
 
     fn create_test_store() -> TrustStore {
         let folder = tempfile::tempdir().unwrap();

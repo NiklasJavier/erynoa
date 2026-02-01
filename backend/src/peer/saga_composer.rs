@@ -23,8 +23,8 @@
 //! ```
 
 use crate::domain::{
-    Constraint, Goal, Intent, RealmId, Saga, SagaAction, SagaCompensation, SagaStep,
-    UniversalId, DID,
+    Constraint, Goal, Intent, RealmId, Saga, SagaAction, SagaCompensation, SagaStep, UniversalId,
+    DID,
 };
 use thiserror::Error;
 
@@ -512,7 +512,7 @@ impl SagaComposer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::{DIDNamespace, SagaStatus};
+    use crate::domain::{Cost, DIDNamespace, SagaStatus, ROOT_REALM_ID};
 
     #[test]
     fn test_compose_transfer() {
