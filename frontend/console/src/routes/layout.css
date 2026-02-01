@@ -1,4 +1,15 @@
-/* Import shared design system from @erynoa/ui */
-@import "@erynoa/ui/styles";
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Console - Main Stylesheet
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Tailwind wird hier direkt importiert für Docker-Kompatibilität.
+ * Design Tokens kommen aus @erynoa/ui/styles/tokens
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Tailwind CSS v4 */
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Shared Design Tokens (ohne Tailwind-Import) */
+@import "@erynoa/ui/styles/tokens";
 
 /* App-specific overrides and extensions can be added below */

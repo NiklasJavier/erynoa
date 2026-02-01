@@ -6,6 +6,7 @@
 -->
 <script lang="ts">
   import { goto } from "$app/navigation";
+  import { base } from "$app/paths";
   import {
     hasPlatformAuthenticator,
     isPasskeyAvailable,
@@ -401,7 +402,7 @@
             <span>Du wirst gleich weitergeleitet...</span>
           </div>
         {:else}
-          <Button class="w-full" onclick={() => goto("/")}>
+          <Button class="w-full" onclick={() => goto(`${base}/`)}>
             Zur Startseite
             <ArrowRight class="ml-2 h-4 w-4" />
           </Button>

@@ -25,7 +25,7 @@ WORKDIR /workspace
 RUN pnpm install --frozen-lockfile
 
 # Wechsle zum Console-Verzeichnis (node_modules sind jetzt installiert)
-WORKDIR /workspace/console
+WORKDIR /workspace/frontend/console
 
 # Exponiere Port für Vite Dev Server
 EXPOSE 5173
@@ -104,11 +104,11 @@ WATCHER_PID=$!
 
 # SvelteKit Sync (generiert .svelte-kit Verzeichnis)
 echo "[3/3] Running SvelteKit sync..."
-cd /workspace/console
+cd /workspace/frontend/console
 if [ -f "package.json" ]; then
   pnpm exec svelte-kit sync 2>/dev/null || true
 else
-  echo "⚠️  package.json not found in /workspace/console, skipping sync"
+  echo "⚠️  package.json not found in /workspace/frontend/console, skipping sync"
   echo "   Current directory: $(pwd)"
   echo "   Contents: $(ls -la)"
 fi
@@ -120,13 +120,13 @@ echo "Proto changes will trigger regeneration"
 echo "========================================="
 
 # Prüfe ob package.json vorhanden ist
-if [ ! -f "/workspace/console/package.json" ]; then
-  echo "❌ ERROR: package.json not found in /workspace/console"
+if [ ! -f "/workspace/frontend/console/package.json" ]; then
+  echo "❌ ERROR: package.json not found in /workspace/frontend/console"
   echo "   Current directory: $(pwd)"
   echo "   Contents: $(ls -la)"
   echo "   Waiting 5 seconds for volume mount..."
   sleep 5
-  if [ ! -f "/workspace/console/package.json" ]; then
+  if [ ! -f "/workspace/frontend/console/package.json" ]; then
     echo "❌ ERROR: package.json still not found after wait"
     exit 1
   fi
@@ -152,7 +152,7 @@ else
 fi
 
 # Wechsle zum Console-Verzeichnis
-cd /workspace/console
+cd /workspace/frontend/console
 
 # Prüfe ob node_modules im Workspace-Root vorhanden sind
 if [ ! -d "/workspace/node_modules" ]; then

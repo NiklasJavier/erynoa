@@ -30,13 +30,15 @@ services:
     ports:
       - "5173:5173"
     volumes:
-      - ../../frontend/console/src:/workspace/console/src:cached
-      - ../../frontend/console/static:/workspace/console/static:cached
-      - ../../frontend/console/svelte.config.js:/workspace/console/svelte.config.js:cached
-      - ../../frontend/console/vite.config.ts:/workspace/console/vite.config.ts:cached
-      - ../../frontend/console/tsconfig.json:/workspace/console/tsconfig.json:cached
-      - ../../frontend/console/package.json:/workspace/console/package.json:cached
-      - console-node_modules:/workspace/node_modules
+      - ../../frontend/console/src:/workspace/frontend/console/src:cached
+      - ../../frontend/console/static:/workspace/frontend/console/static:cached
+      - ../../frontend/console/svelte.config.js:/workspace/frontend/console/svelte.config.js:cached
+      - ../../frontend/console/vite.config.ts:/workspace/frontend/console/vite.config.ts:cached
+      - ../../frontend/console/tsconfig.json:/workspace/frontend/console/tsconfig.json:cached
+      - ../../frontend/console/package.json:/workspace/frontend/console/package.json:cached
+      # Auch das UI-Paket mounten (für @erynoa/ui Importe)
+      - ../../frontend/ui/src:/workspace/frontend/ui/src:cached
+      # node_modules bleiben im Image (keine Volumes, da pnpm Workspaces)
       - ../../backend/proto:/workspace/backend/proto:cached
       - ../../buf.gen.yaml:/workspace/buf.gen.yaml:cached
       - ../../buf.yaml:/workspace/buf.yaml:cached
@@ -64,7 +66,7 @@ services:
       - ../../frontend/platform/vite.config.ts:/workspace/platform/vite.config.ts:cached
       - ../../frontend/platform/tsconfig.json:/workspace/platform/tsconfig.json:cached
       - ../../frontend/platform/package.json:/workspace/platform/package.json:cached
-      - platform-node_modules:/workspace/node_modules
+      # node_modules bleiben im Image (keine Volumes, da pnpm Workspaces)
       - ../../backend/proto:/workspace/backend/proto:cached
       - ../../buf.gen.yaml:/workspace/buf.gen.yaml:cached
       - ../../buf.yaml:/workspace/buf.yaml:cached
@@ -92,7 +94,7 @@ services:
       - ../../frontend/docs/vite.config.ts:/workspace/docs/vite.config.ts:cached
       - ../../frontend/docs/tsconfig.json:/workspace/docs/tsconfig.json:cached
       - ../../frontend/docs/package.json:/workspace/docs/package.json:cached
-      - docs-node_modules:/workspace/node_modules
+      # node_modules bleiben im Image (keine Volumes, da pnpm Workspaces)
       - ../../backend/proto:/workspace/backend/proto:cached
       - ../../buf.gen.yaml:/workspace/buf.gen.yaml:cached
       - ../../buf.yaml:/workspace/buf.yaml:cached
@@ -199,10 +201,7 @@ volumes:
   # Caddy Volumes
   caddy-data:
   caddy-config:
-  # Frontend node_modules
-  console-node_modules:
-  platform-node_modules:
-  docs-node_modules:
+  # Frontend node_modules bleiben im Image (pnpm Workspace Symlinks)
 
 networks:
   devnet:

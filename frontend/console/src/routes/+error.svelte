@@ -1,11 +1,12 @@
 <script lang="ts">
-import { Button } from '@erynoa/ui/components/button'
-import * as Card from '@erynoa/ui/components/card'
-import { ArrowLeft, Home } from 'lucide-svelte'
+  import { base } from "$app/paths";
+  import { Button } from "@erynoa/ui/components/button";
+  import * as Card from "@erynoa/ui/components/card";
+  import { ArrowLeft, Home } from "lucide-svelte";
 </script>
 
 <div class="flex items-center justify-center min-h-[60vh]">
-  <Card.Root class="w-full max-w-md text-center">
+  <Card.Root class="w-full max-md text-center">
     <Card.Header>
       <div class="text-6xl font-bold text-muted-foreground mb-4">404</div>
       <Card.Title>Page Not Found</Card.Title>
@@ -18,7 +19,7 @@ import { ArrowLeft, Home } from 'lucide-svelte'
         <ArrowLeft class="mr-2 h-4 w-4" />
         Go Back
       </Button>
-      <Button href="/">
+      <Button href="{base}/">
         <Home class="mr-2 h-4 w-4" />
         Home
       </Button>

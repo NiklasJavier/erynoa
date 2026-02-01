@@ -8,6 +8,7 @@
    * 2. Passkey-based DID creation (WebAuthn)
    */
   import { goto } from "$app/navigation";
+  import { base } from "$app/paths";
   import {
     activePasskeyDid,
     isPasskeyAuthenticated,
@@ -110,7 +111,15 @@
   }
 
   function goToDashboard() {
-    goto("/");
+    // Check if there's a saved return URL
+    const returnUrl = sessionStorage.getItem("auth_return_url");
+    if (returnUrl) {
+      sessionStorage.removeItem("auth_return_url");
+      // returnUrl is relative to base, so prepend base
+      goto(`${base}${returnUrl}`);
+    } else {
+      goto(`${base}/`);
+    }
   }
 
   function resetOnboarding() {

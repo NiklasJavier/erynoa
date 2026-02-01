@@ -1,84 +1,85 @@
 <script lang="ts">
-import { page } from '$app/stores'
-import { authStore, user } from '$lib/auth'
-import {
-	type NavEntry,
-	type UserRole,
-	getFilteredNavigation,
-	hasChildren,
-	navigationConfig,
-} from '$lib/config'
-import * as Avatar from '@erynoa/ui/components/avatar'
-import { Badge } from '@erynoa/ui/components/badge'
-import * as Collapsible from '@erynoa/ui/components/collapsible'
-import * as DropdownMenu from '@erynoa/ui/components/dropdown-menu'
-import * as Sidebar from '@erynoa/ui/components/sidebar'
-import { getSidebarContext } from '@erynoa/ui/components/sidebar'
-import ChevronRight from 'lucide-svelte/icons/chevron-right'
-import ChevronsUpDown from 'lucide-svelte/icons/chevrons-up-down'
-import LogOut from 'lucide-svelte/icons/log-out'
-import Sparkles from 'lucide-svelte/icons/sparkles'
+  import { goto } from "$app/navigation";
+  import { base } from "$app/paths";
+  import { page } from "$app/stores";
+  import {
+    activePasskeyCredential,
+    activePasskeyDid,
+    passkeyStore,
+  } from "$lib/auth/passkey";
+  import {
+    type NavEntry,
+    type UserRole,
+    getFilteredNavigation,
+    hasChildren,
+    navigationConfig,
+  } from "$lib/config";
+  import * as Avatar from "@erynoa/ui/components/avatar";
+  import { Badge } from "@erynoa/ui/components/badge";
+  import * as Collapsible from "@erynoa/ui/components/collapsible";
+  import * as DropdownMenu from "@erynoa/ui/components/dropdown-menu";
+  import * as Sidebar from "@erynoa/ui/components/sidebar";
+  import { getSidebarContext } from "@erynoa/ui/components/sidebar";
+  import ChevronRight from "lucide-svelte/icons/chevron-right";
+  import ChevronsUpDown from "lucide-svelte/icons/chevrons-up-down";
+  import LogOut from "lucide-svelte/icons/log-out";
+  import Sparkles from "lucide-svelte/icons/sparkles";
 
-interface Props {
-	variant?: 'sidebar' | 'floating' | 'inset'
-}
+  interface Props {
+    variant?: "sidebar" | "floating" | "inset";
+  }
 
-const { variant = 'inset' }: Props = $props()
+  const { variant = "inset" }: Props = $props();
 
-// Sidebar Context für collapsed State
-const { state: sidebarState } = getSidebarContext()
-const isCollapsed = $derived($sidebarState === 'collapsed')
+  // Sidebar Context für collapsed State
+  const { state: sidebarState } = getSidebarContext();
+  const isCollapsed = $derived($sidebarState === "collapsed");
 
-// Benutzerrollen aus OIDC-Claims extrahieren
-const userRoles = $derived(() => {
-	if (!$user?.profile) return ['user'] as UserRole[]
+  // Benutzerrollen - für Passkey vorerst nur 'user'
+  // TODO: Rollen aus DID-Dokument oder Backend laden
+  const userRoles = $derived(() => {
+    return ["user"] as UserRole[];
+  });
 
-	const roles: UserRole[] = ['user']
-	const profile = $user.profile as Record<string, unknown>
+  // Display name from credential label or DID suffix
+  const displayName = $derived(
+    $activePasskeyCredential?.displayName ||
+      $activePasskeyDid?.slice(-8) ||
+      "User",
+  );
 
-	// Standard OIDC role claims (works with most providers)
-	// Check common role claims: roles, groups, realm_access.roles
-	const rolesClaim =
-		profile.roles ||
-		profile.groups ||
-		(profile.realm_access as Record<string, unknown>)?.roles ||
-		profile['urn:zitadel:iam:org:project:roles'] ||
-		{}
-	const rolesArray = Array.isArray(rolesClaim)
-		? rolesClaim
-		: Object.keys((rolesClaim as Record<string, unknown>) || {})
+  // Get initials from DID
+  const userInitial = $derived(() => {
+    if (!$activePasskeyDid) return "U";
+    const suffix = $activePasskeyDid.split(":").pop() || "";
+    return suffix.charAt(0).toUpperCase() || "U";
+  });
 
-	if (rolesArray.includes('admin')) roles.push('admin')
-	if (rolesArray.includes('editor')) roles.push('editor')
+  // Gefilterte Navigation basierend auf Benutzerrollen
+  const filteredConfig = $derived(() => {
+    const roles = userRoles();
+    return getFilteredNavigation(roles);
+  });
 
-	return roles
-})
+  // Navigation aus gefilterter Config
+  const { brand } = navigationConfig; // Brand immer sichtbar
+  const topItems = $derived.by(() => filteredConfig().topItems);
+  const groups = $derived.by(() => filteredConfig().groups);
+  const footer = $derived.by(() => filteredConfig().footer);
 
-// Gefilterte Navigation basierend auf Benutzerrollen
-const filteredConfig = $derived(() => {
-	const roles = userRoles()
-	return getFilteredNavigation(roles)
-})
+  // Exakter Match - für Leaf-Items (ohne Kinder)
+  function isExactActive(url: string | undefined): boolean {
+    if (!url) return false;
+    return $page.url.pathname === url;
+  }
 
-// Navigation aus gefilterter Config
-const { brand } = navigationConfig // Brand immer sichtbar
-const topItems = $derived.by(() => filteredConfig().topItems)
-const groups = $derived.by(() => filteredConfig().groups)
-const footer = $derived.by(() => filteredConfig().footer)
-
-// Exakter Match - für Leaf-Items (ohne Kinder)
-function isExactActive(url: string | undefined): boolean {
-	if (!url) return false
-	return $page.url.pathname === url
-}
-
-// Prüft ob ein Item mit Children (oder deren Children) aktiv ist
-function isChildActiveRecursive(entry: NavEntry): boolean {
-	if (!hasChildren(entry)) {
-		return isExactActive(entry.url)
-	}
-	return entry.children.some((child) => isChildActiveRecursive(child))
-}
+  // Prüft ob ein Item mit Children (oder deren Children) aktiv ist
+  function isChildActiveRecursive(entry: NavEntry): boolean {
+    if (!hasChildren(entry)) {
+      return isExactActive(entry.url);
+    }
+    return entry.children.some((child) => isChildActiveRecursive(child));
+  }
 </script>
 
 {#snippet renderDropdownItems(children: NavEntry[])}
@@ -302,17 +303,15 @@ function isChildActiveRecursive(entry: NavEntry): boolean {
             >
               <Avatar.Root class="h-8 w-8 rounded-lg">
                 <Avatar.Fallback class="rounded-lg">
-                  {$user?.profile?.preferred_username
-                    ?.charAt(0)
-                    .toUpperCase() || "U"}
+                  {userInitial()}
                 </Avatar.Fallback>
               </Avatar.Root>
               <div class="grid flex-1 text-left text-sm leading-tight">
                 <span class="truncate font-semibold">
-                  {$user?.profile?.preferred_username || "User"}
+                  {displayName}
                 </span>
-                <span class="truncate text-xs text-muted-foreground">
-                  {$user?.profile?.email || ""}
+                <span class="truncate text-xs text-muted-foreground font-mono">
+                  {$activePasskeyDid?.slice(0, 16) || ""}...
                 </span>
               </div>
               <ChevronsUpDown class="ml-auto size-4" />
@@ -330,23 +329,24 @@ function isChildActiveRecursive(entry: NavEntry): boolean {
               >
                 <Avatar.Root class="h-8 w-8 rounded-lg">
                   <Avatar.Fallback class="rounded-lg">
-                    {$user?.profile?.preferred_username
-                      ?.charAt(0)
-                      .toUpperCase() || "U"}
+                    {userInitial()}
                   </Avatar.Fallback>
                 </Avatar.Root>
                 <div class="grid flex-1 text-left text-sm leading-tight">
-                  <span class="truncate font-semibold"
-                    >{$user?.profile?.preferred_username || "User"}</span
-                  >
-                  <span class="truncate text-xs text-muted-foreground"
-                    >{$user?.profile?.email || ""}</span
+                  <span class="truncate font-semibold">{displayName}</span>
+                  <span class="truncate text-xs text-muted-foreground font-mono"
+                    >{$activePasskeyDid?.slice(0, 20) || ""}...</span
                   >
                 </div>
               </div>
             </DropdownMenu.Label>
             <DropdownMenu.Separator />
-            <DropdownMenu.Item onclick={() => authStore.logout()}>
+            <DropdownMenu.Item
+              onclick={async () => {
+                passkeyStore.clearActiveDid();
+                await goto(`${base}/onboarding`);
+              }}
+            >
               <LogOut class="mr-2 h-4 w-4" />
               Log out
             </DropdownMenu.Item>

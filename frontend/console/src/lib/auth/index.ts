@@ -1,39 +1,9 @@
 /**
  * Auth Module - Hauptexport
  *
- * Erynoa unterstützt zwei Authentifizierungsmethoden:
- * 1. OIDC - Für Integration mit externen Identity Providern
- * 2. Passkey - Für dezentrale, Passkey-basierte DID-Authentifizierung
+ * Erynoa verwendet Passkey-basierte DID-Authentifizierung.
+ * Alle Auth-Funktionen werden aus dem passkey-Modul re-exportiert.
  */
-
-// ============================================================================
-// OIDC AUTHENTICATION
-// ============================================================================
-
-// OIDC Functions (nicht die isAuthenticated Funktion exportieren, um Konflikte zu vermeiden)
-export {
-	getAccessToken,
-	getAuth,
-	getUser,
-	handleCallback,
-	initAuth,
-	login,
-	logout,
-	type AuthState,
-} from './oidc'
-
-// Svelte Stores
-export {
-	authError,
-	authStore,
-	isAuthenticated,
-	isLoading,
-	user,
-} from './store'
-
-// ============================================================================
-// PASSKEY AUTHENTICATION (Dezentrale DID-basierte Auth)
-// ============================================================================
 
 // Re-export all passkey functionality
 export * from './passkey'
@@ -42,36 +12,45 @@ export * from './passkey'
 export {
 	// Types
 	PasskeyErrorCode,
+	// Derived Stores
 	activePasskeyCredential,
 	activePasskeyDid,
-	authenticateWithPasskey,
 	// Service Functions
+	authenticateWithPasskey,
 	checkPasskeySupport,
 	clearActiveDid,
-	createPasskeyDid,
+	clearAllCredentials,
+	deleteCredential,
 	fetchChallenge,
-	formatDidShort,
-	// Utilities
-	generateErynoaDid,
 	generateLocalChallenge,
 	getActiveCredential,
 	getActiveDid,
 	getCredentialForDid,
 	getStoredCredentials,
 	hasPasskeyRegistered,
+	hasPlatformAuthenticator,
 	isPasskeyAuthenticated,
 	isPasskeyAvailable,
+	isPasskeyAvailable as isPasskeyAvailableStore,
 	isPasskeyInitialized,
 	isPasskeyLoading,
-	isValidDid,
+	passkeyCount,
 	passkeyCredentials,
 	passkeyError,
+	passkeyErrorCode,
 	// Store
 	passkeyStore,
 	passkeySupport,
+	primaryCredential,
+	registerCredentialWithBackend,
 	registerPasskey,
+	saveCredential,
 	setActiveDid,
 	signWithPasskey,
+	supportsEd25519,
+	verifyAuthenticationWithBackend,
+	type ChallengeResponse,
+	type ErynoaNamespace,
 	type PasskeyAuthenticationOptions,
 	type PasskeyAuthenticationResult,
 	type PasskeyDID,
@@ -79,6 +58,7 @@ export {
 	type PasskeyRegistrationResult,
 	type PasskeySignOptions,
 	type PasskeySignatureResult,
+	type PasskeyState,
 	type PasskeySupport,
 	type StoredPasskeyCredential,
 } from './passkey'

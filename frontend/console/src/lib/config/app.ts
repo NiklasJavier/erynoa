@@ -11,10 +11,6 @@ import { z } from 'zod'
 export const ConfigSchema = z.object({
 	environment: z.enum(['development', 'staging', 'production', 'local']),
 	version: z.string().min(1),
-	auth: z.object({
-		issuer: z.string().url(),
-		clientId: z.string().min(1),
-	}),
 	urls: z.object({
 		console: z.string().url(),
 		api: z.string().url(),
@@ -33,11 +29,6 @@ export type Config = z.infer<typeof ConfigSchema>
 export const DEFAULT_CONFIG: Config = {
 	environment: 'local',
 	version: '0.1.0',
-	auth: {
-		issuer: 'http://localhost:8080',
-		// Symbolischer Default – echte Client-ID kommt dynamisch vom Backend (InfoService)
-		clientId: 'erynoa-console',
-	},
 	urls: {
 		console: 'http://localhost:3001/console',
 		api: 'http://localhost:3000',
