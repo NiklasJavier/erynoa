@@ -722,6 +722,9 @@ mod tests {
             description: String::new(),
             created_at: TemporalCoord::default(),
             created_by: None,
+            initial_setup_policy: None,
+            default_shared_stores: vec![],
+            default_personal_stores: vec![],
         };
 
         let result = broken_realm.validate_k1(&root.rules);

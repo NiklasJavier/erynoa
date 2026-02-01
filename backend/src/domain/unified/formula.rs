@@ -721,21 +721,20 @@ mod tests {
         let surprisal = Surprisal::from_frequency(5, 100, 1);
         let human_factor = HumanFactor::BasicAttestation;
 
-        let contrib = WorldFormulaContribution::compute(
-            subject,
-            activity,
-            &trust,
-            100,
-            surprisal,
-            human_factor,
-            0.9,
-            2,
-        );
+        let contrib = WorldFormulaContribution::new(subject)
+            .with_activity(activity)
+            .with_trust_norm(trust.weighted_norm(&TrustVector6D::default_weights()))
+            .with_causal_connectivity(100)
+            .with_surprisal(surprisal)
+            .with_human_factor(human_factor)
+            .with_temporal_weight(0.9)
+            .build();
 
         // Beitrag sollte positiv sein
-        assert!(contrib.contribution > 0.0);
-        // Und kleiner als 1 (wegen Sigmoid)
-        assert!(contrib.contribution < 2.0);
+        let value = contrib.compute();
+        assert!(value > 0.0);
+        // Und kleiner als 2 (wegen Sigmoid + Faktoren)
+        assert!(value < 2.0);
     }
 
     #[test]
