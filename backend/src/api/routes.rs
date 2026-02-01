@@ -1,10 +1,10 @@
 //! API Routes
 //!
-//! Haupt-Router der alle Connect-RPC Services und REST-Fallbacks zusammenführt
+//! REST-basierte API für Health-Checks, Info und WebAuthn
 
 use crate::server::AppState;
 use axum::{
-    middleware::{from_fn, from_fn_with_state},
+    middleware::from_fn,
     routing::{get, post},
     Router,
 };
@@ -12,17 +12,13 @@ use axum::{
 // use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 
 use super::constants::API_VERSION;
-use super::middleware::{build_cors, frontend_origin_middleware, logging_middleware};
+use super::middleware::{build_cors, logging_middleware};
 use super::v1::auth::handlers as auth_handlers;
 use super::v1::rest_handlers;
 
-#[cfg(feature = "connect")]
-use super::v1::connect_routes;
-
-/// Erstellt den Haupt-Router mit allen Connect-RPC Services
+/// Erstellt den Haupt-Router mit REST-API
 ///
-/// REST fallback endpoints für Health-Checks und Info sind unter /api/v1/* verfügbar.
-/// Connect-RPC Services sind unter /api/v1/connect/* verfügbar.
+/// REST endpoints für Health-Checks und Info sind unter /api/v1/* verfügbar.
 /// Auth endpoints für Passkey/WebAuthn sind unter /api/v1/auth/* verfügbar.
 pub fn create_router(state: AppState) -> Router {
     let cors = build_cors(&state);
@@ -34,7 +30,7 @@ pub fn create_router(state: AppState) -> Router {
     // - Burst von 100 für kurzzeitige Spitzen erlaubt
     // Temporarily disabled until correct API usage is determined
 
-    // REST fallback routes for health checks and info
+    // REST routes for health checks and info
     // These are simple endpoints for load balancers, K8s probes, etc.
     let rest_routes = Router::new()
         .route("/health", get(rest_handlers::health_handler))
@@ -49,30 +45,14 @@ pub fn create_router(state: AppState) -> Router {
         .route("/passkey/register", post(auth_handlers::register_passkey))
         .route("/passkey/verify", post(auth_handlers::verify_passkey));
 
-    // Connect-RPC routes (gRPC-Web) - Primary API
-    #[cfg(feature = "connect")]
-    let connect_routes = connect_routes::create_connect_routes(state.clone());
-
-    // API Router mit REST und Connect-RPC routes
-    #[cfg(feature = "connect")]
-    let api = Router::new()
-        .merge(rest_routes)
-        .nest("/auth", auth_routes)
-        .nest("/connect", connect_routes);
-
-    #[cfg(not(feature = "connect"))]
+    // API Router mit REST routes
     let api = Router::new().merge(rest_routes).nest("/auth", auth_routes);
 
     // Haupt-Router mit Middleware und State
-    // Note: frontend_origin_middleware needs State, so it must be applied after with_state
     Router::new()
         .nest(API_VERSION, api)
         .layer(cors)
         // .layer(rate_limit_layer)  // ⚡ Rate Limiting - TODO: Re-enable after fixing API usage
-        .layer(from_fn_with_state(
-            state.clone(),
-            frontend_origin_middleware,
-        ))
         .layer(from_fn(logging_middleware))
         .with_state(state)
 }

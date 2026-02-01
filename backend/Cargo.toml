@@ -152,7 +152,6 @@ futures = { version = "0.3", optional = true }
 [features]
 default = []
 jemalloc = ["dep:tikv-jemallocator"]
-connect = []
 cli = ["dep:clap", "dep:rustyline", "dep:colored", "dep:bincode"]
 p2p = ["dep:libp2p", "dep:futures"]
 

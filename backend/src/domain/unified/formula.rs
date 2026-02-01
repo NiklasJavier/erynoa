@@ -15,7 +15,7 @@
 //! - Integration mit Cost-Algebra
 
 use super::cost::Cost;
-use super::identity::{DIDNamespace, DID};
+use super::identity::DIDNamespace;
 use super::primitives::{TemporalCoord, UniversalId};
 use super::trust::TrustVector6D;
 use serde::{Deserialize, Serialize};
@@ -566,7 +566,7 @@ impl WorldFormulaContribution {
     }
 
     /// Builder: Mit Kontext (für gewichtete Trust-Norm)
-    pub fn with_context(mut self, context: super::trust::ContextType) -> Self {
+    pub fn with_context(self, _context: super::trust::ContextType) -> Self {
         // Kontext beeinflusst die Gewichtung - hier speichern wir nur die Norm
         // Die eigentliche Gewichtung passiert bei with_trust()
         self

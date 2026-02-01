@@ -21,8 +21,8 @@
 
 use crate::domain::unified::realm::StoreTemplate;
 use crate::domain::{
-    realm_id_from_name, RealmId, RootRealm, TrustDampeningMatrix, TrustVector6D, UniversalId,
-    VirtualRealm, DID, ROOT_REALM_ID,
+    RealmId, RootRealm, TrustDampeningMatrix, TrustVector6D, UniversalId,
+    VirtualRealm, DID,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -394,7 +394,7 @@ impl GatewayGuard {
         // 2. Initialisiere Personal-Stores (wenn Storage vorhanden)
         let mut initialized_stores = Vec::new();
 
-        if let Some(ref storage) = storage {
+        if let Some(ref _storage) = storage {
             for template in &crossing.stores_to_initialize {
                 // Personal-Stores werden lazy erstellt (beim ersten Schreibzugriff)
                 // Hier registrieren wir nur das Schema - Note: unified StoreTemplate hat anderes Format

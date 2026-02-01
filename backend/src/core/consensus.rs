@@ -23,7 +23,6 @@ use crate::domain::{
     EventId, FinalityLevel, Signature64, TemporalCoord, TrustVector6D, WitnessAttestation, DID,
 };
 use crate::execution::{ExecutionContext, ExecutionError, ExecutionResult};
-use chrono::Utc;
 use std::collections::HashMap;
 use thiserror::Error;
 

@@ -32,7 +32,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::domain::{realm_id_from_name, RealmId, TrustVector6D, DID};
+use crate::domain::{RealmId, TrustVector6D, DID};
 use crate::eclvm::bytecode::{OpCode, TrustDimIndex, Value};
 use crate::eclvm::mana::{ManaConfig, ManaManager};
 use crate::eclvm::runtime::host::HostInterface;

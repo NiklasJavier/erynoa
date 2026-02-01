@@ -7,7 +7,7 @@ use fjall::Keyspace;
 use serde::{Deserialize, Serialize};
 
 use super::KvStore;
-use crate::domain::{DIDNamespace, TrustVector6D, DID};
+use crate::domain::{TrustVector6D, DID};
 
 /// Trust-Beziehung zwischen zwei Subjekten
 #[derive(Debug, Clone, Serialize, Deserialize)]

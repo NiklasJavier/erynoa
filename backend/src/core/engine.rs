@@ -90,7 +90,7 @@ impl EventProcessor {
     /// Gas: VALIDATE + PARENT_LOOKUP × num_parents
     pub fn validate(
         ctx: &mut ExecutionContext,
-        event_id: &EventId,
+        _event_id: &EventId,
         parents: &[EventId],
         payload: &EventPayload,
     ) -> ExecutionResult<()> {
@@ -117,7 +117,7 @@ impl EventProcessor {
     }
 
     /// Validiere Event-Payload
-    fn validate_payload(ctx: &mut ExecutionContext, payload: &EventPayload) -> ExecutionResult<()> {
+    fn validate_payload(_ctx: &mut ExecutionContext, payload: &EventPayload) -> ExecutionResult<()> {
         match payload {
             EventPayload::Transfer { amount, .. } => {
                 if *amount == 0 {
@@ -540,7 +540,7 @@ impl FinalityTracker {
     /// Revert-Wahrscheinlichkeit (sinkt mit Confirmations)
     pub fn revert_probability(
         ctx: &mut ExecutionContext,
-        state: &FinalityState,
+        _state: &FinalityState,
         confirmations: u32,
     ) -> ExecutionResult<f64> {
         ctx.consume_gas(20)?;

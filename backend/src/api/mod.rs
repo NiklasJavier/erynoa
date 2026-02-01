@@ -5,7 +5,6 @@
 mod constants;
 mod middleware;
 mod routes;
-mod shared;
 pub mod static_files;
 pub mod v1;
 
