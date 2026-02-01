@@ -184,13 +184,19 @@ impl ErynoaHost {
 
 impl HostInterface for ErynoaHost {
     fn get_trust_vector(&self, did: &str) -> Result<[f64; 6]> {
-        // Parse DID (Legacy DID für TrustStore Kompatibilität)
-        let did_parsed =
-            LegacyDID::from_str(did).unwrap_or_else(|_| LegacyDID::new_self("unknown"));
+        // Parse DID (unified DID)
+        let did_parsed = DID::from_str(did).unwrap_or_else(|_| DID::new_self(b"unknown"));
 
         // Hole aggregierte Reputation für diese DID
         match self.storage.trust.compute_reputation(&did_parsed) {
-            Ok(trust) => Ok([trust.r, trust.i, trust.c, trust.p, trust.v, trust.omega]),
+            Ok(trust) => Ok([
+                trust.r as f64,
+                trust.i as f64,
+                trust.c as f64,
+                trust.p as f64,
+                trust.v as f64,
+                trust.omega as f64,
+            ]),
             Err(_) => {
                 // Fehler beim Zugriff → Newcomer (fail-safe)
                 Ok([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
@@ -214,8 +220,8 @@ impl HostInterface for ErynoaHost {
     }
 
     fn resolve_did(&self, did: &str) -> Result<bool> {
-        // Parse DID (Legacy DID für IdentityStore Kompatibilität)
-        let did_parsed = match LegacyDID::from_str(did) {
+        // Parse DID (unified DID)
+        let did_parsed = match DID::from_str(did) {
             Ok(d) => d,
             Err(_) => return Ok(false),
         };

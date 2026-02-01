@@ -7,7 +7,7 @@ use fjall::Keyspace;
 use serde::{Deserialize, Serialize};
 
 use super::KvStore;
-use crate::domain::{Event, EventId, FinalityLevel};
+use crate::domain::{Event, EventId, FinalityState};
 
 /// Persistiertes Event mit Metadaten
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -15,7 +15,7 @@ pub struct StoredEvent {
     /// Das Event selbst
     pub event: Event,
     /// Finalitätsstatus
-    pub finality: FinalityLevel,
+    pub finality: FinalityState,
     /// Anzahl Bestätigungen
     pub confirmations: u32,
     /// Persistierungszeitpunkt
@@ -79,14 +79,9 @@ impl EventStore {
             self.by_subject.put(&subject_key, &subject_events)?;
         }
 
-        // Realm-Index aktualisieren (wenn Realm vorhanden)
-        if let Some(ref realm_id) = event.realm_id {
-            let mut realm_events: Vec<String> = self.by_realm.get(realm_id)?.unwrap_or_default();
-            if !realm_events.contains(&event_id) {
-                realm_events.push(event_id.clone());
-                self.by_realm.put(realm_id, &realm_events)?;
-            }
-        }
+        // Realm-Index aktualisieren (wenn Realm im Payload vorhanden)
+        // Note: unified Event hat kein direktes realm_id Feld mehr
+        // TODO: Extract realm_id from payload if needed for indexing
 
         Ok(())
     }
@@ -112,7 +107,10 @@ impl EventStore {
             .children
             .get(parent_id.to_string())?
             .unwrap_or_default();
-        Ok(children.into_iter().map(EventId::from).collect())
+        Ok(children
+            .into_iter()
+            .filter_map(|s| EventId::from_hex(&s).ok())
+            .collect())
     }
 
     /// Holt alle Events eines Subjects
