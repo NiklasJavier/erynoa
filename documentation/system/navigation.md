@@ -98,6 +98,7 @@ documentation/
 
 - **[Architecture](reference/architecture.md)** - Systemarchitektur, Tech Stack, Design-Entscheidungen
 - **[Backend Architecture](reference/BACKEND-ARCHITECTURE.md)** - Backend-Schichten, UDM, Axiom-Mapping
+- **[CLI Tool](reference/CLI-TOOL.md)** - ECL CLI Referenz, REPL, Bytecode-Kompilierung
 - **[Configuration](reference/config.md)** - Service-Konfiguration, Ports, Verbindungen
 - **[Connections](reference/connections.md)** - API-Verbindungen, Error-Handling Harmonisierung
 
