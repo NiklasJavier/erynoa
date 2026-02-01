@@ -365,42 +365,6 @@ pub struct WitnessAttestation {
     pub timestamp: DateTime<Utc>,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_event_creation() {
-        let author = DID::new_self("alice");
-        let event = Event::new(
-            author.clone(),
-            EventPayload::Transfer {
-                from: author.clone(),
-                to: DID::new_self("bob"),
-                amount: 100,
-                asset_type: "ERY".to_string(),
-            },
-            vec![],
-        );
-
-        assert_eq!(event.finality, FinalityLevel::Nascent);
-        assert!(event.id.0.starts_with("event:sha3:"));
-    }
-
-    #[test]
-    fn test_genesis_event() {
-        let did = DID::new_self("alice");
-        let event = Event::genesis(did.clone(), "pubkey123".to_string());
-
-        assert!(event.parents.is_empty());
-        matches!(event.payload, EventPayload::Genesis { .. });
-    }
-
-    #[test]
-    fn test_finality_ordering() {
-        assert!(FinalityLevel::Nascent < FinalityLevel::Validated);
-        assert!(FinalityLevel::Validated < FinalityLevel::Witnessed);
-        assert!(FinalityLevel::Witnessed < FinalityLevel::Anchored);
-        assert!(FinalityLevel::Anchored < FinalityLevel::Eternal);
-    }
-}
+// Tests moved to domain::unified::event - this module is deprecated
+// #[cfg(test)]
+// mod tests { ... }

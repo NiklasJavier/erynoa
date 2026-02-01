@@ -23,8 +23,8 @@
 //! ```
 
 use crate::domain::{
-    Constraint, Goal, Intent, RealmId, Saga, SagaAction, SagaCompensation, SagaStep, UniversalId,
-    DID, ROOT_REALM_ID,
+    Constraint, Cost, Goal, Intent, RealmId, Saga, SagaAction, SagaCompensation, SagaStep,
+    UniversalId, DID, ROOT_REALM_ID,
 };
 use thiserror::Error;
 
@@ -512,13 +512,13 @@ impl SagaComposer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::SagaStatus;
+    use crate::domain::{DIDNamespace, SagaStatus};
 
     #[test]
     fn test_compose_transfer() {
         let composer = SagaComposer::default();
-        let alice = DID::new_self(b"alice");
-        let bob = DID::new_self(b"bob");
+        let alice = DID::new(DIDNamespace::Self_, b"alice");
+        let bob = DID::new(DIDNamespace::Self_, b"bob");
 
         let intent = Intent::new(
             alice.id.clone(),
@@ -538,8 +538,8 @@ mod tests {
 
         // Erster Schritt: Lock
         match &saga.steps[0].action {
-            SagaAction::Lock { did, amount, .. } => {
-                assert_eq!(did, &alice);
+            SagaAction::Lock { owner, amount, .. } => {
+                assert_eq!(owner, &alice.id);
                 assert_eq!(*amount, 100);
             }
             _ => panic!("Expected Lock action"),
@@ -552,8 +552,8 @@ mod tests {
     #[test]
     fn test_compose_delegation() {
         let composer = SagaComposer::default();
-        let alice = DID::new_self(b"alice");
-        let bob = DID::new_self(b"bob");
+        let alice = DID::new(DIDNamespace::Self_, b"alice");
+        let bob = DID::new(DIDNamespace::Self_, b"bob");
 
         let intent = Intent::new(
             alice.id.clone(),
@@ -575,8 +575,8 @@ mod tests {
     #[test]
     fn test_max_cost_constraint() {
         let composer = SagaComposer::default();
-        let alice = DID::new_self(b"alice");
-        let bob = DID::new_self(b"bob");
+        let alice = DID::new(DIDNamespace::Self_, b"alice");
+        let bob = DID::new(DIDNamespace::Self_, b"bob");
 
         let intent = Intent::new(
             alice.id.clone(),
@@ -605,8 +605,8 @@ mod tests {
     fn test_add_realm_crossing() {
         use crate::domain::realm_id_from_name;
         let composer = SagaComposer::default();
-        let alice = DID::new_self(b"alice");
-        let bob = DID::new_self(b"bob");
+        let alice = DID::new(DIDNamespace::Self_, b"alice");
+        let bob = DID::new(DIDNamespace::Self_, b"bob");
 
         let intent = Intent::new(
             alice.id.clone(),

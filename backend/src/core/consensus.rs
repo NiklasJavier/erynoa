@@ -439,7 +439,7 @@ pub struct ConsensusEngineStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::DIDNamespace;
+    use crate::domain::{DIDNamespace, UniversalId};
 
     fn setup_engine() -> ConsensusEngine {
         let mut engine = ConsensusEngine::default();

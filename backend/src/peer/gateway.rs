@@ -491,7 +491,7 @@ mod tests {
         let result = guard
             .validate_crossing(
                 &alice,
-                &RealmId::root(),
+                &ROOT_REALM_ID,
                 &realm_id_from_name("realm:erynoa:gaming"),
             )
             .unwrap();
@@ -512,7 +512,7 @@ mod tests {
         let result = guard
             .validate_crossing(
                 &alice,
-                &RealmId::root(),
+                &ROOT_REALM_ID,
                 &realm_id_from_name("realm:erynoa:finance"), // Requires 0.7
             )
             .unwrap();
@@ -535,7 +535,7 @@ mod tests {
         let result = guard
             .validate_crossing(
                 &alice,
-                &RealmId::root(),
+                &ROOT_REALM_ID,
                 &realm_id_from_name("realm:erynoa:finance"),
             )
             .unwrap();
@@ -558,7 +558,7 @@ mod tests {
         let result = guard
             .validate_crossing(
                 &alice,
-                &RealmId::root(),
+                &ROOT_REALM_ID,
                 &realm_id_from_name("realm:erynoa:finance"),
             )
             .unwrap();
