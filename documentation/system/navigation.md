@@ -96,6 +96,7 @@ documentation/
 
 **Ziel**: Detaillierte technische Informationen
 
+- **[API Reference](reference/API-REFERENCE.md)** - gRPC/Connect-RPC API-Dokumentation
 - **[Architecture](reference/architecture.md)** - Systemarchitektur, Tech Stack, Design-Entscheidungen
 - **[Backend Architecture](reference/BACKEND-ARCHITECTURE.md)** - Backend-Schichten, UDM, Axiom-Mapping
 - **[CLI Tool](reference/CLI-TOOL.md)** - ECL CLI Referenz, REPL, Bytecode-Kompilierung
