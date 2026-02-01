@@ -291,6 +291,12 @@ impl TrustVector6D {
             .min(self.omega)
     }
 
+    /// Alias für min() - Kompatibilität mit altem API
+    #[inline]
+    pub fn min_component(&self) -> f32 {
+        self.min()
+    }
+
     /// Maximum-Wert über alle Dimensionen
     pub fn max(&self) -> f32 {
         self.r
@@ -380,6 +386,12 @@ impl ContextType {
             Self::Technical => [0.15, 0.15, 0.35, 0.10, 0.15, 0.10],
             Self::Creative => [0.10, 0.15, 0.25, 0.25, 0.15, 0.10],
         }
+    }
+
+    /// Alias für default_weights() - Kompatibilität mit altem API
+    #[inline]
+    pub fn weights(&self) -> [f32; 6] {
+        self.default_weights()
     }
 
     /// Berechne Trust-Norm für diesen Kontext

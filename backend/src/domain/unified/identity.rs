@@ -264,6 +264,92 @@ impl fmt::Display for DID {
     }
 }
 
+impl FromStr for DID {
+    type Err = IdentityError;
+
+    /// Parse DID aus URI-String
+    ///
+    /// Format: `did:erynoa:<namespace>:<hex-id>`
+    ///
+    /// # Beispiele
+    ///
+    /// ```rust
+    /// use std::str::FromStr;
+    /// use erynoa_api::domain::unified::identity::DID;
+    ///
+    /// let did = DID::from_str("did:erynoa:self:abc123").unwrap();
+    /// ```
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        DID::parse(s)
+    }
+}
+
+impl DID {
+    /// Parse DID aus String
+    ///
+    /// Unterstützte Formate:
+    /// - `did:erynoa:<namespace>:<hex-id>`
+    /// - `did:erynoa:<namespace>:<hex-id>#key-<n>`
+    /// - Kurzform: `<namespace>:<hex-id>`
+    pub fn parse(s: &str) -> Result<Self, IdentityError> {
+        let s = s.trim();
+
+        // Entferne eventuelle Key-Referenz (#key-1)
+        let s = s.split('#').next().unwrap_or(s);
+
+        // Parse verschiedene Formate
+        let (namespace_str, id_hex) = if s.starts_with("did:erynoa:") {
+            // Vollständiges Format: did:erynoa:namespace:id
+            let parts: Vec<&str> = s.strip_prefix("did:erynoa:").unwrap().split(':').collect();
+            if parts.len() < 2 {
+                return Err(IdentityError::InvalidDIDFormat(s.to_string()));
+            }
+            (parts[0], parts[1])
+        } else if s.contains(':') {
+            // Kurzformat: namespace:id
+            let parts: Vec<&str> = s.split(':').collect();
+            if parts.len() < 2 {
+                return Err(IdentityError::InvalidDIDFormat(s.to_string()));
+            }
+            (parts[0], parts[1])
+        } else {
+            // Nur ID, nehme "self" als Default
+            ("self", s)
+        };
+
+        // Parse Namespace
+        let namespace = DIDNamespace::from_str(namespace_str)?;
+
+        // Parse ID als Hex
+        let id_bytes = hex::decode(id_hex)
+            .map_err(|_| IdentityError::InvalidDIDFormat(format!("invalid hex: {}", id_hex)))?;
+
+        // Erstelle DID (public_key aus ID extrahieren oder 0-initialisieren)
+        let mut public_key = [0u8; 32];
+        if id_bytes.len() >= 32 {
+            public_key.copy_from_slice(&id_bytes[..32]);
+        } else {
+            public_key[..id_bytes.len()].copy_from_slice(&id_bytes);
+        }
+
+        Ok(Self::new(namespace, &public_key))
+    }
+
+    /// Generiere zufällige DID (für Tests)
+    pub fn generate() -> Self {
+        let mut rng_bytes = [0u8; 32];
+        // Einfache Pseudo-Random basierend auf Zeit
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default();
+        let seed = now.as_nanos() as u64;
+        for (i, byte) in rng_bytes.iter_mut().enumerate() {
+            *byte = ((seed >> (i % 8 * 8)) ^ (i as u64 * 0x9E3779B97F4A7C15)) as u8;
+        }
+        Self::new(DIDNamespace::Self_, &rng_bytes)
+    }
+}
+
 // ============================================================================
 // DIDDocument
 // ============================================================================
@@ -480,6 +566,9 @@ pub enum IdentityError {
 
     #[error("Invalid DID format: {0}")]
     InvalidFormat(String),
+
+    #[error("Invalid DID format: {0}")]
+    InvalidDIDFormat(String),
 
     #[error("Invalid trust factor: {0} (must be in (0, 1])")]
     InvalidTrustFactor(f32),

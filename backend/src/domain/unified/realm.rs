@@ -339,6 +339,66 @@ pub struct VirtualRealm {
     pub description: String,
     pub created_at: TemporalCoord,
     pub created_by: Option<UniversalId>,
+    /// ECL-Policy die beim Join ausgeführt wird
+    #[serde(default)]
+    pub initial_setup_policy: Option<String>,
+    /// Gemeinsame Stores für alle Mitglieder
+    #[serde(default)]
+    pub default_shared_stores: Vec<StoreTemplate>,
+    /// Persönliche Stores die für jedes neue Mitglied erstellt werden
+    #[serde(default)]
+    pub default_personal_stores: Vec<StoreTemplate>,
+}
+
+/// Template für Store-Erstellung beim Realm-Join
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StoreTemplate {
+    /// Name des Stores
+    pub name: String,
+    /// Store-Typ
+    pub store_type: StoreType,
+    /// Initiale Kapazität
+    pub initial_capacity: u64,
+    /// Optionale Beschreibung
+    pub description: Option<String>,
+}
+
+/// Typ eines Stores
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StoreType {
+    /// Key-Value Store
+    KeyValue,
+    /// Event-Log
+    EventLog,
+    /// Blob-Store
+    Blob,
+    /// Queue
+    Queue,
+}
+
+impl StoreTemplate {
+    /// Erstelle neues StoreTemplate
+    pub fn new(name: impl Into<String>, store_type: StoreType) -> Self {
+        Self {
+            name: name.into(),
+            store_type,
+            initial_capacity: 1024,
+            description: None,
+        }
+    }
+
+    /// Mit Kapazität
+    pub fn with_capacity(mut self, capacity: u64) -> Self {
+        self.initial_capacity = capacity;
+        self
+    }
+
+    /// Mit Beschreibung
+    pub fn with_description(mut self, desc: impl Into<String>) -> Self {
+        self.description = Some(desc.into());
+        self
+    }
 }
 
 impl VirtualRealm {
@@ -367,12 +427,33 @@ impl VirtualRealm {
             description: String::new(),
             created_at: coord,
             created_by: None,
+            initial_setup_policy: None,
+            default_shared_stores: Vec::new(),
+            default_personal_stores: Vec::new(),
         })
     }
 
     /// Füge zusätzliche Regel hinzu (Κ1: nur hinzufügen)
     pub fn add_rule(&mut self, rule: Rule) {
         self.rules.add(rule);
+    }
+
+    /// Setze Initial-Setup-Policy
+    pub fn with_initial_setup_policy(mut self, policy: impl Into<String>) -> Self {
+        self.initial_setup_policy = Some(policy.into());
+        self
+    }
+
+    /// Füge persönliches Store-Template hinzu
+    pub fn with_personal_store(mut self, template: StoreTemplate) -> Self {
+        self.default_personal_stores.push(template);
+        self
+    }
+
+    /// Füge gemeinsames Store-Template hinzu
+    pub fn with_shared_store(mut self, template: StoreTemplate) -> Self {
+        self.default_shared_stores.push(template);
+        self
     }
 
     /// Prüfe Κ1-Invariante gegen Parent

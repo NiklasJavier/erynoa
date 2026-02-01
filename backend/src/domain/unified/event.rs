@@ -430,6 +430,46 @@ impl Event {
         }
         Ok(())
     }
+
+    /// Timestamp Accessor (Kompatibilität mit altem API)
+    #[inline]
+    pub fn timestamp(&self) -> u64 {
+        self.coord.wall_time()
+    }
+
+    /// Primäre Trust-Dimension dieses Events
+    pub fn primary_trust_dimension(&self) -> Option<super::trust::TrustDimension> {
+        use super::trust::TrustDimension;
+        match &self.payload {
+            EventPayload::Attest { .. } => Some(TrustDimension::Prestige),
+            EventPayload::Delegate { .. } => Some(TrustDimension::Reliability),
+            EventPayload::Witness { .. } => Some(TrustDimension::Integrity),
+            EventPayload::CredentialIssue { .. } => Some(TrustDimension::Competence),
+            EventPayload::CredentialRevoke { .. } => Some(TrustDimension::Vigilance),
+            _ => None,
+        }
+    }
+
+    /// Ist dieses Event ein negativer Trust-Event?
+    pub fn is_negative_trust(&self) -> bool {
+        matches!(
+            &self.payload,
+            EventPayload::DelegationRevoke { .. } | EventPayload::CredentialRevoke { .. }
+        )
+    }
+
+    /// Erstelle Genesis-Event
+    pub fn genesis(author: UniversalId, did: DID, lamport: u32) -> Self {
+        Self::new(
+            author,
+            vec![],
+            EventPayload::Genesis {
+                did: did.clone(),
+                public_key_hex: did.public_key_hex(),
+            },
+            lamport,
+        )
+    }
 }
 
 impl PartialEq for Event {
@@ -536,6 +576,27 @@ pub enum EventPayload {
 
     /// Custom Event
     Custom { event_type: String, data: Vec<u8> },
+
+    /// Credential Issue (für Attestations)
+    CredentialIssue {
+        subject: UniversalId,
+        credential_type: String,
+        claims: std::collections::HashMap<String, serde_json::Value>,
+    },
+
+    /// Credential Revoke
+    CredentialRevoke {
+        credential_id: UniversalId,
+        reason: String,
+    },
+
+    /// Trust Update (für explizite Trust-Änderungen)
+    TrustUpdate {
+        subject: UniversalId,
+        dimension: super::trust::TrustDimension,
+        delta: f32,
+        reason: String,
+    },
 }
 
 impl EventPayload {

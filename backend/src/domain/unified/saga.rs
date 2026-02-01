@@ -42,7 +42,8 @@ pub fn saga_id_from_intent(intent_id: &UniversalId) -> SagaId {
 pub struct Intent {
     /// Eindeutige ID
     pub id: UniversalId,
-    /// Quelle (wer hat den Intent erstellt)
+    /// Quelle (wer hat den Intent erstellt) - primäres Feld
+    #[serde(alias = "source_did")]
     pub source: UniversalId,
     /// Ziel-Zustand
     pub goal: Goal,
@@ -59,6 +60,13 @@ pub struct Intent {
 }
 
 impl Intent {
+    /// Alias für source (Kompatibilität mit alter API)
+    /// Verwendung: `intent.source_did()` statt `intent.source_did`
+    #[inline]
+    pub fn source_did(&self) -> &UniversalId {
+        &self.source
+    }
+
     /// Erstelle neuen Intent
     pub fn new(source: UniversalId, goal: Goal, context_realm: RealmId, lamport: u32) -> Self {
         // Content für ID
@@ -141,6 +149,7 @@ pub enum Goal {
     /// Komplexes Ziel (natürlichsprachlich)
     Complex {
         description: String,
+        #[serde(alias = "parsed_goals")]
         sub_goals: Vec<Goal>,
     },
 }
@@ -157,6 +166,14 @@ impl Goal {
             Self::Complex { .. } => "complex",
         }
     }
+
+    /// Alias für sub_goals in Complex (Kompatibilität)
+    pub fn parsed_goals(&self) -> Option<&Vec<Goal>> {
+        match self {
+            Self::Complex { sub_goals, .. } => Some(sub_goals),
+            _ => None,
+        }
+    }
 }
 
 // ============================================================================
@@ -169,8 +186,16 @@ impl Goal {
 pub enum Constraint {
     /// Minimaler Trust des Counterparts
     MinTrust { value: f32 },
-    /// Maximale Kosten
-    MaxCost { cost: Cost },
+    /// Maximale Kosten (neu)
+    MaxCost {
+        cost: Cost,
+        /// Kompatibilität: amount in natürlichen Einheiten
+        #[serde(default)]
+        amount: Option<u64>,
+        /// Kompatibilität: Asset-Typ
+        #[serde(default)]
+        asset_type: Option<String>,
+    },
     /// Zeitlimit (absoluter Lamport-Zeitpunkt)
     Deadline { lamport: u32 },
     /// Nur bestimmte Realms
@@ -476,6 +501,68 @@ pub enum SagaAction {
         to_realm: RealmId,
         subject: UniversalId,
     },
+
+    /// Lock Asset (für Escrow/Atomic Swaps)
+    Lock {
+        owner: UniversalId,
+        asset_type: String,
+        amount: u64,
+        #[serde(default)]
+        lock_id: Option<UniversalId>,
+        #[serde(default)]
+        release_conditions: Vec<String>,
+    },
+
+    /// Unlock Asset
+    Unlock {
+        lock_id: UniversalId,
+        #[serde(default)]
+        to: Option<UniversalId>,
+    },
+
+    /// Auf Event/Bedingung warten
+    WaitFor {
+        condition: String,
+        #[serde(default)]
+        timeout_lamport: u32,
+        /// Alternative: Timeout in Sekunden (Kompatibilität)
+        #[serde(default)]
+        timeout_seconds: u64,
+    },
+
+    /// Mint neuer Assets
+    Mint {
+        asset_type: String,
+        amount: u64,
+        to: UniversalId,
+        #[serde(default)]
+        authorization: Option<UniversalId>,
+    },
+
+    /// Burn von Assets
+    Burn {
+        asset_type: String,
+        amount: u64,
+        from: UniversalId,
+        #[serde(default)]
+        authorization: Option<UniversalId>,
+    },
+
+    /// Gateway-Prüfung (Κ23)
+    GatewayCheck {
+        subject: UniversalId,
+        target_realm: RealmId,
+        #[serde(default)]
+        required_trust: f32,
+    },
+
+    /// Externe Chain-Operation (Kompatibilität)
+    ExternalChain {
+        chain: String,
+        operation: String,
+        params: serde_json::Value,
+    },
+
     /// Custom Action
     Custom { action_type: String, data: Vec<u8> },
 }

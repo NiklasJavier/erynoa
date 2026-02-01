@@ -343,12 +343,12 @@ impl ConsensusEngine {
         }
 
         // Prüfe ob Übergang durch Konsensus gedeckt ist
-        let check = self
-            .check_finality(event_id)
-            .map_err(|e| ExecutionError::NotFound {
+        let check = self.check_finality(event_id).map_err(|e| {
+            ExecutionError::NotFound {
                 resource_type: "Event".into(),
                 id: event_id.0.clone(),
-            })?;
+            }
+        })?;
 
         // Prüfe ob empfohlenes Level mindestens so hoch wie vorgeschlagen
         let transition_valid = check.recommended_level >= proposed;
@@ -368,12 +368,12 @@ impl ConsensusEngine {
     ) -> ExecutionResult<FinalityCheck> {
         ctx.consume_gas(Self::GAS_FINALITY_CHECK)?;
 
-        let check = self
-            .check_finality(event_id)
-            .map_err(|_| ExecutionError::NotFound {
+        let check = self.check_finality(event_id).map_err(|_| {
+            ExecutionError::NotFound {
                 resource_type: "Event".into(),
                 id: event_id.0.clone(),
-            })?;
+            }
+        })?;
 
         let witness_gas = Self::GAS_PER_WITNESS * check.witness_count as u64;
         ctx.consume_gas(witness_gas)?;
@@ -581,10 +581,7 @@ mod tests {
             TrustVector6D::new(0.1, 0.1, 0.1, 0.1, 0.1, 0.1),
         );
 
-        assert!(matches!(
-            result,
-            Err(ExecutionError::TrustGateBlocked { .. })
-        ));
+        assert!(matches!(result, Err(ExecutionError::TrustGateBlocked { .. })));
     }
 
     #[test]
@@ -616,10 +613,7 @@ mod tests {
             FinalityLevel::Witnessed,
             FinalityLevel::Nascent,
         );
-        assert!(matches!(
-            result,
-            Err(ExecutionError::FinalityRegression { .. })
-        ));
+        assert!(matches!(result, Err(ExecutionError::FinalityRegression { .. })));
     }
 
     #[test]
@@ -658,32 +652,17 @@ mod tests {
 
         // Erste zwei Attestations (noch keine Finality)
         engine
-            .add_attestation_with_ctx(
-                &mut ctx,
-                event_id.clone(),
-                DID::new_self("w1"),
-                "sig1".to_string(),
-            )
+            .add_attestation_with_ctx(&mut ctx, event_id.clone(), DID::new_self("w1"), "sig1".to_string())
             .unwrap();
         engine
-            .add_attestation_with_ctx(
-                &mut ctx,
-                event_id.clone(),
-                DID::new_self("w2"),
-                "sig2".to_string(),
-            )
+            .add_attestation_with_ctx(&mut ctx, event_id.clone(), DID::new_self("w2"), "sig2".to_string())
             .unwrap();
 
         let events_before_finality = ctx.emitted_events.len();
 
         // Dritte Attestation erreicht Finality
         let check = engine
-            .add_attestation_with_ctx(
-                &mut ctx,
-                event_id.clone(),
-                DID::new_self("w3"),
-                "sig3".to_string(),
-            )
+            .add_attestation_with_ctx(&mut ctx, event_id.clone(), DID::new_self("w3"), "sig3".to_string())
             .unwrap();
 
         // Sollte zusätzliches finality_reached Event emittieren

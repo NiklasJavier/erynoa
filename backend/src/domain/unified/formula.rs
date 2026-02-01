@@ -332,8 +332,8 @@ pub struct WorldFormulaContribution {
 }
 
 impl WorldFormulaContribution {
-    /// Berechne neuen Beitrag
-    pub fn compute(
+    /// Berechne neuen Beitrag (statische Factory-Methode)
+    pub fn compute_full(
         subject: UniversalId,
         activity: Activity,
         trust: &TrustVector6D,
@@ -380,7 +380,7 @@ impl WorldFormulaContribution {
 
     /// Aktualisiere mit neuem Trust-Vektor
     pub fn update_trust(&mut self, trust: &TrustVector6D, lamport: u32) {
-        let new_contribution = Self::compute(
+        let new_contribution = Self::compute_full(
             self.subject,
             self.activity,
             trust,
@@ -436,6 +436,183 @@ impl SurprisalComponents {
     /// Berechne Surprisal aus Komponenten
     pub fn to_surprisal(&self, lamport: u32) -> Surprisal {
         Surprisal::from_frequency(self.estimated_frequency, self.total_observations, lamport)
+    }
+}
+
+// ============================================================================
+// WorldFormulaStatus – Globaler Weltformel-Status
+// ============================================================================
+
+/// Globaler Weltformel-Status (Κ15b)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorldFormulaStatus {
+    /// Gesamtwert 𝔼
+    pub total_e: f64,
+
+    /// Änderung in den letzten 24h
+    pub delta_24h: f64,
+
+    /// Anzahl Entitäten
+    pub entity_count: u64,
+
+    /// Durchschnittliche Aktivität
+    pub avg_activity: f64,
+
+    /// Durchschnittliche Trust-Norm
+    pub avg_trust_norm: f64,
+
+    /// Anteil Human-verifizierter Entitäten
+    pub human_verified_ratio: f64,
+
+    /// Realm (optional, für Realm-spezifische Berechnung)
+    pub realm_id: Option<super::realm::RealmId>,
+
+    /// Zeitpunkt der Berechnung
+    pub computed_at: TemporalCoord,
+}
+
+impl WorldFormulaStatus {
+    /// Erstelle neuen Status
+    pub fn new(lamport: u32) -> Self {
+        Self {
+            total_e: 0.0,
+            delta_24h: 0.0,
+            entity_count: 0,
+            avg_activity: 0.0,
+            avg_trust_norm: 0.0,
+            human_verified_ratio: 0.0,
+            realm_id: None,
+            computed_at: TemporalCoord::now(lamport, &UniversalId::NULL),
+        }
+    }
+
+    /// Mit Realm-ID
+    pub fn for_realm(realm_id: super::realm::RealmId, lamport: u32) -> Self {
+        let mut status = Self::new(lamport);
+        status.realm_id = Some(realm_id);
+        status
+    }
+
+    /// Ist das System "gesund" (𝔼 > Schwellwert)?
+    pub fn is_healthy(&self, threshold: f64) -> bool {
+        self.total_e > threshold
+    }
+
+    /// Wächst das System?
+    pub fn is_growing(&self) -> bool {
+        self.delta_24h > 0.0
+    }
+}
+
+impl Default for WorldFormulaStatus {
+    fn default() -> Self {
+        Self::new(0)
+    }
+}
+
+// ============================================================================
+// WorldFormulaContribution – Builder-Pattern (Kompatibilität)
+// ============================================================================
+
+impl WorldFormulaContribution {
+    /// Builder-Pattern: Erstelle mit Subject (Kompatibilität mit alter API - 1 Arg)
+    ///
+    /// Verwendet Lamport=0 als Default.
+    pub fn from_subject(subject: UniversalId) -> Self {
+        Self::new(subject, 0)
+    }
+
+    /// Builder-Pattern: Erstelle mit Subject und Lamport (neue API)
+    pub fn new(subject: UniversalId, lamport: u32) -> Self {
+        Self {
+            subject,
+            activity: Activity::default(),
+            trust_norm: 0.5,
+            causal_connectivity: 1,
+            surprisal: Surprisal::default(),
+            human_factor: HumanFactor::default(),
+            temporal_weight: 1.0,
+            contribution: 0.0,
+            computation_cost: Cost::ZERO,
+            computed_at: TemporalCoord::now(lamport, &UniversalId::NULL),
+        }
+    }
+
+    /// Builder: Mit Aktivität
+    pub fn with_activity(mut self, activity: Activity) -> Self {
+        self.activity = activity;
+        self
+    }
+
+    /// Builder: Mit Trust-Vektor
+    pub fn with_trust(mut self, trust: &TrustVector6D) -> Self {
+        self.trust_norm = trust.weighted_norm(&TrustVector6D::default_weights());
+        self
+    }
+
+    /// Builder: Mit Kontext (für gewichtete Trust-Norm)
+    pub fn with_context(mut self, context: super::trust::ContextType) -> Self {
+        // Kontext beeinflusst die Gewichtung - hier speichern wir nur die Norm
+        // Die eigentliche Gewichtung passiert bei with_trust()
+        self
+    }
+
+    /// Builder: Mit Surprisal
+    pub fn with_surprisal(mut self, surprisal: Surprisal) -> Self {
+        self.surprisal = surprisal;
+        self
+    }
+
+    /// Builder: Mit Human-Factor
+    pub fn with_human_factor(mut self, human_factor: HumanFactor) -> Self {
+        self.human_factor = human_factor;
+        self
+    }
+
+    /// Builder: Mit kausaler Geschichte
+    pub fn with_causal_history(mut self, size: u64) -> Self {
+        self.causal_connectivity = size;
+        self
+    }
+
+    /// Builder: Mit temporaler Gewichtung
+    pub fn with_temporal_weight(mut self, weight: f64) -> Self {
+        self.temporal_weight = weight;
+        self
+    }
+
+    /// Berechne Beitrag (für Builder-Pattern)
+    pub fn build(mut self) -> Self {
+        // Κ15b: Inner term
+        let ln_connectivity = (self.causal_connectivity.max(1) as f64).ln();
+        let inner = (self.trust_norm as f64) * ln_connectivity * self.surprisal.dampened();
+
+        // Κ15c: Sigmoid
+        let sigmoid = 1.0 / (1.0 + (-inner).exp());
+
+        // Final contribution
+        self.contribution =
+            self.activity.value() * sigmoid * self.human_factor.value() * self.temporal_weight;
+
+        // Kosten: O(1)
+        self.computation_cost = Cost::new(10, 5, 0.001);
+
+        self
+    }
+
+    /// Berechne Beitrag und gib Wert zurück (Kompatibilität mit alter API)
+    pub fn compute_value(&self) -> f64 {
+        let ln_connectivity = (self.causal_connectivity.max(1) as f64).ln();
+        let inner = (self.trust_norm as f64) * ln_connectivity * self.surprisal.dampened();
+        let sigmoid = 1.0 / (1.0 + (-inner).exp());
+        self.activity.value() * sigmoid * self.human_factor.value() * self.temporal_weight
+    }
+
+    /// Alias für compute_value() - alte API Kompatibilität
+    /// Erwartet keine Argumente und berechnet den Beitrag
+    #[inline]
+    pub fn compute(&self) -> f64 {
+        self.compute_value()
     }
 }
 

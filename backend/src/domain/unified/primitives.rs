@@ -306,8 +306,11 @@ impl PartialOrd for TemporalCoord {
 impl Ord for TemporalCoord {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         // Lexikographische Ordnung: (wall_time, lamport, node_hash)
-        (self.wall_time, self.lamport, self.node_hash)
-            .cmp(&(other.wall_time, other.lamport, other.node_hash))
+        (self.wall_time, self.lamport, self.node_hash).cmp(&(
+            other.wall_time,
+            other.lamport,
+            other.node_hash,
+        ))
     }
 }
 

@@ -66,7 +66,7 @@ pub use event::{
 };
 pub use formula::{
     Activity, AttestationLevel, HumanFactor, Surprisal, SurprisalComponents, TemporalWeight,
-    WorldFormulaContribution,
+    WorldFormulaContribution, WorldFormulaStatus,
 };
 pub use identity::{
     Capability, DIDDocument, DIDNamespace, Delegation, IdentityError, VerificationMethod,
@@ -80,7 +80,8 @@ pub use message::{
 pub use primitives::{TemporalCoord, UniversalId};
 pub use realm::{
     realm_id_from_name, GovernanceType, MemberRole, Partition, Realm, RealmError, RealmId,
-    RealmMembership, RealmRules, RootRealm, Rule, RuleCategory, VirtualRealm, ROOT_REALM_ID,
+    RealmMembership, RealmRules, RootRealm, Rule, RuleCategory, StoreTemplate, StoreType,
+    VirtualRealm, ROOT_REALM_ID,
 };
 pub use saga::{
     saga_id_from_intent, Constraint, Goal, Intent, RealmCrossing, Saga, SagaAction,

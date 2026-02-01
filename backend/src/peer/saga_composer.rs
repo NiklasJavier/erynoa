@@ -119,24 +119,24 @@ impl SagaComposer {
                 to,
                 amount,
                 asset_type,
-            } => self.compose_transfer(&intent.source_did, to, *amount, asset_type)?,
+            } => self.compose_transfer(intent.source_did(), to, *amount, asset_type)?,
             Goal::Attest { subject, claim } => {
-                self.compose_attest(&intent.source_did, subject, claim)?
+                self.compose_attest(intent.source_did(), subject, claim)?
             }
             Goal::Delegate {
                 to,
                 capabilities,
                 ttl_seconds,
-            } => self.compose_delegate(&intent.source_did, to, capabilities, *ttl_seconds)?,
-            Goal::Query { predicate } => self.compose_query(&intent.source_did, predicate)?,
+            } => self.compose_delegate(intent.source_did(), to, capabilities, *ttl_seconds)?,
+            Goal::Query { predicate } => self.compose_query(intent.source_did(), predicate)?,
             Goal::Create {
                 entity_type,
                 params,
-            } => self.compose_create(&intent.source_did, entity_type, params)?,
+            } => self.compose_create(intent.source_did(), entity_type, params)?,
             Goal::Complex {
                 description,
-                parsed_goals,
-            } => self.compose_complex(&intent.source_did, description, parsed_goals)?,
+                sub_goals,
+            } => self.compose_complex(intent.source_did(), description, sub_goals)?,
         };
 
         // Prüfe Constraints
