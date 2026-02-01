@@ -1,6 +1,9 @@
 //! # Weltformel Types
 //!
-//! Komponenten der Weltformel V2.0 gemäß Axiome Κ15a-d.
+//! **DEPRECATED:** Verwende stattdessen `domain::unified::formula`.
+//!
+//! Dieses Modul wird in einer zukünftigen Version entfernt.
+//! Migration: `use crate::domain::unified::{Activity, Surprisal, HumanFactor, WorldFormulaContribution};`
 //!
 //! ## Axiom-Referenz
 //!
@@ -8,6 +11,11 @@
 //! - **Κ15b (Weltformel)**: `𝔼 = Σ 𝔸(s) · σ⃗( ‖𝕎(s)‖_w · ln|ℂ(s)| · 𝒮(s) ) · Ĥ(s) · w(s,t)`
 //! - **Κ15c (Sigmoid)**: `σ⃗(x) = 1 / (1 + e^(-x))`
 //! - **Κ15d (Approximation)**: Count-Min Sketch für ℐ
+
+#![deprecated(
+    since = "0.2.0",
+    note = "Use `domain::unified::formula` instead. This module will be removed in v0.3.0."
+)]
 
 use crate::domain::{ContextType, TrustVector6D, DID};
 use serde::{Deserialize, Serialize};

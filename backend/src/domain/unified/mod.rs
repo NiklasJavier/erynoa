@@ -7,6 +7,8 @@
 //! - [`primitives`]: Kern-Primitive (UniversalId, TemporalCoord)
 //! - [`cost`]: Kosten-Algebra (Cost, Budget, CostTable)
 //! - [`trust`]: Trust-Strukturen (TrustVector6D, TrustRecord)
+//! - [`identity`]: DID-Strukturen (DID, DIDDocument, Delegation)
+//! - [`event`]: Kausale Events (Event, FinalityState)
 //!
 //! ## Design-Prinzipien
 //!
@@ -21,8 +23,8 @@
 //! | Axiom | Datenstruktur |
 //! |-------|---------------|
 //! | Κ2-Κ5 | `TrustVector6D`, `TrustRecord` |
-//! | Κ6-Κ8 | (siehe `domain/did.rs`) |
-//! | Κ9-Κ12 | (siehe `domain/event.rs`) |
+//! | Κ6-Κ8 | `DID`, `DIDDocument`, `Delegation` |
+//! | Κ9-Κ12 | `Event`, `FinalityState`, `EventPayload` |
 //! | Κ15a-d | (siehe `core/world_formula.rs`) |
 //!
 //! ## Beispiel
@@ -47,15 +49,46 @@
 //! ```
 
 pub mod cost;
+pub mod event;
+pub mod formula;
+pub mod identity;
+pub mod message;
 pub mod primitives;
+pub mod realm;
+pub mod saga;
 pub mod trust;
 
 // Re-exports für einfachen Zugriff
 pub use cost::{Budget, BudgetExhausted, Cost, CostTable};
+pub use event::{
+    event_id_from_content, Event, EventError, EventId, EventPayload, FinalityError, FinalityLevel,
+    FinalityState, Hash32, SagaStepResult, Signature64, VoteDirection, WitnessAttestation,
+};
+pub use formula::{
+    Activity, AttestationLevel, HumanFactor, Surprisal, SurprisalComponents, TemporalWeight,
+    WorldFormulaContribution,
+};
+pub use identity::{
+    Capability, DIDDocument, DIDNamespace, Delegation, IdentityError, VerificationMethod,
+    VerificationMethodType, DID,
+};
+pub use message::{
+    AttestationMessage, DhtRecordMessage, EventMessage, MessagePayload, P2PMessage, P2PProtocol,
+    PeerInfoMessage, PingMessage, PongMessage, RealmJoinMessage, SagaIntentMessage,
+    SyncRequestMessage, SyncResponseMessage, SyncType, TrustClaimMessage,
+};
 pub use primitives::{TemporalCoord, UniversalId};
+pub use realm::{
+    realm_id_from_name, GovernanceType, MemberRole, Partition, Realm, RealmError, RealmId,
+    RealmMembership, RealmRules, RootRealm, Rule, RuleCategory, VirtualRealm, ROOT_REALM_ID,
+};
+pub use saga::{
+    saga_id_from_intent, Constraint, Goal, Intent, RealmCrossing, Saga, SagaAction,
+    SagaCompensation, SagaError, SagaId, SagaStatus, SagaStep, StepResult, StepStatus,
+};
 pub use trust::{
-    ContextType, DailyTrustStats, TrustDimension, TrustHistory, TrustHistoryEntry, TrustRecord,
-    TrustUpdateReason, TrustVector6D,
+    ContextType, DailyTrustStats, TrustCombination, TrustDampeningMatrix, TrustDimension,
+    TrustHistory, TrustHistoryEntry, TrustRecord, TrustUpdateReason, TrustVector6D,
 };
 
 // ============================================================================

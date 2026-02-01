@@ -32,6 +32,9 @@
 // === Domain Layer (Kern-Typen gemäß V4.1) ===
 pub mod domain;
 
+// === Execution Layer (IPS v1.2.0 Monade ℳ) ===
+pub mod execution;
+
 // === Core Logic Layer (Κ2-Κ18) ===
 pub mod core;
 

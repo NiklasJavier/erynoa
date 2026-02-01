@@ -1,6 +1,9 @@
 //! # Event Types
 //!
-//! Kausale Events im DAG gemäß Axiome Κ9-Κ12.
+//! **DEPRECATED:** Verwende stattdessen `domain::unified::event`.
+//!
+//! Dieses Modul wird in einer zukünftigen Version entfernt.
+//! Migration: `use crate::domain::unified::{Event, EventId, EventPayload, FinalityState};`
 //!
 //! ## Axiom-Referenz
 //!
@@ -8,6 +11,11 @@
 //! - **Κ10 (Bezeugung-Finalität)**: `⟦e⟧ → □⟦e⟧` (Permanenz der Bezeugung)
 //! - **Κ11 (Prozess-Korrektheit)**: `{pre} Π {post}`
 //! - **Κ12 (Event-Erzeugung)**: `∀Π : ⟦Π⟧ → Δ|ℂ| ≥ 1`
+
+#![deprecated(
+    since = "0.2.0",
+    note = "Use `domain::unified::event` instead. This module will be removed in v0.3.0."
+)]
 
 use crate::domain::DID;
 use chrono::{DateTime, Utc};

@@ -1,12 +1,20 @@
 //! # Saga Types
 //!
-//! Multi-Step Transaktionen gemäß Axiome Κ22-Κ24.
+//! **DEPRECATED:** Verwende stattdessen `domain::unified::saga`.
+//!
+//! Dieses Modul wird in einer zukünftigen Version entfernt.
+//! Migration: `use crate::domain::unified::{Saga, SagaId, Intent, Goal, Constraint};`
 //!
 //! ## Axiom-Referenz
 //!
 //! - **Κ22 (Saga-Composer)**: `∀ Intent I : ∃! Saga S : resolve(I) = S`
 //! - **Κ23 (Gateway-Guard)**: `cross(s, 𝒞₁, 𝒞₂) requires G(s, 𝒞₂) = true`
 //! - **Κ24 (Atomare Kompensation)**: `fail(Sᵢ) → compensate(S₁..Sᵢ₋₁)`
+
+#![deprecated(
+    since = "0.2.0",
+    note = "Use `domain::unified::saga` instead. This module will be removed in v0.3.0."
+)]
 
 use crate::domain::{RealmId, DID};
 use chrono::{DateTime, Duration, Utc};

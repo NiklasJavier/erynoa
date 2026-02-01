@@ -56,6 +56,8 @@ pub mod protocol;
 #[cfg(feature = "p2p")]
 pub mod swarm;
 #[cfg(feature = "p2p")]
+pub mod timing;
+#[cfg(feature = "p2p")]
 pub mod topics;
 #[cfg(feature = "p2p")]
 pub mod trust_gate;
@@ -70,6 +72,8 @@ pub use identity::PeerIdentity;
 pub use protocol::{SyncProtocol, SyncRequest, SyncResponse};
 #[cfg(feature = "p2p")]
 pub use swarm::SwarmManager;
+#[cfg(feature = "p2p")]
+pub use timing::{NetworkConditions, NetworkQuality, SyncTiming, TimingManager, TimingStatus};
 #[cfg(feature = "p2p")]
 pub use topics::{RealmTopic, TopicManager};
 #[cfg(feature = "p2p")]

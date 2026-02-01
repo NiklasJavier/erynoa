@@ -1,6 +1,9 @@
 //! # Trust Engine Types
 //!
-//! 6-dimensionaler Trust-Vektor 𝕎 gemäß Axiome Κ2-Κ5.
+//! **DEPRECATED:** Verwende stattdessen `domain::unified::trust`.
+//!
+//! Dieses Modul wird in einer zukünftigen Version entfernt.
+//! Migration: `use crate::domain::unified::{TrustVector6D, TrustRecord, TrustCombination, TrustDampeningMatrix};`
 //!
 //! ## Axiom-Referenz
 //!
@@ -8,6 +11,11 @@
 //! - **Κ3 (Dimensionale Unabhängigkeit)**: `∂𝕎ᵢ/∂event ⊥ ∂𝕎ⱼ/∂event`
 //! - **Κ4 (Asymmetrische Evolution)**: `Δ⁻(dim) = λ_asym · Δ⁺(dim)`
 //! - **Κ5 (Probabilistische Kombination)**: `t₁ ⊕ t₂ = 1 - (1-t₁)(1-t₂)`
+
+#![deprecated(
+    since = "0.2.0",
+    note = "Use `domain::unified::trust` instead. This module will be removed in v0.3.0."
+)]
 
 use serde::{Deserialize, Serialize};
 

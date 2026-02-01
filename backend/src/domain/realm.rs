@@ -1,6 +1,9 @@
 //! # Realm Types
 //!
-//! Realm-Hierarchie gemäß Axiom Κ1.
+//! **DEPRECATED:** Verwende stattdessen `domain::unified::realm`.
+//!
+//! Dieses Modul wird in einer zukünftigen Version entfernt.
+//! Migration: `use crate::domain::unified::{RealmId, Realm, RealmRules, VirtualRealm, Partition};`
 //!
 //! ## Axiom-Referenz
 //!
@@ -19,6 +22,11 @@
 //! - `initial_setup_policy`: ECL-Policy für automatische Einrichtung beim Join
 //! - `default_shared_stores`: Gemeinsame Stores für alle Mitglieder
 //! - `default_personal_stores`: Persönliche Stores pro Mitglied
+
+#![deprecated(
+    since = "0.2.0",
+    note = "Use `domain::unified::realm` instead. This module will be removed in v0.3.0."
+)]
 
 use crate::local::{SchemaFieldType, StoreSchema, StoreTemplate};
 use serde::{Deserialize, Serialize};

@@ -1,12 +1,20 @@
 //! # Dezentrale Identifikatoren (DID)
 //!
-//! Implementierung gemäß Axiome Κ6-Κ8.
+//! **DEPRECATED:** Verwende stattdessen `domain::unified::identity`.
+//!
+//! Dieses Modul wird in einer zukünftigen Version entfernt.
+//! Migration: `use crate::domain::unified::{DID, DIDDocument, DIDNamespace, Delegation};`
 //!
 //! ## Axiom-Referenz
 //!
 //! - **Κ6 (Existenz-Eindeutigkeit)**: `∀ entity e : ∃! did ∈ DID : identity(e) = did`
 //! - **Κ7 (Permanenz)**: `⟨s⟩ ∧ ⟦create(s)⟧ ⟹ □⟨s⟩`
 //! - **Κ8 (Delegations-Struktur)**: `s ⊳ s' → 𝕋(s') ≤ 𝕋(s)`
+
+#![deprecated(
+    since = "0.2.0",
+    note = "Use `domain::unified::identity` instead. This module will be removed in v0.3.0."
+)]
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

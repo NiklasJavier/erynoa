@@ -13,8 +13,14 @@
 //! Σᵢ 𝕎(vᵢ) ≥ θ_finality
 //! ```
 //! wobei vᵢ die Witnesses sind und θ_finality = 0.67 (Supermajorität)
+//!
+//! ## Phase 3.4: ExecutionContext Integration
+//!
+//! Erweitert um `*_with_ctx`-Methoden für Gas-Accounting und Κ10 Invariant-Checks.
 
+use crate::domain::unified::Cost;
 use crate::domain::{EventId, FinalityLevel, TrustVector6D, WitnessAttestation, DID};
+use crate::execution::{ExecutionContext, ExecutionError, ExecutionResult};
 use chrono::Utc;
 use std::collections::HashMap;
 use thiserror::Error;
@@ -253,6 +259,157 @@ impl ConsensusEngine {
             finalized_events,
         }
     }
+
+    // =========================================================================
+    // ExecutionContext-Integration (Phase 3.4)
+    // =========================================================================
+
+    /// Gas-Konstanten für Konsensus-Operationen
+    const GAS_ATTESTATION: u64 = 100;
+    const GAS_FINALITY_CHECK: u64 = 50;
+    const GAS_PER_WITNESS: u64 = 20;
+
+    /// Füge Attestation mit Gas-Accounting hinzu
+    ///
+    /// Gas: GAS_ATTESTATION + GAS_FINALITY_CHECK + GAS_PER_WITNESS × witness_count
+    pub fn add_attestation_with_ctx(
+        &mut self,
+        ctx: &mut ExecutionContext,
+        event_id: EventId,
+        witness: DID,
+        signature: String,
+    ) -> ExecutionResult<FinalityCheck> {
+        ctx.consume_gas(Self::GAS_ATTESTATION)?;
+
+        // Legacy-Methode aufrufen
+        let check = self
+            .add_attestation(event_id.clone(), witness.clone(), signature)
+            .map_err(|e| match e {
+                ConsensusError::UnauthorizedWitness(_) => ExecutionError::TrustGateBlocked {
+                    required: self.config.min_witness_trust as f32,
+                    actual: 0.0,
+                },
+                ConsensusError::InsufficientTrust { current, required } => {
+                    ExecutionError::TrustGateBlocked {
+                        required: required as f32,
+                        actual: current as f32,
+                    }
+                }
+                _ => ExecutionError::Internal(e.to_string()),
+            })?;
+
+        // Gas für Finality-Check
+        let witness_gas = Self::GAS_PER_WITNESS * check.witness_count as u64;
+        ctx.consume_gas(Self::GAS_FINALITY_CHECK + witness_gas)?;
+
+        ctx.emit_raw("consensus.attestation", event_id.0.as_bytes());
+
+        // Wenn Finality erreicht, zusätzliches Event
+        if check.reached {
+            ctx.emit_raw(
+                "consensus.finality_reached",
+                format!("{:?}:{}", check.recommended_level, event_id.0).as_bytes(),
+            );
+        }
+
+        ctx.track_cost(Cost::new(
+            Self::GAS_ATTESTATION + Self::GAS_FINALITY_CHECK + witness_gas,
+            0,
+            0.0,
+        ));
+
+        Ok(check)
+    }
+
+    /// Κ10: Prüfe Finalitäts-Übergang mit Invariant-Check
+    ///
+    /// Κ10: Finality darf nur aufsteigen (Nascent → Validated → Witnessed → Anchored → Eternal)
+    pub fn validate_finality_transition_with_ctx(
+        &self,
+        ctx: &mut ExecutionContext,
+        event_id: &EventId,
+        current: FinalityLevel,
+        proposed: FinalityLevel,
+    ) -> ExecutionResult<bool> {
+        ctx.consume_gas(Self::GAS_FINALITY_CHECK)?;
+
+        // Κ10: Finality kann nur aufsteigen
+        if proposed < current {
+            return Err(ExecutionError::FinalityRegression {
+                event_id: event_id.0.clone(),
+                old_level: current as u8,
+                new_level: proposed as u8,
+            });
+        }
+
+        // Prüfe ob Übergang durch Konsensus gedeckt ist
+        let check = self
+            .check_finality(event_id)
+            .map_err(|e| ExecutionError::NotFound {
+                resource_type: "Event".into(),
+                id: event_id.0.clone(),
+            })?;
+
+        // Prüfe ob empfohlenes Level mindestens so hoch wie vorgeschlagen
+        let transition_valid = check.recommended_level >= proposed;
+
+        ctx.track_cost(Cost::new(Self::GAS_FINALITY_CHECK, 0, 0.0));
+
+        Ok(transition_valid)
+    }
+
+    /// Prüfe Konsensus-Status mit Gas-Accounting
+    ///
+    /// Gas: GAS_FINALITY_CHECK + GAS_PER_WITNESS × witness_count
+    pub fn check_finality_with_ctx(
+        &self,
+        ctx: &mut ExecutionContext,
+        event_id: &EventId,
+    ) -> ExecutionResult<FinalityCheck> {
+        ctx.consume_gas(Self::GAS_FINALITY_CHECK)?;
+
+        let check = self
+            .check_finality(event_id)
+            .map_err(|_| ExecutionError::NotFound {
+                resource_type: "Event".into(),
+                id: event_id.0.clone(),
+            })?;
+
+        let witness_gas = Self::GAS_PER_WITNESS * check.witness_count as u64;
+        ctx.consume_gas(witness_gas)?;
+
+        ctx.track_cost(Cost::new(Self::GAS_FINALITY_CHECK + witness_gas, 0, 0.0));
+
+        Ok(check)
+    }
+
+    /// Registriere Witness mit Trust-Check
+    ///
+    /// Gas: 50 (konstant)
+    pub fn register_witness_with_ctx(
+        &mut self,
+        ctx: &mut ExecutionContext,
+        did: DID,
+        trust: TrustVector6D,
+    ) -> ExecutionResult<()> {
+        ctx.consume_gas(50)?;
+
+        // Prüfe Minimum Trust für Witness-Registrierung
+        let trust_norm = trust.weighted_norm(&[1.0; 6]);
+        if trust_norm < self.config.min_witness_trust {
+            return Err(ExecutionError::TrustGateBlocked {
+                required: self.config.min_witness_trust as f32,
+                actual: trust_norm as f32,
+            });
+        }
+
+        self.register_witness(did.clone(), trust);
+
+        ctx.emit_raw("consensus.witness_registered", did.to_string().as_bytes());
+        ctx.track_cost(Cost::new(50, 0, 0.0));
+
+        Ok(())
+    }
 }
 
 /// Ergebnis einer Finalitäts-Prüfung
@@ -375,5 +532,162 @@ mod tests {
         // Revert-Wahrscheinlichkeit sollte sinken
         assert!(check2.revert_probability < check1.revert_probability);
         assert!(check3.revert_probability < check2.revert_probability);
+    }
+
+    // =========================================================================
+    // ExecutionContext Tests (Phase 3.4)
+    // =========================================================================
+
+    #[test]
+    fn test_add_attestation_with_ctx() {
+        let mut engine = setup_engine();
+        let mut ctx = ExecutionContext::default_for_testing();
+        let event_id = EventId::new("event:test:ctx:1");
+
+        let initial_gas = ctx.gas_remaining;
+
+        let check = engine
+            .add_attestation_with_ctx(&mut ctx, event_id, DID::new_self("w1"), "sig1".to_string())
+            .unwrap();
+
+        // Attestation wurde verarbeitet
+        assert_eq!(check.witness_count, 1);
+
+        // Gas wurde verbraucht
+        assert!(ctx.gas_remaining < initial_gas);
+
+        // Event wurde emittiert
+        assert!(!ctx.emitted_events.is_empty());
+    }
+
+    #[test]
+    fn test_register_witness_with_ctx() {
+        let mut engine = ConsensusEngine::default();
+        let mut ctx = ExecutionContext::default_for_testing();
+
+        // Hoher Trust - sollte funktionieren
+        engine
+            .register_witness_with_ctx(
+                &mut ctx,
+                DID::new_self("high_trust"),
+                TrustVector6D::new(0.9, 0.9, 0.9, 0.9, 0.9, 0.9),
+            )
+            .unwrap();
+
+        // Niedriger Trust - sollte abgelehnt werden
+        let result = engine.register_witness_with_ctx(
+            &mut ctx,
+            DID::new_self("low_trust"),
+            TrustVector6D::new(0.1, 0.1, 0.1, 0.1, 0.1, 0.1),
+        );
+
+        assert!(matches!(
+            result,
+            Err(ExecutionError::TrustGateBlocked { .. })
+        ));
+    }
+
+    #[test]
+    fn test_validate_finality_transition_k10() {
+        let mut engine = setup_engine();
+        let mut ctx = ExecutionContext::default_for_testing();
+        let event_id = EventId::new("event:test:k10");
+
+        // Füge Attestations hinzu
+        engine
+            .add_attestation(event_id.clone(), DID::new_self("w1"), "sig1".to_string())
+            .unwrap();
+
+        // Gültiger Übergang: Nascent → Validated
+        let valid = engine
+            .validate_finality_transition_with_ctx(
+                &mut ctx,
+                &event_id,
+                FinalityLevel::Nascent,
+                FinalityLevel::Validated,
+            )
+            .unwrap();
+        assert!(valid);
+
+        // Κ10: Regression verboten - Witnessed → Nascent
+        let result = engine.validate_finality_transition_with_ctx(
+            &mut ctx,
+            &event_id,
+            FinalityLevel::Witnessed,
+            FinalityLevel::Nascent,
+        );
+        assert!(matches!(
+            result,
+            Err(ExecutionError::FinalityRegression { .. })
+        ));
+    }
+
+    #[test]
+    fn test_check_finality_with_ctx() {
+        let mut engine = setup_engine();
+        let mut ctx = ExecutionContext::default_for_testing();
+        let event_id = EventId::new("event:test:check");
+
+        // Füge drei Attestations hinzu
+        engine
+            .add_attestation(event_id.clone(), DID::new_self("w1"), "sig1".to_string())
+            .unwrap();
+        engine
+            .add_attestation(event_id.clone(), DID::new_self("w2"), "sig2".to_string())
+            .unwrap();
+        engine
+            .add_attestation(event_id.clone(), DID::new_self("w3"), "sig3".to_string())
+            .unwrap();
+
+        let initial_gas = ctx.gas_remaining;
+        let check = engine.check_finality_with_ctx(&mut ctx, &event_id).unwrap();
+
+        // Check korrekt
+        assert_eq!(check.witness_count, 3);
+        assert!(check.trust_ratio > 0.5);
+
+        // Gas wurde verbraucht (abhängig von witness_count)
+        assert!(ctx.gas_remaining < initial_gas);
+    }
+
+    #[test]
+    fn test_finality_reached_event_emission() {
+        let mut engine = setup_engine();
+        let mut ctx = ExecutionContext::default_for_testing();
+        let event_id = EventId::new("event:test:finality");
+
+        // Erste zwei Attestations (noch keine Finality)
+        engine
+            .add_attestation_with_ctx(
+                &mut ctx,
+                event_id.clone(),
+                DID::new_self("w1"),
+                "sig1".to_string(),
+            )
+            .unwrap();
+        engine
+            .add_attestation_with_ctx(
+                &mut ctx,
+                event_id.clone(),
+                DID::new_self("w2"),
+                "sig2".to_string(),
+            )
+            .unwrap();
+
+        let events_before_finality = ctx.emitted_events.len();
+
+        // Dritte Attestation erreicht Finality
+        let check = engine
+            .add_attestation_with_ctx(
+                &mut ctx,
+                event_id.clone(),
+                DID::new_self("w3"),
+                "sig3".to_string(),
+            )
+            .unwrap();
+
+        // Sollte zusätzliches finality_reached Event emittieren
+        assert!(ctx.emitted_events.len() > events_before_finality);
+        assert!(check.witness_count >= 3);
     }
 }

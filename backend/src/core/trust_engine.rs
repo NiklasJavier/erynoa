@@ -8,10 +8,17 @@
 //! - **Κ3 (Trust-Bounds)**: `0 ≤ 𝕎ᵢ ≤ 1`
 //! - **Κ4 (Asymmetric Update)**: Vertrauen sinkt 2× schneller als es steigt
 //! - **Κ5 (Probabilistic Combination)**: `𝕎_comb = 1 − ∏(1 − 𝕎ⱼ)`
+//!
+//! ## Phase 3.2: ExecutionContext Integration
+//!
+//! Erweitert um `*_with_ctx`-Methoden für Gas-Accounting und Event-Emission.
 
+use crate::core::engine::trust_gas;
+use crate::domain::unified::Cost;
 use crate::domain::{
     ContextType, Event, TrustCombination, TrustDampeningMatrix, TrustVector6D, DID,
 };
+use crate::execution::{ExecutionContext, ExecutionError, ExecutionResult};
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -252,6 +259,173 @@ impl TrustEngine {
             low_trust_entities: low_trust_count,
         }
     }
+
+    // =========================================================================
+    // ExecutionContext-Integration (Phase 3.2)
+    // =========================================================================
+
+    /// Κ2: Initialisiere Trust mit Gas-Accounting
+    ///
+    /// Gas: LOOKUP + UPDATE
+    pub fn initialize_trust_with_ctx(
+        &mut self,
+        ctx: &mut ExecutionContext,
+        entity: &DID,
+    ) -> ExecutionResult<()> {
+        ctx.consume_gas(trust_gas::LOOKUP)?;
+
+        // Prüfe ob bereits initialisiert
+        if self.trust_vectors.contains_key(entity) {
+            return Ok(());
+        }
+
+        ctx.consume_gas(trust_gas::UPDATE)?;
+
+        // Κ2: Default Trust = 0.5 für alle Dimensionen
+        let default_trust = TrustVector6D::default();
+        self.trust_vectors.insert(entity.clone(), default_trust);
+
+        ctx.emit_raw("trust.initialized", entity.to_string().as_bytes());
+        ctx.track_cost(Cost::new(trust_gas::LOOKUP + trust_gas::UPDATE, 0, 0.0));
+
+        Ok(())
+    }
+
+    /// Κ4: Verarbeite Event und aktualisiere Trust mit ExecutionContext
+    ///
+    /// Gas: LOOKUP + UPDATE + PROPAGATE
+    pub fn process_event_with_ctx(
+        &mut self,
+        ctx: &mut ExecutionContext,
+        event: &Event,
+    ) -> ExecutionResult<()> {
+        ctx.consume_gas(trust_gas::LOOKUP)?;
+
+        // Initialisiere Trust falls nötig
+        self.initialize_trust_with_ctx(ctx, &event.author)?;
+
+        // Trust-Änderung basierend auf Event-Typ
+        let (dimension, delta, is_positive) = Self::derive_trust_delta(event);
+
+        ctx.consume_gas(trust_gas::UPDATE)?;
+
+        // Κ4: Asymmetrisches Update (negativ wirkt 2× so stark)
+        if let Some(trust) = self.trust_vectors.get_mut(&event.author) {
+            trust.update(dimension, delta, is_positive);
+        }
+
+        ctx.emit_raw("trust.updated", event.author.to_string().as_bytes());
+        ctx.track_cost(Cost::new(trust_gas::LOOKUP + trust_gas::UPDATE, 0, 0.0));
+
+        Ok(())
+    }
+
+    /// Κ3: Setze direkten Trust-Wert mit Bounds-Check und Gas-Accounting
+    ///
+    /// Gas: LOOKUP + UPDATE
+    pub fn set_direct_trust_with_ctx(
+        &mut self,
+        ctx: &mut ExecutionContext,
+        from: &DID,
+        to: &DID,
+        context: ContextType,
+        trust: f64,
+    ) -> ExecutionResult<()> {
+        ctx.consume_gas(trust_gas::LOOKUP)?;
+
+        // Κ3: Trust-Bounds prüfen
+        if !(0.0..=1.0).contains(&trust) {
+            return Err(ExecutionError::InvalidInput(format!(
+                "Trust value {} out of bounds [0,1]",
+                trust
+            )));
+        }
+
+        // Self-Attestation verhindern
+        if from == to {
+            return Err(ExecutionError::InvalidInput(
+                "Self-attestation not allowed".to_string(),
+            ));
+        }
+
+        ctx.consume_gas(trust_gas::UPDATE)?;
+
+        // Update relationship
+        self.relationships
+            .entry(from.clone())
+            .or_default()
+            .entry(to.clone())
+            .or_default()
+            .insert(context, trust);
+
+        ctx.emit_raw("trust.relationship", format!("{}→{}", from, to).as_bytes());
+        ctx.track_cost(Cost::new(trust_gas::LOOKUP + trust_gas::UPDATE, 0, 0.0));
+
+        Ok(())
+    }
+
+    /// Κ5: Kombiniere Trust aus mehreren Quellen mit Gas-Accounting
+    ///
+    /// Gas: COMBINE + LOOKUP × sources.len()
+    pub fn combine_trust_with_ctx(
+        &self,
+        ctx: &mut ExecutionContext,
+        sources: &[(DID, f64)],
+    ) -> ExecutionResult<f64> {
+        ctx.consume_gas(trust_gas::COMBINE)?;
+
+        // Gas für jeden Lookup
+        let lookup_cost = trust_gas::LOOKUP * sources.len() as u64;
+        ctx.consume_gas(lookup_cost)?;
+
+        // Κ5: 𝕎_comb = 1 - ∏(1 - 𝕎ⱼ)
+        let combined = self.combine_trust(sources);
+
+        ctx.track_cost(Cost::new(trust_gas::COMBINE + lookup_cost, 0, 0.0));
+
+        Ok(combined)
+    }
+
+    /// Τ1: Berechne Chain-Trust mit ExecutionContext
+    ///
+    /// Gas: CHAIN_TRUST_BASE + LOOKUP × path.len()
+    pub fn chain_trust_with_ctx(
+        &self,
+        ctx: &mut ExecutionContext,
+        path: &[DID],
+        context: ContextType,
+    ) -> ExecutionResult<f64> {
+        ctx.consume_gas(trust_gas::CHAIN_TRUST_BASE)?;
+
+        let lookup_cost = trust_gas::LOOKUP * path.len() as u64;
+        ctx.consume_gas(lookup_cost)?;
+
+        let trust = self.chain_trust(path, context);
+
+        ctx.track_cost(Cost::new(trust_gas::CHAIN_TRUST_BASE + lookup_cost, 0, 0.0));
+
+        Ok(trust)
+    }
+
+    /// Bestimme Trust-Delta basierend auf Event-Typ (Helper)
+    fn derive_trust_delta(event: &Event) -> (crate::domain::TrustDimension, f64, bool) {
+        use crate::domain::{EventPayload, TrustDimension};
+
+        match &event.payload {
+            EventPayload::Transfer { .. } => (TrustDimension::Reliability, 0.01, true),
+            EventPayload::Attest { .. } => (TrustDimension::Integrity, 0.02, true),
+            EventPayload::Delegate { .. } => (TrustDimension::Competence, 0.01, true),
+            EventPayload::CredentialIssue { .. } => (TrustDimension::Prestige, 0.015, true),
+            EventPayload::Custom { event_type, .. } => {
+                if event_type.starts_with("violation") {
+                    (TrustDimension::Reliability, 0.05, false) // Κ4: Negativ
+                } else {
+                    (TrustDimension::Prestige, 0.005, true)
+                }
+            }
+            _ => (TrustDimension::Prestige, 0.001, true),
+        }
+    }
 }
 
 /// Statistiken der TrustEngine
@@ -389,5 +563,132 @@ mod tests {
 
         let result = engine.set_direct_trust(&alice, &alice, ContextType::Default, 0.9);
         assert!(matches!(result, Err(TrustError::SelfAttestation)));
+    }
+
+    // =========================================================================
+    // ExecutionContext Tests (Phase 3.2)
+    // =========================================================================
+
+    #[test]
+    fn test_initialize_trust_with_ctx() {
+        let mut engine = TrustEngine::default();
+        let mut ctx = ExecutionContext::default_for_testing();
+        let alice = DID::new_self("alice");
+
+        let initial_gas = ctx.gas_remaining;
+
+        engine.initialize_trust_with_ctx(&mut ctx, &alice).unwrap();
+
+        // Trust wurde initialisiert
+        let trust = engine.get_trust(&alice).unwrap();
+        assert!((trust.r - 0.5).abs() < 0.001); // Κ2
+
+        // Gas wurde verbraucht
+        assert!(ctx.gas_remaining < initial_gas);
+
+        // Event wurde emittiert
+        assert!(!ctx.emitted_events.is_empty());
+    }
+
+    #[test]
+    fn test_process_event_with_ctx() {
+        let mut engine = TrustEngine::default();
+        let mut ctx = ExecutionContext::default_for_testing();
+        let alice = DID::new_self("alice");
+
+        let event = Event::new(
+            alice.clone(),
+            EventPayload::Transfer {
+                from: alice.clone(),
+                to: DID::new_self("bob"),
+                amount: 100,
+                asset_type: "ERY".to_string(),
+            },
+            vec![],
+        );
+
+        let initial_gas = ctx.gas_remaining;
+        engine.process_event_with_ctx(&mut ctx, &event).unwrap();
+
+        // Trust wurde erhöht
+        let trust = engine.get_trust(&alice).unwrap();
+        assert!(trust.r > 0.5);
+
+        // Gas wurde verbraucht
+        assert!(ctx.gas_remaining < initial_gas);
+    }
+
+    #[test]
+    fn test_set_direct_trust_with_ctx() {
+        let mut engine = TrustEngine::default();
+        let mut ctx = ExecutionContext::default_for_testing();
+        let alice = DID::new_self("alice");
+        let bob = DID::new_self("bob");
+
+        engine
+            .set_direct_trust_with_ctx(&mut ctx, &alice, &bob, ContextType::Default, 0.8)
+            .unwrap();
+
+        // Event wurde emittiert
+        assert!(!ctx.emitted_events.is_empty());
+    }
+
+    #[test]
+    fn test_set_direct_trust_with_ctx_bounds_check() {
+        let mut engine = TrustEngine::default();
+        let mut ctx = ExecutionContext::default_for_testing();
+        let alice = DID::new_self("alice");
+        let bob = DID::new_self("bob");
+
+        // Κ3: Out of bounds
+        let result =
+            engine.set_direct_trust_with_ctx(&mut ctx, &alice, &bob, ContextType::Default, 1.5);
+        assert!(matches!(result, Err(ExecutionError::InvalidInput(_))));
+    }
+
+    #[test]
+    fn test_combine_trust_with_ctx() {
+        let engine = TrustEngine::default();
+        let mut ctx = ExecutionContext::default_for_testing();
+
+        let sources = vec![
+            (DID::new_self("a"), 0.8),
+            (DID::new_self("b"), 0.7),
+            (DID::new_self("c"), 0.6),
+        ];
+
+        let combined = engine.combine_trust_with_ctx(&mut ctx, &sources).unwrap();
+
+        // Κ5: 1 - (1-0.8)(1-0.7)(1-0.6) = 0.976
+        assert!((combined - 0.976).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_chain_trust_with_ctx() {
+        let mut engine = TrustEngine::default();
+        let mut ctx = ExecutionContext::default_for_testing();
+
+        let alice = DID::new_self("alice");
+        let bob = DID::new_self("bob");
+        let carol = DID::new_self("carol");
+
+        engine
+            .set_direct_trust(&alice, &bob, ContextType::Default, 0.9)
+            .unwrap();
+        engine
+            .set_direct_trust(&bob, &carol, ContextType::Default, 0.8)
+            .unwrap();
+
+        let initial_gas = ctx.gas_remaining;
+        let chain_trust = engine
+            .chain_trust_with_ctx(&mut ctx, &[alice, bob, carol], ContextType::Default)
+            .unwrap();
+
+        // Τ1: Chain trust
+        assert!(chain_trust > 0.0);
+        assert!(chain_trust < 1.0);
+
+        // Gas wurde verbraucht
+        assert!(ctx.gas_remaining < initial_gas);
     }
 }

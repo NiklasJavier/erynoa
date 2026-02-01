@@ -7,11 +7,18 @@
 //! - **Κ15b (Weltformel)**: `𝔼 = Σ 𝔸(s) · σ⃗( ‖𝕎(s)‖_w · ln|ℂ(s)| · 𝒮(s) ) · Ĥ(s) · w(s,t)`
 //! - **Κ15c (Sigmoid)**: `σ⃗(x) = 1 / (1 + e^(-x))`
 //! - **Κ15d (Approximation)**: Count-Min Sketch für ℐ
+//!
+//! ## Phase 3.3: ExecutionContext Integration
+//!
+//! Erweitert um `*_with_ctx`-Methoden für Gas-Accounting und Budget-Integration.
 
+use crate::core::engine::formula_gas;
+use crate::domain::unified::Cost;
 use crate::domain::{
     Activity, ContextType, HumanFactor, Surprisal, TrustVector6D, WorldFormulaContribution,
     WorldFormulaStatus, DID,
 };
+use crate::execution::{ExecutionContext, ExecutionError, ExecutionResult};
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 
@@ -353,6 +360,133 @@ impl WorldFormulaEngine {
             human_verified_ratio: status.human_verified_ratio,
         }
     }
+
+    // =========================================================================
+    // ExecutionContext-Integration (Phase 3.3)
+    // =========================================================================
+
+    /// Κ15b: Update Contribution mit Gas-Accounting
+    ///
+    /// Gas: CONTRIBUTION
+    pub fn update_contribution_with_ctx(
+        &mut self,
+        ctx: &mut ExecutionContext,
+        did: DID,
+        trust: TrustVector6D,
+        recent_events: u64,
+        causal_history_size: u64,
+        surprisal: Surprisal,
+        human_factor: HumanFactor,
+    ) -> ExecutionResult<()> {
+        ctx.consume_gas(formula_gas::CONTRIBUTION)?;
+
+        // Legacy-Methode aufrufen
+        self.update_contribution(
+            did.clone(),
+            trust,
+            recent_events,
+            causal_history_size,
+            surprisal,
+            human_factor,
+        );
+
+        ctx.emit_raw("formula.contribution_updated", did.to_string().as_bytes());
+        ctx.track_cost(Cost::new(formula_gas::CONTRIBUTION, 0, 0.0));
+
+        Ok(())
+    }
+
+    /// Κ15b: Berechne globale Weltformel mit Gas-Accounting und Budget-Check
+    ///
+    /// Gas: GLOBAL_COMPUTE
+    ///
+    /// Gibt `(Status, Cost)` zurück für Budget-Integration.
+    pub fn compute_global_with_ctx(
+        &mut self,
+        ctx: &mut ExecutionContext,
+    ) -> ExecutionResult<(WorldFormulaStatus, Cost)> {
+        ctx.consume_gas(formula_gas::GLOBAL_COMPUTE)?;
+
+        let status = self.compute_global();
+
+        let cost = Cost::new(formula_gas::GLOBAL_COMPUTE, 0, 0.0);
+        ctx.track_cost(cost);
+
+        ctx.emit_raw("formula.computed", &status.total_e.to_le_bytes());
+
+        Ok((status, cost))
+    }
+
+    /// Berechne individuellen Beitrag mit Gas-Accounting
+    ///
+    /// Gas: CONTRIBUTION
+    pub fn compute_individual_with_ctx(
+        &self,
+        ctx: &mut ExecutionContext,
+        did: &DID,
+    ) -> ExecutionResult<(f64, Surprisal)> {
+        ctx.consume_gas(formula_gas::CONTRIBUTION)?;
+
+        let contribution = self
+            .contributions
+            .get(did)
+            .ok_or_else(|| ExecutionError::NotFound {
+                resource_type: "Contribution".into(),
+                id: did.to_string(),
+            })?;
+
+        let value = contribution.compute();
+        let surprisal = contribution.surprisal;
+
+        ctx.track_cost(Cost::new(formula_gas::CONTRIBUTION, 0, 0.0));
+
+        Ok((value, surprisal))
+    }
+
+    /// Berechne Surprisal für Event mit Gas-Accounting
+    ///
+    /// Gas: SURPRISAL
+    pub fn compute_surprisal_with_ctx(
+        &self,
+        ctx: &mut ExecutionContext,
+        _event_type: &str,
+        _event_count: u64,
+        _total_events: u64,
+    ) -> ExecutionResult<(Surprisal, Cost)> {
+        ctx.consume_gas(formula_gas::SURPRISAL)?;
+
+        // Κ15d: Surprisal = -log2(p) wobei p = count/total
+        // Verwende Default für jetzt (vollständige Implementierung in IPS)
+        let surprisal = Surprisal::default();
+
+        let cost = Cost::new(formula_gas::SURPRISAL, 0, 0.0);
+        ctx.track_cost(cost);
+
+        Ok((surprisal, cost))
+    }
+
+    /// Berechne Top Contributors mit Budget-Limit
+    ///
+    /// Gas: CONTRIBUTION × min(n, available_budget)
+    pub fn top_contributors_with_ctx(
+        &self,
+        ctx: &mut ExecutionContext,
+        n: usize,
+    ) -> ExecutionResult<Vec<(DID, f64)>> {
+        // Prüfe wie viele wir mit dem Budget schaffen
+        let gas_per_item = formula_gas::CONTRIBUTION;
+        let max_items = (ctx.gas_remaining / gas_per_item) as usize;
+        let actual_n = n.min(max_items).min(self.contributions.len());
+
+        // Gas für alle Items verbrauchen
+        ctx.consume_gas(gas_per_item * actual_n as u64)?;
+
+        let result = self.top_contributors(actual_n);
+
+        ctx.track_cost(Cost::new(gas_per_item * actual_n as u64, 0, 0.0));
+
+        Ok(result)
+    }
 }
 
 /// Statistiken der WorldFormulaEngine
@@ -457,5 +591,134 @@ mod tests {
         let weight_30 = engine.temporal_weight(days_ago_30);
         assert!(weight_30 < 0.8);
         assert!(weight_30 > 0.7);
+    }
+
+    // =========================================================================
+    // ExecutionContext Tests (Phase 3.3)
+    // =========================================================================
+
+    #[test]
+    fn test_update_contribution_with_ctx() {
+        let mut engine = WorldFormulaEngine::default();
+        let mut ctx = ExecutionContext::default_for_testing();
+
+        let initial_gas = ctx.gas_remaining;
+
+        engine
+            .update_contribution_with_ctx(
+                &mut ctx,
+                DID::new_self("alice"),
+                TrustVector6D::new(0.8, 0.8, 0.8, 0.8, 0.8, 0.8),
+                25,
+                500,
+                Surprisal::default(),
+                HumanFactor::BasicAttestation,
+            )
+            .unwrap();
+
+        // Contribution wurde gespeichert
+        assert!(engine.get_contribution(&DID::new_self("alice")).is_some());
+
+        // Gas wurde verbraucht
+        assert!(ctx.gas_remaining < initial_gas);
+
+        // Event wurde emittiert
+        assert!(!ctx.emitted_events.is_empty());
+    }
+
+    #[test]
+    fn test_compute_global_with_ctx() {
+        let mut engine = WorldFormulaEngine::default();
+        let mut ctx = ExecutionContext::default_for_testing();
+
+        // Contribution hinzufügen
+        engine.update_contribution(
+            DID::new_self("alice"),
+            TrustVector6D::new(0.9, 0.9, 0.8, 0.7, 0.6, 0.9),
+            50,
+            1000,
+            Surprisal::default(),
+            HumanFactor::FullAttestation,
+        );
+
+        let initial_gas = ctx.gas_remaining;
+        let (status, cost) = engine.compute_global_with_ctx(&mut ctx).unwrap();
+
+        // Status korrekt
+        assert_eq!(status.entity_count, 1);
+        assert!(status.total_e > 0.0);
+
+        // Cost wurde zurückgegeben
+        assert!(cost.gas > 0);
+
+        // Gas wurde verbraucht
+        assert!(ctx.gas_remaining < initial_gas);
+    }
+
+    #[test]
+    fn test_compute_individual_with_ctx() {
+        let mut engine = WorldFormulaEngine::default();
+        let mut ctx = ExecutionContext::default_for_testing();
+
+        let alice = DID::new_self("alice");
+
+        // Contribution hinzufügen
+        engine.update_contribution(
+            alice.clone(),
+            TrustVector6D::new(0.9, 0.9, 0.8, 0.7, 0.6, 0.9),
+            50,
+            1000,
+            Surprisal::default(),
+            HumanFactor::FullAttestation,
+        );
+
+        let (value, _surprisal) = engine
+            .compute_individual_with_ctx(&mut ctx, &alice)
+            .unwrap();
+
+        // Wert ist positiv
+        assert!(value > 0.0);
+    }
+
+    #[test]
+    fn test_compute_individual_not_found() {
+        let engine = WorldFormulaEngine::default();
+        let mut ctx = ExecutionContext::default_for_testing();
+
+        let result = engine.compute_individual_with_ctx(&mut ctx, &DID::new_self("unknown"));
+
+        assert!(matches!(result, Err(ExecutionError::NotFound { .. })));
+    }
+
+    #[test]
+    fn test_top_contributors_with_budget() {
+        let mut engine = WorldFormulaEngine::default();
+        // Sehr wenig Gas - nur genug für ca. 2-3 Contributors (150 Gas pro Item)
+        let mut ctx = ExecutionContext::minimal();
+        ctx.gas_remaining = 400; // ~2-3 Contributors möglich
+        ctx.gas_initial = 400;
+
+        // Mehrere Contributors
+        for i in 0..10 {
+            engine.update_contribution(
+                DID::new_self(&format!("user{}", i)),
+                TrustVector6D::new(0.5 + (i as f64 * 0.05), 0.5, 0.5, 0.5, 0.5, 0.5),
+                10 + i as u64,
+                100,
+                Surprisal::default(),
+                HumanFactor::NotVerified,
+            );
+        }
+
+        // Mit begrenztem Budget
+        let result = engine.top_contributors_with_ctx(&mut ctx, 10).unwrap();
+
+        // Sollte weniger als 10 zurückgeben wegen Gas-Limit
+        assert!(
+            result.len() < 10,
+            "Expected less than 10 contributors, got {}",
+            result.len()
+        );
+        assert!(!result.is_empty(), "Should return at least one contributor");
     }
 }

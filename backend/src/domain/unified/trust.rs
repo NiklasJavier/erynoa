@@ -305,6 +305,24 @@ impl TrustVector6D {
     pub fn mean(&self) -> f32 {
         (self.r + self.i + self.c + self.p + self.v + self.omega) / 6.0
     }
+
+    /// Skaliere alle Dimensionen mit einem Faktor (für Trust-Decay, Κ8)
+    pub fn scale(&self, factor: f32) -> Self {
+        let factor = factor.clamp(0.0, 1.0);
+        Self {
+            r: (self.r * factor).clamp(0.0, 1.0),
+            i: (self.i * factor).clamp(0.0, 1.0),
+            c: (self.c * factor).clamp(0.0, 1.0),
+            p: (self.p * factor).clamp(0.0, 1.0),
+            v: (self.v * factor).clamp(0.0, 1.0),
+            omega: (self.omega * factor).clamp(0.0, 1.0),
+        }
+    }
+
+    /// Standard-Gewichte (gleichmäßig)
+    pub fn default_weights() -> [f32; 6] {
+        [0.167, 0.167, 0.167, 0.167, 0.166, 0.166]
+    }
 }
 
 impl Default for TrustVector6D {
@@ -565,6 +583,145 @@ pub enum TrustUpdateReason {
 }
 
 // ============================================================================
+// TrustCombination – Probabilistische Kombination (Κ5)
+// ============================================================================
+
+/// Κ5: Probabilistische Trust-Kombination
+///
+/// `t₁ ⊕ t₂ = 1 - (1-t₁)(1-t₂)`
+///
+/// Entspricht logischem "unabhängige Bestätigung ODER"
+#[derive(Debug, Clone, Copy)]
+pub struct TrustCombination;
+
+impl TrustCombination {
+    /// Κ5: Kombiniere zwei Trust-Werte
+    #[inline]
+    pub fn combine(t1: f32, t2: f32) -> f32 {
+        1.0 - (1.0 - t1) * (1.0 - t2)
+    }
+
+    /// Kombiniere mehrere Trust-Werte
+    pub fn combine_all(values: &[f32]) -> f32 {
+        values.iter().fold(0.0, |acc, &t| Self::combine(acc, t))
+    }
+
+    /// Τ1: Ketten-Trust mit √n Dämpfung
+    ///
+    /// `t_chain = exp(Σᵢ ln(tᵢ) / √n)`
+    pub fn chain_trust(chain: &[f32]) -> f32 {
+        if chain.is_empty() {
+            return 0.0;
+        }
+
+        let n = chain.len() as f32;
+        let log_sum: f32 = chain.iter().map(|t| t.max(1e-10).ln()).sum();
+
+        (log_sum / n.sqrt()).exp()
+    }
+}
+
+// ============================================================================
+// TrustDampeningMatrix – Realm-Crossing Dämpfung (Κ24)
+// ============================================================================
+
+/// 6x6 Matrix für Trust-Dämpfung bei Realm-Crossings (Κ24)
+///
+/// `𝕎_target = M × 𝕎_source`
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrustDampeningMatrix {
+    /// 6x6 Matrix-Einträge
+    pub data: [[f32; 6]; 6],
+}
+
+impl Default for TrustDampeningMatrix {
+    /// Identitätsmatrix (keine Dämpfung)
+    fn default() -> Self {
+        Self {
+            data: [
+                [1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+            ],
+        }
+    }
+}
+
+impl TrustDampeningMatrix {
+    /// Erstelle Identitätsmatrix
+    pub fn identity() -> Self {
+        Self::default()
+    }
+
+    /// Erstelle Matrix für generischen Realm-Crossing
+    /// Competence und Prestige werden stärker gedämpft
+    pub fn generic_crossing(factor: f32) -> Self {
+        Self {
+            data: [
+                [factor * 0.8, 0.0, 0.0, 0.0, 0.0, 0.0], // R: 80% erhalten
+                [0.0, factor * 0.9, 0.0, 0.0, 0.0, 0.0], // I: 90% erhalten
+                [0.0, 0.0, factor * 0.4, 0.0, 0.0, 0.0], // C: 40% erhalten
+                [0.0, 0.0, 0.0, factor * 0.3, 0.0, 0.0], // P: 30% erhalten
+                [0.0, 0.0, 0.0, 0.0, 1.0, 0.0],          // V: 100% (universal)
+                [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],          // Ω: 100% (universal)
+            ],
+        }
+    }
+
+    /// Erstelle Matrix für spezifische Realm-Beziehung
+    pub fn for_realms(r_factor: f32, i_factor: f32, c_factor: f32, p_factor: f32) -> Self {
+        Self {
+            data: [
+                [r_factor, 0.0, 0.0, 0.0, 0.0, 0.0],
+                [0.0, i_factor, 0.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, c_factor, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, p_factor, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0, 1.0, 0.0], // V bleibt
+                [0.0, 0.0, 0.0, 0.0, 0.0, 1.0], // Ω bleibt
+            ],
+        }
+    }
+
+    /// Κ24: Wende Dämpfung an - `𝕎_target = M × 𝕎_source`
+    pub fn apply(&self, trust: &TrustVector6D) -> TrustVector6D {
+        let source = trust.to_array();
+        let mut result = [0.0f32; 6];
+
+        for i in 0..6 {
+            for j in 0..6 {
+                result[i] += self.data[i][j] * source[j];
+            }
+        }
+
+        TrustVector6D::from_array(result)
+    }
+
+    /// Prüft ob ‖M‖ ≤ 1 (Trust kann nicht steigen)
+    pub fn is_valid(&self) -> bool {
+        // Vereinfachte Prüfung: Alle Diagonalelemente ≤ 1
+        self.data.iter().enumerate().all(|(i, row)| row[i] <= 1.0)
+    }
+
+    /// Multiplikation zweier Matrizen (für Ketten-Crossings)
+    pub fn multiply(&self, other: &Self) -> Self {
+        let mut result = [[0.0f32; 6]; 6];
+
+        for i in 0..6 {
+            for j in 0..6 {
+                for k in 0..6 {
+                    result[i][j] += self.data[i][k] * other.data[k][j];
+                }
+            }
+        }
+
+        Self { data: result }
+    }
+}
+
+// ============================================================================
 // Compile-Time Assertions
 // ============================================================================
 
@@ -665,5 +822,78 @@ mod tests {
 
         assert!((record.vector.r - 0.2).abs() < 0.001);
         assert_eq!(record.sample_count[0], 1);
+    }
+
+    #[test]
+    fn test_trust_combination_k5() {
+        // Κ5: t₁ ⊕ t₂ = 1 - (1-t₁)(1-t₂)
+        let combined = TrustCombination::combine(0.5, 0.5);
+        assert!((combined - 0.75).abs() < 0.001);
+
+        // Neutral element: t ⊕ 0 = t
+        let neutral = TrustCombination::combine(0.7, 0.0);
+        assert!((neutral - 0.7).abs() < 0.001);
+
+        // Absorbing: t ⊕ 1 = 1
+        let absorbing = TrustCombination::combine(0.3, 1.0);
+        assert!((absorbing - 1.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_chain_trust() {
+        // Τ1: Ketten-Trust mit √n Dämpfung
+        let chain = vec![0.8, 0.8, 0.8];
+        let result = TrustCombination::chain_trust(&chain);
+
+        // Die √n Dämpfung macht es besser als reine Multiplikation
+        let simple_product = 0.8_f32.powi(3); // 0.512
+        assert!(
+            result > simple_product,
+            "Chain trust {} should be > simple product {}",
+            result,
+            simple_product
+        );
+        assert!(result < 1.0);
+    }
+
+    #[test]
+    fn test_dampening_matrix_identity() {
+        let matrix = TrustDampeningMatrix::identity();
+        let trust = TrustVector6D::new(0.8, 0.7, 0.6, 0.5, 0.4, 0.3);
+        let result = matrix.apply(&trust);
+
+        // Identity sollte unverändert lassen
+        assert!((result.r - 0.8).abs() < 0.001);
+        assert!((result.omega - 0.3).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_dampening_matrix_generic_crossing() {
+        let matrix = TrustDampeningMatrix::generic_crossing(1.0);
+        let trust = TrustVector6D::new(1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
+        let dampened = matrix.apply(&trust);
+
+        // V und Ω sollten unverändert sein (universell)
+        assert!((dampened.v - 1.0).abs() < 0.001);
+        assert!((dampened.omega - 1.0).abs() < 0.001);
+
+        // C sollte auf 0.4 gedämpft sein
+        assert!((dampened.c - 0.4).abs() < 0.001);
+        // P sollte auf 0.3 gedämpft sein
+        assert!((dampened.p - 0.3).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_dampening_matrix_multiply() {
+        let m1 = TrustDampeningMatrix::generic_crossing(1.0);
+        let m2 = TrustDampeningMatrix::generic_crossing(1.0);
+        let combined = m1.multiply(&m2);
+
+        // Doppeltes Crossing sollte stärker dämpfen
+        let trust = TrustVector6D::MAX;
+        let result = combined.apply(&trust);
+
+        // C: 0.4 * 0.4 = 0.16
+        assert!((result.c - 0.16).abs() < 0.001);
     }
 }
