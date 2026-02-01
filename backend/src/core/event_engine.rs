@@ -220,8 +220,8 @@ impl EventEngine {
             .ok_or_else(|| EventError::ParentNotFound(event_id.clone()))?;
 
         // Finalität kann nur aufsteigen, nie absteigen (Permanenz)
-        if level > event.finality {
-            event.finality = level;
+        if level > event.finality.level {
+            event.finality.level = level;
         }
 
         Ok(())
@@ -231,7 +231,7 @@ impl EventEngine {
     pub fn get_events_by_finality(&self, min_level: FinalityLevel) -> Vec<&Event> {
         self.events
             .values()
-            .filter(|e| e.finality >= min_level)
+            .filter(|e| e.finality.level >= min_level)
             .collect()
     }
 
@@ -283,7 +283,7 @@ impl EventEngine {
     /// Statistiken
     pub fn stats(&self) -> EventEngineStats {
         let finality_counts = self.events.values().fold([0usize; 5], |mut acc, e| {
-            match e.finality {
+            match e.finality.level {
                 FinalityLevel::Nascent => acc[0] += 1,
                 FinalityLevel::Validated => acc[1] += 1,
                 FinalityLevel::Witnessed => acc[2] += 1,
@@ -391,7 +391,7 @@ impl EventEngine {
         self.events.insert(event_id.clone(), event.clone());
 
         // Event über Context emittieren (Κ12)
-        ctx.emit_raw("event.added", event_id.0.as_bytes());
+        ctx.emit_raw("event.added", event_id.as_bytes());
 
         // Lamport-Clock updaten
         ctx.state.tick();
@@ -422,17 +422,17 @@ impl EventEngine {
             })?;
 
         // Κ10: Finality kann nur aufsteigen, nie absteigen (Permanenz)
-        if level < event.finality {
+        if level < event.finality.level {
             return Err(ExecutionError::FinalityRegression {
                 event_id: format!("{:?}", event_id),
-                old_level: event.finality as u8,
+                old_level: event.finality.level as u8,
                 new_level: level as u8,
             });
         }
 
-        if level > event.finality {
-            event.finality = level;
-            ctx.emit_raw("event.finality_updated", event_id.0.as_bytes());
+        if level > event.finality.level {
+            event.finality.level = level;
+            ctx.emit_raw("event.finality_updated", event_id.as_bytes());
         }
 
         Ok(())

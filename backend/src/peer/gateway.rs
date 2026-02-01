@@ -398,7 +398,7 @@ impl GatewayGuard {
                 // Personal-Stores werden lazy erstellt (beim ersten Schreibzugriff)
                 // Hier registrieren wir nur das Schema
                 if let Err(e) = storage.realm.register_schema(
-                    &to_realm.0,
+                    &to_realm.to_hex(),
                     &template.schema.name,
                     template.schema.clone(),
                 ) {

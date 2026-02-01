@@ -685,7 +685,7 @@ impl PrefixBuilder {
     /// Neuer Prefix für shared Store
     pub fn shared(realm_id: &RealmId, store_name: &str) -> Self {
         Self {
-            realm_id: realm_id.0.clone(),
+            realm_id: realm_id.to_hex(),
             store_type: StoreType::Shared,
             owner_did: None,
             store_name: store_name.to_string(),
@@ -695,7 +695,7 @@ impl PrefixBuilder {
     /// Neuer Prefix für personal Store
     pub fn personal(realm_id: &RealmId, owner_did: &DID, store_name: &str) -> Self {
         Self {
-            realm_id: realm_id.0.clone(),
+            realm_id: realm_id.to_hex(),
             store_type: StoreType::Personal,
             owner_did: Some(owner_did.unique_id.clone()),
             store_name: store_name.to_string(),
@@ -839,7 +839,7 @@ impl RealmStorage {
         self.meta.insert(&schema_key, &schema_bytes)?;
 
         // Cache aktualisieren
-        let cache_key = format!("{}:{}", realm_id.0, schema.name);
+        let cache_key = format!("{}:{}", realm_id.to_hex(), schema.name);
         self.schema_cache.write().insert(cache_key, schema.clone());
 
         tracing::info!(
@@ -859,7 +859,7 @@ impl RealmStorage {
         store_name: &str,
         sender_did: Option<&DID>,
     ) -> Result<StoreSchema> {
-        let cache_key = format!("{}:{}", realm_id.0, store_name);
+        let cache_key = format!("{}:{}", realm_id.to_hex(), store_name);
 
         // Cache-Check
         if let Some(schema) = self.schema_cache.read().get(&cache_key) {
@@ -990,7 +990,7 @@ impl RealmStorage {
             self.meta.insert(&schema_key, &schema_bytes)?;
 
             // Cache aktualisieren
-            let cache_key = format!("{}:{}", realm_id.0, store_name);
+            let cache_key = format!("{}:{}", realm_id.to_hex(), store_name);
             self.schema_cache
                 .write()
                 .insert(cache_key, new_schema.clone());
@@ -1073,7 +1073,7 @@ impl RealmStorage {
         self.meta.insert(&schema_key, &schema_bytes)?;
 
         // Cache aktualisieren
-        let cache_key = format!("{}:{}", realm_id.0, store_name);
+        let cache_key = format!("{}:{}", realm_id.to_hex(), store_name);
         self.schema_cache.write().insert(cache_key, pending_schema);
 
         tracing::info!(
@@ -1705,7 +1705,7 @@ impl RealmStorage {
 
     /// Liste alle Stores eines Realms
     pub fn list_stores(&self, realm_id: &RealmId) -> Result<Vec<StoreSchema>> {
-        let prefix = format!("realm:{}:", realm_id.0);
+        let prefix = format!("realm:{}:", realm_id.to_hex());
         let mut schemas = Vec::new();
         let mut seen = std::collections::HashSet::new();
 
@@ -1769,7 +1769,7 @@ impl RealmStorage {
         self.meta.remove(prefix.schema_key())?;
 
         // Cache aktualisieren
-        let cache_key = format!("{}:{}", realm_id.0, store_name);
+        let cache_key = format!("{}:{}", realm_id.to_hex(), store_name);
         self.schema_cache.write().remove(&cache_key);
 
         tracing::info!(

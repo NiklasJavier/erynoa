@@ -19,7 +19,9 @@
 //! Erweitert um `*_with_ctx`-Methoden für Gas-Accounting und Κ10 Invariant-Checks.
 
 use crate::domain::unified::Cost;
-use crate::domain::{EventId, FinalityLevel, TrustVector6D, WitnessAttestation, DID};
+use crate::domain::{
+    EventId, FinalityLevel, Signature64, TemporalCoord, TrustVector6D, WitnessAttestation, DID,
+};
 use crate::execution::{ExecutionContext, ExecutionError, ExecutionResult};
 use chrono::Utc;
 use std::collections::HashMap;
@@ -35,7 +37,7 @@ pub enum ConsensusError {
     UnauthorizedWitness(String),
 
     #[error("Insufficient trust for finality: {current} < {required}")]
-    InsufficientTrust { current: f64, required: f64 },
+    InsufficientTrust { current: f32, required: f32 },
 
     #[error("Invalid attestation signature")]
     InvalidSignature,
@@ -87,7 +89,7 @@ pub struct ConsensusConfig {
     pub finality_threshold: f64,
 
     /// Minimum Trust pro Witness
-    pub min_witness_trust: f64,
+    pub min_witness_trust: f32,
 
     /// Κ18: Maximum Revert-Wahrscheinlichkeit
     pub max_revert_probability: f64,
@@ -129,7 +131,7 @@ impl ConsensusEngine {
         &mut self,
         event_id: EventId,
         witness: DID,
-        signature: String,
+        _signature: String, // TODO: Parse to Signature64
     ) -> ConsensusResult<FinalityCheck> {
         // Prüfe ob Witness registriert ist
         let trust = self
@@ -146,13 +148,13 @@ impl ConsensusEngine {
             });
         }
 
-        // Erstelle Attestation
+        // Erstelle Attestation mit unified Typen
         let attestation = WitnessAttestation {
             event_id: event_id.clone(),
-            witness,
-            trust_weight: trust_norm,
-            signature,
-            timestamp: Utc::now(),
+            witness: witness.id.clone(),
+            trust_at_witness: trust_norm,
+            signature: Signature64::NULL, // TODO: Parse actual signature
+            attested_at: TemporalCoord::now(0, &event_id),
         };
 
         // Speichere
@@ -176,13 +178,13 @@ impl ConsensusEngine {
         let witness_count = attestations.len();
 
         // Berechne Trust-gewichtete Summe
-        let total_trust: f64 = attestations.iter().map(|a| a.trust_weight).sum();
+        let total_trust: f64 = attestations.iter().map(|a| a.trust_at_witness as f64).sum();
 
         // Maximum möglicher Trust (alle registrierten Witnesses)
         let max_possible_trust: f64 = self
             .witness_trust
             .values()
-            .map(|t| t.weighted_norm(&[1.0; 6]))
+            .map(|t| t.weighted_norm(&[1.0; 6]) as f64)
             .sum();
 
         // Anteil
@@ -286,13 +288,13 @@ impl ConsensusEngine {
             .add_attestation(event_id.clone(), witness.clone(), signature)
             .map_err(|e| match e {
                 ConsensusError::UnauthorizedWitness(_) => ExecutionError::TrustGateBlocked {
-                    required: self.config.min_witness_trust as f32,
+                    required: self.config.min_witness_trust,
                     actual: 0.0,
                 },
                 ConsensusError::InsufficientTrust { current, required } => {
                     ExecutionError::TrustGateBlocked {
-                        required: required as f32,
-                        actual: current as f32,
+                        required,
+                        actual: current,
                     }
                 }
                 _ => ExecutionError::Internal(e.to_string()),
@@ -302,13 +304,13 @@ impl ConsensusEngine {
         let witness_gas = Self::GAS_PER_WITNESS * check.witness_count as u64;
         ctx.consume_gas(Self::GAS_FINALITY_CHECK + witness_gas)?;
 
-        ctx.emit_raw("consensus.attestation", event_id.0.as_bytes());
+        ctx.emit_raw("consensus.attestation", event_id.as_bytes());
 
         // Wenn Finality erreicht, zusätzliches Event
         if check.reached {
             ctx.emit_raw(
                 "consensus.finality_reached",
-                format!("{:?}:{}", check.recommended_level, event_id.0).as_bytes(),
+                format!("{:?}:{}", check.recommended_level, event_id.to_hex()).as_bytes(),
             );
         }
 
@@ -336,19 +338,19 @@ impl ConsensusEngine {
         // Κ10: Finality kann nur aufsteigen
         if proposed < current {
             return Err(ExecutionError::FinalityRegression {
-                event_id: event_id.0.clone(),
+                event_id: event_id.to_hex(),
                 old_level: current as u8,
                 new_level: proposed as u8,
             });
         }
 
         // Prüfe ob Übergang durch Konsensus gedeckt ist
-        let check = self.check_finality(event_id).map_err(|e| {
-            ExecutionError::NotFound {
+        let check = self
+            .check_finality(event_id)
+            .map_err(|_| ExecutionError::NotFound {
                 resource_type: "Event".into(),
-                id: event_id.0.clone(),
-            }
-        })?;
+                id: event_id.to_hex(),
+            })?;
 
         // Prüfe ob empfohlenes Level mindestens so hoch wie vorgeschlagen
         let transition_valid = check.recommended_level >= proposed;
@@ -368,12 +370,12 @@ impl ConsensusEngine {
     ) -> ExecutionResult<FinalityCheck> {
         ctx.consume_gas(Self::GAS_FINALITY_CHECK)?;
 
-        let check = self.check_finality(event_id).map_err(|_| {
-            ExecutionError::NotFound {
+        let check = self
+            .check_finality(event_id)
+            .map_err(|_| ExecutionError::NotFound {
                 resource_type: "Event".into(),
-                id: event_id.0.clone(),
-            }
-        })?;
+                id: event_id.to_hex(),
+            })?;
 
         let witness_gas = Self::GAS_PER_WITNESS * check.witness_count as u64;
         ctx.consume_gas(witness_gas)?;
@@ -398,8 +400,8 @@ impl ConsensusEngine {
         let trust_norm = trust.weighted_norm(&[1.0; 6]);
         if trust_norm < self.config.min_witness_trust {
             return Err(ExecutionError::TrustGateBlocked {
-                required: self.config.min_witness_trust as f32,
-                actual: trust_norm as f32,
+                required: self.config.min_witness_trust,
+                actual: trust_norm,
             });
         }
 
@@ -581,7 +583,10 @@ mod tests {
             TrustVector6D::new(0.1, 0.1, 0.1, 0.1, 0.1, 0.1),
         );
 
-        assert!(matches!(result, Err(ExecutionError::TrustGateBlocked { .. })));
+        assert!(matches!(
+            result,
+            Err(ExecutionError::TrustGateBlocked { .. })
+        ));
     }
 
     #[test]
@@ -613,7 +618,10 @@ mod tests {
             FinalityLevel::Witnessed,
             FinalityLevel::Nascent,
         );
-        assert!(matches!(result, Err(ExecutionError::FinalityRegression { .. })));
+        assert!(matches!(
+            result,
+            Err(ExecutionError::FinalityRegression { .. })
+        ));
     }
 
     #[test]
@@ -652,17 +660,32 @@ mod tests {
 
         // Erste zwei Attestations (noch keine Finality)
         engine
-            .add_attestation_with_ctx(&mut ctx, event_id.clone(), DID::new_self(b"w1"), "sig1".to_string())
+            .add_attestation_with_ctx(
+                &mut ctx,
+                event_id.clone(),
+                DID::new_self(b"w1"),
+                "sig1".to_string(),
+            )
             .unwrap();
         engine
-            .add_attestation_with_ctx(&mut ctx, event_id.clone(), DID::new_self(b"w2"), "sig2".to_string())
+            .add_attestation_with_ctx(
+                &mut ctx,
+                event_id.clone(),
+                DID::new_self(b"w2"),
+                "sig2".to_string(),
+            )
             .unwrap();
 
         let events_before_finality = ctx.emitted_events.len();
 
         // Dritte Attestation erreicht Finality
         let check = engine
-            .add_attestation_with_ctx(&mut ctx, event_id.clone(), DID::new_self(b"w3"), "sig3".to_string())
+            .add_attestation_with_ctx(
+                &mut ctx,
+                event_id.clone(),
+                DID::new_self(b"w3"),
+                "sig3".to_string(),
+            )
             .unwrap();
 
         // Sollte zusätzliches finality_reached Event emittieren

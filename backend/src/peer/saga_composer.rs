@@ -23,7 +23,8 @@
 //! ```
 
 use crate::domain::{
-    Constraint, Goal, Intent, RealmId, Saga, SagaAction, SagaCompensation, SagaStep, DID,
+    Constraint, Goal, Intent, RealmId, Saga, SagaAction, SagaCompensation, SagaStep, UniversalId,
+    DID,
 };
 use thiserror::Error;
 
@@ -127,6 +128,7 @@ impl SagaComposer {
                 to,
                 capabilities,
                 ttl_seconds,
+                ..  // trust_factor nicht hier verwendet
             } => self.compose_delegate(intent.source_did(), to, capabilities, *ttl_seconds)?,
             Goal::Query { predicate } => self.compose_query(intent.source_did(), predicate)?,
             Goal::Create {
@@ -148,8 +150,8 @@ impl SagaComposer {
     /// Komponiere Transfer-Saga
     fn compose_transfer(
         &self,
-        from: &DID,
-        to: &DID,
+        from: &UniversalId,
+        to: &UniversalId,
         amount: u64,
         asset_type: &str,
     ) -> CompositionResult<Vec<SagaStep>> {
@@ -158,11 +160,13 @@ impl SagaComposer {
         // Step 1: Lock Funds
         let lock_step = SagaStep::new(
             0,
-            format!("Lock {} {} from {}", amount, asset_type, from.to_uri()),
+            format!("Lock {} {} from {}", amount, asset_type, from.to_hex()),
             SagaAction::Lock {
-                did: from.clone(),
+                owner: from.clone(),
                 amount,
                 asset_type: asset_type.to_string(),
+                lock_id: None,
+                release_conditions: vec![],
             },
         )
         .with_compensation(SagaCompensation::new(
@@ -177,7 +181,7 @@ impl SagaComposer {
         // Step 2: Execute Transfer
         let transfer_step = SagaStep::new(
             1,
-            format!("Transfer {} {} to {}", amount, asset_type, to.to_uri()),
+            format!("Transfer {} {} to {}", amount, asset_type, to.to_hex()),
             SagaAction::Transfer {
                 from: from.clone(),
                 to: to.clone(),
@@ -194,8 +198,8 @@ impl SagaComposer {
     /// Komponiere Attestation-Saga
     fn compose_attest(
         &self,
-        attester: &DID,
-        subject: &DID,
+        attester: &UniversalId,
+        subject: &UniversalId,
         claim: &str,
     ) -> CompositionResult<Vec<SagaStep>> {
         let mut steps = Vec::new();
@@ -203,10 +207,10 @@ impl SagaComposer {
         // Step 1: Validiere Attester-Berechtigung
         let validate_step = SagaStep::new(
             0,
-            format!("Validate attester {} credentials", attester.to_uri()),
+            format!("Validate attester {} credentials", attester.to_hex()),
             SagaAction::WaitFor {
                 timeout_lamport: 0,
-                condition: format!("trust({}) >= 0.5", attester.to_uri()),
+                condition: format!("trust({}) >= 0.5", attester.to_hex()),
                 timeout_seconds: 30,
             },
         );
@@ -219,11 +223,11 @@ impl SagaComposer {
             format!(
                 "Create attestation for {} on subject {}",
                 claim,
-                subject.to_uri()
+                subject.to_hex()
             ),
             SagaAction::WaitFor {
                 timeout_lamport: 0,
-                condition: format!("attestation({}, {})", attester.to_uri(), subject.to_uri()),
+                condition: format!("attestation({}, {})", attester.to_hex(), subject.to_hex()),
                 timeout_seconds: 60,
             },
         )
@@ -236,8 +240,8 @@ impl SagaComposer {
     /// Komponiere Delegation-Saga
     fn compose_delegate(
         &self,
-        from: &DID,
-        to: &DID,
+        from: &UniversalId,
+        to: &UniversalId,
         capabilities: &[String],
         ttl_seconds: u64,
     ) -> CompositionResult<Vec<SagaStep>> {
@@ -248,14 +252,14 @@ impl SagaComposer {
             0,
             format!(
                 "Validate {} has capabilities {:?}",
-                from.to_uri(),
+                from.to_hex(),
                 capabilities
             ),
             SagaAction::WaitFor {
                 timeout_lamport: 0,
                 condition: format!(
                     "capabilities({}) includes {:?}",
-                    from.to_uri(),
+                    from.to_hex(),
                     capabilities
                 ),
                 timeout_seconds: 30,
@@ -269,13 +273,13 @@ impl SagaComposer {
             format!(
                 "Delegate {:?} from {} to {} for {}s",
                 capabilities,
-                from.to_uri(),
-                to.to_uri(),
+                from.to_hex(),
+                to.to_hex(),
                 ttl_seconds
             ),
             SagaAction::WaitFor {
                 timeout_lamport: 0,
-                condition: format!("delegation({}, {})", from.to_uri(), to.to_uri()),
+                condition: format!("delegation({}, {})", from.to_hex(), to.to_hex()),
                 timeout_seconds: 60,
             },
         )
@@ -284,7 +288,7 @@ impl SagaComposer {
             "Revoke delegation",
             SagaAction::WaitFor {
                 timeout_lamport: 0,
-                condition: format!("revoke_delegation({}, {})", from.to_uri(), to.to_uri()),
+                condition: format!("revoke_delegation({}, {})", from.to_hex(), to.to_hex()),
                 timeout_seconds: 30,
             },
         ));
@@ -294,7 +298,11 @@ impl SagaComposer {
     }
 
     /// Komponiere Query-Saga
-    fn compose_query(&self, _querier: &DID, predicate: &str) -> CompositionResult<Vec<SagaStep>> {
+    fn compose_query(
+        &self,
+        _querier: &UniversalId,
+        predicate: &str,
+    ) -> CompositionResult<Vec<SagaStep>> {
         let step = SagaStep::new(
             0,
             format!("Execute query: {}", predicate),
@@ -311,7 +319,7 @@ impl SagaComposer {
     /// Komponiere Create-Saga
     fn compose_create(
         &self,
-        creator: &DID,
+        creator: &UniversalId,
         entity_type: &str,
         params: &std::collections::HashMap<String, serde_json::Value>,
     ) -> CompositionResult<Vec<SagaStep>> {
@@ -325,11 +333,12 @@ impl SagaComposer {
                 steps.push(
                     SagaStep::new(
                         0,
-                        format!("Mint {} {} for {}", amount, entity_type, creator.to_uri()),
+                        format!("Mint {} {} for {}", amount, entity_type, creator.to_hex()),
                         SagaAction::Mint {
                             to: creator.clone(),
                             amount,
                             asset_type: entity_type.to_string(),
+                            authorization: None,
                         },
                     )
                     .with_compensation(SagaCompensation::new(
@@ -338,6 +347,7 @@ impl SagaComposer {
                             from: creator.clone(),
                             amount,
                             asset_type: entity_type.to_string(),
+                            authorization: None,
                         },
                     )),
                 );
@@ -345,10 +355,10 @@ impl SagaComposer {
             _ => {
                 steps.push(SagaStep::new(
                     0,
-                    format!("Create {} for {}", entity_type, creator.to_uri()),
+                    format!("Create {} for {}", entity_type, creator.to_hex()),
                     SagaAction::WaitFor {
                         timeout_lamport: 0,
-                        condition: format!("create({}, {})", entity_type, creator.to_uri()),
+                        condition: format!("create({}, {})", entity_type, creator.to_hex()),
                         timeout_seconds: 60,
                     },
                 ));
@@ -361,7 +371,7 @@ impl SagaComposer {
     /// Komponiere Complex-Saga (mehrere Ziele)
     fn compose_complex(
         &self,
-        source: &DID,
+        source: &UniversalId,
         _description: &str,
         parsed_goals: &[Goal],
     ) -> CompositionResult<Vec<SagaStep>> {
