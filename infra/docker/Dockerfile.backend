@@ -55,7 +55,7 @@ RUN mkdir -p src && \
     echo "fn main() {}" > src/main.rs && \
     echo "// lib" > src/lib.rs && \
     RUSTFLAGS="-C link-arg=-fuse-ld=mold" cargo build --lib 2>&1 || true && \
-    RUSTFLAGS="-C link-arg=-fuse-ld=mold" cargo build --bin godstack-api 2>&1 || true && \
+    RUSTFLAGS="-C link-arg=-fuse-ld=mold" cargo build --bin erynoa-api 2>&1 || true && \
     rm -rf src
 
 WORKDIR /workspace/backend
