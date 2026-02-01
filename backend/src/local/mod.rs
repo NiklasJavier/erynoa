@@ -14,13 +14,14 @@
 //! │ identities  │   events    │    trust    │   content   │    realm_storage    │
 //! │ (DIDs,Keys) │  (DAG)      │ (Vektoren)  │  (CAS)      │  (Dynamische Stores)│
 //! └─────────────┴─────────────┴─────────────┴─────────────┴─────────────────────┘
-//!                                    │
-//!                    ┌───────────────┴───────────────┐
-//!                    │      Blueprint Marketplace     │
-//!                    │   (Dezentraler Template-Store) │
-//!                    └───────────────────────────────┘
+//!                      │                                         │
+//!       ┌──────────────┴──────────────┐         ┌───────────────┴───────────────┐
+//!       │      Cold Storage Archive   │         │      Blueprint Marketplace     │
+//!       │   (ψ_archive Morphismus)    │         │   (Dezentraler Template-Store) │
+//!       └─────────────────────────────┘         └───────────────────────────────┘
 //! ```
 
+pub mod archive;
 pub mod blueprint_marketplace;
 mod content_store;
 mod event_store;
@@ -83,6 +84,11 @@ pub use realm_storage::{
     StoreValue,
 };
 pub use trust_store::{StoredTrust, TrustStore};
+
+// Cold Storage Archive (ψ_archive Morphismus)
+pub use archive::{
+    Archive, ArchiveConfig, ArchiveError, ArchiveResult, ArchiveStats, EpochMetadata, MerkleProof,
+};
 
 use anyhow::Result;
 use fjall::Keyspace;

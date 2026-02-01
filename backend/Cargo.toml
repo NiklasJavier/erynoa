@@ -141,6 +141,11 @@ libp2p = { version = "0.54", features = [
     "macros",
     "serde",
     "ed25519",
+    # NAT Traversal (Priorität 3)
+    "autonat", # Automatic NAT detection
+    "dcutr",   # Direct Connection Upgrade through Relay
+    "relay",   # Circuit Relay for NAT traversal
+    "upnp",    # UPnP port mapping
 ], optional = true }
 futures = { version = "0.3", optional = true }
 

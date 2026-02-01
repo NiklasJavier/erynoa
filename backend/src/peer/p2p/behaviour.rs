@@ -10,23 +10,35 @@
 //! - **Identify**: Peer-Identifikation
 //! - **mDNS**: LAN-Discovery (optional)
 //! - **Ping**: Connection-Health
+//! - **AutoNAT**: Automatische NAT-Erkennung (Priorität 3)
+//! - **DCUTR**: Direct Connection Upgrade through Relay (Priorität 3)
+//! - **Relay**: Circuit Relay für NAT-Traversal (Priorität 3)
 
-use crate::peer::p2p::config::{GossipsubConfig, KademliaConfig, P2PConfig};
+use crate::peer::p2p::config::{GossipsubConfig, KademliaConfig, NatConfig, P2PConfig};
 use crate::peer::p2p::protocol::{SyncCodec, SyncProtocol};
 use anyhow::{anyhow, Result};
+use libp2p::autonat;
+use libp2p::dcutr;
 use libp2p::gossipsub::{self, MessageAuthenticity, MessageId, ValidationMode};
 use libp2p::identify;
 use libp2p::kad::{self, store::MemoryStore, Mode};
 use libp2p::mdns;
 use libp2p::ping;
+use libp2p::relay;
 use libp2p::request_response::{self, ProtocolSupport};
 use libp2p::swarm::NetworkBehaviour;
+use libp2p::upnp;
 use libp2p::{identity::Keypair, PeerId, StreamProtocol};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
 
 /// Erynoa Network Behaviour
+///
+/// Kombiniert alle libp2p-Protokolle für das Erynoa-Netzwerk:
+/// - Discovery: Kademlia DHT, mDNS
+/// - Messaging: Gossipsub, Request-Response
+/// - NAT-Traversal: AutoNAT, DCUTR, Relay, UPnP
 #[derive(NetworkBehaviour)]
 pub struct ErynoaBehaviour {
     /// Kademlia DHT
@@ -47,10 +59,27 @@ pub struct ErynoaBehaviour {
 
     /// Ping für Connection-Health
     pub ping: ping::Behaviour,
+
+    // ========================================================================
+    // NAT-Traversal (Priorität 3)
+    // ========================================================================
+    /// AutoNAT für NAT-Erkennung
+    pub autonat: autonat::Behaviour,
+
+    /// DCUTR für Holepunching
+    pub dcutr: dcutr::Behaviour,
+
+    /// Relay-Client für Verbindungen über Relays
+    pub relay_client: relay::client::Behaviour,
+
+    /// UPnP für automatisches Port-Mapping
+    pub upnp: upnp::tokio::Behaviour,
 }
 
 impl ErynoaBehaviour {
     /// Erstelle neues Behaviour
+    ///
+    /// Initialisiert alle libp2p-Protokolle inkl. NAT-Traversal.
     pub fn new(keypair: &Keypair, config: &P2PConfig) -> Result<Self> {
         let peer_id = PeerId::from(keypair.public());
 
@@ -85,6 +114,22 @@ impl ErynoaBehaviour {
         // Ping
         let ping = ping::Behaviour::new(ping::Config::new());
 
+        // ====================================================================
+        // NAT-Traversal (Priorität 3)
+        // ====================================================================
+
+        // AutoNAT für NAT-Erkennung
+        let autonat = Self::build_autonat(peer_id, &config.nat)?;
+
+        // DCUTR für Holepunching
+        let dcutr = dcutr::Behaviour::new(peer_id);
+
+        // Relay-Client
+        let relay_client = relay::client::Behaviour::new(peer_id, Default::default());
+
+        // UPnP
+        let upnp = upnp::tokio::Behaviour::default();
+
         Ok(Self {
             kademlia,
             gossipsub,
@@ -93,7 +138,43 @@ impl ErynoaBehaviour {
             #[cfg(feature = "p2p")]
             mdns,
             ping,
+            autonat,
+            dcutr,
+            relay_client,
+            upnp,
         })
+    }
+
+    /// Erstelle Behaviour mit Relay-Server-Funktionalität
+    ///
+    /// Für Peers die als Relay für andere fungieren wollen.
+    pub fn new_with_relay_server(
+        keypair: &Keypair,
+        config: &P2PConfig,
+    ) -> Result<(Self, relay::client::Transport)> {
+        let peer_id = PeerId::from(keypair.public());
+
+        // Standard-Behaviour erstellen
+        let behaviour = Self::new(keypair, config)?;
+
+        // Relay-Transport für Relay-Server
+        let (relay_transport, _relay_behaviour) = relay::client::new(peer_id);
+
+        Ok((behaviour, relay_transport))
+    }
+
+    /// Baue AutoNAT-Behaviour
+    fn build_autonat(peer_id: PeerId, config: &NatConfig) -> Result<autonat::Behaviour> {
+        let autonat_config = autonat::Config {
+            retry_interval: config.autonat_probe_interval,
+            refresh_interval: config.autonat_probe_interval * 2,
+            boot_delay: Duration::from_secs(10),
+            throttle_server_period: Duration::from_secs(1),
+            only_global_ips: true,
+            ..Default::default()
+        };
+
+        Ok(autonat::Behaviour::new(peer_id, autonat_config))
     }
 
     /// Baue Kademlia-Behaviour

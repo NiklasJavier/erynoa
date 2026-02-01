@@ -31,6 +31,9 @@ pub struct P2PConfig {
 
     /// Connection-Limits
     pub connection_limits: ConnectionLimitsConfig,
+
+    /// NAT-Traversal-Konfiguration (Priorität 3)
+    pub nat: NatConfig,
 }
 
 impl Default for P2PConfig {
@@ -50,6 +53,7 @@ impl Default for P2PConfig {
             trust_gate: TrustGateConfig::default(),
             sync: SyncConfig::default(),
             connection_limits: ConnectionLimitsConfig::default(),
+            nat: NatConfig::default(),
         }
     }
 }
@@ -217,6 +221,84 @@ impl Default for ConnectionLimitsConfig {
             max_per_peer: 2,
             idle_timeout: Duration::from_secs(60),
         }
+    }
+}
+
+// ============================================================================
+// NAT-Traversal-Konfiguration (Priorität 3)
+// ============================================================================
+
+/// NAT-Traversal-Konfiguration
+///
+/// Ermöglicht Verbindungen durch NATs mittels:
+/// - **AutoNAT**: Automatische NAT-Erkennung
+/// - **DCUTR**: Direct Connection Upgrade through Relay
+/// - **Relay**: Circuit Relay als Fallback
+/// - **UPnP**: Automatisches Port-Mapping
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NatConfig {
+    /// AutoNAT aktivieren
+    pub enable_autonat: bool,
+
+    /// DCUTR (Holepunching) aktivieren
+    pub enable_dcutr: bool,
+
+    /// Als Relay-Server fungieren (für andere Peers)
+    pub enable_relay_server: bool,
+
+    /// Relay-Client aktivieren (Verbindung über Relays)
+    pub enable_relay_client: bool,
+
+    /// UPnP Port-Mapping aktivieren
+    pub enable_upnp: bool,
+
+    /// Bekannte Relay-Server (Multiaddrs)
+    pub relay_servers: Vec<String>,
+
+    /// AutoNAT Probe-Intervall
+    #[serde(with = "humantime_serde")]
+    pub autonat_probe_interval: Duration,
+
+    /// Maximale Relay-Reservierungen (als Server)
+    pub max_relay_reservations: u32,
+
+    /// Relay-Reservierungs-TTL
+    #[serde(with = "humantime_serde")]
+    pub relay_reservation_ttl: Duration,
+
+    /// Minimum Trust-R für Relay-Server (Κ19-konform)
+    pub min_relay_server_trust: f32,
+}
+
+impl Default for NatConfig {
+    fn default() -> Self {
+        Self {
+            enable_autonat: true,
+            enable_dcutr: true,
+            enable_relay_server: false, // Opt-in für Relay-Server
+            enable_relay_client: true,
+            enable_upnp: true,
+            relay_servers: vec![
+                // Erynoa Foundation Relay Nodes
+                // "/ip4/51.159.23.74/tcp/4001/p2p/12D3KooW.../p2p-circuit".to_string(),
+            ],
+            autonat_probe_interval: Duration::from_secs(60),
+            max_relay_reservations: 128,
+            relay_reservation_ttl: Duration::from_secs(3600), // 1h
+            min_relay_server_trust: 0.5,                      // Κ19: Nur vertrauenswürdige Relays
+        }
+    }
+}
+
+impl NatConfig {
+    /// Prüfe ob NAT-Traversal komplett deaktiviert ist
+    pub fn is_disabled(&self) -> bool {
+        !self.enable_autonat && !self.enable_dcutr && !self.enable_relay_client && !self.enable_upnp
+    }
+
+    /// Prüfe ob Peer als Relay fungieren kann
+    pub fn can_be_relay(&self) -> bool {
+        self.enable_relay_server
     }
 }
 
