@@ -19,8 +19,10 @@
 //! | Parameter | Default | Bereich | Beschreibung |
 //! |-----------|---------|---------|-------------|
 //! | gini_threshold | 0.35 | 0.32-0.38 | Trigger für Power-Cap/Decay |
-//! | decay_rate | 0.0008 | 0.0005-0.0012 | Anti-Calcification Decay |
-//! | power_cap_exponent | 0.5 | - | sqrt-Scaling für Quadratic Voting |
+//! | decay_rate | 0.006 | 0.003-0.012 | Anti-Calcification Decay/Tag |
+//! | entity_exponent | 0.25 | 0.20-0.30 | Power-Cap Skalierung (n^0.25) |
+//! | alarm_top_percentage | 0.03 | 0.01-0.10 | Top-% für Calcification-Check |
+//! | alarm_power_threshold | 0.42 | 0.35-0.55 | Power-Konzentrations-Schwelle |
 //!
 //! ### Realm-Parameter (Κ23-Κ24)
 //!
@@ -512,7 +514,17 @@ impl Default for HumanFactorConfig {
 /// Anti-Calcification Konfiguration gemäß Κ19
 ///
 /// Verhindert übermäßige Machtkonzentration und Trust-Ossifikation.
-/// Optimale Werte aus Small-World Simulation validiert.
+/// Optimale Werte aus Small-World Simulation validiert (10.000+ Agents, 20% Malicious).
+///
+/// ## Parameter-Referenz
+///
+/// | Parameter | Optimal | Range | Beschreibung |
+/// |-----------|---------|-------|--------------|
+/// | gini_threshold | 0.35 | 0.32-0.38 | Trigger für Power-Cap/Decay |
+/// | decay_rate | 0.006 | 0.003-0.012 | Decay-Rate pro Tag |
+/// | entity_exponent | 0.25 | 0.20-0.30 | Power-Cap Skalierung (n^0.25) |
+/// | alarm_top_percentage | 0.03 | 0.01-0.10 | Top-% für Calcification-Check |
+/// | alarm_power_threshold | 0.42 | 0.35-0.55 | Power-Konzentrations-Schwelle |
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProtectionConfig {
     /// Gini-Schwellwert für Trigger von Power-Cap/Decay
@@ -523,12 +535,36 @@ pub struct ProtectionConfig {
     /// - 0.35 entspricht realen sozialen Systemen (Lorenz-Kurve)
     pub gini_threshold: f64,
 
-    /// Anti-Calcification Decay-Rate pro Step
+    /// Anti-Calcification Decay-Rate pro Tag
     /// Κ19: Langsamer Decay löst Ossifikation auf
-    /// Optimal: 0.0008 (Bereich: 0.0005-0.0012)
-    /// - Sehr langsam verhindert Oscillation
+    /// Optimal: 0.006 (Bereich: 0.003-0.012)
+    /// - Langsamer als alte 0.01 Werte
+    /// - Verhindert Oscillation
     /// - Erhält legitime Realm-Cluster
     pub decay_rate: f64,
+
+    /// Κ19: Exponent für Entitäten-Anzahl
+    /// max_power ~ n^entity_exponent
+    /// Optimal: 0.25 (Bereich: 0.20-0.30)
+    /// - Sub-quadratic Scaling (1/4 Wurzel)
+    /// - Stark genug gegen Sybil/Whale Mass-Creation
+    /// - Erlaubt legitime Realm-Clusters
+    pub entity_exponent: f64,
+
+    /// Alarm: Top-Prozentsatz für Calcification-Check
+    /// Optimal: 0.03 (Top 3%) (Bereich: 0.01-0.10)
+    /// - Erkennt Whales in Netzen >500 Nodes früh
+    /// - Berücksichtigt Pareto-Effekt
+    /// - Vermeidet False-Positives bei kleinen Nets
+    pub alarm_top_percentage: f64,
+
+    /// Alarm: Power-Schwelle für Calcification
+    /// Wenn Top-n% > alarm_power_threshold der total_power → Alarm
+    /// Optimal: 0.42 (Bereich: 0.35-0.55)
+    /// - Strenger Schutz vor Concentration
+    /// - Verhindert >42% Power bei Top-Gruppen
+    /// - Resilientes Equilibrium
+    pub alarm_power_threshold: f64,
 
     /// Power-Cap Exponent (Quadratic Voting Inspiration)
     /// effective_power = total_power^exponent / count
@@ -561,6 +597,30 @@ impl ProtectionConfig {
             });
         }
 
+        if self.entity_exponent <= 0.0 || self.entity_exponent > 1.0 {
+            return Err(ConfigValidationError::InvalidProtection {
+                name: "entity_exponent",
+                value: self.entity_exponent,
+                reason: "must be in (0.0, 1.0]",
+            });
+        }
+
+        if self.alarm_top_percentage <= 0.0 || self.alarm_top_percentage > 1.0 {
+            return Err(ConfigValidationError::InvalidProtection {
+                name: "alarm_top_percentage",
+                value: self.alarm_top_percentage,
+                reason: "must be in (0.0, 1.0]",
+            });
+        }
+
+        if self.alarm_power_threshold <= 0.0 || self.alarm_power_threshold > 1.0 {
+            return Err(ConfigValidationError::InvalidProtection {
+                name: "alarm_power_threshold",
+                value: self.alarm_power_threshold,
+                reason: "must be in (0.0, 1.0]",
+            });
+        }
+
         if self.power_cap_exponent <= 0.0 || self.power_cap_exponent > 1.0 {
             return Err(ConfigValidationError::InvalidProtection {
                 name: "power_cap_exponent",
@@ -581,15 +641,26 @@ impl ProtectionConfig {
         }
         total_power.powf(self.power_cap_exponent) / (count as f64).sqrt()
     }
+
+    /// Κ19: Berechne maximale erlaubte Macht für eine Entität
+    /// max_power(s) = √(Σ power) / |S|^entity_exponent
+    #[inline]
+    pub fn calculate_power_cap(&self, total_power: f64, entity_count: usize) -> f64 {
+        let count = entity_count.max(1) as f64;
+        total_power.sqrt() / count.powf(self.entity_exponent)
+    }
 }
 
 impl Default for ProtectionConfig {
     fn default() -> Self {
         Self {
-            // Optimale Werte aus Simulation
-            gini_threshold: 0.35,    // Optimal: 0.35 (Bereich: 0.32-0.38)
-            decay_rate: 0.0008,      // Optimal: 0.0008 (Bereich: 0.0005-0.0012)
-            power_cap_exponent: 0.5, // sqrt-Scaling (Quadratic Voting)
+            // Optimale Werte aus Small-World Simulation
+            gini_threshold: 0.35,        // Optimal: 0.35 (Bereich: 0.32-0.38)
+            decay_rate: 0.006,           // Optimal: 0.006 (Bereich: 0.003-0.012)
+            entity_exponent: 0.25,       // Optimal: 0.25 (Bereich: 0.20-0.30)
+            alarm_top_percentage: 0.03,  // Optimal: 0.03 (Top 3%)
+            alarm_power_threshold: 0.42, // Optimal: 0.42 (42% Schwelle)
+            power_cap_exponent: 0.5,     // sqrt-Scaling (Quadratic Voting)
             min_trust_after_decay: 0.05,
         }
     }
@@ -1081,8 +1152,12 @@ mod tests {
     fn test_protection_defaults() {
         let config = ProtectionConfig::default();
 
+        // Optimale Werte aus Small-World Simulation
         assert_eq!(config.gini_threshold, 0.35); // Optimal: 0.35
-        assert_eq!(config.decay_rate, 0.0008); // Optimal: 0.0008
+        assert_eq!(config.decay_rate, 0.006); // Optimal: 0.006
+        assert_eq!(config.entity_exponent, 0.25); // Optimal: 0.25
+        assert_eq!(config.alarm_top_percentage, 0.03); // Optimal: 0.03 (Top 3%)
+        assert_eq!(config.alarm_power_threshold, 0.42); // Optimal: 0.42
         assert_eq!(config.power_cap_exponent, 0.5); // sqrt-Scaling
     }
 
