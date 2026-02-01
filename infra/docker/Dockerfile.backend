@@ -87,7 +87,7 @@ echo "========================================="
 # ⚡ MOLD Linker für schnelle Rebuilds
 export RUSTFLAGS="-C link-arg=-fuse-ld=mold"
 exec cargo watch --poll --why \
-  -x "run" \
+  -x "run --bin erynoa-api" \
   -w src \
   -w Cargo.toml \
   -w config \
