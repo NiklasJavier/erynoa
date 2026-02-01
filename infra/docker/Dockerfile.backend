@@ -63,61 +63,35 @@ WORKDIR /workspace/backend
 # Exponiere API Port
 EXPOSE 3000
 
-# Erstelle ein Startup-Script, das wartet bis die DB bereit ist
+# Erstelle ein Startup-Script für ECLVM (kein externes DB benötigt - nutzt Fjall embedded)
 RUN cat > /entrypoint.sh << 'EOF'
 #!/bin/bash
 set -e
 
 echo "========================================="
-echo "Backend Container Starting..."
+echo "🚀 Erynoa Backend Container Starting..."
+echo "   Mode: ECLVM (Embedded Fjall Storage)"
 echo "========================================="
-
-# Warte bis PostgreSQL bereit ist (bis zu 300 Sekunden = 5 Minuten)
-echo "[1/2] Waiting for PostgreSQL to be ready at db:5432..."
-DB_READY=0
-for i in {1..300}; do
-  if pg_isready -h db -p 5432 -U godstack -d godstack 2>/dev/null; then
-    echo "✓ PostgreSQL is ready! (after $i seconds)"
-    DB_READY=1
-    break
-  fi
-  if [ $((i % 10)) -eq 0 ]; then
-    echo "  Still waiting... ($i/300 seconds)"
-  fi
-  sleep 1
-done
-
-if [ $DB_READY -eq 0 ]; then
-  echo "✗ PostgreSQL did not become ready after 300 seconds"
-  echo "Checking if db host is resolvable..."
-  getent hosts db || echo "✗ db hostname not resolvable!"
-  exit 1
-fi
-
-# Gib kurz Zeit für sqlx migrations preparation
-echo "[2/2] Giving database time to stabilize..."
-sleep 3
 
 # Starte cargo watch mit optimierten Einstellungen
-echo "========================================="
+echo ""
 echo "Starting cargo watch with hot-reload..."
-echo "Code changes in src/ will trigger rebuild"
-echo "Watching: src/, Cargo.toml, config/"
-echo "⚡ Using MOLD linker for fast rebuilds"
+echo "  ├─ Code changes in src/ will trigger rebuild"
+echo "  ├─ Watching: src/, Cargo.toml, config/"
+echo "  └─ ⚡ Using MOLD linker for fast rebuilds"
+echo ""
 echo "========================================="
 
 # --poll für bessere Kompatibilität in Container-Umgebungen
 # --why zeigt an welche Datei den Rebuild ausgelöst hat
-# Überwache auch backend/proto/ für Connect-RPC Code-Generierung
 # ⚡ MOLD Linker für schnelle Rebuilds
 export RUSTFLAGS="-C link-arg=-fuse-ld=mold"
 exec cargo watch --poll --why \
-  -x "run --features connect" \
+  -x "run" \
   -w src \
   -w Cargo.toml \
   -w config \
-  -w ../backend/proto \
-  -s "cd /workspace && buf generate 2>/dev/null || echo '⚠️  buf generate skipped (not critical)'"
+  -w proto
 EOF
 
 RUN chmod +x /entrypoint.sh
