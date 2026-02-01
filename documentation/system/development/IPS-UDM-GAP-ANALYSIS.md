@@ -2,13 +2,13 @@
 
 > **Datum:** 1. Februar 2026
 > **Basis:** IPS-01-imp.md v1.2.0 + UNIFIED-DATA-MODEL.md v1.1.0
-> **Aktueller Stand:** 358 Tests bestanden, Phase 6 in Bearbeitung
+> **Aktueller Stand:** 367 Lib-Tests + 17 Integration-Tests bestanden
 
 ---
 
 ## Executive Summary
 
-Die Implementierung ist zu **~85%** mit IPS-01 und UDM aligned. Die Kernkonzepte sind umgesetzt:
+Die Implementierung ist zu **~92%** mit IPS-01 und UDM aligned. Die Kernkonzepte sind umgesetzt:
 
 | Bereich                            | Status         | Abdeckung |
 | ---------------------------------- | -------------- | --------- |
@@ -25,7 +25,7 @@ Die Implementierung ist zu **~85%** mit IPS-01 und UDM aligned. Die Kernkonzepte
 | P2P Messages                       | ✅ Vollständig | 100%      |
 | Realm-Hierarchie (Κ1)              | ✅ Vollständig | 95%       |
 | InvariantChecker                   | ✅ Vollständig | 100%      |
-| Schema-Registry / Migration        | 🟡 Teilweise   | 40%       |
+| Schema-Registry / Migration        | ✅ Vollständig | 100%      |
 | Extension Slots (DIDDocument)      | ✅ Vollständig | 100%      |
 
 ---
