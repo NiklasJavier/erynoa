@@ -117,7 +117,10 @@ impl EventProcessor {
     }
 
     /// Validiere Event-Payload
-    fn validate_payload(_ctx: &mut ExecutionContext, payload: &EventPayload) -> ExecutionResult<()> {
+    fn validate_payload(
+        _ctx: &mut ExecutionContext,
+        payload: &EventPayload,
+    ) -> ExecutionResult<()> {
         match payload {
             EventPayload::Transfer { amount, .. } => {
                 if *amount == 0 {

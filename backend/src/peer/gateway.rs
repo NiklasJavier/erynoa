@@ -21,8 +21,7 @@
 
 use crate::domain::unified::realm::StoreTemplate;
 use crate::domain::{
-    RealmId, RootRealm, TrustDampeningMatrix, TrustVector6D, UniversalId,
-    VirtualRealm, DID,
+    RealmId, RootRealm, TrustDampeningMatrix, TrustVector6D, UniversalId, VirtualRealm, DID,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
