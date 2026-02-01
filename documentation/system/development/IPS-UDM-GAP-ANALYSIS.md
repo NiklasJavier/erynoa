@@ -2,7 +2,7 @@
 
 > **Datum:** 1. Februar 2026
 > **Basis:** IPS-01-imp.md v1.2.0 + UNIFIED-DATA-MODEL.md v1.1.0
-> **Aktueller Stand:** 386 Lib-Tests + 17 Integration-Tests + 21 Property-Tests bestanden (424 total)
+> **Aktueller Stand:** 394 Lib-Tests + 17 Integration-Tests + 21 Property-Tests bestanden (432 total)
 
 ---
 
