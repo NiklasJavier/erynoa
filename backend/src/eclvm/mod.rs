@@ -53,6 +53,7 @@
 //! ```
 
 pub mod ast;
+pub mod bridge;
 pub mod bytecode;
 #[cfg(feature = "cli")]
 pub mod cli;
@@ -66,6 +67,7 @@ pub mod runtime;
 pub mod stdlib;
 
 // Re-exports für einfachen Zugriff
+pub use bridge::{CoreToEclvm, EclvmToCore, InterpretError};
 pub use bytecode::{OpCode, Value};
 #[cfg(feature = "cli")]
 pub use cli::{run_cli, Cli, Commands};

@@ -71,12 +71,17 @@
 
 pub mod context;
 pub mod error;
+pub mod information_loss;
 
 // Re-exports
 pub use context::{
     DelegationHop, Event, ExecutionContext, ExecutionSummary, TrustContext, WorldState,
 };
 pub use error::{ErrorCategory, ExecutionError, ExecutionResult};
+pub use information_loss::{
+    ChannelType, CompressionRecord, InformationLoss, LossReason, LossRegistry, LossSummary,
+    LossTracker,
+};
 
 // ============================================================================
 // Prelude für häufige Imports
