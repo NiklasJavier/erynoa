@@ -109,7 +109,14 @@ impl EventStore {
             .unwrap_or_default();
         Ok(children
             .into_iter()
-            .filter_map(|s| EventId::from_hex(&s).ok())
+            .filter_map(|s| {
+                // Format: "type:hex" - extrahiere nur den Hex-Teil
+                if let Some(hex_part) = s.split(':').last() {
+                    EventId::from_hex(hex_part).ok()
+                } else {
+                    EventId::from_hex(&s).ok()
+                }
+            })
             .collect())
     }
 

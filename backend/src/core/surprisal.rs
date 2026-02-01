@@ -132,7 +132,9 @@ impl SurprisalCalculator {
             EventPayload::SagaStep { action, .. } => format!("saga:{}", action),
             EventPayload::Custom { event_type, .. } => format!("custom:{}", event_type),
             EventPayload::Witness { .. } => "witness".to_string(),
-            EventPayload::AnchorConfirm { anchor_system, .. } => format!("anchor:{}", anchor_system),
+            EventPayload::AnchorConfirm { anchor_system, .. } => {
+                format!("anchor:{}", anchor_system)
+            }
             EventPayload::TrustUpdate { dimension, .. } => format!("trust_update:{:?}", dimension),
         }
     }
@@ -240,23 +242,25 @@ impl CountMinSketch {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::{EventPayload, DID};
+    use crate::domain::{DIDNamespace, EventPayload, DID};
 
     #[test]
     fn test_surprisal_calculation() {
         let mut calc = SurprisalCalculator::new();
-        let alice = DID::new_self(b"alice");
+        let alice = DID::new(DIDNamespace::Self_, b"alice");
+        let bob = DID::new(DIDNamespace::Self_, b"bob");
 
         // Erstes Event: hohe Surprisal
         let event1 = Event::new(
-            alice.clone(),
+            alice.id.clone(),
+            vec![],
             EventPayload::Transfer {
-                from: alice.clone(),
-                to: DID::new_self(b"bob"),
+                from: alice.id.clone(),
+                to: bob.id.clone(),
                 amount: 100,
                 asset_type: "ERY".to_string(),
             },
-            vec![],
+            0,
         );
 
         let surprisal_first = calc.calculate_surprisal(&event1);
@@ -274,16 +278,18 @@ mod tests {
     #[test]
     fn test_dampened_surprisal() {
         let calc = SurprisalCalculator::new();
-        let alice = DID::new_self(b"alice");
+        let alice = DID::new(DIDNamespace::Self_, b"alice");
+        let bob = DID::new(DIDNamespace::Self_, b"bob");
 
         let event = Event::new(
-            alice.clone(),
-            EventPayload::Attest {
-                subject: DID::new_self(b"bob"),
-                claim: "verified".to_string(),
-                evidence: None,
-            },
+            alice.id.clone(),
             vec![],
+            EventPayload::Attest {
+                subject: bob.id.clone(),
+                claim: "verified".to_string(),
+                evidence_hash: None,
+            },
+            0,
         );
 
         // Hoher Trust → weniger Dämpfung

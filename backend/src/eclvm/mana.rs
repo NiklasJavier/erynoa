@@ -359,8 +359,13 @@ mod tests {
         let account = ManaAccount::new(&trust, &config);
 
         // Trust 0.9 → multiplier 1 + 0.9*100 = 91
-        // max_mana = 10_000 * 91 = 910_000
-        assert_eq!(account.max(), 910_000);
+        // max_mana = 10_000 * 91 = 910_000 (mit Fließkomma-Toleranz)
+        let max = account.max();
+        assert!(
+            (max as i64 - 910_000i64).abs() < 10,
+            "Expected ~910_000, got {}",
+            max
+        );
     }
 
     #[test]

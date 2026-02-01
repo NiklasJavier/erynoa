@@ -441,6 +441,7 @@ impl Event {
     pub fn primary_trust_dimension(&self) -> Option<super::trust::TrustDimension> {
         use super::trust::TrustDimension;
         match &self.payload {
+            EventPayload::Transfer { .. } => Some(TrustDimension::Reliability),
             EventPayload::Attest { .. } => Some(TrustDimension::Prestige),
             EventPayload::Delegate { .. } => Some(TrustDimension::Reliability),
             EventPayload::Witness { .. } => Some(TrustDimension::Integrity),

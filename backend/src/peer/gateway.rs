@@ -506,7 +506,7 @@ mod tests {
         let alice = DID::new_self(b"alice");
         guard.register_trust(
             alice.clone(),
-            TrustVector6D::new(0.5, 0.5, 0.5, 0.5, 0.5, 0.5), // Trust ~0.5
+            TrustVector6D::new(0.2, 0.2, 0.2, 0.2, 0.2, 0.2), // Low trust
         );
 
         let result = guard

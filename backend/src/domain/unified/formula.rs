@@ -721,10 +721,10 @@ mod tests {
         let surprisal = Surprisal::from_frequency(5, 100, 1);
         let human_factor = HumanFactor::BasicAttestation;
 
-        let contrib = WorldFormulaContribution::new(subject)
+        let contrib = WorldFormulaContribution::new(subject, 0)
             .with_activity(activity)
-            .with_trust_norm(trust.weighted_norm(&TrustVector6D::default_weights()))
-            .with_causal_connectivity(100)
+            .with_trust(&trust)
+            .with_causal_history(100)
             .with_surprisal(surprisal)
             .with_human_factor(human_factor)
             .with_temporal_weight(0.9)

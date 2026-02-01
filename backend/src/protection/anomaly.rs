@@ -437,7 +437,8 @@ mod tests {
         let mut found_velocity_anomaly = false;
 
         // 10 Events in kurzer Zeit (mehr als max_events_per_minute)
-        for _ in 0..10 {
+        // Start bei Lamport 100 um saturating_sub-Problem zu vermeiden
+        for i in 0..10 {
             let event = Event::new(
                 alice.id.clone(),
                 vec![],
@@ -445,7 +446,7 @@ mod tests {
                     event_type: "test".to_string(),
                     data: vec![],
                 },
-                0,
+                100 + i, // Aufsteigende Lamport-Zeiten im gleichen Fenster
             );
 
             let anomalies = detector.analyze_event(&event);

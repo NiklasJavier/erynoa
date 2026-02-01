@@ -368,12 +368,11 @@ mod tests {
 
     #[test]
     fn test_default_entry_policy_allows_trusted() {
-        let host = Arc::new(
-            StubHost::new().with_trust("did:erynoa:self:alice", [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]),
-        );
+        let alice = DID::new_self(b"alice");
+        let alice_uri = alice.to_uri();
+        let host = Arc::new(StubHost::new().with_trust(&alice_uri, [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]));
         let gateway = ProgrammableGateway::new(host);
 
-        let alice = DID::new_self(b"alice");
         let alice_trust = TrustVector6D::new(0.8, 0.8, 0.8, 0.8, 0.8, 0.8);
 
         let decision = gateway
@@ -385,12 +384,11 @@ mod tests {
 
     #[test]
     fn test_default_entry_policy_denies_newcomer() {
-        let host = Arc::new(
-            StubHost::new().with_trust("did:erynoa:self:bob", [0.1, 0.1, 0.1, 0.1, 0.1, 0.1]),
-        );
+        let bob = DID::new_self(b"bob");
+        let bob_uri = bob.to_uri();
+        let host = Arc::new(StubHost::new().with_trust(&bob_uri, [0.1, 0.1, 0.1, 0.1, 0.1, 0.1]));
         let gateway = ProgrammableGateway::new(host);
 
-        let bob = DID::new_self(b"bob");
         let bob_trust = TrustVector6D::newcomer(); // 0.1
 
         let decision = gateway
@@ -402,15 +400,14 @@ mod tests {
 
     #[test]
     fn test_custom_policy_high_trust() {
-        let host = Arc::new(
-            StubHost::new().with_trust("did:erynoa:self:alice", [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]),
-        );
+        let alice = DID::new_self(b"alice");
+        let alice_uri = alice.to_uri();
+        let host = Arc::new(StubHost::new().with_trust(&alice_uri, [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]));
         let mut gateway = ProgrammableGateway::new(host);
 
         let finance = realm_id_from_name("realm:erynoa:finance");
         gateway.register_entry_policy(finance.clone(), StandardPolicies::high_trust());
 
-        let alice = DID::new_self(b"alice");
         let alice_trust = TrustVector6D::new(0.8, 0.8, 0.8, 0.8, 0.8, 0.8);
 
         let decision = gateway
@@ -420,12 +417,12 @@ mod tests {
 
         // Medium trust user should be denied
         let charlie = DID::new_self(b"charlie");
+        let charlie_uri = charlie.to_uri();
         let charlie_trust = TrustVector6D::new(0.5, 0.5, 0.5, 0.5, 0.5, 0.5);
 
         // Need to update host mock for charlie
-        let host2 = Arc::new(
-            StubHost::new().with_trust("did:erynoa:self:charlie", [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]),
-        );
+        let host2 =
+            Arc::new(StubHost::new().with_trust(&charlie_uri, [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]));
         let mut gateway2 = ProgrammableGateway::new(host2);
         gateway2.register_entry_policy(finance.clone(), StandardPolicies::high_trust());
 
@@ -437,17 +434,18 @@ mod tests {
 
     #[test]
     fn test_verified_users_policy() {
+        let alice = DID::new_self(b"alice");
+        let alice_uri = alice.to_uri();
         let host = Arc::new(
             StubHost::new()
-                .with_trust("did:erynoa:self:alice", [0.8, 0.8, 0.8, 0.8, 0.8, 0.8])
-                .with_credential("did:erynoa:self:alice", "email-verified"),
+                .with_trust(&alice_uri, [0.8, 0.8, 0.8, 0.8, 0.8, 0.8])
+                .with_credential(&alice_uri, "email-verified"),
         );
         let mut gateway = ProgrammableGateway::new(host);
 
         let verified = realm_id_from_name("realm:verified");
         gateway.register_entry_policy(verified.clone(), StandardPolicies::verified_users());
 
-        let alice = DID::new_self(b"alice");
         let alice_trust = TrustVector6D::new(0.8, 0.8, 0.8, 0.8, 0.8, 0.8);
 
         let decision = gateway

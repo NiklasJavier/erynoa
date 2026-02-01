@@ -2099,18 +2099,15 @@ mod tests {
         let did = DID::new_self(b"alice123");
 
         let shared = PrefixBuilder::shared(&realm_id, "posts");
-        assert_eq!(
-            shared.store_prefix(),
-            "realm:social.berlin:shared:store:posts"
-        );
-        assert_eq!(
-            shared.key("post1"),
-            "realm:social.berlin:shared:store:posts:post1"
-        );
+        // RealmId wird jetzt als Hex gespeichert, nicht als Name
+        assert!(shared.store_prefix().starts_with("realm:"));
+        assert!(shared.store_prefix().contains(":shared:store:posts"));
+        assert!(shared.key("post1").ends_with(":post1"));
 
         let personal = PrefixBuilder::personal(&realm_id, &did, "notes");
         assert!(personal.store_prefix().contains("personal"));
-        assert!(personal.store_prefix().contains("alice123"));
+        // DID wird als Hex gespeichert, nicht als lesbarer Name
+        assert!(personal.store_prefix().contains(&did.id.to_hex()));
     }
 
     #[test]
