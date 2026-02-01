@@ -3,7 +3,7 @@ name: DevContainer Test
 on:
   schedule:
     # Jeden Montag um 2:00 UTC (3:00 MEZ)
-    - cron: '0 2 * * 1'
+    - cron: "0 2 * * 1"
   workflow_dispatch:
 
 jobs:
@@ -11,51 +11,51 @@ jobs:
     name: Test DevContainer Build
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Build DevContainer
         run: |
           cd .devcontainer
           docker compose build dev
-      
+
       - name: Test DevContainer Tools
         run: |
           cd .devcontainer
           docker compose run --rm dev bash -c "
             set -e
             echo '🔍 Testing installed tools...'
-            
+
             # Rust
             rustc --version || (echo '❌ rustc not found' && exit 1)
             cargo --version || (echo '❌ cargo not found' && exit 1)
             echo '✅ Rust tools OK'
-            
+
             # Node.js & pnpm
             node --version || (echo '❌ node not found' && exit 1)
             pnpm --version || (echo '❌ pnpm not found' && exit 1)
             echo '✅ Node.js & pnpm OK'
-            
+
             # buf
             buf --version || (echo '❌ buf not found' && exit 1)
             echo '✅ buf OK'
-            
+
             # just
             just --version || (echo '❌ just not found' && exit 1)
             echo '✅ just OK'
-            
+
             # direnv
             direnv --version || (echo '❌ direnv not found' && exit 1)
             echo '✅ direnv OK'
-            
+
             # Docker (Docker-in-Docker)
             docker --version || (echo '❌ docker not found' && exit 1)
             echo '✅ Docker OK'
-            
+
             echo '✅ All tools installed correctly'
           "
-      
+
       - name: Test Backend Build
         run: |
           cd .devcontainer
@@ -66,7 +66,7 @@ jobs:
             cargo check || (echo '❌ Backend build failed' && exit 1)
             echo '✅ Backend builds successfully'
           "
-      
+
       - name: Test Frontend Setup
         run: |
           cd .devcontainer
@@ -77,7 +77,7 @@ jobs:
             pnpm install --frozen-lockfile || (echo '❌ Frontend install failed' && exit 1)
             echo '✅ Frontend dependencies installed'
           "
-      
+
       - name: Test Protobuf Generation
         run: |
           cd .devcontainer
@@ -88,13 +88,13 @@ jobs:
             buf generate || (echo '❌ Protobuf generation failed' && exit 1)
             echo '✅ Protobuf generation OK'
           "
-      
+
       - name: Cleanup
         if: always()
         run: |
           cd .devcontainer
           docker compose down -v || true
-      
+
       - name: Summary
         if: always()
         run: |
@@ -110,4 +110,3 @@ jobs:
           echo "- Backend build check" >> $GITHUB_STEP_SUMMARY
           echo "- Frontend setup" >> $GITHUB_STEP_SUMMARY
           echo "- Protobuf generation" >> $GITHUB_STEP_SUMMARY
-
