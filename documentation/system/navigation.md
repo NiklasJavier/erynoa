@@ -1,8 +1,8 @@
 # 🧭 Dokumentations-Navigation
 
-**Letzte Aktualisierung**: 2026-01-27 (20:57)
+**Letzte Aktualisierung**: 2026-02-01
 
-**Status**: Aktuell und vollständig ✅
+**Status**: Aktuell und vollständig ✅ (inkl. Priorität 3)
 
 Diese Datei bietet eine Übersicht über die gesamte Dokumentationsstruktur und hilft dabei, schnell die richtige Dokumentation zu finden.
 
@@ -31,7 +31,7 @@ documentation/
     └── archive/                 # Historische Dokumentation
 ```
 
-> 💡 **Hinweis:** Höher-level **Konzept- und Protokoll-Dokumente** (Erynoa Triade, liquides Datenmodell, Cybernetic Loop etc.) befinden sich im Verzeichnis `../concept/`.  
+> 💡 **Hinweis:** Höher-level **Konzept- und Protokoll-Dokumente** (Erynoa Triade, liquides Datenmodell, Cybernetic Loop etc.) befinden sich im Verzeichnis `../concept/`.
 > Einstieg: `../concept/README.md`.
 
 ---
@@ -97,6 +97,7 @@ documentation/
 **Ziel**: Detaillierte technische Informationen
 
 - **[Architecture](reference/architecture.md)** - Systemarchitektur, Tech Stack, Design-Entscheidungen
+- **[Backend Architecture](reference/BACKEND-ARCHITECTURE.md)** - Backend-Schichten, UDM, Axiom-Mapping
 - **[Configuration](reference/config.md)** - Service-Konfiguration, Ports, Verbindungen
 - **[Connections](reference/connections.md)** - API-Verbindungen, Error-Handling Harmonisierung
 
@@ -107,8 +108,11 @@ documentation/
 - **[Style Guide](development/style-guide.md)** - Code-Stil, Naming Conventions, File Organization
 - **[Testing](development/testing.md)** - Test-Strategien, Tools, Best Practices
 - **[todos](development/todos.md)** - Offene Aufgaben, Prioritäten, bekannte Issues
+- **[IPS Implementation](development/IPS-01-imp.md)** - Mathematisches Logik-Modell (Kategorialtheorie)
+- **[Unified Data Model](development/UNIFIED-DATA-MODEL.md)** - UDM Datenstruktur-Spezifikation
+- **[P2P Implementation](development/P2P-IMPLEMENTATION.md)** - libp2p Netzwerk-Details
+- **[IPS-UDM Gap Analysis](development/IPS-UDM-GAP-ANALYSIS.md)** - Implementierungs-Status
 - **[REST Deprecation Plan](development/rest_deprecation_plan.md)** - Plan zur REST-API Entfernung
-- **[Folder Structure Analysis](development/folder_structure_analysis.md)** - Struktur-Analyse & Optimierungsvorschläge
 - **[Folder Structure Analysis](development/folder_structure_analysis.md)** - Struktur-Analyse & Optimierungsvorschläge
 
 ### 📦 Archive (Historische Dokumentation)

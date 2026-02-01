@@ -159,6 +159,8 @@ Dieses Dokument beschreibt die **technische Plattform-Architektur** – Frontend
 | **Tokio**       | 1.x     | Async Runtime            |
 | **SQLx**        | 0.8     | DB (Compile-Time Checks) |
 | **Connect-RPC** | -       | gRPC-Web API             |
+| **libp2p**      | 0.54    | P2P Networking           |
+| **Fjall**       | -       | Embedded Key-Value Store |
 | **Jemalloc**    | -       | Memory Allocator         |
 
 ### Fähigkeiten
@@ -342,12 +344,15 @@ erynoa/
 ├── 🦀 backend/                    Rust Backend
 │   ├── src/
 │   │   ├── api/                   API Layer
+│   │   ├── core/                  Weltformel, Consensus, Engine
+│   │   ├── domain/                Domain-Typen (UniversalId, Trust, Event)
+│   │   ├── execution/             ExecutionContext (Monade ℳ)
+│   │   ├── local/                 Fjall Storage, Archive, Realm-Storage
+│   │   ├── peer/                  P2P Layer (libp2p, NAT-Traversal)
+│   │   ├── protection/            Anti-Calcification, Adaptive Calibration
 │   │   ├── auth/                  Auth Logic
-│   │   ├── cache/                 Cache Layer
 │   │   ├── config/                Configuration
-│   │   ├── db/                    Database Layer
-│   │   ├── gen/                   Generated Protobuf
-│   │   └── storage/               Storage Layer
+│   │   └── gen/                   Generated Protobuf
 │   ├── config/                    TOML Config Files
 │   ├── migrations/                SQL Migrations
 │   └── proto/                     Protobuf Definitions

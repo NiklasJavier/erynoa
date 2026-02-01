@@ -385,6 +385,10 @@ api/v1/{feature}/
 | GitHub Actions CI/CD           | ✅     |
 | Nix Flakes Environment         | ✅     |
 | Protobuf Code-Gen              | ✅     |
+| **libp2p NAT-Traversal**       | ✅     |
+| **Cold Storage / Archive**     | ✅     |
+| **Adaptive Kalibrierung**      | ✅     |
+| **409 Backend-Tests**          | ✅     |
 
 ### 🔄 In Arbeit
 
@@ -444,6 +448,6 @@ Die System-Dokumentation fokussiert auf die **Implementierung**. Für das **Prot
 └─────────────────────────────────────────────┘
 ```
 
-**Letzte Aktualisierung:** Januar 2026
+**Letzte Aktualisierung:** Februar 2026 (Priorität 3 abgeschlossen)
 
 </div>
