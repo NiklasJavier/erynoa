@@ -238,13 +238,19 @@ impl TopicManager {
         self.subscribed.write().remove(&hash);
         self.topics.write().remove(&hash);
 
-        // Update Realm-Membership
+        // Update Realm-Membership (avoid deadlock by not nesting write() calls)
         if let Some(realm_id) = &topic.realm_id {
-            if let Some(types) = self.realm_memberships.write().get_mut(realm_id) {
-                types.remove(&topic.topic_type);
-                if types.is_empty() {
-                    self.realm_memberships.write().remove(realm_id);
+            let should_remove = {
+                let mut memberships = self.realm_memberships.write();
+                if let Some(types) = memberships.get_mut(realm_id) {
+                    types.remove(&topic.topic_type);
+                    types.is_empty()
+                } else {
+                    false
                 }
+            };
+            if should_remove {
+                self.realm_memberships.write().remove(realm_id);
             }
         }
 
