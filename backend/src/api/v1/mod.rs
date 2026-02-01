@@ -20,3 +20,7 @@ pub mod connect_routes;
 
 // REST fallback handlers for health checks and info
 pub mod rest_handlers;
+
+// Passkey/WebAuthn authentication module
+pub mod auth;
+pub use auth::StoredPasskeyCredential;

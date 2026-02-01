@@ -1040,6 +1040,7 @@ dependencies = [
  "axum 0.8.8",
  "axum-connect",
  "axum-connect-build",
+ "base64 0.22.1",
  "bincode",
  "bs58",
  "chrono",

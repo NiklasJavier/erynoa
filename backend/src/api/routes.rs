@@ -5,7 +5,7 @@
 use crate::server::AppState;
 use axum::{
     middleware::{from_fn, from_fn_with_state},
-    routing::get,
+    routing::{get, post},
     Router,
 };
 // TODO: Rate Limiting mit tower_governor 0.4 korrekt implementieren
@@ -13,6 +13,7 @@ use axum::{
 
 use super::constants::API_VERSION;
 use super::middleware::{build_cors, frontend_origin_middleware, logging_middleware};
+use super::v1::auth::handlers as auth_handlers;
 use super::v1::rest_handlers;
 
 #[cfg(feature = "connect")]
@@ -22,6 +23,7 @@ use super::v1::connect_routes;
 ///
 /// REST fallback endpoints für Health-Checks und Info sind unter /api/v1/* verfügbar.
 /// Connect-RPC Services sind unter /api/v1/connect/* verfügbar.
+/// Auth endpoints für Passkey/WebAuthn sind unter /api/v1/auth/* verfügbar.
 pub fn create_router(state: AppState) -> Router {
     let cors = build_cors(&state);
 
@@ -40,6 +42,13 @@ pub fn create_router(state: AppState) -> Router {
         .route("/info", get(rest_handlers::info_handler))
         .route("/status", get(rest_handlers::status_handler));
 
+    // Auth routes for Passkey/WebAuthn authentication
+    // These endpoints handle challenge generation, registration, and verification
+    let auth_routes = Router::new()
+        .route("/challenge", get(auth_handlers::get_challenge))
+        .route("/passkey/register", post(auth_handlers::register_passkey))
+        .route("/passkey/verify", post(auth_handlers::verify_passkey));
+
     // Connect-RPC routes (gRPC-Web) - Primary API
     #[cfg(feature = "connect")]
     let connect_routes = connect_routes::create_connect_routes(state.clone());
@@ -48,10 +57,11 @@ pub fn create_router(state: AppState) -> Router {
     #[cfg(feature = "connect")]
     let api = Router::new()
         .merge(rest_routes)
+        .nest("/auth", auth_routes)
         .nest("/connect", connect_routes);
 
     #[cfg(not(feature = "connect"))]
-    let api = rest_routes;
+    let api = Router::new().merge(rest_routes).nest("/auth", auth_routes);
 
     // Haupt-Router mit Middleware und State
     // Note: frontend_origin_middleware needs State, so it must be applied after with_state

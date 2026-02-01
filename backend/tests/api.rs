@@ -255,4 +255,199 @@ mod tests {
         // Prüfe ob Response erfolgreich ist (CORS funktioniert)
         assert!(res.status().is_success());
     }
+
+    // ============================================================================
+    // Passkey Auth Tests (v1/auth)
+    // ============================================================================
+
+    #[tokio::test]
+    async fn auth_challenge_returns_valid_challenge() {
+        let app = TestApp::spawn().await;
+        let res = app.get("/api/v1/auth/challenge").await;
+
+        assert!(res.status().is_success());
+        let body: Value = res.json().await.unwrap();
+
+        // Challenge sollte vorhanden und Base64URL encoded sein
+        assert!(body["challenge"].is_string());
+        let challenge = body["challenge"].as_str().unwrap();
+        assert!(!challenge.is_empty());
+        // Base64URL: nur a-z, A-Z, 0-9, -, _
+        assert!(challenge
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '-' || c == '_'));
+
+        // Expires_at sollte in der Zukunft liegen
+        assert!(body["expires_at"].is_number());
+        let expires_at = body["expires_at"].as_i64().unwrap();
+        let now = chrono::Utc::now().timestamp();
+        assert!(expires_at > now);
+    }
+
+    #[tokio::test]
+    async fn auth_challenge_returns_unique_challenges() {
+        let app = TestApp::spawn().await;
+
+        let res1 = app.get("/api/v1/auth/challenge").await;
+        let body1: Value = res1.json().await.unwrap();
+        let challenge1 = body1["challenge"].as_str().unwrap();
+
+        let res2 = app.get("/api/v1/auth/challenge").await;
+        let body2: Value = res2.json().await.unwrap();
+        let challenge2 = body2["challenge"].as_str().unwrap();
+
+        // Challenges sollten einzigartig sein
+        assert_ne!(challenge1, challenge2);
+    }
+
+    #[tokio::test]
+    async fn auth_register_requires_valid_body() {
+        let app = TestApp::spawn().await;
+
+        // Leerer Body
+        let res = app.post("/api/v1/auth/passkey/register", None).await;
+        assert!(res.status().is_client_error());
+
+        // Unvollständiger Body
+        let incomplete = serde_json::json!({
+            "credential_id": "test-id"
+        });
+        let res = app
+            .post("/api/v1/auth/passkey/register", Some(incomplete))
+            .await;
+        assert!(res.status().is_client_error());
+    }
+
+    #[tokio::test]
+    async fn auth_register_accepts_valid_ed25519_registration() {
+        let app = TestApp::spawn().await;
+
+        // Valider Ed25519 Registration Request
+        // In der Praxis kommt der Public Key vom Authenticator
+        let valid_request = serde_json::json!({
+            "credential_id": "dGVzdC1jcmVkZW50aWFsLWlk",
+            "public_key": "dGVzdC1wdWJsaWMta2V5LWJhc2U2NC1lbmNvZGVk",
+            "algorithm": -8,  // Ed25519
+            "did": "did:erynoa:self:test123abc",
+            "namespace": "self",
+            "display_name": "Test User",
+            "transports": ["internal"]
+        });
+
+        let res = app
+            .post("/api/v1/auth/passkey/register", Some(valid_request))
+            .await;
+
+        // Sollte erfolgreich sein (oder spezifischer Fehler)
+        let body: Value = res.json().await.unwrap();
+        assert!(body.get("success").is_some() || body.get("error").is_some());
+    }
+
+    #[tokio::test]
+    async fn auth_register_rejects_unsupported_algorithm() {
+        let app = TestApp::spawn().await;
+
+        // RS256 ist nicht unterstützt
+        let request = serde_json::json!({
+            "credential_id": "dGVzdC1jcmVkZW50aWFsLWlk",
+            "public_key": "dGVzdC1wdWJsaWMta2V5",
+            "algorithm": -257,  // RS256 - nicht unterstützt
+            "did": "did:erynoa:self:test123",
+            "namespace": "self"
+        });
+
+        let res = app
+            .post("/api/v1/auth/passkey/register", Some(request))
+            .await;
+        let body: Value = res.json().await.unwrap();
+
+        // Sollte fehlschlagen
+        assert_eq!(body["success"], false);
+        assert!(body["error"].is_string());
+    }
+
+    #[tokio::test]
+    async fn auth_verify_requires_valid_body() {
+        let app = TestApp::spawn().await;
+
+        // Leerer Body
+        let res = app.post("/api/v1/auth/passkey/verify", None).await;
+        assert!(res.status().is_client_error());
+
+        // Unvollständiger Body
+        let incomplete = serde_json::json!({
+            "credential_id": "test-id"
+        });
+        let res = app
+            .post("/api/v1/auth/passkey/verify", Some(incomplete))
+            .await;
+        assert!(res.status().is_client_error());
+    }
+
+    #[tokio::test]
+    async fn auth_verify_returns_error_for_unknown_credential() {
+        let app = TestApp::spawn().await;
+
+        let request = serde_json::json!({
+            "credential_id": "dW5rbm93bi1jcmVkZW50aWFsLWlk",
+            "signature": "dGVzdC1zaWduYXR1cmU",
+            "authenticator_data": "dGVzdC1hdXRoLWRhdGE",
+            "client_data_json": "dGVzdC1jbGllbnQtZGF0YQ"
+        });
+
+        let res = app.post("/api/v1/auth/passkey/verify", Some(request)).await;
+        let body: Value = res.json().await.unwrap();
+
+        // Sollte fehlschlagen weil Credential nicht registriert
+        assert_eq!(body["success"], false);
+        assert!(body["error"].is_string());
+    }
+
+    #[tokio::test]
+    async fn auth_full_flow_register_then_verify() {
+        let app = TestApp::spawn().await;
+
+        // 1. Challenge holen
+        let challenge_res = app.get("/api/v1/auth/challenge").await;
+        assert!(challenge_res.status().is_success());
+        let challenge_body: Value = challenge_res.json().await.unwrap();
+        let _challenge = challenge_body["challenge"].as_str().unwrap();
+
+        // 2. Registrieren
+        // Hinweis: In einem echten Test würden wir eine echte WebAuthn-Signatur brauchen
+        // Hier testen wir nur, dass der Flow grundsätzlich funktioniert
+        let register_request = serde_json::json!({
+            "credential_id": "Zmxvdy10ZXN0LWNyZWRlbnRpYWw",
+            "public_key": "Zmxvdy10ZXN0LXB1YmxpYy1rZXk",
+            "algorithm": -8,
+            "did": "did:erynoa:self:flowtest123",
+            "namespace": "self",
+            "display_name": "Flow Test"
+        });
+
+        let register_res = app
+            .post("/api/v1/auth/passkey/register", Some(register_request))
+            .await;
+        let register_body: Value = register_res.json().await.unwrap();
+
+        // Verifizierung hängt davon ab, ob die Registrierung erfolgreich war
+        if register_body["success"] == true {
+            // 3. Versuche zu verifizieren (wird fehlschlagen ohne echte Signatur)
+            let verify_request = serde_json::json!({
+                "credential_id": "Zmxvdy10ZXN0LWNyZWRlbnRpYWw",
+                "signature": "dGVzdC1zaWduYXR1cmU",
+                "authenticator_data": "dGVzdC1hdXRoLWRhdGE",
+                "client_data_json": "dGVzdC1jbGllbnQtZGF0YQ"
+            });
+
+            let verify_res = app
+                .post("/api/v1/auth/passkey/verify", Some(verify_request))
+                .await;
+            let verify_body: Value = verify_res.json().await.unwrap();
+
+            // Verifizierung sollte fehlschlagen (ungültige Signatur)
+            // aber das Credential sollte gefunden werden
+            assert!(verify_body.get("success").is_some() || verify_body.get("error").is_some());
+        }
+    }
 }

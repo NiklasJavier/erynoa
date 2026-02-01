@@ -70,6 +70,10 @@ pub struct IdentityStore {
     pubkey_index: KvStore,
     /// Vouching Records (voucher_did:newcomer_did -> VouchRecord)
     vouch_records: KvStore,
+    /// Passkey Credentials (credential_id -> StoredPasskeyCredential)
+    passkey_credentials: KvStore,
+    /// Passkey DID Index (did -> credential_id)
+    passkey_did_index: KvStore,
 }
 
 impl IdentityStore {
@@ -79,6 +83,8 @@ impl IdentityStore {
             identities: KvStore::new(keyspace, "identities")?,
             pubkey_index: KvStore::new(keyspace, "pubkey_index")?,
             vouch_records: KvStore::new(keyspace, "vouch_records")?,
+            passkey_credentials: KvStore::new(keyspace, "passkey_credentials")?,
+            passkey_did_index: KvStore::new(keyspace, "passkey_did_index")?,
         })
     }
 
@@ -321,6 +327,128 @@ impl IdentityStore {
     /// Anzahl der gespeicherten Identitäten
     pub fn count(&self) -> usize {
         self.identities.len()
+    }
+
+    // ========================================================================
+    // PASSKEY CREDENTIAL METHODS
+    // ========================================================================
+
+    /// Speichert ein Passkey Credential
+    pub fn store_passkey_credential(
+        &self,
+        credential: &crate::api::v1::auth::StoredPasskeyCredential,
+    ) -> Result<()> {
+        // Speichere Credential unter credential_id
+        self.passkey_credentials
+            .put(&credential.credential_id, credential)?;
+
+        // Index: DID -> credential_id
+        self.passkey_did_index
+            .put(&credential.did, &credential.credential_id)?;
+
+        // Optional: Auch als StoredIdentity speichern für Kompatibilität
+        // mit dem bestehenden Identitätssystem
+        let namespace = credential
+            .namespace
+            .parse::<DIDNamespace>()
+            .unwrap_or(DIDNamespace::Self_);
+
+        let did = DID::new(namespace, &credential.public_key_hex[..16]);
+
+        let identity = StoredIdentity {
+            did: did.clone(),
+            public_key: credential.public_key_hex.clone(),
+            private_key: None, // Passkey = kein lokaler Private Key
+            created_at: credential.created_at,
+            metadata: {
+                let mut m = std::collections::HashMap::new();
+                m.insert("passkey".to_string(), "true".to_string());
+                m.insert(
+                    "credential_id".to_string(),
+                    credential.credential_id.clone(),
+                );
+                m.insert("algorithm".to_string(), credential.algorithm.to_string());
+                m
+            },
+            voucher: None,
+            vouch_stake: 0.0,
+        };
+
+        self.identities.put(credential.did.clone(), &identity)?;
+        self.pubkey_index
+            .put(&credential.public_key_hex, &credential.did)?;
+
+        Ok(())
+    }
+
+    /// Holt ein Passkey Credential per Credential ID
+    pub fn get_passkey_credential(
+        &self,
+        credential_id: &str,
+    ) -> Result<Option<crate::api::v1::auth::StoredPasskeyCredential>> {
+        self.passkey_credentials.get(credential_id)
+    }
+
+    /// Holt ein Passkey Credential per DID
+    pub fn get_passkey_credential_by_did(
+        &self,
+        did: &str,
+    ) -> Result<Option<crate::api::v1::auth::StoredPasskeyCredential>> {
+        if let Some(credential_id) = self.passkey_did_index.get::<_, String>(did)? {
+            self.passkey_credentials.get(&credential_id)
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Aktualisiert den last_used_at Timestamp eines Passkey Credentials
+    pub fn update_passkey_last_used(&self, credential_id: &str) -> Result<()> {
+        if let Some(mut credential) =
+            self.passkey_credentials
+                .get::<_, crate::api::v1::auth::StoredPasskeyCredential>(credential_id)?
+        {
+            credential.last_used_at = Some(chrono::Utc::now().timestamp());
+            credential.sign_count += 1;
+            self.passkey_credentials.put(credential_id, &credential)?;
+        }
+        Ok(())
+    }
+
+    /// Löscht ein Passkey Credential
+    pub fn delete_passkey_credential(&self, credential_id: &str) -> Result<()> {
+        if let Some(credential) =
+            self.passkey_credentials
+                .get::<_, crate::api::v1::auth::StoredPasskeyCredential>(credential_id)?
+        {
+            // Lösche Indizes
+            self.passkey_did_index.delete(&credential.did)?;
+            self.pubkey_index.delete(&credential.public_key_hex)?;
+            self.identities.delete(&credential.did)?;
+
+            // Lösche Credential
+            self.passkey_credentials.delete(credential_id)?;
+        }
+        Ok(())
+    }
+
+    /// Listet alle Passkey Credentials
+    pub fn list_passkey_credentials(
+        &self,
+    ) -> Result<Vec<crate::api::v1::auth::StoredPasskeyCredential>> {
+        let mut credentials = Vec::new();
+        for result in self
+            .passkey_credentials
+            .iter::<crate::api::v1::auth::StoredPasskeyCredential>()
+        {
+            let (_, credential) = result?;
+            credentials.push(credential);
+        }
+        Ok(credentials)
+    }
+
+    /// Anzahl der gespeicherten Passkey Credentials
+    pub fn passkey_count(&self) -> usize {
+        self.passkey_credentials.len()
     }
 }
 
