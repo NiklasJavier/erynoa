@@ -141,7 +141,7 @@ impl EventStore {
     pub fn update_finality(
         &self,
         id: &EventId,
-        finality: FinalityLevel,
+        finality: FinalityState,
         confirmations: u32,
     ) -> Result<()> {
         if let Some(mut stored) = self.get(id)? {
@@ -176,7 +176,7 @@ impl EventStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::{DIDNamespace, EventPayload, DID};
+    use crate::domain::{DIDNamespace, EventPayload, UniversalId, DID};
 
     fn create_test_store() -> EventStore {
         let folder = tempfile::tempdir().unwrap();
@@ -186,7 +186,7 @@ mod tests {
 
     fn create_test_event() -> Event {
         let author = DID::new(DIDNamespace::Self_, b"test123");
-        Event::genesis(author.clone(), "test-pubkey-123".to_string())
+        Event::genesis(author.id.clone(), author, 0)
     }
 
     #[test]
@@ -214,13 +214,14 @@ mod tests {
         // Child Event mit Genesis als Parent
         let author = DID::new(DIDNamespace::Self_, b"test456");
         let child = Event::new(
-            author.clone(),
-            EventPayload::Attest {
-                subject: author.clone(),
-                claim: "test claim".to_string(),
-                evidence: None,
-            },
+            author.id.clone(),
             vec![genesis_id.clone()],
+            EventPayload::Attest {
+                subject: author.id.clone(),
+                claim: "test claim".to_string(),
+                evidence_hash: None,
+            },
+            1,
         );
         store.put(child.clone()).unwrap();
 

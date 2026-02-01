@@ -314,12 +314,13 @@ impl IntentParser {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::DIDNamespace;
 
     #[test]
     fn test_parse_transfer() {
         let parser = IntentParser::default();
-        let alice = DID::new_self(b"alice");
-        let bob = DID::new_self(b"bob");
+        let alice = DID::new(DIDNamespace::Self_, b"alice");
+        let bob = DID::new(DIDNamespace::Self_, b"bob");
 
         let intent = parser
             .parse_transfer(alice.clone(), bob.clone(), 100, "ERY".to_string())
@@ -331,7 +332,7 @@ mod tests {
                 amount,
                 asset_type,
             } => {
-                assert_eq!(to, bob);
+                assert_eq!(to, bob.id);
                 assert_eq!(amount, 100);
                 assert_eq!(asset_type, "ERY");
             }
@@ -342,8 +343,8 @@ mod tests {
     #[test]
     fn test_parse_delegation() {
         let parser = IntentParser::default();
-        let alice = DID::new_self(b"alice");
-        let bob = DID::new_self(b"bob");
+        let alice = DID::new(DIDNamespace::Self_, b"alice");
+        let bob = DID::new(DIDNamespace::Self_, b"bob");
 
         let intent = parser
             .parse_delegation(
@@ -359,8 +360,9 @@ mod tests {
                 to,
                 capabilities,
                 ttl_seconds,
+                ..
             } => {
-                assert_eq!(to, bob);
+                assert_eq!(to, bob.id);
                 assert_eq!(capabilities.len(), 2);
                 assert_eq!(ttl_seconds, 86400);
             }
@@ -371,7 +373,7 @@ mod tests {
     #[test]
     fn test_parse_natural_transfer() {
         let parser = IntentParser::default();
-        let alice = DID::new_self(b"alice");
+        let alice = DID::new(DIDNamespace::Self_, b"alice");
 
         let intent = parser.parse_natural(alice, "send 100 ERY to Bob").unwrap();
 
@@ -386,8 +388,8 @@ mod tests {
     #[test]
     fn test_validate_zero_amount() {
         let parser = IntentParser::default();
-        let alice = DID::new_self(b"alice");
-        let bob = DID::new_self(b"bob");
+        let alice = DID::new(DIDNamespace::Self_, b"alice");
+        let bob = DID::new(DIDNamespace::Self_, b"bob");
 
         let result = parser.parse_transfer(alice, bob, 0, "ERY".to_string());
         let intent = result.unwrap();

@@ -17,7 +17,7 @@
 //! - Invarianten-Prüfungen
 
 use crate::core::engine::event_gas;
-use crate::domain::unified::{Cost, FinalityLevel as UnifiedFinalityLevel, UniversalId};
+use crate::domain::unified::{Cost, UniversalId};
 use crate::domain::{Event, EventId, FinalityLevel, DID};
 use crate::execution::{ExecutionContext, ExecutionError, ExecutionResult};
 use std::collections::{HashMap, HashSet};
@@ -484,13 +484,13 @@ pub struct EventEngineStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::EventPayload;
+    use crate::domain::{DIDNamespace, EventPayload};
 
     #[test]
     fn test_add_genesis_event() {
         let mut engine = EventEngine::default();
-        let did = DID::new_self(b"alice");
-        let event = Event::genesis(did.clone(), "pubkey".to_string());
+        let did = DID::new(DIDNamespace::Self_, b"alice");
+        let event = Event::genesis(did.id.clone(), did.clone(), 0);
 
         let id = engine.add_event(event).unwrap();
         assert!(engine.genesis_events.contains(&id));
@@ -500,22 +500,24 @@ mod tests {
     #[test]
     fn test_add_event_with_parent() {
         let mut engine = EventEngine::default();
-        let did = DID::new_self(b"alice");
+        let did = DID::new(DIDNamespace::Self_, b"alice");
+        let bob = DID::new(DIDNamespace::Self_, b"bob");
 
         // Genesis
-        let genesis = Event::genesis(did.clone(), "pubkey".to_string());
+        let genesis = Event::genesis(did.id.clone(), did.clone(), 0);
         let genesis_id = engine.add_event(genesis).unwrap();
 
         // Child-Event
         let child = Event::new(
-            did.clone(),
+            did.id.clone(),
+            vec![genesis_id.clone()],
             EventPayload::Transfer {
-                from: did.clone(),
-                to: DID::new_self(b"bob"),
+                from: did.id.clone(),
+                to: bob.id.clone(),
                 amount: 100,
                 asset_type: "ERY".to_string(),
             },
-            vec![genesis_id.clone()],
+            1,
         );
 
         let child_id = engine.add_event(child).unwrap();
@@ -531,17 +533,22 @@ mod tests {
     #[test]
     fn test_reject_missing_parent() {
         let mut engine = EventEngine::default();
-        let did = DID::new_self(b"alice");
+        let did = DID::new(DIDNamespace::Self_, b"alice");
+        let bob = DID::new(DIDNamespace::Self_, b"bob");
+
+        // Fake parent ID
+        let fake_parent = UniversalId::new(UniversalId::TAG_EVENT, 1, b"nonexistent");
 
         let event = Event::new(
-            did.clone(),
+            did.id.clone(),
+            vec![fake_parent],
             EventPayload::Transfer {
-                from: did.clone(),
-                to: DID::new_self(b"bob"),
+                from: did.id.clone(),
+                to: bob.id.clone(),
                 amount: 100,
                 asset_type: "ERY".to_string(),
             },
-            vec![EventId::new("nonexistent")],
+            1,
         );
 
         let result = engine.add_event(event);
@@ -551,35 +558,37 @@ mod tests {
     #[test]
     fn test_causal_history_size() {
         let mut engine = EventEngine::default();
-        let alice = DID::new_self(b"alice");
-        let bob = DID::new_self(b"bob");
+        let alice = DID::new(DIDNamespace::Self_, b"alice");
+        let bob = DID::new(DIDNamespace::Self_, b"bob");
 
         // Alice: 3 Events
-        let e1 = Event::genesis(alice.clone(), "pk".to_string());
+        let e1 = Event::genesis(alice.id.clone(), alice.clone(), 0);
         let id1 = engine.add_event(e1).unwrap();
 
         let e2 = Event::new(
-            alice.clone(),
+            alice.id.clone(),
+            vec![id1.clone()],
             EventPayload::Custom {
                 event_type: "test".to_string(),
-                data: serde_json::Value::Null,
+                data: vec![],
             },
-            vec![id1.clone()],
+            1,
         );
         let id2 = engine.add_event(e2).unwrap();
 
         let e3 = Event::new(
-            alice.clone(),
+            alice.id.clone(),
+            vec![id2],
             EventPayload::Custom {
                 event_type: "test".to_string(),
-                data: serde_json::Value::Null,
+                data: vec![],
             },
-            vec![id2],
+            2,
         );
         engine.add_event(e3).unwrap();
 
         // Bob: 1 Event
-        let e4 = Event::genesis(bob.clone(), "pk".to_string());
+        let e4 = Event::genesis(bob.id.clone(), bob.clone(), 0);
         engine.add_event(e4).unwrap();
 
         assert_eq!(engine.causal_history_size(&alice), 3);
@@ -594,9 +603,9 @@ mod tests {
     fn test_add_event_with_ctx() {
         let mut engine = EventEngine::default();
         let mut ctx = ExecutionContext::default_for_testing();
-        let did = DID::new_self(b"alice");
+        let did = DID::new(DIDNamespace::Self_, b"alice");
 
-        let event = Event::genesis(did.clone(), "pubkey".to_string());
+        let event = Event::genesis(did.id.clone(), did.clone(), 0);
         let initial_gas = ctx.gas_remaining;
 
         let id = engine.add_event_with_ctx(&mut ctx, event).unwrap();
@@ -615,15 +624,19 @@ mod tests {
     fn test_validate_with_ctx_parent_not_found() {
         let engine = EventEngine::default();
         let mut ctx = ExecutionContext::default_for_testing();
-        let did = DID::new_self(b"alice");
+        let did = DID::new(DIDNamespace::Self_, b"alice");
+
+        // Fake parent ID
+        let fake_parent = UniversalId::new(UniversalId::TAG_EVENT, 1, b"nonexistent");
 
         let event = Event::new(
-            did.clone(),
+            did.id.clone(),
+            vec![fake_parent],
             EventPayload::Custom {
                 event_type: "test".to_string(),
-                data: serde_json::Value::Null,
+                data: vec![],
             },
-            vec![EventId::new("nonexistent")],
+            1,
         );
 
         let result = engine.validate_structure_with_ctx(&mut ctx, &event);
@@ -634,10 +647,10 @@ mod tests {
     fn test_update_finality_with_ctx() {
         let mut engine = EventEngine::default();
         let mut ctx = ExecutionContext::default_for_testing();
-        let did = DID::new_self(b"alice");
+        let did = DID::new(DIDNamespace::Self_, b"alice");
 
         // Genesis hinzufügen
-        let event = Event::genesis(did.clone(), "pubkey".to_string());
+        let event = Event::genesis(did.id.clone(), did.clone(), 0);
         let id = engine.add_event_with_ctx(&mut ctx, event).unwrap();
 
         // Finality aufsteigen: Nascent -> Validated -> Witnessed
@@ -649,7 +662,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            engine.get_event(&id).unwrap().finality,
+            engine.get_event(&id).unwrap().finality.level,
             FinalityLevel::Witnessed
         );
     }
@@ -658,9 +671,9 @@ mod tests {
     fn test_finality_regression_prevented() {
         let mut engine = EventEngine::default();
         let mut ctx = ExecutionContext::default_for_testing();
-        let did = DID::new_self(b"alice");
+        let did = DID::new(DIDNamespace::Self_, b"alice");
 
-        let event = Event::genesis(did.clone(), "pubkey".to_string());
+        let event = Event::genesis(did.id.clone(), did.clone(), 0);
         let id = engine.add_event_with_ctx(&mut ctx, event).unwrap();
 
         // Auf Witnessed setzen
@@ -685,7 +698,10 @@ mod tests {
         ctx.gas_initial = 500;
 
         let events: Vec<Event> = (0..10)
-            .map(|i| Event::genesis(DID::new_self(&format!("user{}", i)), "pubkey".to_string()))
+            .map(|i| {
+                let did = DID::new(DIDNamespace::Self_, format!("user{}", i).as_bytes());
+                Event::genesis(did.id.clone(), did.clone(), i as u32)
+            })
             .collect();
 
         let processed = engine.process_batch_with_ctx(&mut ctx, events).unwrap();

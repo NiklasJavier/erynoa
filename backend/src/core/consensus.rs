@@ -439,20 +439,21 @@ pub struct ConsensusEngineStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::DIDNamespace;
 
     fn setup_engine() -> ConsensusEngine {
         let mut engine = ConsensusEngine::default();
 
         // Registriere 5 Witnesses mit unterschiedlichem Trust
         for (name, trust) in [
-            ("w1", 0.9),
-            ("w2", 0.85),
-            ("w3", 0.8),
-            ("w4", 0.7),
-            ("w5", 0.6),
+            (b"w1".as_slice(), 0.9),
+            (b"w2".as_slice(), 0.85),
+            (b"w3".as_slice(), 0.8),
+            (b"w4".as_slice(), 0.7),
+            (b"w5".as_slice(), 0.6),
         ] {
             engine.register_witness(
-                DID::new_self(name),
+                DID::new(DIDNamespace::Self_, name),
                 TrustVector6D::new(trust, trust, trust, trust, trust, trust),
             );
         }
@@ -460,13 +461,21 @@ mod tests {
         engine
     }
 
+    fn test_event_id(suffix: &str) -> EventId {
+        UniversalId::new(UniversalId::TAG_EVENT, 1, suffix.as_bytes())
+    }
+
     #[test]
     fn test_single_attestation_not_final() {
         let mut engine = setup_engine();
-        let event_id = EventId::new("event:test:1");
+        let event_id = test_event_id("test:1");
 
         let result = engine
-            .add_attestation(event_id.clone(), DID::new_self(b"w1"), "sig1".to_string())
+            .add_attestation(
+                event_id.clone(),
+                DID::new(DIDNamespace::Self_, b"w1"),
+                "sig1".to_string(),
+            )
             .unwrap();
 
         // 1 Witness < 3 (min_witnesses)
@@ -477,17 +486,29 @@ mod tests {
     #[test]
     fn test_three_attestations_finality() {
         let mut engine = setup_engine();
-        let event_id = EventId::new("event:test:2");
+        let event_id = test_event_id("test:2");
 
         // Drei hochvertrauenswürdige Witnesses
         engine
-            .add_attestation(event_id.clone(), DID::new_self(b"w1"), "sig1".to_string())
+            .add_attestation(
+                event_id.clone(),
+                DID::new(DIDNamespace::Self_, b"w1"),
+                "sig1".to_string(),
+            )
             .unwrap();
         engine
-            .add_attestation(event_id.clone(), DID::new_self(b"w2"), "sig2".to_string())
+            .add_attestation(
+                event_id.clone(),
+                DID::new(DIDNamespace::Self_, b"w2"),
+                "sig2".to_string(),
+            )
             .unwrap();
         let result = engine
-            .add_attestation(event_id.clone(), DID::new_self(b"w3"), "sig3".to_string())
+            .add_attestation(
+                event_id.clone(),
+                DID::new(DIDNamespace::Self_, b"w3"),
+                "sig3".to_string(),
+            )
             .unwrap();
 
         // 3 Witnesses mit hohem Trust sollten Threshold erreichen
@@ -498,9 +519,13 @@ mod tests {
     #[test]
     fn test_unauthorized_witness_rejected() {
         let mut engine = setup_engine();
-        let event_id = EventId::new("event:test:3");
+        let event_id = test_event_id("test:3");
 
-        let result = engine.add_attestation(event_id, DID::new_self(b"unknown"), "sig".to_string());
+        let result = engine.add_attestation(
+            event_id,
+            DID::new(DIDNamespace::Self_, b"unknown"),
+            "sig".to_string(),
+        );
 
         assert!(matches!(
             result,
@@ -511,23 +536,35 @@ mod tests {
     #[test]
     fn test_revert_probability_decreases() {
         let mut engine = setup_engine();
-        let event_id = EventId::new("event:test:4");
+        let event_id = test_event_id("test:4");
 
         // Eine Attestation
         engine
-            .add_attestation(event_id.clone(), DID::new_self(b"w1"), "sig1".to_string())
+            .add_attestation(
+                event_id.clone(),
+                DID::new(DIDNamespace::Self_, b"w1"),
+                "sig1".to_string(),
+            )
             .unwrap();
         let check1 = engine.check_finality(&event_id).unwrap();
 
         // Zwei Attestations
         engine
-            .add_attestation(event_id.clone(), DID::new_self(b"w2"), "sig2".to_string())
+            .add_attestation(
+                event_id.clone(),
+                DID::new(DIDNamespace::Self_, b"w2"),
+                "sig2".to_string(),
+            )
             .unwrap();
         let check2 = engine.check_finality(&event_id).unwrap();
 
         // Drei Attestations
         engine
-            .add_attestation(event_id.clone(), DID::new_self(b"w3"), "sig3".to_string())
+            .add_attestation(
+                event_id.clone(),
+                DID::new(DIDNamespace::Self_, b"w3"),
+                "sig3".to_string(),
+            )
             .unwrap();
         let check3 = engine.check_finality(&event_id).unwrap();
 
@@ -544,12 +581,17 @@ mod tests {
     fn test_add_attestation_with_ctx() {
         let mut engine = setup_engine();
         let mut ctx = ExecutionContext::default_for_testing();
-        let event_id = EventId::new("event:test:ctx:1");
+        let event_id = test_event_id("ctx:1");
 
         let initial_gas = ctx.gas_remaining;
 
         let check = engine
-            .add_attestation_with_ctx(&mut ctx, event_id, DID::new_self(b"w1"), "sig1".to_string())
+            .add_attestation_with_ctx(
+                &mut ctx,
+                event_id,
+                DID::new(DIDNamespace::Self_, b"w1"),
+                "sig1".to_string(),
+            )
             .unwrap();
 
         // Attestation wurde verarbeitet
@@ -571,7 +613,7 @@ mod tests {
         engine
             .register_witness_with_ctx(
                 &mut ctx,
-                DID::new_self(b"high_trust"),
+                DID::new(DIDNamespace::Self_, b"high_trust"),
                 TrustVector6D::new(0.9, 0.9, 0.9, 0.9, 0.9, 0.9),
             )
             .unwrap();
@@ -579,7 +621,7 @@ mod tests {
         // Niedriger Trust - sollte abgelehnt werden
         let result = engine.register_witness_with_ctx(
             &mut ctx,
-            DID::new_self(b"low_trust"),
+            DID::new(DIDNamespace::Self_, b"low_trust"),
             TrustVector6D::new(0.1, 0.1, 0.1, 0.1, 0.1, 0.1),
         );
 
@@ -593,11 +635,15 @@ mod tests {
     fn test_validate_finality_transition_k10() {
         let mut engine = setup_engine();
         let mut ctx = ExecutionContext::default_for_testing();
-        let event_id = EventId::new("event:test:k10");
+        let event_id = test_event_id("k10");
 
         // Füge Attestations hinzu
         engine
-            .add_attestation(event_id.clone(), DID::new_self(b"w1"), "sig1".to_string())
+            .add_attestation(
+                event_id.clone(),
+                DID::new(DIDNamespace::Self_, b"w1"),
+                "sig1".to_string(),
+            )
             .unwrap();
 
         // Gültiger Übergang: Nascent → Validated
@@ -628,17 +674,29 @@ mod tests {
     fn test_check_finality_with_ctx() {
         let mut engine = setup_engine();
         let mut ctx = ExecutionContext::default_for_testing();
-        let event_id = EventId::new("event:test:check");
+        let event_id = test_event_id("check");
 
         // Füge drei Attestations hinzu
         engine
-            .add_attestation(event_id.clone(), DID::new_self(b"w1"), "sig1".to_string())
+            .add_attestation(
+                event_id.clone(),
+                DID::new(DIDNamespace::Self_, b"w1"),
+                "sig1".to_string(),
+            )
             .unwrap();
         engine
-            .add_attestation(event_id.clone(), DID::new_self(b"w2"), "sig2".to_string())
+            .add_attestation(
+                event_id.clone(),
+                DID::new(DIDNamespace::Self_, b"w2"),
+                "sig2".to_string(),
+            )
             .unwrap();
         engine
-            .add_attestation(event_id.clone(), DID::new_self(b"w3"), "sig3".to_string())
+            .add_attestation(
+                event_id.clone(),
+                DID::new(DIDNamespace::Self_, b"w3"),
+                "sig3".to_string(),
+            )
             .unwrap();
 
         let initial_gas = ctx.gas_remaining;
@@ -656,14 +714,14 @@ mod tests {
     fn test_finality_reached_event_emission() {
         let mut engine = setup_engine();
         let mut ctx = ExecutionContext::default_for_testing();
-        let event_id = EventId::new("event:test:finality");
+        let event_id = test_event_id("finality");
 
         // Erste zwei Attestations (noch keine Finality)
         engine
             .add_attestation_with_ctx(
                 &mut ctx,
                 event_id.clone(),
-                DID::new_self(b"w1"),
+                DID::new(DIDNamespace::Self_, b"w1"),
                 "sig1".to_string(),
             )
             .unwrap();
@@ -671,7 +729,7 @@ mod tests {
             .add_attestation_with_ctx(
                 &mut ctx,
                 event_id.clone(),
-                DID::new_self(b"w2"),
+                DID::new(DIDNamespace::Self_, b"w2"),
                 "sig2".to_string(),
             )
             .unwrap();
@@ -683,7 +741,7 @@ mod tests {
             .add_attestation_with_ctx(
                 &mut ctx,
                 event_id.clone(),
-                DID::new_self(b"w3"),
+                DID::new(DIDNamespace::Self_, b"w3"),
                 "sig3".to_string(),
             )
             .unwrap();

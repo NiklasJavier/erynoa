@@ -39,7 +39,6 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::domain::did::DID as LegacyDID;
 use crate::domain::DID;
 use crate::eclvm::runtime::host::{HostInterface, HostStoreValue, StoreContext};
 use crate::error::Result;
