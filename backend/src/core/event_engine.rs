@@ -489,7 +489,7 @@ mod tests {
     #[test]
     fn test_add_genesis_event() {
         let mut engine = EventEngine::default();
-        let did = DID::new_self("alice");
+        let did = DID::new_self(b"alice");
         let event = Event::genesis(did.clone(), "pubkey".to_string());
 
         let id = engine.add_event(event).unwrap();
@@ -500,7 +500,7 @@ mod tests {
     #[test]
     fn test_add_event_with_parent() {
         let mut engine = EventEngine::default();
-        let did = DID::new_self("alice");
+        let did = DID::new_self(b"alice");
 
         // Genesis
         let genesis = Event::genesis(did.clone(), "pubkey".to_string());
@@ -511,7 +511,7 @@ mod tests {
             did.clone(),
             EventPayload::Transfer {
                 from: did.clone(),
-                to: DID::new_self("bob"),
+                to: DID::new_self(b"bob"),
                 amount: 100,
                 asset_type: "ERY".to_string(),
             },
@@ -531,13 +531,13 @@ mod tests {
     #[test]
     fn test_reject_missing_parent() {
         let mut engine = EventEngine::default();
-        let did = DID::new_self("alice");
+        let did = DID::new_self(b"alice");
 
         let event = Event::new(
             did.clone(),
             EventPayload::Transfer {
                 from: did.clone(),
-                to: DID::new_self("bob"),
+                to: DID::new_self(b"bob"),
                 amount: 100,
                 asset_type: "ERY".to_string(),
             },
@@ -551,8 +551,8 @@ mod tests {
     #[test]
     fn test_causal_history_size() {
         let mut engine = EventEngine::default();
-        let alice = DID::new_self("alice");
-        let bob = DID::new_self("bob");
+        let alice = DID::new_self(b"alice");
+        let bob = DID::new_self(b"bob");
 
         // Alice: 3 Events
         let e1 = Event::genesis(alice.clone(), "pk".to_string());
@@ -594,7 +594,7 @@ mod tests {
     fn test_add_event_with_ctx() {
         let mut engine = EventEngine::default();
         let mut ctx = ExecutionContext::default_for_testing();
-        let did = DID::new_self("alice");
+        let did = DID::new_self(b"alice");
 
         let event = Event::genesis(did.clone(), "pubkey".to_string());
         let initial_gas = ctx.gas_remaining;
@@ -615,7 +615,7 @@ mod tests {
     fn test_validate_with_ctx_parent_not_found() {
         let engine = EventEngine::default();
         let mut ctx = ExecutionContext::default_for_testing();
-        let did = DID::new_self("alice");
+        let did = DID::new_self(b"alice");
 
         let event = Event::new(
             did.clone(),
@@ -634,7 +634,7 @@ mod tests {
     fn test_update_finality_with_ctx() {
         let mut engine = EventEngine::default();
         let mut ctx = ExecutionContext::default_for_testing();
-        let did = DID::new_self("alice");
+        let did = DID::new_self(b"alice");
 
         // Genesis hinzufügen
         let event = Event::genesis(did.clone(), "pubkey".to_string());
@@ -658,7 +658,7 @@ mod tests {
     fn test_finality_regression_prevented() {
         let mut engine = EventEngine::default();
         let mut ctx = ExecutionContext::default_for_testing();
-        let did = DID::new_self("alice");
+        let did = DID::new_self(b"alice");
 
         let event = Event::genesis(did.clone(), "pubkey".to_string());
         let id = engine.add_event_with_ctx(&mut ctx, event).unwrap();

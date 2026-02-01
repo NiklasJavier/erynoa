@@ -405,8 +405,8 @@ mod tests {
 
     #[test]
     fn test_direct_topic() {
-        let sender = DID::new_self("alice");
-        let receiver = DID::new_self("bob");
+        let sender = DID::new_self(b"alice");
+        let receiver = DID::new_self(b"bob");
         let topic = RealmTopic::direct(&sender, &receiver);
 
         assert_eq!(topic.topic_type, TopicType::Direct);

@@ -616,6 +616,9 @@ impl EventPayload {
             Self::Witness { .. } => "witness",
             Self::AnchorConfirm { .. } => "anchor_confirm",
             Self::Custom { .. } => "custom",
+            Self::CredentialIssue { .. } => "credential_issue",
+            Self::CredentialRevoke { .. } => "credential_revoke",
+            Self::TrustUpdate { .. } => "trust_update",
         }
     }
 }

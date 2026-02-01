@@ -465,7 +465,7 @@ mod tests {
 
         // Registriere Finance-Realm mit höheren Anforderungen
         guard.register_realm_entry(
-            RealmId::new("realm:erynoa:finance"),
+            realm_id_from_name("realm:erynoa:finance"),
             "Finance".to_string(),
             0.7, // Hoher min_trust
             vec!["COMPLIANCE".to_string()],
@@ -474,7 +474,7 @@ mod tests {
 
         // Registriere Gaming-Realm mit niedrigeren Anforderungen
         guard.register_realm_entry(
-            RealmId::new("realm:erynoa:gaming"),
+            realm_id_from_name("realm:erynoa:gaming"),
             "Gaming".to_string(),
             0.3,
             vec![],
@@ -488,7 +488,7 @@ mod tests {
     fn test_crossing_to_low_trust_realm() {
         let mut guard = setup_gateway();
 
-        let alice = DID::new_self("alice");
+        let alice = DID::new_self(b"alice");
         guard.register_trust(
             alice.clone(),
             TrustVector6D::new(0.5, 0.5, 0.5, 0.5, 0.5, 0.5),
@@ -498,7 +498,7 @@ mod tests {
             .validate_crossing(
                 &alice,
                 &RealmId::root(),
-                &RealmId::new("realm:erynoa:gaming"),
+                &realm_id_from_name("realm:erynoa:gaming"),
             )
             .unwrap();
 
@@ -509,7 +509,7 @@ mod tests {
     fn test_crossing_denied_insufficient_trust() {
         let mut guard = setup_gateway();
 
-        let alice = DID::new_self("alice");
+        let alice = DID::new_self(b"alice");
         guard.register_trust(
             alice.clone(),
             TrustVector6D::new(0.5, 0.5, 0.5, 0.5, 0.5, 0.5), // Trust ~0.5
@@ -519,7 +519,7 @@ mod tests {
             .validate_crossing(
                 &alice,
                 &RealmId::root(),
-                &RealmId::new("realm:erynoa:finance"), // Requires 0.7
+                &realm_id_from_name("realm:erynoa:finance"), // Requires 0.7
             )
             .unwrap();
 
@@ -531,7 +531,7 @@ mod tests {
     fn test_crossing_denied_missing_credential() {
         let mut guard = setup_gateway();
 
-        let alice = DID::new_self("alice");
+        let alice = DID::new_self(b"alice");
         guard.register_trust(
             alice.clone(),
             TrustVector6D::new(0.9, 0.9, 0.9, 0.9, 0.9, 0.9), // High trust
@@ -542,7 +542,7 @@ mod tests {
             .validate_crossing(
                 &alice,
                 &RealmId::root(),
-                &RealmId::new("realm:erynoa:finance"),
+                &realm_id_from_name("realm:erynoa:finance"),
             )
             .unwrap();
 
@@ -554,7 +554,7 @@ mod tests {
     fn test_crossing_allowed_with_credentials() {
         let mut guard = setup_gateway();
 
-        let alice = DID::new_self("alice");
+        let alice = DID::new_self(b"alice");
         guard.register_trust(
             alice.clone(),
             TrustVector6D::new(0.9, 0.9, 0.9, 0.9, 0.9, 0.9),
@@ -565,7 +565,7 @@ mod tests {
             .validate_crossing(
                 &alice,
                 &RealmId::root(),
-                &RealmId::new("realm:erynoa:finance"),
+                &realm_id_from_name("realm:erynoa:finance"),
             )
             .unwrap();
 
@@ -576,15 +576,15 @@ mod tests {
     fn test_trust_dampening() {
         let mut guard = setup_gateway();
 
-        let alice = DID::new_self("alice");
+        let alice = DID::new_self(b"alice");
         let original_trust = TrustVector6D::new(0.9, 0.9, 0.9, 0.9, 0.9, 0.9);
         guard.register_trust(alice.clone(), original_trust.clone());
 
         let result = guard
             .validate_crossing(
                 &alice,
-                &RealmId::new("realm:erynoa:gaming"),
-                &RealmId::new("realm:erynoa:gaming"), // Same realm, still dampening
+                &realm_id_from_name("realm:erynoa:gaming"),
+                &realm_id_from_name("realm:erynoa:gaming"), // Same realm, still dampening
             )
             .unwrap();
 

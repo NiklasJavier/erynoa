@@ -128,6 +128,11 @@ impl SurprisalCalculator {
             EventPayload::Vote { .. } => "vote".to_string(),
             EventPayload::SagaStep { action, .. } => format!("saga:{}", action),
             EventPayload::Custom { event_type, .. } => format!("custom:{}", event_type),
+            EventPayload::Witness {
+                attestation_type, ..
+            } => format!("witness:{}", attestation_type),
+            EventPayload::AnchorConfirm { anchor_type, .. } => format!("anchor:{}", anchor_type),
+            EventPayload::TrustUpdate { dimension, .. } => format!("trust_update:{:?}", dimension),
         }
     }
 
@@ -239,14 +244,14 @@ mod tests {
     #[test]
     fn test_surprisal_calculation() {
         let mut calc = SurprisalCalculator::new();
-        let alice = DID::new_self("alice");
+        let alice = DID::new_self(b"alice");
 
         // Erstes Event: hohe Surprisal
         let event1 = Event::new(
             alice.clone(),
             EventPayload::Transfer {
                 from: alice.clone(),
-                to: DID::new_self("bob"),
+                to: DID::new_self(b"bob"),
                 amount: 100,
                 asset_type: "ERY".to_string(),
             },
@@ -268,12 +273,12 @@ mod tests {
     #[test]
     fn test_dampened_surprisal() {
         let calc = SurprisalCalculator::new();
-        let alice = DID::new_self("alice");
+        let alice = DID::new_self(b"alice");
 
         let event = Event::new(
             alice.clone(),
             EventPayload::Attest {
-                subject: DID::new_self("bob"),
+                subject: DID::new_self(b"bob"),
                 claim: "verified".to_string(),
                 evidence: None,
             },

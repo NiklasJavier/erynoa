@@ -184,7 +184,7 @@ impl ErynoaHost {
 impl HostInterface for ErynoaHost {
     fn get_trust_vector(&self, did: &str) -> Result<[f64; 6]> {
         // Parse DID
-        let did_parsed = DID::from_str(did).unwrap_or_else(|_| DID::new_self("unknown"));
+        let did_parsed = DID::from_str(did).unwrap_or_else(|_| DID::new_self(b"unknown"));
 
         // Hole aggregierte Reputation für diese DID
         match self.storage.trust.compute_reputation(&did_parsed) {
@@ -673,7 +673,7 @@ mod tests {
 
         // Erstelle Store zuerst
         use crate::local::realm_storage::{SchemaFieldType, StoreSchema};
-        let realm_id = crate::domain::RealmId::new("test-realm");
+        let realm_id = crate::domain::realm_id_from_name("test-realm");
         let schema = StoreSchema::new("posts", false)
             .with_field("title", SchemaFieldType::String)
             .with_field("likes", SchemaFieldType::Number);
@@ -730,7 +730,7 @@ mod tests {
 
         // Erstelle Personal-Store
         use crate::local::realm_storage::{SchemaFieldType, StoreSchema};
-        let realm_id = crate::domain::RealmId::new("test-realm");
+        let realm_id = crate::domain::realm_id_from_name("test-realm");
         let schema = StoreSchema::new("profile", true) // personal = true
             .with_field("theme", SchemaFieldType::String);
         storage
@@ -785,7 +785,7 @@ mod tests {
 
         // Erstelle Store mit nested Object
         use crate::local::realm_storage::{SchemaFieldType, StoreSchema};
-        let realm_id = crate::domain::RealmId::new("test-realm");
+        let realm_id = crate::domain::realm_id_from_name("test-realm");
         let schema = StoreSchema::new("users", false).with_field(
             "profile",
             SchemaFieldType::Object {
@@ -865,7 +865,7 @@ mod tests {
 
         // Erstelle Store mit List
         use crate::local::realm_storage::{SchemaFieldType, StoreSchema};
-        let realm_id = crate::domain::RealmId::new("test-realm");
+        let realm_id = crate::domain::realm_id_from_name("test-realm");
         let schema = StoreSchema::new("posts", false)
             .with_field("title", SchemaFieldType::String)
             .with_field(
@@ -949,7 +949,7 @@ mod tests {
 
         // Erstelle Store
         use crate::local::realm_storage::{SchemaFieldType, StoreSchema};
-        let realm_id = crate::domain::RealmId::new("test-realm");
+        let realm_id = crate::domain::realm_id_from_name("test-realm");
         let schema = StoreSchema::new("items", false).with_field("value", SchemaFieldType::Number);
         storage
             .realm

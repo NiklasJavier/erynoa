@@ -1706,7 +1706,7 @@ mod tests {
         let blueprint = create_test_blueprint("Rated Blueprint", "did:erynoa:self:alice");
         let publish_result = marketplace.publish(blueprint, 0.9, 2.0).unwrap();
 
-        let rater = DID::new_self("bob");
+        let rater = DID::new_self(b"bob");
         let rating_result = marketplace
             .rate(
                 &publish_result.blueprint_id,
@@ -1737,7 +1737,7 @@ mod tests {
         let blueprint = create_test_blueprint("Once Rated", "did:erynoa:self:alice");
         let publish_result = marketplace.publish(blueprint, 0.9, 2.0).unwrap();
 
-        let rater = DID::new_self("bob");
+        let rater = DID::new_self(b"bob");
         marketplace
             .rate(&publish_result.blueprint_id, &rater, 5, None, 0.5, 1.5)
             .unwrap();
@@ -1755,7 +1755,7 @@ mod tests {
         let blueprint = create_test_blueprint("Deployable", "did:erynoa:self:alice");
         let publish_result = marketplace.publish(blueprint, 0.9, 2.0).unwrap();
 
-        let deployer = DID::new_self("charlie");
+        let deployer = DID::new_self(b"charlie");
         let deploy_result = marketplace
             .record_deployment(
                 &publish_result.blueprint_id,
@@ -1898,7 +1898,7 @@ mod tests {
     fn test_creator_analytics() {
         let (_dir, marketplace) = setup();
 
-        let alice = DID::new_self("alice");
+        let alice = DID::new_self(b"alice");
         let bp = create_test_blueprint("Alice's Blueprint", &alice.to_uri());
         marketplace.publish(bp, 0.9, 2.0).unwrap();
 

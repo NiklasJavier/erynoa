@@ -42,7 +42,7 @@
 //! - **Schema-Evolution**: Versionierte Schemas mit Backward-Compatibility
 //! - **Gaming-Resistenz**: Mana-Kosten, Trust-Checks, Limits
 
-use crate::domain::{RealmId, DID};
+use crate::domain::{realm_id_from_name, RealmId, DID};
 use anyhow::{anyhow, Result};
 use fjall::{Keyspace, PartitionHandle};
 use serde::{Deserialize, Serialize};
@@ -1792,8 +1792,8 @@ impl RealmStorage {
         store_name: &str,
         key: &str,
     ) -> Result<Option<StoreValue>> {
-        let realm = RealmId::new(realm_id);
-        let dummy_did = DID::new_self("_system");
+        let realm = realm_id_from_name(realm_id);
+        let dummy_did = DID::new_self(b"_system");
         self.get(&realm, &dummy_did, store_name, key)
     }
 
@@ -1805,7 +1805,7 @@ impl RealmStorage {
         store_name: &str,
         key: &str,
     ) -> Result<Option<StoreValue>> {
-        let realm = RealmId::new(realm_id);
+        let realm = realm_id_from_name(realm_id);
         self.get(&realm, did, store_name, key)
     }
 
@@ -1817,8 +1817,8 @@ impl RealmStorage {
         key: &str,
         value: StoreValue,
     ) -> Result<()> {
-        let realm = RealmId::new(realm_id);
-        let dummy_did = DID::new_self("_system");
+        let realm = realm_id_from_name(realm_id);
+        let dummy_did = DID::new_self(b"_system");
         self.put(&realm, &dummy_did, store_name, key, value)
     }
 
@@ -1831,14 +1831,14 @@ impl RealmStorage {
         key: &str,
         value: StoreValue,
     ) -> Result<()> {
-        let realm = RealmId::new(realm_id);
+        let realm = realm_id_from_name(realm_id);
         self.put(&realm, did, store_name, key, value)
     }
 
     /// Lösche Wert aus Shared-Store (Convenience für Host-Interface)
     pub fn delete_shared(&self, realm_id: &str, store_name: &str, key: &str) -> Result<bool> {
-        let realm = RealmId::new(realm_id);
-        let dummy_did = DID::new_self("_system");
+        let realm = realm_id_from_name(realm_id);
+        let dummy_did = DID::new_self(b"_system");
         self.delete(&realm, &dummy_did, store_name, key)
     }
 
@@ -1850,7 +1850,7 @@ impl RealmStorage {
         store_name: &str,
         key: &str,
     ) -> Result<bool> {
-        let realm = RealmId::new(realm_id);
+        let realm = realm_id_from_name(realm_id);
         self.delete(&realm, did, store_name, key)
     }
 
@@ -1862,8 +1862,8 @@ impl RealmStorage {
         key: &str,
         path: &str,
     ) -> Result<Option<StoreValue>> {
-        let realm = RealmId::new(realm_id);
-        let dummy_did = DID::new_self("_system");
+        let realm = realm_id_from_name(realm_id);
+        let dummy_did = DID::new_self(b"_system");
         let path_parts: Vec<&str> = path.split('.').collect();
         self.get_nested(&realm, &dummy_did, store_name, key, &path_parts)
     }
@@ -1877,7 +1877,7 @@ impl RealmStorage {
         key: &str,
         path: &str,
     ) -> Result<Option<StoreValue>> {
-        let realm = RealmId::new(realm_id);
+        let realm = realm_id_from_name(realm_id);
         let path_parts: Vec<&str> = path.split('.').collect();
         self.get_nested(&realm, did, store_name, key, &path_parts)
     }
@@ -1891,8 +1891,8 @@ impl RealmStorage {
         path: &str,
         value: StoreValue,
     ) -> Result<()> {
-        let realm = RealmId::new(realm_id);
-        let dummy_did = DID::new_self("_system");
+        let realm = realm_id_from_name(realm_id);
+        let dummy_did = DID::new_self(b"_system");
         let path_parts: Vec<&str> = path.split('.').collect();
         self.put_nested(&realm, &dummy_did, store_name, key, &path_parts, value)
     }
@@ -1907,7 +1907,7 @@ impl RealmStorage {
         path: &str,
         value: StoreValue,
     ) -> Result<()> {
-        let realm = RealmId::new(realm_id);
+        let realm = realm_id_from_name(realm_id);
         let path_parts: Vec<&str> = path.split('.').collect();
         self.put_nested(&realm, did, store_name, key, &path_parts, value)
     }
@@ -1921,8 +1921,8 @@ impl RealmStorage {
         path: &str,
         value: StoreValue,
     ) -> Result<usize> {
-        let realm = RealmId::new(realm_id);
-        let dummy_did = DID::new_self("_system");
+        let realm = realm_id_from_name(realm_id);
+        let dummy_did = DID::new_self(b"_system");
         let path_parts: Vec<&str> = path.split('.').collect();
         self.append_list(&realm, &dummy_did, store_name, key, &path_parts, value)
     }
@@ -1937,15 +1937,15 @@ impl RealmStorage {
         path: &str,
         value: StoreValue,
     ) -> Result<usize> {
-        let realm = RealmId::new(realm_id);
+        let realm = realm_id_from_name(realm_id);
         let path_parts: Vec<&str> = path.split('.').collect();
         self.append_list(&realm, did, store_name, key, &path_parts, value)
     }
 
     /// Prüfe ob Shared-Store existiert
     pub fn store_exists_shared(&self, realm_id: &str, store_name: &str) -> Result<bool> {
-        let realm = RealmId::new(realm_id);
-        let dummy_did = DID::new_self("_system");
+        let realm = realm_id_from_name(realm_id);
+        let dummy_did = DID::new_self(b"_system");
         Ok(self
             .get_schema(&realm, store_name, Some(&dummy_did))
             .is_ok())
@@ -1958,21 +1958,21 @@ impl RealmStorage {
         did: &DID,
         store_name: &str,
     ) -> Result<bool> {
-        let realm = RealmId::new(realm_id);
+        let realm = realm_id_from_name(realm_id);
         Ok(self.get_schema(&realm, store_name, Some(did)).is_ok())
     }
 
     /// Zähle Einträge in Shared-Store
     pub fn count_shared(&self, realm_id: &str, store_name: &str) -> Result<usize> {
-        let realm = RealmId::new(realm_id);
-        let dummy_did = DID::new_self("_system");
+        let realm = realm_id_from_name(realm_id);
+        let dummy_did = DID::new_self(b"_system");
         let results = self.query_all(&realm, &dummy_did, store_name, None)?;
         Ok(results.len())
     }
 
     /// Zähle Einträge in Personal-Store
     pub fn count_personal(&self, realm_id: &str, did: &DID, store_name: &str) -> Result<usize> {
-        let realm = RealmId::new(realm_id);
+        let realm = realm_id_from_name(realm_id);
         let results = self.query_all(&realm, did, store_name, None)?;
         Ok(results.len())
     }
@@ -1986,8 +1986,8 @@ impl RealmStorage {
         value: &str,
         limit: usize,
     ) -> Result<Vec<String>> {
-        let realm = RealmId::new(realm_id);
-        let dummy_did = DID::new_self("_system");
+        let realm = realm_id_from_name(realm_id);
+        let dummy_did = DID::new_self(b"_system");
         let results =
             self.query_by_index(&realm, &dummy_did, store_name, field, value, Some(limit))?;
         Ok(results.into_iter().map(|(k, _)| k).collect())
@@ -2001,8 +2001,8 @@ impl RealmStorage {
         prefix: Option<&str>,
         limit: usize,
     ) -> Result<Vec<String>> {
-        let realm = RealmId::new(realm_id);
-        let dummy_did = DID::new_self("_system");
+        let realm = realm_id_from_name(realm_id);
+        let dummy_did = DID::new_self(b"_system");
         let results = self.query_all(&realm, &dummy_did, store_name, Some(limit))?;
 
         let keys: Vec<String> = results
@@ -2023,7 +2023,7 @@ impl RealmStorage {
         prefix: Option<&str>,
         limit: usize,
     ) -> Result<Vec<String>> {
-        let realm = RealmId::new(realm_id);
+        let realm = realm_id_from_name(realm_id);
         let results = self.query_all(&realm, did, store_name, Some(limit))?;
 
         let keys: Vec<String> = results
@@ -2042,8 +2042,8 @@ impl RealmStorage {
         _store_name: &str,
         schema: StoreSchema,
     ) -> Result<()> {
-        let realm = RealmId::new(realm_id);
-        let dummy_did = DID::new_self("_system");
+        let realm = realm_id_from_name(realm_id);
+        let dummy_did = DID::new_self(b"_system");
         self.create_store(&realm, &dummy_did, schema)
     }
 }
@@ -2095,8 +2095,8 @@ mod tests {
 
     #[test]
     fn test_prefix_builder() {
-        let realm_id = RealmId::new("social.berlin");
-        let did = DID::new_self("alice123");
+        let realm_id = realm_id_from_name("social.berlin");
+        let did = DID::new_self(b"alice123");
 
         let shared = PrefixBuilder::shared(&realm_id, "posts");
         assert_eq!(
@@ -2116,8 +2116,8 @@ mod tests {
     #[test]
     fn test_store_creation_and_crud() {
         let (_dir, storage) = setup();
-        let realm_id = RealmId::new("test-realm");
-        let sender = DID::new_self("alice");
+        let realm_id = realm_id_from_name("test-realm");
+        let sender = DID::new_self(b"alice");
 
         // Schema erstellen
         let schema = StoreSchema::new("posts", false)
@@ -2162,9 +2162,9 @@ mod tests {
     #[test]
     fn test_personal_store_isolation() {
         let (_dir, storage) = setup();
-        let realm_id = RealmId::new("test-realm");
-        let alice = DID::new_self("alice");
-        let bob = DID::new_self("bob");
+        let realm_id = realm_id_from_name("test-realm");
+        let alice = DID::new_self(b"alice");
+        let bob = DID::new_self(b"bob");
 
         // Personal schema
         let schema = StoreSchema::new("notes", true).with_field("text", SchemaFieldType::String);
@@ -2238,8 +2238,8 @@ mod tests {
     #[test]
     fn test_nested_operations() {
         let (_dir, storage) = setup();
-        let realm_id = RealmId::new("test-realm");
-        let sender = DID::new_self("alice");
+        let realm_id = realm_id_from_name("test-realm");
+        let sender = DID::new_self(b"alice");
 
         let schema = StoreSchema::new("profiles", false).with_field(
             "main",
@@ -2290,8 +2290,8 @@ mod tests {
     #[test]
     fn test_list_operations() {
         let (_dir, storage) = setup();
-        let realm_id = RealmId::new("test-realm");
-        let sender = DID::new_self("alice");
+        let realm_id = realm_id_from_name("test-realm");
+        let sender = DID::new_self(b"alice");
 
         let schema = StoreSchema::new("users", false).with_field(
             "interests",
@@ -2419,8 +2419,8 @@ mod tests {
     #[test]
     fn test_schema_evolution_add_field() {
         let (_dir, storage) = setup();
-        let realm_id = RealmId::new("test-realm");
-        let sender = DID::new_self("alice");
+        let realm_id = realm_id_from_name("test-realm");
+        let sender = DID::new_self(b"alice");
 
         // Erstelle ursprüngliches Schema
         let schema = StoreSchema::new("posts", false)
@@ -2463,8 +2463,8 @@ mod tests {
     #[test]
     fn test_schema_evolution_remove_field_pending() {
         let (_dir, storage) = setup();
-        let realm_id = RealmId::new("test-realm");
-        let sender = DID::new_self("alice");
+        let realm_id = realm_id_from_name("test-realm");
+        let sender = DID::new_self(b"alice");
 
         let schema = StoreSchema::new("users", false)
             .with_field("name", SchemaFieldType::String)
@@ -2508,8 +2508,8 @@ mod tests {
     #[test]
     fn test_schema_evolution_rename_field() {
         let (_dir, storage) = setup();
-        let realm_id = RealmId::new("test-realm");
-        let sender = DID::new_self("alice");
+        let realm_id = realm_id_from_name("test-realm");
+        let sender = DID::new_self(b"alice");
 
         let schema =
             StoreSchema::new("items", false).with_field("old_name", SchemaFieldType::String);
@@ -2539,8 +2539,8 @@ mod tests {
     #[test]
     fn test_schema_evolution_add_index() {
         let (_dir, storage) = setup();
-        let realm_id = RealmId::new("test-realm");
-        let sender = DID::new_self("alice");
+        let realm_id = realm_id_from_name("test-realm");
+        let sender = DID::new_self(b"alice");
 
         let schema = StoreSchema::new("products", false)
             .with_field("name", SchemaFieldType::String)
@@ -2574,8 +2574,8 @@ mod tests {
     #[test]
     fn test_schema_history() {
         let (_dir, storage) = setup();
-        let realm_id = RealmId::new("test-realm");
-        let sender = DID::new_self("alice");
+        let realm_id = realm_id_from_name("test-realm");
+        let sender = DID::new_self(b"alice");
 
         let schema = StoreSchema::new("events", false).with_field("name", SchemaFieldType::String);
 
@@ -2632,8 +2632,8 @@ mod tests {
     #[test]
     fn test_schema_version_retrieval() {
         let (_dir, storage) = setup();
-        let realm_id = RealmId::new("test-realm");
-        let sender = DID::new_self("alice");
+        let realm_id = realm_id_from_name("test-realm");
+        let sender = DID::new_self(b"alice");
 
         let schema =
             StoreSchema::new("documents", false).with_field("title", SchemaFieldType::String);
@@ -2667,8 +2667,8 @@ mod tests {
     #[test]
     fn test_schema_change_validation() {
         let (_dir, storage) = setup();
-        let realm_id = RealmId::new("test-realm");
-        let sender = DID::new_self("alice");
+        let realm_id = realm_id_from_name("test-realm");
+        let sender = DID::new_self(b"alice");
 
         let schema = StoreSchema::new("config", false)
             .with_field("setting", SchemaFieldType::String)
@@ -2815,8 +2815,8 @@ mod tests {
     #[test]
     fn test_lazy_value_migration() {
         let (_dir, storage) = setup();
-        let _realm_id = RealmId::new("test-realm");
-        let _sender = DID::new_self("alice");
+        let _realm_id = realm_id_from_name("test-realm");
+        let _sender = DID::new_self(b"alice");
 
         // Altes Schema
         let old_schema =
@@ -2863,8 +2863,8 @@ mod tests {
     #[test]
     fn test_reject_pending_schema() {
         let (_dir, storage) = setup();
-        let realm_id = RealmId::new("test-realm");
-        let sender = DID::new_self("alice");
+        let realm_id = realm_id_from_name("test-realm");
+        let sender = DID::new_self(b"alice");
 
         let schema = StoreSchema::new("data", false).with_field("value", SchemaFieldType::String);
 

@@ -97,7 +97,7 @@ pub use unified::{
 // Formula
 pub use unified::{
     Activity, AttestationLevel, HumanFactor, Surprisal, SurprisalComponents, TemporalWeight,
-    WorldFormulaContribution,
+    WorldFormulaContribution, WorldFormulaStatus,
 };
 
 // Cost
@@ -112,9 +112,3 @@ pub use unified::{
 
 // Invarianten-Prüfer
 pub use unified::{InvariantChecker, InvariantViolation};
-
-// ============================================================================
-// Re-Exports aus Legacy (Deprecated - nur für Abwärtskompatibilität)
-// ============================================================================
-#[allow(deprecated)]
-pub use formula::WorldFormulaStatus;

@@ -445,7 +445,7 @@ mod tests {
     #[test]
     fn test_initialize_default_trust() {
         let mut engine = TrustEngine::default();
-        let did = DID::new_self("alice");
+        let did = DID::new_self(b"alice");
 
         engine.initialize_trust(&did);
         let trust = engine.get_trust(&did).unwrap();
@@ -458,14 +458,14 @@ mod tests {
     #[test]
     fn test_process_positive_event() {
         let mut engine = TrustEngine::default();
-        let alice = DID::new_self("alice");
+        let alice = DID::new_self(b"alice");
 
         // Transfer-Event (positiv für Reliability)
         let event = Event::new(
             alice.clone(),
             EventPayload::Transfer {
                 from: alice.clone(),
-                to: DID::new_self("bob"),
+                to: DID::new_self(b"bob"),
                 amount: 100,
                 asset_type: "ERY".to_string(),
             },
@@ -482,7 +482,7 @@ mod tests {
     #[test]
     fn test_asymmetric_update() {
         let mut engine = TrustEngine::default();
-        let alice = DID::new_self("alice");
+        let alice = DID::new_self(b"alice");
 
         engine.initialize_trust(&alice);
         let initial = engine.get_trust(&alice).unwrap().r;
@@ -514,9 +514,9 @@ mod tests {
 
         // Κ5: 1 - (1-0.8)(1-0.7)(1-0.6) = 1 - 0.2×0.3×0.4 = 0.976
         let sources = vec![
-            (DID::new_self("a"), 0.8),
-            (DID::new_self("b"), 0.7),
-            (DID::new_self("c"), 0.6),
+            (DID::new_self(b"a"), 0.8),
+            (DID::new_self(b"b"), 0.7),
+            (DID::new_self(b"c"), 0.6),
         ];
 
         let combined = engine.combine_trust(&sources);
@@ -527,9 +527,9 @@ mod tests {
     fn test_chain_trust() {
         let mut engine = TrustEngine::default();
 
-        let alice = DID::new_self("alice");
-        let bob = DID::new_self("bob");
-        let carol = DID::new_self("carol");
+        let alice = DID::new_self(b"alice");
+        let bob = DID::new_self(b"bob");
+        let carol = DID::new_self(b"carol");
 
         // Alice → Bob: 0.9
         // Bob → Carol: 0.8
@@ -559,7 +559,7 @@ mod tests {
     #[test]
     fn test_self_attestation_rejected() {
         let mut engine = TrustEngine::default();
-        let alice = DID::new_self("alice");
+        let alice = DID::new_self(b"alice");
 
         let result = engine.set_direct_trust(&alice, &alice, ContextType::Default, 0.9);
         assert!(matches!(result, Err(TrustError::SelfAttestation)));
@@ -573,7 +573,7 @@ mod tests {
     fn test_initialize_trust_with_ctx() {
         let mut engine = TrustEngine::default();
         let mut ctx = ExecutionContext::default_for_testing();
-        let alice = DID::new_self("alice");
+        let alice = DID::new_self(b"alice");
 
         let initial_gas = ctx.gas_remaining;
 
@@ -594,13 +594,13 @@ mod tests {
     fn test_process_event_with_ctx() {
         let mut engine = TrustEngine::default();
         let mut ctx = ExecutionContext::default_for_testing();
-        let alice = DID::new_self("alice");
+        let alice = DID::new_self(b"alice");
 
         let event = Event::new(
             alice.clone(),
             EventPayload::Transfer {
                 from: alice.clone(),
-                to: DID::new_self("bob"),
+                to: DID::new_self(b"bob"),
                 amount: 100,
                 asset_type: "ERY".to_string(),
             },
@@ -622,8 +622,8 @@ mod tests {
     fn test_set_direct_trust_with_ctx() {
         let mut engine = TrustEngine::default();
         let mut ctx = ExecutionContext::default_for_testing();
-        let alice = DID::new_self("alice");
-        let bob = DID::new_self("bob");
+        let alice = DID::new_self(b"alice");
+        let bob = DID::new_self(b"bob");
 
         engine
             .set_direct_trust_with_ctx(&mut ctx, &alice, &bob, ContextType::Default, 0.8)
@@ -637,8 +637,8 @@ mod tests {
     fn test_set_direct_trust_with_ctx_bounds_check() {
         let mut engine = TrustEngine::default();
         let mut ctx = ExecutionContext::default_for_testing();
-        let alice = DID::new_self("alice");
-        let bob = DID::new_self("bob");
+        let alice = DID::new_self(b"alice");
+        let bob = DID::new_self(b"bob");
 
         // Κ3: Out of bounds
         let result =
@@ -652,9 +652,9 @@ mod tests {
         let mut ctx = ExecutionContext::default_for_testing();
 
         let sources = vec![
-            (DID::new_self("a"), 0.8),
-            (DID::new_self("b"), 0.7),
-            (DID::new_self("c"), 0.6),
+            (DID::new_self(b"a"), 0.8),
+            (DID::new_self(b"b"), 0.7),
+            (DID::new_self(b"c"), 0.6),
         ];
 
         let combined = engine.combine_trust_with_ctx(&mut ctx, &sources).unwrap();
@@ -668,9 +668,9 @@ mod tests {
         let mut engine = TrustEngine::default();
         let mut ctx = ExecutionContext::default_for_testing();
 
-        let alice = DID::new_self("alice");
-        let bob = DID::new_self("bob");
-        let carol = DID::new_self("carol");
+        let alice = DID::new_self(b"alice");
+        let bob = DID::new_self(b"bob");
+        let carol = DID::new_self(b"carol");
 
         engine
             .set_direct_trust(&alice, &bob, ContextType::Default, 0.9)

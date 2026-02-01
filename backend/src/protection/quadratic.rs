@@ -421,8 +421,8 @@ mod tests {
     fn test_voting() {
         let mut gov = QuadraticGovernance::default();
 
-        let alice = DID::new_self("alice");
-        let bob = DID::new_self("bob");
+        let alice = DID::new_self(b"alice");
+        let bob = DID::new_self(b"bob");
 
         gov.register_voter(alice.clone());
         gov.register_voter(bob.clone());
@@ -454,7 +454,7 @@ mod tests {
     fn test_insufficient_credits() {
         let mut gov = QuadraticGovernance::default();
 
-        let alice = DID::new_self("alice");
+        let alice = DID::new_self(b"alice");
         gov.register_voter(alice.clone());
 
         let proposal = gov.create_proposal(
@@ -478,7 +478,7 @@ mod tests {
         // Whale vs. viele kleine Voter
         let mut gov = QuadraticGovernance::default();
 
-        let whale = DID::new_self("whale");
+        let whale = DID::new_self(b"whale");
         gov.register_voter(whale.clone());
         gov.add_credits(&whale, 900); // 900 + 100 (initial) = 1000 total
 

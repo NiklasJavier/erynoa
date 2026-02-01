@@ -184,6 +184,12 @@ impl TrustVector6D {
         }
     }
 
+    /// Alias für NEWCOMER - Kompatibilität mit altem API
+    #[inline]
+    pub fn newcomer() -> Self {
+        Self::NEWCOMER
+    }
+
     /// Von Array erstellen
     pub fn from_array(arr: [f32; 6]) -> Self {
         Self::new(arr[0], arr[1], arr[2], arr[3], arr[4], arr[5])

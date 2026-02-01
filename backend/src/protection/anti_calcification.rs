@@ -243,7 +243,7 @@ mod tests {
         }
 
         // 1 Whale mit viel Power
-        let whale = DID::new_self("whale");
+        let whale = DID::new_self(b"whale");
         ac.set_power(whale.clone(), 100.0);
 
         let result = ac.check_power_cap(&whale);
@@ -267,7 +267,7 @@ mod tests {
         }
 
         // 1 großer User hat mehr als 50%
-        ac.set_power(DID::new_self("big"), 100.0);
+        ac.set_power(DID::new_self(b"big"), 100.0);
 
         let result = ac.check_system_calcification();
         assert!(matches!(
@@ -283,7 +283,7 @@ mod tests {
             ..Default::default()
         });
 
-        let user_did = DID::new_self("user");
+        let user_did = DID::new_self(b"user");
         ac.set_power(user_did.clone(), 100.0);
 
         // Verifiziere Initial-Wert
@@ -315,7 +315,7 @@ mod tests {
 
         // Ungleichheit
         let mut ac2 = AntiCalcification::default();
-        ac2.set_power(DID::new_self("rich"), 99.0);
+        ac2.set_power(DID::new_self(b"rich"), 99.0);
         for i in 0..99 {
             ac2.set_power(DID::new_self(&format!("poor{}", i)), 0.01);
         }

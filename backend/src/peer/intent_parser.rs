@@ -220,8 +220,8 @@ impl IntentParser {
                 // Extrahiere Betrag und Empfänger (vereinfacht)
                 let goal = Goal::Complex {
                     description: text.to_string(),
-                    parsed_goals: vec![Goal::Transfer {
-                        to: DID::new_self("unknown"),
+                    sub_goals: vec![Goal::Transfer {
+                        to: DID::new_self(b"unknown").id,
                         amount: 0,
                         asset_type: "ERY".to_string(),
                     }],
@@ -237,8 +237,8 @@ impl IntentParser {
             Some(GoalType::Attest) => {
                 let goal = Goal::Complex {
                     description: text.to_string(),
-                    parsed_goals: vec![Goal::Attest {
-                        subject: DID::new_self("unknown"),
+                    sub_goals: vec![Goal::Attest {
+                        subject: DID::new_self(b"unknown").id,
                         claim: text.to_string(),
                     }],
                 };
@@ -248,7 +248,7 @@ impl IntentParser {
                 // Fallback: Complex Goal
                 let goal = Goal::Complex {
                     description: text.to_string(),
-                    parsed_goals: vec![],
+                    sub_goals: vec![],
                 };
                 self.parse_structured(source, goal, vec![])
             }
@@ -313,8 +313,8 @@ mod tests {
     #[test]
     fn test_parse_transfer() {
         let parser = IntentParser::default();
-        let alice = DID::new_self("alice");
-        let bob = DID::new_self("bob");
+        let alice = DID::new_self(b"alice");
+        let bob = DID::new_self(b"bob");
 
         let intent = parser
             .parse_transfer(alice.clone(), bob.clone(), 100, "ERY".to_string())
@@ -337,8 +337,8 @@ mod tests {
     #[test]
     fn test_parse_delegation() {
         let parser = IntentParser::default();
-        let alice = DID::new_self("alice");
-        let bob = DID::new_self("bob");
+        let alice = DID::new_self(b"alice");
+        let bob = DID::new_self(b"bob");
 
         let intent = parser
             .parse_delegation(
@@ -366,7 +366,7 @@ mod tests {
     #[test]
     fn test_parse_natural_transfer() {
         let parser = IntentParser::default();
-        let alice = DID::new_self("alice");
+        let alice = DID::new_self(b"alice");
 
         let intent = parser.parse_natural(alice, "send 100 ERY to Bob").unwrap();
 
@@ -381,8 +381,8 @@ mod tests {
     #[test]
     fn test_validate_zero_amount() {
         let parser = IntentParser::default();
-        let alice = DID::new_self("alice");
-        let bob = DID::new_self("bob");
+        let alice = DID::new_self(b"alice");
+        let bob = DID::new_self(b"bob");
 
         let result = parser.parse_transfer(alice, bob, 0, "ERY".to_string());
         let intent = result.unwrap();

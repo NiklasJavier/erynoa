@@ -438,7 +438,7 @@ mod tests {
             ..Default::default()
         });
 
-        let alice = DID::new_self("alice");
+        let alice = DID::new_self(b"alice");
         let mut found_velocity_anomaly = false;
 
         // 10 Events in kurzer Zeit (mehr als max_events_per_minute)
@@ -476,8 +476,8 @@ mod tests {
             ..Default::default()
         });
 
-        let alice = DID::new_self("alice");
-        let bob = DID::new_self("bob");
+        let alice = DID::new_self(b"alice");
+        let bob = DID::new_self(b"bob");
 
         // Normale Transfers (Mittelwert ~100, Std ~10)
         for i in 0..20 {

@@ -338,8 +338,8 @@ mod tests {
         let mut dm = DiversityMonitor::default();
 
         // Verschiedene DID-Typen
-        dm.observe_did(&DID::new_self("alice"));
-        dm.observe_did(&DID::new_self("bob"));
+        dm.observe_did(&DID::new_self(b"alice"));
+        dm.observe_did(&DID::new_self(b"bob"));
         dm.observe_did(&DID::new_guild("guild1"));
         dm.observe_did(&DID::new_guild("guild2"));
 

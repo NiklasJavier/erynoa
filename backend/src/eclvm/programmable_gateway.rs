@@ -373,11 +373,11 @@ mod tests {
         );
         let gateway = ProgrammableGateway::new(host);
 
-        let alice = DID::new_self("alice");
+        let alice = DID::new_self(b"alice");
         let alice_trust = TrustVector6D::new(0.8, 0.8, 0.8, 0.8, 0.8, 0.8);
 
         let decision = gateway
-            .validate_entry(&alice, &alice_trust, &RealmId::new("realm:test"))
+            .validate_entry(&alice, &alice_trust, &realm_id_from_name("realm:test"))
             .unwrap();
 
         assert!(decision.allowed);
@@ -390,11 +390,11 @@ mod tests {
         );
         let gateway = ProgrammableGateway::new(host);
 
-        let bob = DID::new_self("bob");
+        let bob = DID::new_self(b"bob");
         let bob_trust = TrustVector6D::newcomer(); // 0.1
 
         let decision = gateway
-            .validate_entry(&bob, &bob_trust, &RealmId::new("realm:test"))
+            .validate_entry(&bob, &bob_trust, &realm_id_from_name("realm:test"))
             .unwrap();
 
         assert!(!decision.allowed);
@@ -407,10 +407,10 @@ mod tests {
         );
         let mut gateway = ProgrammableGateway::new(host);
 
-        let finance = RealmId::new("realm:erynoa:finance");
+        let finance = realm_id_from_name("realm:erynoa:finance");
         gateway.register_entry_policy(finance.clone(), StandardPolicies::high_trust());
 
-        let alice = DID::new_self("alice");
+        let alice = DID::new_self(b"alice");
         let alice_trust = TrustVector6D::new(0.8, 0.8, 0.8, 0.8, 0.8, 0.8);
 
         let decision = gateway
@@ -419,7 +419,7 @@ mod tests {
         assert!(decision.allowed);
 
         // Medium trust user should be denied
-        let charlie = DID::new_self("charlie");
+        let charlie = DID::new_self(b"charlie");
         let charlie_trust = TrustVector6D::new(0.5, 0.5, 0.5, 0.5, 0.5, 0.5);
 
         // Need to update host mock for charlie
@@ -444,10 +444,10 @@ mod tests {
         );
         let mut gateway = ProgrammableGateway::new(host);
 
-        let verified = RealmId::new("realm:verified");
+        let verified = realm_id_from_name("realm:verified");
         gateway.register_entry_policy(verified.clone(), StandardPolicies::verified_users());
 
-        let alice = DID::new_self("alice");
+        let alice = DID::new_self(b"alice");
         let alice_trust = TrustVector6D::new(0.8, 0.8, 0.8, 0.8, 0.8, 0.8);
 
         let decision = gateway
@@ -463,10 +463,10 @@ mod tests {
         );
         let mut gateway = ProgrammableGateway::new(host);
 
-        let verified = RealmId::new("realm:verified");
+        let verified = realm_id_from_name("realm:verified");
         gateway.register_entry_policy(verified.clone(), StandardPolicies::verified_users());
 
-        let bob = DID::new_self("bob");
+        let bob = DID::new_self(b"bob");
         let bob_trust = TrustVector6D::new(0.8, 0.8, 0.8, 0.8, 0.8, 0.8);
 
         let decision = gateway.validate_entry(&bob, &bob_trust, &verified).unwrap();
@@ -480,10 +480,10 @@ mod tests {
         );
         let mut gateway = ProgrammableGateway::new(host);
 
-        let public = RealmId::new("realm:public");
+        let public = realm_id_from_name("realm:public");
         gateway.register_entry_policy(public.clone(), StandardPolicies::public_realm());
 
-        let newcomer = DID::new_self("newcomer");
+        let newcomer = DID::new_self(b"newcomer");
         let newcomer_trust = TrustVector6D::newcomer();
 
         let decision = gateway

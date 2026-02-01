@@ -168,7 +168,8 @@ impl SagaComposer {
         .with_compensation(SagaCompensation::new(
             "Unlock funds",
             SagaAction::Unlock {
-                lock_id: "{{lock_id}}".to_string(), // Placeholder
+                lock_id: UniversalId::NULL, // Placeholder - wird bei Ausführung ersetzt
+                to: None,
             },
         ));
         steps.push(lock_step);
@@ -204,6 +205,7 @@ impl SagaComposer {
             0,
             format!("Validate attester {} credentials", attester.to_uri()),
             SagaAction::WaitFor {
+                timeout_lamport: 0,
                 condition: format!("trust({}) >= 0.5", attester.to_uri()),
                 timeout_seconds: 30,
             },
@@ -220,6 +222,7 @@ impl SagaComposer {
                 subject.to_uri()
             ),
             SagaAction::WaitFor {
+                timeout_lamport: 0,
                 condition: format!("attestation({}, {})", attester.to_uri(), subject.to_uri()),
                 timeout_seconds: 60,
             },
@@ -249,6 +252,7 @@ impl SagaComposer {
                 capabilities
             ),
             SagaAction::WaitFor {
+                timeout_lamport: 0,
                 condition: format!(
                     "capabilities({}) includes {:?}",
                     from.to_uri(),
@@ -270,6 +274,7 @@ impl SagaComposer {
                 ttl_seconds
             ),
             SagaAction::WaitFor {
+                timeout_lamport: 0,
                 condition: format!("delegation({}, {})", from.to_uri(), to.to_uri()),
                 timeout_seconds: 60,
             },
@@ -278,6 +283,7 @@ impl SagaComposer {
         .with_compensation(SagaCompensation::new(
             "Revoke delegation",
             SagaAction::WaitFor {
+                timeout_lamport: 0,
                 condition: format!("revoke_delegation({}, {})", from.to_uri(), to.to_uri()),
                 timeout_seconds: 30,
             },
@@ -293,6 +299,7 @@ impl SagaComposer {
             0,
             format!("Execute query: {}", predicate),
             SagaAction::WaitFor {
+                timeout_lamport: 0,
                 condition: format!("query({})", predicate),
                 timeout_seconds: 300,
             },
@@ -340,6 +347,7 @@ impl SagaComposer {
                     0,
                     format!("Create {} for {}", entity_type, creator.to_uri()),
                     SagaAction::WaitFor {
+                        timeout_lamport: 0,
                         condition: format!("create({}, {})", entity_type, creator.to_uri()),
                         timeout_seconds: 60,
                     },
@@ -374,6 +382,7 @@ impl SagaComposer {
                         step_index,
                         format!("Process goal: {:?}", goal),
                         SagaAction::WaitFor {
+                            timeout_lamport: 0,
                             condition: "goal_processed".to_string(),
                             timeout_seconds: 60,
                         },
@@ -496,8 +505,8 @@ mod tests {
     #[test]
     fn test_compose_transfer() {
         let composer = SagaComposer::default();
-        let alice = DID::new_self("alice");
-        let bob = DID::new_self("bob");
+        let alice = DID::new_self(b"alice");
+        let bob = DID::new_self(b"bob");
 
         let intent = Intent::new(
             alice.clone(),
@@ -530,8 +539,8 @@ mod tests {
     #[test]
     fn test_compose_delegation() {
         let composer = SagaComposer::default();
-        let alice = DID::new_self("alice");
-        let bob = DID::new_self("bob");
+        let alice = DID::new_self(b"alice");
+        let bob = DID::new_self(b"bob");
 
         let intent = Intent::new(
             alice.clone(),
@@ -551,8 +560,8 @@ mod tests {
     #[test]
     fn test_max_cost_constraint() {
         let composer = SagaComposer::default();
-        let alice = DID::new_self("alice");
-        let bob = DID::new_self("bob");
+        let alice = DID::new_self(b"alice");
+        let bob = DID::new_self(b"bob");
 
         let intent = Intent::new(
             alice.clone(),
@@ -564,8 +573,9 @@ mod tests {
             RealmId::root(),
         )
         .with_constraint(Constraint::MaxCost {
-            amount: 1, // Zu niedrig
-            asset_type: "ERY".to_string(),
+            cost: Cost::default(),
+            amount: Some(1), // Zu niedrig
+            asset_type: Some("ERY".to_string()),
         });
 
         let result = composer.compose(&intent);
@@ -577,9 +587,10 @@ mod tests {
 
     #[test]
     fn test_add_realm_crossing() {
+        use crate::domain::realm_id_from_name;
         let composer = SagaComposer::default();
-        let alice = DID::new_self("alice");
-        let bob = DID::new_self("bob");
+        let alice = DID::new_self(b"alice");
+        let bob = DID::new_self(b"bob");
 
         let intent = Intent::new(
             alice.clone(),
@@ -594,8 +605,8 @@ mod tests {
         let saga = composer.compose(&intent).unwrap();
         let saga_with_crossing = composer.add_realm_crossing(
             saga,
-            RealmId::new("realm:erynoa:gaming"),
-            RealmId::new("realm:erynoa:finance"),
+            realm_id_from_name("realm:erynoa:gaming"),
+            realm_id_from_name("realm:erynoa:finance"),
             &alice,
         );
 

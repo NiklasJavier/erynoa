@@ -15,7 +15,7 @@
 //! - Integration mit Cost-Algebra
 
 use super::cost::Cost;
-use super::identity::DIDNamespace;
+use super::identity::{DIDNamespace, DID};
 use super::primitives::{TemporalCoord, UniversalId};
 use super::trust::TrustVector6D;
 use serde::{Deserialize, Serialize};
@@ -313,7 +313,10 @@ pub struct WorldFormulaContribution {
     pub subject: UniversalId,
     /// Aktivitäts-Faktor 𝔸(s)
     pub activity: Activity,
-    /// Trust-Norm ‖𝕎(s)‖_w
+    /// Trust-Vektor 𝕎(s) - Legacy-Feld für Kompatibilität
+    #[serde(default)]
+    pub trust: TrustVector6D,
+    /// Trust-Norm ‖𝕎(s)‖_w (berechnet aus trust)
     pub trust_norm: f32,
     /// Kausale Konnektivität |ℂ(s)|
     pub causal_connectivity: u64,
@@ -323,6 +326,9 @@ pub struct WorldFormulaContribution {
     pub human_factor: HumanFactor,
     /// Temporaler Gewichtsfaktor w(s,t)
     pub temporal_weight: f64,
+    /// Kontext für Trust-Gewichtung - Legacy-Feld für Kompatibilität
+    #[serde(default)]
+    pub context: super::trust::ContextType,
     /// Berechneter Beitrag
     pub contribution: f64,
     /// Kosten der Berechnung
@@ -343,6 +349,7 @@ impl WorldFormulaContribution {
         temporal_weight: f64,
         lamport: u32,
     ) -> Self {
+        let context = super::trust::ContextType::Default;
         let trust_norm = trust.weighted_norm(&TrustVector6D::default_weights());
 
         // Κ15b: Inner term
@@ -362,16 +369,114 @@ impl WorldFormulaContribution {
         Self {
             subject,
             activity,
+            trust: trust.clone(),
             trust_norm,
             causal_connectivity,
             surprisal,
             human_factor,
             temporal_weight,
+            context,
             contribution,
             computation_cost,
             computed_at: TemporalCoord::now(lamport, &id),
         }
     }
+
+    // ========================================================================
+    // Legacy Builder API (Kompatibilität mit domain/formula.rs)
+    // ========================================================================
+
+    /// Legacy: Erstelle neue Contribution mit DID
+    pub fn new(subject: DID) -> Self {
+        Self {
+            subject: subject.id,
+            activity: Activity::default(),
+            trust: TrustVector6D::default(),
+            trust_norm: 0.5,
+            causal_connectivity: 1,
+            surprisal: Surprisal::default(),
+            human_factor: HumanFactor::default(),
+            temporal_weight: 1.0,
+            context: super::trust::ContextType::Default,
+            contribution: 0.0,
+            computation_cost: Cost::default(),
+            computed_at: TemporalCoord::default(),
+        }
+    }
+
+    /// Legacy: Builder - Mit Aktivität
+    pub fn with_activity(mut self, activity: Activity) -> Self {
+        self.activity = activity;
+        self
+    }
+
+    /// Legacy: Builder - Mit Trust-Vektor
+    pub fn with_trust(mut self, trust: TrustVector6D) -> Self {
+        self.trust = trust;
+        self.trust_norm = trust.weighted_norm(&self.context.weights());
+        self
+    }
+
+    /// Legacy: Builder - Mit Surprisal
+    pub fn with_surprisal(mut self, surprisal: Surprisal) -> Self {
+        self.surprisal = surprisal;
+        self
+    }
+
+    /// Legacy: Builder - Mit Human-Factor
+    pub fn with_human_factor(mut self, human_factor: HumanFactor) -> Self {
+        self.human_factor = human_factor;
+        self
+    }
+
+    /// Legacy: Builder - Mit kausaler Geschichte (Alias für causal_connectivity)
+    pub fn with_causal_history(mut self, size: u64) -> Self {
+        self.causal_connectivity = size;
+        self
+    }
+
+    /// Legacy: Builder - Mit Kontext
+    pub fn with_context(mut self, context: super::trust::ContextType) -> Self {
+        self.context = context;
+        // Aktualisiere trust_norm mit neuen Kontext-Gewichten
+        self.trust_norm = self.trust.weighted_norm(&context.weights());
+        self
+    }
+
+    /// Legacy: Berechne den Beitrag 𝔼(s)
+    pub fn compute(&self) -> f64 {
+        // 𝔸(s)
+        let a = self.activity.value();
+
+        // ‖𝕎(s)‖_w
+        let weights = self.context.weights();
+        let trust_norm = self.trust.weighted_norm(&weights);
+
+        // ln|ℂ(s)|
+        let log_history = (self.causal_connectivity.max(1) as f64).ln();
+
+        // 𝒮(s) mit angepasster Trust-Norm
+        let mut surprisal = self.surprisal;
+        surprisal.trust_norm = trust_norm;
+        let dampened_surprisal = surprisal.dampened();
+
+        // σ⃗(...)
+        let inner = (trust_norm as f64) * log_history * dampened_surprisal;
+        let sigmoid = Self::sigmoid(inner);
+
+        // Ĥ(s)
+        let h = self.human_factor.value();
+
+        // w(s,t)
+        let w = self.temporal_weight;
+
+        // Kombination
+        a * sigmoid * h * w
+    }
+
+    // ========================================================================
+    // Modern API
+    // ========================================================================
 
     /// Sigmoid-Funktion σ⃗(x) (Κ15c)
     pub fn sigmoid(x: f64) -> f64 {

@@ -511,7 +511,7 @@ mod tests {
 
         // Alice: aktiv, hoher Trust, human-verified
         engine.update_contribution(
-            DID::new_self("alice"),
+            DID::new_self(b"alice"),
             TrustVector6D::new(0.9, 0.9, 0.8, 0.7, 0.6, 0.9),
             50,
             1000,
@@ -521,7 +521,7 @@ mod tests {
 
         // Bob: weniger aktiv, niedrigerer Trust
         engine.update_contribution(
-            DID::new_self("bob"),
+            DID::new_self(b"bob"),
             TrustVector6D::new(0.5, 0.5, 0.5, 0.5, 0.5, 0.5),
             10,
             100,
@@ -543,7 +543,7 @@ mod tests {
 
         // Drei Contributors mit unterschiedlicher Aktivität/Trust
         engine.update_contribution(
-            DID::new_self("high"),
+            DID::new_self(b"high"),
             TrustVector6D::new(0.9, 0.9, 0.9, 0.9, 0.9, 0.9),
             100,
             5000,
@@ -552,7 +552,7 @@ mod tests {
         );
 
         engine.update_contribution(
-            DID::new_self("medium"),
+            DID::new_self(b"medium"),
             TrustVector6D::new(0.6, 0.6, 0.6, 0.6, 0.6, 0.6),
             30,
             500,
@@ -561,7 +561,7 @@ mod tests {
         );
 
         engine.update_contribution(
-            DID::new_self("low"),
+            DID::new_self(b"low"),
             TrustVector6D::new(0.3, 0.3, 0.3, 0.3, 0.3, 0.3),
             5,
             50,
@@ -607,7 +607,7 @@ mod tests {
         engine
             .update_contribution_with_ctx(
                 &mut ctx,
-                DID::new_self("alice"),
+                DID::new_self(b"alice"),
                 TrustVector6D::new(0.8, 0.8, 0.8, 0.8, 0.8, 0.8),
                 25,
                 500,
@@ -617,7 +617,7 @@ mod tests {
             .unwrap();
 
         // Contribution wurde gespeichert
-        assert!(engine.get_contribution(&DID::new_self("alice")).is_some());
+        assert!(engine.get_contribution(&DID::new_self(b"alice")).is_some());
 
         // Gas wurde verbraucht
         assert!(ctx.gas_remaining < initial_gas);
@@ -633,7 +633,7 @@ mod tests {
 
         // Contribution hinzufügen
         engine.update_contribution(
-            DID::new_self("alice"),
+            DID::new_self(b"alice"),
             TrustVector6D::new(0.9, 0.9, 0.8, 0.7, 0.6, 0.9),
             50,
             1000,
@@ -660,7 +660,7 @@ mod tests {
         let mut engine = WorldFormulaEngine::default();
         let mut ctx = ExecutionContext::default_for_testing();
 
-        let alice = DID::new_self("alice");
+        let alice = DID::new_self(b"alice");
 
         // Contribution hinzufügen
         engine.update_contribution(
@@ -685,7 +685,7 @@ mod tests {
         let engine = WorldFormulaEngine::default();
         let mut ctx = ExecutionContext::default_for_testing();
 
-        let result = engine.compute_individual_with_ctx(&mut ctx, &DID::new_self("unknown"));
+        let result = engine.compute_individual_with_ctx(&mut ctx, &DID::new_self(b"unknown"));
 
         assert!(matches!(result, Err(ExecutionError::NotFound { .. })));
     }
