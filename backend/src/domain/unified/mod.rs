@@ -56,6 +56,7 @@ pub mod message;
 pub mod primitives;
 pub mod realm;
 pub mod saga;
+pub mod schema;
 pub mod trust;
 
 // Re-exports für einfachen Zugriff
@@ -69,8 +70,8 @@ pub use formula::{
     WorldFormulaContribution, WorldFormulaStatus,
 };
 pub use identity::{
-    Capability, DIDDocument, DIDNamespace, Delegation, IdentityError, VerificationMethod,
-    VerificationMethodType, DID,
+    extension_slots, Capability, DIDDocument, DIDNamespace, Delegation, IdentityError,
+    VerificationMethod, VerificationMethodType, DID,
 };
 pub use message::{
     AttestationMessage, DhtRecordMessage, EventMessage, MessagePayload, P2PMessage, P2PProtocol,
@@ -86,6 +87,9 @@ pub use realm::{
 pub use saga::{
     saga_id_from_intent, Constraint, Goal, Intent, RealmCrossing, Saga, SagaAction,
     SagaCompensation, SagaError, SagaId, SagaStatus, SagaStep, StepResult, StepStatus,
+};
+pub use schema::{
+    append_field_migration, identity_migration, MigrationError, MigrationFn, SchemaRegistry,
 };
 pub use trust::{
     ContextType, DailyTrustStats, TrustCombination, TrustDampeningMatrix, TrustDimension,

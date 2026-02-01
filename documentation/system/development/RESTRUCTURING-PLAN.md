@@ -903,24 +903,26 @@ pub struct CompressionRecord {
 
 ---
 
-### Phase 6: Finalisierung (Woche 6)
+### Phase 6: Finalisierung (Woche 6) 🚧 IN PROGRESS
 
-#### 6.1 Alte Module entfernen
+#### 6.1 Alte Module entfernen ✅
 
 **Tasks:**
 
-- [ ] `domain/did.rs` → Deprecation → Remove
-- [ ] `domain/event.rs` → Deprecation → Remove
-- [ ] `domain/trust.rs` → Deprecation → Remove (nur doppelte Teile)
-- [ ] `domain/realm.rs` → Deprecation → Remove
-- [ ] `domain/saga.rs` → Deprecation → Remove
-- [ ] `domain/formula.rs` → Deprecation → Remove
+- [x] `domain/did.rs` → Deprecation → Remove
+- [x] `domain/event.rs` → Deprecation → Remove
+- [x] `domain/trust.rs` → Deprecation → Remove
+- [x] `domain/realm.rs` → Deprecation → Remove
+- [x] `domain/saga.rs` → Deprecation → Remove
+- [x] `domain/formula.rs` → Deprecation → Remove
 
-**Strategie:**
+**Ergebnis:** 6 Legacy-Module entfernt, 358 Tests bestanden (vorher 373 inkl. 15 deprecated Tests)
 
-1. Woche 5: `#[deprecated]` Attribut hinzufügen
-2. Woche 6: CI-Check dass keine Deprecated-Warnings mehr existieren
-3. Woche 6+: Module entfernen
+**Durchgeführte Änderungen:**
+
+1. `domain/mod.rs` → Nur noch `pub mod unified` + Re-Exports
+2. `api/v1/auth/handlers.rs` → `domain::DID` statt `domain::did::DID`
+3. `error.rs` → `domain::IdentityError` statt `domain::did::DIDError`
 
 #### 6.2 API-Kompatibilität
 
@@ -1071,10 +1073,10 @@ Phase 1 (Foundation)
 - [ ] `information_loss.rs`
 - [ ] Zig-Zag Identity Tests
 
-### Phase 6: Finalisierung ☐
+### Phase 6: Finalisierung 🚧
 
-- [ ] Alte Module entfernt
-- [ ] API-Kompatibilität verifiziert
+- [x] Alte Module entfernt (6 Dateien gelöscht)
+- [x] API-Kompatibilität verifiziert (358 Tests bestanden)
 - [ ] Integration-Tests
 - [ ] Dokumentation aktualisiert
 - [ ] Performance-Benchmarks bestanden

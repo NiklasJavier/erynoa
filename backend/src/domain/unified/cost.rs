@@ -186,7 +186,13 @@ impl fmt::Debug for Cost {
 
 impl fmt::Display for Cost {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}g/{}m/{:.1}%r", self.gas, self.mana, self.trust_risk * 100.0)
+        write!(
+            f,
+            "{}g/{}m/{:.1}%r",
+            self.gas,
+            self.mana,
+            self.trust_risk * 100.0
+        )
     }
 }
 
@@ -396,7 +402,9 @@ impl CostTable {
             "add" | "sub" => self.vm_add,
             "mul" => self.vm_mul,
             "div" | "mod" => self.vm_div,
-            "call" => self.vm_call_base.seq(self.vm_call_per_arg.scale(args as f32)),
+            "call" => self
+                .vm_call_base
+                .seq(self.vm_call_per_arg.scale(args as f32)),
             "host" => self.vm_host_call,
             "br" | "br_if" => self.vm_branch,
             "load" | "get" => self.vm_load,
@@ -500,3 +508,13 @@ mod tests {
         assert_eq!(total.mana, 15);
     }
 }
+
+// ============================================================================
+// Compile-Time Size Checks (UDM §XIV.1)
+// ============================================================================
+
+/// Garantiert erwartete Layouts
+/// Note: Cost ist 24 Bytes wegen Alignment (8 + 8 + 4 + 4 padding)
+const _: () = {
+    assert!(std::mem::size_of::<Cost>() == 24);
+};

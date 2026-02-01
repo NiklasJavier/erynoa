@@ -915,3 +915,13 @@ mod tests {
         assert!((result.c - 0.16).abs() < 0.001);
     }
 }
+
+// ============================================================================
+// Compile-Time Size Checks (UDM §XIV.1)
+// ============================================================================
+
+/// Garantiert Cache-freundliche Layouts
+const _: () = {
+    // TrustVector6D: 24 Bytes (6 × f32)
+    assert!(std::mem::size_of::<TrustVector6D>() == 24);
+};

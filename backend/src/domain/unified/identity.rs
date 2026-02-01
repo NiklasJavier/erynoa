@@ -354,6 +354,23 @@ impl DID {
 // DIDDocument
 // ============================================================================
 
+/// Extension Slot IDs (UDM §2.1)
+///
+/// Zukunftssichere Erweiterungen für DIDDocument
+pub mod extension_slots {
+    /// Recovery-Keys für Key-Rotation
+    pub const RECOVERY_KEYS: u16 = 0x0001;
+    /// Biometrische Bindung
+    pub const BIOMETRIC_BINDING: u16 = 0x0002;
+    /// Hardware-Attestation (TEE, TPM)
+    pub const HARDWARE_ATTESTATION: u16 = 0x0003;
+    /// Cross-Chain-Links
+    pub const CROSS_CHAIN_LINKS: u16 = 0x0004;
+    /// AI-Agent-Manifest
+    pub const AI_AGENT_MANIFEST: u16 = 0x0005;
+    // Custom Extensions: 0x0006..0xFFFF
+}
+
 /// DID Document mit Verifikationsmethoden
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DIDDocument {
@@ -369,6 +386,9 @@ pub struct DIDDocument {
     pub delegations: Vec<Delegation>,
     /// Letztes Update
     pub updated_at: TemporalCoord,
+    /// Zukunftssichere Extension Slots (UDM §2.1)
+    #[serde(default)]
+    pub extension_slots: std::collections::BTreeMap<u16, Vec<u8>>,
 }
 
 impl DIDDocument {
@@ -389,6 +409,7 @@ impl DIDDocument {
             assertion_method: vec![primary_vm.id],
             delegations: Vec::new(),
             updated_at: coord,
+            extension_slots: std::collections::BTreeMap::new(),
         }
     }
 
@@ -405,6 +426,21 @@ impl DIDDocument {
     /// Finde Verifikationsmethode nach ID
     pub fn find_verification_method(&self, id: &UniversalId) -> Option<&VerificationMethod> {
         self.verification_methods.iter().find(|vm| &vm.id == id)
+    }
+
+    /// Setze Extension Slot
+    pub fn set_extension(&mut self, slot_id: u16, data: Vec<u8>) {
+        self.extension_slots.insert(slot_id, data);
+    }
+
+    /// Hole Extension Slot
+    pub fn get_extension(&self, slot_id: u16) -> Option<&Vec<u8>> {
+        self.extension_slots.get(&slot_id)
+    }
+
+    /// Prüfe ob Extension existiert
+    pub fn has_extension(&self, slot_id: u16) -> bool {
+        self.extension_slots.contains_key(&slot_id)
     }
 }
 

@@ -418,3 +418,15 @@ mod tests {
         assert_eq!(coord, recovered);
     }
 }
+
+// ============================================================================
+// Compile-Time Size Checks (UDM §XIV.1)
+// ============================================================================
+
+/// Garantiert Cache-freundliche Layouts
+const _: () = {
+    // UniversalId: 32 Bytes (Content-Addressed ID)
+    assert!(std::mem::size_of::<UniversalId>() == 32);
+    // TemporalCoord: 16 Bytes (Wall-Clock + Lamport + Node-Hash)
+    assert!(std::mem::size_of::<TemporalCoord>() == 16);
+};
