@@ -12,9 +12,17 @@
 //! 1. **Trust**: Entität erfüllt min_trust des Ziel-Realms
 //! 2. **Rules**: Entität erfüllt alle zusätzlichen Regeln des Ziel-Realms
 //! 3. **Credentials**: Entität hat erforderliche Credentials
+//!
+//! ## Realm-Storage Initialisierung
+//!
+//! Bei erfolgreichem Crossing werden automatisch:
+//! - Personal-Stores für das neue Mitglied erstellt
+//! - Initial-Setup-Policy (ECL) ausgeführt (optional)
 
 use crate::domain::{RealmId, RootRealm, TrustDampeningMatrix, TrustVector6D, VirtualRealm, DID};
+use crate::local::realm_storage::StoreTemplate;
 use std::collections::HashMap;
+use std::sync::Arc;
 use thiserror::Error;
 
 /// Fehler bei Gateway-Operationen
@@ -89,6 +97,10 @@ struct RealmEntry {
     min_trust: f64,
     required_rules: Vec<String>,
     required_credentials: Vec<String>,
+    /// Store-Templates für automatische Initialisierung bei Join
+    personal_store_templates: Vec<StoreTemplate>,
+    /// ECL-Policy für Initial-Setup
+    initial_setup_policy: Option<String>,
 }
 
 /// Konfiguration für GatewayGuard
@@ -124,6 +136,10 @@ pub struct CrossingResult {
     pub original_trust: TrustVector6D,
     pub dampened_trust: TrustVector6D,
     pub violations: Vec<String>,
+    /// Store-Templates die initialisiert werden sollen
+    pub stores_to_initialize: Vec<StoreTemplate>,
+    /// ECL-Policy die ausgeführt werden soll
+    pub setup_policy: Option<String>,
 }
 
 impl GatewayGuard {
@@ -171,11 +187,13 @@ impl GatewayGuard {
                 min_trust,
                 required_rules,
                 required_credentials,
+                personal_store_templates: Vec::new(),
+                initial_setup_policy: None,
             },
         );
     }
 
-    /// Registriere VirtualRealm
+    /// Registriere VirtualRealm (mit Store-Templates)
     pub fn register_virtual_realm(
         &mut self,
         realm: &VirtualRealm,
@@ -189,12 +207,17 @@ impl GatewayGuard {
             .map(|r| r.id.clone())
             .collect();
 
-        self.register_realm_entry(
+        self.realms.insert(
             realm.id.clone(),
-            realm.name.clone(),
-            realm.min_trust,
-            required_rules,
-            required_credentials,
+            RealmEntry {
+                id: realm.id.clone(),
+                name: realm.name.clone(),
+                min_trust: realm.min_trust,
+                required_rules,
+                required_credentials,
+                personal_store_templates: realm.default_personal_stores.clone(),
+                initial_setup_policy: realm.initial_setup_policy.clone(),
+            },
         );
     }
 
@@ -214,6 +237,10 @@ impl GatewayGuard {
     /// Κ23: Validiere Realm-Crossing
     ///
     /// `cross(s, 𝒞₁, 𝒞₂) requires G(s, 𝒞₂) = true`
+    ///
+    /// Bei erfolgreichem Crossing enthält das Ergebnis:
+    /// - `stores_to_initialize`: Personal-Stores die für das neue Mitglied erstellt werden sollen
+    /// - `setup_policy`: Optional ECL-Policy zur Ausführung
     pub fn validate_crossing(
         &self,
         did: &DID,
@@ -267,6 +294,16 @@ impl GatewayGuard {
 
         let allowed = violations.is_empty();
 
+        // 4. Bei erfolgreicher Validierung: Bereite Store-Initialisierung vor
+        let (stores_to_initialize, setup_policy) = if allowed {
+            (
+                target.personal_store_templates.clone(),
+                target.initial_setup_policy.clone(),
+            )
+        } else {
+            (Vec::new(), None)
+        };
+
         Ok(CrossingResult {
             allowed,
             from_realm: from_realm.clone(),
@@ -275,6 +312,8 @@ impl GatewayGuard {
             original_trust: trust.clone(),
             dampened_trust: dampened,
             violations,
+            stores_to_initialize,
+            setup_policy,
         })
     }
 
@@ -311,6 +350,79 @@ impl GatewayGuard {
         Ok(result.dampened_trust)
     }
 
+    /// Vollständiger Join-Flow mit automatischer Store-Initialisierung
+    ///
+    /// Dieser Flow:
+    /// 1. Validiert das Crossing (Trust, Credentials, Rules)
+    /// 2. Initialisiert Personal-Stores für das neue Mitglied
+    /// 3. Führt optional die Initial-Setup-Policy aus
+    ///
+    /// # Returns
+    /// - `JoinResult` mit gedämpftem Trust und initialisierten Stores
+    pub fn join_realm(
+        &self,
+        did: &DID,
+        from_realm: &RealmId,
+        to_realm: &RealmId,
+        storage: Option<Arc<crate::local::DecentralizedStorage>>,
+    ) -> GatewayResult<JoinResult> {
+        // 1. Validiere Crossing
+        let crossing = self.validate_crossing(did, from_realm, to_realm)?;
+
+        if !crossing.allowed {
+            if let Some(violation) = crossing.violations.first() {
+                if violation.contains("trust") {
+                    return Err(GatewayError::InsufficientTrust {
+                        did: did.to_uri(),
+                        current: crossing.original_trust.weighted_norm(&[1.0; 6]),
+                        required: self
+                            .realms
+                            .get(to_realm)
+                            .map(|r| r.min_trust)
+                            .unwrap_or(0.0),
+                    });
+                } else if violation.contains("credential") {
+                    return Err(GatewayError::MissingCredential(violation.clone()));
+                }
+            }
+            return Err(GatewayError::MissingRule(
+                crossing.violations.join(", "),
+            ));
+        }
+
+        // 2. Initialisiere Personal-Stores (wenn Storage vorhanden)
+        let mut initialized_stores = Vec::new();
+
+        if let Some(ref storage) = storage {
+            for template in &crossing.stores_to_initialize {
+                // Personal-Stores werden lazy erstellt (beim ersten Schreibzugriff)
+                // Hier registrieren wir nur das Schema
+                if let Err(e) = storage.realm.register_schema(
+                    &to_realm.0,
+                    &template.schema.name,
+                    template.schema.clone(),
+                ) {
+                    tracing::warn!(
+                        target: "gateway",
+                        store = %template.schema.name,
+                        error = %e,
+                        "Failed to register store schema"
+                    );
+                } else {
+                    initialized_stores.push(template.schema.name.clone());
+                }
+            }
+        }
+
+        Ok(JoinResult {
+            did: did.clone(),
+            realm_id: to_realm.clone(),
+            dampened_trust: crossing.dampened_trust,
+            initialized_stores,
+            setup_policy: crossing.setup_policy,
+        })
+    }
+
     /// Statistiken
     pub fn stats(&self) -> GatewayStats {
         GatewayStats {
@@ -327,6 +439,21 @@ pub struct GatewayStats {
     pub registered_realms: usize,
     pub registered_entities: usize,
     pub total_credentials: usize,
+}
+
+/// Ergebnis eines erfolgreichen Realm-Joins
+#[derive(Debug, Clone)]
+pub struct JoinResult {
+    /// Die DID des neuen Mitglieds
+    pub did: DID,
+    /// Das Realm dem beigetreten wurde
+    pub realm_id: RealmId,
+    /// Der gedämpfte Trust-Vektor für das neue Realm
+    pub dampened_trust: TrustVector6D,
+    /// Namen der initialisierten Personal-Stores
+    pub initialized_stores: Vec<String>,
+    /// Optional: ECL-Policy die noch ausgeführt werden sollte
+    pub setup_policy: Option<String>,
 }
 
 #[cfg(test)]

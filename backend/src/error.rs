@@ -96,6 +96,15 @@ pub enum ApiError {
 
     #[error("Protection error: {0}")]
     Protection(String),
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // State & Capabilities
+    // ─────────────────────────────────────────────────────────────────────────
+    #[error("Invalid state: {0}")]
+    InvalidState(String),
+
+    #[error("Operation not supported: {0}")]
+    NotSupported(String),
 }
 
 impl ApiError {
@@ -118,6 +127,8 @@ impl ApiError {
             Self::IntentParse(_) | Self::SagaComposition(_) => StatusCode::BAD_REQUEST,
             Self::DIDError(_) => StatusCode::BAD_REQUEST,
             Self::Protection(_) => StatusCode::FORBIDDEN,
+            Self::InvalidState(_) => StatusCode::CONFLICT,
+            Self::NotSupported(_) => StatusCode::NOT_IMPLEMENTED,
         }
     }
 
@@ -144,6 +155,8 @@ impl ApiError {
             Self::SagaComposition(_) => "SAGA_COMPOSITION_ERROR",
             Self::DIDError(_) => "DID_ERROR",
             Self::Protection(_) => "PROTECTION_ERROR",
+            Self::InvalidState(_) => "INVALID_STATE",
+            Self::NotSupported(_) => "NOT_SUPPORTED",
         }
     }
 }

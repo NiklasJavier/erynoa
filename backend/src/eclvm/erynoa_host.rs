@@ -19,27 +19,35 @@
 //! │  │ TrustStore  │  │IdentityStore│  │ EventStore  │              │
 //! │  │ get_trust() │  │ resolve()   │  │ get_depth() │              │
 //! │  └─────────────┘  └─────────────┘  └─────────────┘              │
+//! │                                                                 │
+//! │  ┌─────────────────────────────────────────────────────────────┐│
+//! │  │                    RealmStorage                             ││
+//! │  │  store_get() | store_put() | store_query() | ...            ││
+//! │  │  Intelligentes Prefixing | Schema-Validierung               ││
+//! │  └─────────────────────────────────────────────────────────────┘│
 //! └─────────────────────────────────────────────────────────────────┘
 //! ```
 //!
 //! ## Sicherheit
 //!
-//! - Alle Zugriffe sind read-only
-//! - Keine Mutation des Zustands aus der VM heraus
+//! - Trust/Identity/Event-Zugriffe sind read-only
+//! - Store-Operationen respektieren Schema-Validierung
 //! - Jede Operation ist Gas-metered (in der VM)
+//! - Personal-Stores nur für eigene DID zugänglich
 
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::domain::DID;
-use crate::eclvm::runtime::host::HostInterface;
+use crate::eclvm::runtime::host::{HostInterface, HostStoreValue, StoreContext};
 use crate::error::Result;
+use crate::local::realm_storage::StoreValue;
 use crate::local::DecentralizedStorage;
 
 /// Erynoa Host - Verbindet ECLVM mit dem echten Backend
 pub struct ErynoaHost {
-    /// Dezentraler Storage (enthält Trust, Identities, Events)
+    /// Dezentraler Storage (enthält Trust, Identities, Events, Realm-Storage)
     storage: Arc<DecentralizedStorage>,
 
     /// Credential-Verifikation (vereinfacht: Schema -> DIDs die es haben)
@@ -48,6 +56,9 @@ pub struct ErynoaHost {
 
     /// Log-Callback (optional)
     log_callback: Option<Box<dyn Fn(&str) + Send + Sync>>,
+
+    /// Aktueller Store-Kontext (Realm + Caller-DID)
+    store_context: Option<StoreContext>,
 }
 
 impl ErynoaHost {
@@ -57,6 +68,7 @@ impl ErynoaHost {
             storage,
             credential_schemas: std::collections::HashMap::new(),
             log_callback: None,
+            store_context: None,
         }
     }
 
@@ -76,6 +88,12 @@ impl ErynoaHost {
         self
     }
 
+    /// Builder: Setze initialen Store-Kontext
+    pub fn with_store_context(mut self, ctx: StoreContext) -> Self {
+        self.store_context = Some(ctx);
+        self
+    }
+
     /// Registriere Credential für DID
     pub fn grant_credential(&mut self, did: &str, schema: &str) {
         self.credential_schemas
@@ -89,6 +107,77 @@ impl ErynoaHost {
         if let Some(holders) = self.credential_schemas.get_mut(schema) {
             holders.remove(did);
         }
+    }
+
+    /// Helper: Konvertiere HostStoreValue zu internem StoreValue
+    fn host_to_store_value(&self, value: HostStoreValue) -> StoreValue {
+        match value {
+            HostStoreValue::Null => StoreValue::Null,
+            HostStoreValue::String(s) => StoreValue::String(s),
+            HostStoreValue::Number(n) => StoreValue::Number(n),
+            HostStoreValue::Bool(b) => StoreValue::Bool(b),
+            HostStoreValue::List(items) => StoreValue::List(
+                items
+                    .into_iter()
+                    .map(|v| self.host_to_store_value(v))
+                    .collect(),
+            ),
+            HostStoreValue::Object(map) => StoreValue::Object(
+                map.into_iter()
+                    .map(|(k, v)| (k, self.host_to_store_value(v)))
+                    .collect(),
+            ),
+        }
+    }
+
+    /// Helper: Konvertiere internes StoreValue zu HostStoreValue
+    fn store_to_host_value(&self, value: StoreValue) -> HostStoreValue {
+        match value {
+            StoreValue::Null => HostStoreValue::Null,
+            StoreValue::String(s) => HostStoreValue::String(s),
+            StoreValue::Number(n) => HostStoreValue::Number(n),
+            StoreValue::Bool(b) => HostStoreValue::Bool(b),
+            StoreValue::Did(did) => HostStoreValue::String(did), // DID als String
+            StoreValue::Timestamp(ts) => HostStoreValue::Number(ts as f64), // Timestamp als Number
+            StoreValue::Bytes(bytes) => {
+                // Bytes als Base64-String
+                HostStoreValue::String(base64::Engine::encode(
+                    &base64::engine::general_purpose::STANDARD,
+                    &bytes,
+                ))
+            }
+            StoreValue::List(items) => HostStoreValue::List(
+                items
+                    .into_iter()
+                    .map(|v| self.store_to_host_value(v))
+                    .collect(),
+            ),
+            StoreValue::Object(map) => HostStoreValue::Object(
+                map.into_iter()
+                    .map(|(k, v)| (k, self.store_to_host_value(v)))
+                    .collect(),
+            ),
+        }
+    }
+
+    /// Helper: Parse DID aus Kontext
+    fn get_context_did(&self) -> Result<DID> {
+        let ctx = self.store_context.as_ref().ok_or_else(|| {
+            crate::error::ApiError::InvalidState("Kein Store-Kontext gesetzt".into())
+        })?;
+
+        DID::from_str(&ctx.caller_did)
+            .map_err(|e| crate::error::ApiError::Validation(format!("Ungültige Caller-DID: {}", e)))
+    }
+
+    /// Helper: Hole Realm-ID aus Kontext
+    fn get_context_realm(&self) -> Result<&str> {
+        self.store_context
+            .as_ref()
+            .map(|ctx| ctx.realm_id.as_str())
+            .ok_or_else(|| {
+                crate::error::ApiError::InvalidState("Kein Store-Kontext gesetzt".into())
+            })
     }
 }
 
@@ -149,6 +238,247 @@ impl HostInterface for ErynoaHost {
             callback(message);
         } else {
             tracing::debug!(target: "eclvm", message = %message, "VM log");
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Realm Storage Operationen (Κ24: Datenintegrität)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    fn set_store_context(&mut self, ctx: StoreContext) -> Result<()> {
+        self.store_context = Some(ctx);
+        Ok(())
+    }
+
+    fn store_get(
+        &self,
+        store_name: &str,
+        key: &str,
+        is_personal: bool,
+    ) -> Result<Option<HostStoreValue>> {
+        let realm_id = self.get_context_realm()?;
+
+        let result = if is_personal {
+            let did = self.get_context_did()?;
+            self.storage
+                .realm
+                .get_personal(realm_id, &did, store_name, key)?
+        } else {
+            self.storage.realm.get_shared(realm_id, store_name, key)?
+        };
+
+        Ok(result.map(|v| self.store_to_host_value(v)))
+    }
+
+    fn store_put(
+        &mut self,
+        store_name: &str,
+        key: &str,
+        value: HostStoreValue,
+        is_personal: bool,
+    ) -> Result<()> {
+        let realm_id = self.get_context_realm()?.to_string();
+        let store_value = self.host_to_store_value(value);
+
+        if is_personal {
+            let did = self.get_context_did()?;
+            self.storage
+                .realm
+                .put_personal(&realm_id, &did, store_name, key, store_value)?;
+        } else {
+            self.storage
+                .realm
+                .put_shared(&realm_id, store_name, key, store_value)?;
+        }
+
+        Ok(())
+    }
+
+    fn store_delete(&mut self, store_name: &str, key: &str, is_personal: bool) -> Result<bool> {
+        let realm_id = self.get_context_realm()?.to_string();
+
+        let existed = if is_personal {
+            let did = self.get_context_did()?;
+            self.storage
+                .realm
+                .delete_personal(&realm_id, &did, store_name, key)?
+        } else {
+            self.storage
+                .realm
+                .delete_shared(&realm_id, store_name, key)?
+        };
+
+        Ok(existed)
+    }
+
+    fn store_get_nested(
+        &self,
+        store_name: &str,
+        key: &str,
+        path: &str,
+        is_personal: bool,
+    ) -> Result<Option<HostStoreValue>> {
+        let realm_id = self.get_context_realm()?;
+
+        let result = if is_personal {
+            let did = self.get_context_did()?;
+            self.storage
+                .realm
+                .get_nested_personal(realm_id, &did, store_name, key, path)?
+        } else {
+            self.storage
+                .realm
+                .get_nested_shared(realm_id, store_name, key, path)?
+        };
+
+        Ok(result.map(|v| self.store_to_host_value(v)))
+    }
+
+    fn store_put_nested(
+        &mut self,
+        store_name: &str,
+        key: &str,
+        path: &str,
+        value: HostStoreValue,
+        is_personal: bool,
+    ) -> Result<()> {
+        let realm_id = self.get_context_realm()?.to_string();
+        let store_value = self.host_to_store_value(value);
+
+        if is_personal {
+            let did = self.get_context_did()?;
+            self.storage.realm.put_nested_personal(
+                &realm_id,
+                &did,
+                store_name,
+                key,
+                path,
+                store_value,
+            )?;
+        } else {
+            self.storage
+                .realm
+                .put_nested_shared(&realm_id, store_name, key, path, store_value)?;
+        }
+
+        Ok(())
+    }
+
+    fn store_append_list(
+        &mut self,
+        store_name: &str,
+        key: &str,
+        path: &str,
+        value: HostStoreValue,
+        is_personal: bool,
+    ) -> Result<usize> {
+        let realm_id = self.get_context_realm()?.to_string();
+        let store_value = self.host_to_store_value(value);
+
+        let new_len = if is_personal {
+            let did = self.get_context_did()?;
+            self.storage.realm.append_to_list_personal(
+                &realm_id,
+                &did,
+                store_name,
+                key,
+                path,
+                store_value,
+            )?
+        } else {
+            self.storage.realm.append_to_list_shared(
+                &realm_id,
+                store_name,
+                key,
+                path,
+                store_value,
+            )?
+        };
+
+        Ok(new_len)
+    }
+
+    fn store_exists(&self, store_name: &str, is_personal: bool) -> Result<bool> {
+        let realm_id = self.get_context_realm()?;
+
+        if is_personal {
+            let did = self.get_context_did()?;
+            Ok(self
+                .storage
+                .realm
+                .store_exists_personal(realm_id, &did, store_name)?)
+        } else {
+            Ok(self
+                .storage
+                .realm
+                .store_exists_shared(realm_id, store_name)?)
+        }
+    }
+
+    fn store_count(&self, store_name: &str, is_personal: bool) -> Result<usize> {
+        let realm_id = self.get_context_realm()?;
+
+        if is_personal {
+            let did = self.get_context_did()?;
+            Ok(self
+                .storage
+                .realm
+                .count_personal(realm_id, &did, store_name)?)
+        } else {
+            Ok(self.storage.realm.count_shared(realm_id, store_name)?)
+        }
+    }
+
+    fn store_query_by_index(
+        &self,
+        store_name: &str,
+        index_field: &str,
+        value: &HostStoreValue,
+        limit: usize,
+    ) -> Result<Vec<String>> {
+        let realm_id = self.get_context_realm()?;
+
+        // Konvertiere HostStoreValue zu String für Index-Query
+        let index_value = match value {
+            HostStoreValue::String(s) => s.clone(),
+            HostStoreValue::Number(n) => n.to_string(),
+            HostStoreValue::Bool(b) => b.to_string(),
+            _ => {
+                return Err(crate::error::ApiError::Validation(
+                    "Index-Wert muss String, Number oder Bool sein".into(),
+                ))
+            }
+        };
+
+        Ok(self.storage.realm.query_by_index_shared(
+            realm_id,
+            store_name,
+            index_field,
+            &index_value,
+            limit,
+        )?)
+    }
+
+    fn store_list_keys(
+        &self,
+        store_name: &str,
+        prefix: Option<&str>,
+        limit: usize,
+        is_personal: bool,
+    ) -> Result<Vec<String>> {
+        let realm_id = self.get_context_realm()?;
+
+        if is_personal {
+            let did = self.get_context_did()?;
+            Ok(self
+                .storage
+                .realm
+                .list_keys_personal(realm_id, &did, store_name, prefix, limit)?)
+        } else {
+            Ok(self
+                .storage
+                .realm
+                .list_keys_shared(realm_id, store_name, prefix, limit)?)
         }
     }
 }
@@ -329,5 +659,330 @@ mod tests {
         // Mit nur einem Vertrauenden entspricht die Reputation dem Trust
         assert!((alice_trust[0] - 0.8).abs() < 0.01); // R
         assert!((alice_trust[1] - 0.7).abs() < 0.01); // I
+    }
+
+    #[test]
+    fn test_erynoa_host_store_operations() {
+        let (storage, _temp) = setup_storage();
+
+        // Erstelle Alice Identity
+        let alice = storage
+            .identities
+            .create_identity(crate::domain::DIDNamespace::Self_)
+            .unwrap();
+
+        // Erstelle Store zuerst
+        use crate::local::realm_storage::{SchemaFieldType, StoreSchema};
+        let realm_id = crate::domain::RealmId::new("test-realm");
+        let schema = StoreSchema::new("posts", false)
+            .with_field("title", SchemaFieldType::String)
+            .with_field("likes", SchemaFieldType::Number);
+        storage
+            .realm
+            .create_store(&realm_id, &alice.did, schema)
+            .unwrap();
+
+        let mut host = ErynoaHost::new(Arc::clone(&storage));
+
+        // Setze Store-Kontext
+        host.set_store_context(StoreContext::new("test-realm", alice.did.to_uri()))
+            .unwrap();
+
+        // Speichere Wert in Shared Store
+        host.store_put(
+            "posts",
+            "post-1",
+            HostStoreValue::Object({
+                let mut m = std::collections::HashMap::new();
+                m.insert(
+                    "title".to_string(),
+                    HostStoreValue::String("Hello World".to_string()),
+                );
+                m.insert("likes".to_string(), HostStoreValue::Number(42.0));
+                m
+            }),
+            false,
+        )
+        .unwrap();
+
+        // Lese Wert zurück
+        let value = host.store_get("posts", "post-1", false).unwrap().unwrap();
+        match value {
+            HostStoreValue::Object(map) => {
+                assert_eq!(
+                    map.get("title"),
+                    Some(&HostStoreValue::String("Hello World".to_string()))
+                );
+                assert_eq!(map.get("likes"), Some(&HostStoreValue::Number(42.0)));
+            }
+            _ => panic!("Expected Object"),
+        }
+    }
+
+    #[test]
+    fn test_erynoa_host_personal_store() {
+        let (storage, _temp) = setup_storage();
+
+        let alice = storage
+            .identities
+            .create_identity(crate::domain::DIDNamespace::Self_)
+            .unwrap();
+
+        // Erstelle Personal-Store
+        use crate::local::realm_storage::{SchemaFieldType, StoreSchema};
+        let realm_id = crate::domain::RealmId::new("test-realm");
+        let schema = StoreSchema::new("profile", true) // personal = true
+            .with_field("theme", SchemaFieldType::String);
+        storage
+            .realm
+            .create_store(&realm_id, &alice.did, schema)
+            .unwrap();
+
+        let mut host = ErynoaHost::new(Arc::clone(&storage));
+        host.set_store_context(StoreContext::new("test-realm", alice.did.to_uri()))
+            .unwrap();
+
+        // Speichere persönliche Daten
+        host.store_put(
+            "profile",
+            "settings",
+            HostStoreValue::Object({
+                let mut m = std::collections::HashMap::new();
+                m.insert(
+                    "theme".to_string(),
+                    HostStoreValue::String("dark".to_string()),
+                );
+                m
+            }),
+            true, // Personal
+        )
+        .unwrap();
+
+        // Lese persönliche Daten
+        let value = host
+            .store_get("profile", "settings", true)
+            .unwrap()
+            .unwrap();
+        match value {
+            HostStoreValue::Object(map) => {
+                assert_eq!(
+                    map.get("theme"),
+                    Some(&HostStoreValue::String("dark".to_string()))
+                );
+            }
+            _ => panic!("Expected Object"),
+        }
+    }
+
+    #[test]
+    fn test_erynoa_host_nested_operations() {
+        let (storage, _temp) = setup_storage();
+
+        let alice = storage
+            .identities
+            .create_identity(crate::domain::DIDNamespace::Self_)
+            .unwrap();
+
+        // Erstelle Store mit nested Object
+        use crate::local::realm_storage::{SchemaFieldType, StoreSchema};
+        let realm_id = crate::domain::RealmId::new("test-realm");
+        let schema = StoreSchema::new("users", false).with_field(
+            "profile",
+            SchemaFieldType::Object {
+                fields: {
+                    let mut m = std::collections::HashMap::new();
+                    m.insert("name".to_string(), SchemaFieldType::String);
+                    m.insert("age".to_string(), SchemaFieldType::Number);
+                    m
+                },
+            },
+        );
+        storage
+            .realm
+            .create_store(&realm_id, &alice.did, schema)
+            .unwrap();
+
+        let mut host = ErynoaHost::new(Arc::clone(&storage));
+        host.set_store_context(StoreContext::new("test-realm", alice.did.to_uri()))
+            .unwrap();
+
+        // Speichere komplexes Objekt
+        host.store_put(
+            "users",
+            "user-1",
+            HostStoreValue::Object({
+                let mut m = std::collections::HashMap::new();
+                m.insert(
+                    "profile".to_string(),
+                    HostStoreValue::Object({
+                        let mut p = std::collections::HashMap::new();
+                        p.insert(
+                            "name".to_string(),
+                            HostStoreValue::String("Alice".to_string()),
+                        );
+                        p.insert("age".to_string(), HostStoreValue::Number(30.0));
+                        p
+                    }),
+                );
+                m
+            }),
+            false,
+        )
+        .unwrap();
+
+        // Lese verschachtelten Wert
+        let name = host
+            .store_get_nested("users", "user-1", "profile.name", false)
+            .unwrap()
+            .unwrap();
+        assert_eq!(name, HostStoreValue::String("Alice".to_string()));
+
+        // Aktualisiere verschachtelten Wert
+        host.store_put_nested(
+            "users",
+            "user-1",
+            "profile.age",
+            HostStoreValue::Number(31.0),
+            false,
+        )
+        .unwrap();
+
+        let age = host
+            .store_get_nested("users", "user-1", "profile.age", false)
+            .unwrap()
+            .unwrap();
+        assert_eq!(age, HostStoreValue::Number(31.0));
+    }
+
+    #[test]
+    fn test_erynoa_host_list_operations() {
+        let (storage, _temp) = setup_storage();
+
+        let alice = storage
+            .identities
+            .create_identity(crate::domain::DIDNamespace::Self_)
+            .unwrap();
+
+        // Erstelle Store mit List
+        use crate::local::realm_storage::{SchemaFieldType, StoreSchema};
+        let realm_id = crate::domain::RealmId::new("test-realm");
+        let schema = StoreSchema::new("posts", false)
+            .with_field("title", SchemaFieldType::String)
+            .with_field(
+                "tags",
+                SchemaFieldType::List {
+                    item_type: Box::new(SchemaFieldType::String),
+                },
+            );
+        storage
+            .realm
+            .create_store(&realm_id, &alice.did, schema)
+            .unwrap();
+
+        let mut host = ErynoaHost::new(Arc::clone(&storage));
+        host.set_store_context(StoreContext::new("test-realm", alice.did.to_uri()))
+            .unwrap();
+
+        // Erstelle Objekt mit leerer Liste
+        host.store_put(
+            "posts",
+            "post-1",
+            HostStoreValue::Object({
+                let mut m = std::collections::HashMap::new();
+                m.insert(
+                    "title".to_string(),
+                    HostStoreValue::String("Post".to_string()),
+                );
+                m.insert("tags".to_string(), HostStoreValue::List(vec![]));
+                m
+            }),
+            false,
+        )
+        .unwrap();
+
+        // Füge Tags hinzu
+        let len1 = host
+            .store_append_list(
+                "posts",
+                "post-1",
+                "tags",
+                HostStoreValue::String("rust".to_string()),
+                false,
+            )
+            .unwrap();
+        assert_eq!(len1, 1);
+
+        let len2 = host
+            .store_append_list(
+                "posts",
+                "post-1",
+                "tags",
+                HostStoreValue::String("erynoa".to_string()),
+                false,
+            )
+            .unwrap();
+        assert_eq!(len2, 2);
+
+        // Prüfe Liste
+        let tags = host
+            .store_get_nested("posts", "post-1", "tags", false)
+            .unwrap()
+            .unwrap();
+        match tags {
+            HostStoreValue::List(items) => {
+                assert_eq!(items.len(), 2);
+                assert_eq!(items[0], HostStoreValue::String("rust".to_string()));
+                assert_eq!(items[1], HostStoreValue::String("erynoa".to_string()));
+            }
+            _ => panic!("Expected List"),
+        }
+    }
+
+    #[test]
+    fn test_erynoa_host_store_count_and_keys() {
+        let (storage, _temp) = setup_storage();
+
+        let alice = storage
+            .identities
+            .create_identity(crate::domain::DIDNamespace::Self_)
+            .unwrap();
+
+        // Erstelle Store
+        use crate::local::realm_storage::{SchemaFieldType, StoreSchema};
+        let realm_id = crate::domain::RealmId::new("test-realm");
+        let schema = StoreSchema::new("items", false).with_field("value", SchemaFieldType::Number);
+        storage
+            .realm
+            .create_store(&realm_id, &alice.did, schema)
+            .unwrap();
+
+        let mut host = ErynoaHost::new(Arc::clone(&storage));
+        host.set_store_context(StoreContext::new("test-realm", alice.did.to_uri()))
+            .unwrap();
+
+        // Füge mehrere Einträge hinzu
+        for i in 0..5 {
+            host.store_put(
+                "items",
+                &format!("item-{}", i),
+                HostStoreValue::Number(i as f64),
+                false,
+            )
+            .unwrap();
+        }
+
+        // Zähle Einträge
+        let count = host.store_count("items", false).unwrap();
+        assert_eq!(count, 5);
+
+        // Liste Keys
+        let keys = host.store_list_keys("items", None, 10, false).unwrap();
+        assert_eq!(keys.len(), 5);
+
+        // Liste Keys mit Prefix
+        let keys_filtered = host
+            .store_list_keys("items", Some("item-1"), 10, false)
+            .unwrap();
+        assert_eq!(keys_filtered.len(), 1);
     }
 }

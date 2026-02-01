@@ -12,7 +12,15 @@
 //! ```text
 //! 𝒞_RootRealm ⊃ 𝒞_VirtualRealm ⊃ 𝒞_Partition
 //! ```
+//!
+//! ## Speicherverwaltung
+//!
+//! Realms können dynamische Stores definieren:
+//! - `initial_setup_policy`: ECL-Policy für automatische Einrichtung beim Join
+//! - `default_shared_stores`: Gemeinsame Stores für alle Mitglieder
+//! - `default_personal_stores`: Persönliche Stores pro Mitglied
 
+use crate::local::{SchemaFieldType, StoreSchema, StoreTemplate};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
@@ -185,6 +193,7 @@ impl Realm for RootRealm {
 /// Ein VirtualRealm (mittlere Ebene)
 ///
 /// Kann zusätzliche Regeln definieren, z.B. für regionale Compliance.
+/// Definiert auch die Speicherstruktur für Mitglieder.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VirtualRealm {
     pub id: RealmId,
@@ -193,6 +202,18 @@ pub struct VirtualRealm {
     pub rules: RealmRules,
     pub min_trust: f64,
     pub governance_type: GovernanceType,
+    /// ECL-Policy die beim Join ausgeführt wird
+    #[serde(default)]
+    pub initial_setup_policy: Option<String>,
+    /// Gemeinsame Stores für alle Mitglieder
+    #[serde(default)]
+    pub default_shared_stores: Vec<StoreTemplate>,
+    /// Persönliche Stores die für jedes neue Mitglied erstellt werden
+    #[serde(default)]
+    pub default_personal_stores: Vec<StoreTemplate>,
+    /// Beschreibung des Realms
+    #[serde(default)]
+    pub description: String,
 }
 
 /// Governance-Typ eines Realms
@@ -234,12 +255,130 @@ impl VirtualRealm {
             rules,
             min_trust: 0.3, // Default
             governance_type: GovernanceType::Quadratic,
+            initial_setup_policy: None,
+            default_shared_stores: Vec::new(),
+            default_personal_stores: Vec::new(),
+            description: String::new(),
         }
     }
 
     /// Füge zusätzliche Regel hinzu (Κ1: nur hinzufügen)
     pub fn add_rule(&mut self, rule: Rule) {
         self.rules.add(rule);
+    }
+
+    /// Builder: Setze min_trust
+    pub fn with_min_trust(mut self, min_trust: f64) -> Self {
+        self.min_trust = min_trust;
+        self
+    }
+
+    /// Builder: Setze Governance-Typ
+    pub fn with_governance(mut self, governance_type: GovernanceType) -> Self {
+        self.governance_type = governance_type;
+        self
+    }
+
+    /// Builder: Setze Initial-Setup-Policy (ECL)
+    pub fn with_setup_policy(mut self, policy: impl Into<String>) -> Self {
+        self.initial_setup_policy = Some(policy.into());
+        self
+    }
+
+    /// Builder: Füge shared Store hinzu
+    pub fn with_shared_store(mut self, template: StoreTemplate) -> Self {
+        self.default_shared_stores.push(template);
+        self
+    }
+
+    /// Builder: Füge personal Store hinzu
+    pub fn with_personal_store(mut self, template: StoreTemplate) -> Self {
+        self.default_personal_stores.push(template);
+        self
+    }
+
+    /// Builder: Setze Beschreibung
+    pub fn with_description(mut self, description: impl Into<String>) -> Self {
+        self.description = description.into();
+        self
+    }
+
+    /// Erstelle Standard-Social-Realm mit typischen Stores
+    pub fn social_realm(id: RealmId, name: impl Into<String>, parent_id: RealmId, parent_rules: &RealmRules) -> Self {
+        use std::collections::HashMap;
+
+        Self::new(id, name, parent_id, parent_rules)
+            .with_description("Social Realm für Austausch und Kommunikation")
+            .with_shared_store(StoreTemplate {
+                schema: StoreSchema::new("posts", false)
+                    .with_field("id", SchemaFieldType::String)
+                    .with_field("text", SchemaFieldType::String)
+                    .with_field("author", SchemaFieldType::Did)
+                    .with_field("timestamp", SchemaFieldType::Timestamp)
+                    .with_field("replies", SchemaFieldType::List {
+                        item_type: Box::new(SchemaFieldType::Reference {
+                            target_store: "posts".to_string(),
+                        }),
+                    })
+                    .with_index("author")
+                    .with_index("timestamp"),
+                optional: false,
+                description: "Öffentliche Posts".to_string(),
+            })
+            .with_personal_store(StoreTemplate {
+                schema: StoreSchema::new("profile", true)
+                    .with_field("bio", SchemaFieldType::String)
+                    .with_field("avatar_hash", SchemaFieldType::Optional {
+                        inner: Box::new(SchemaFieldType::String),
+                    })
+                    .with_field("settings", SchemaFieldType::Object {
+                        fields: {
+                            let mut m = HashMap::new();
+                            m.insert("theme".to_string(), SchemaFieldType::String);
+                            m.insert("notifications".to_string(), SchemaFieldType::Bool);
+                            m
+                        },
+                    }),
+                optional: false,
+                description: "Dein persönliches Profil".to_string(),
+            })
+            .with_personal_store(StoreTemplate {
+                schema: StoreSchema::new("drafts", true)
+                    .with_field("id", SchemaFieldType::String)
+                    .with_field("text", SchemaFieldType::String)
+                    .with_field("private", SchemaFieldType::Bool),
+                optional: true,
+                description: "Private Entwürfe".to_string(),
+            })
+    }
+
+    /// Erstelle Standard-Marketplace-Realm
+    pub fn marketplace_realm(id: RealmId, name: impl Into<String>, parent_id: RealmId, parent_rules: &RealmRules) -> Self {
+        Self::new(id, name, parent_id, parent_rules)
+            .with_description("Marketplace Realm für Handel")
+            .with_min_trust(0.5)
+            .with_shared_store(StoreTemplate {
+                schema: StoreSchema::new("listings", false)
+                    .with_field("id", SchemaFieldType::String)
+                    .with_field("title", SchemaFieldType::String)
+                    .with_field("description", SchemaFieldType::String)
+                    .with_field("price", SchemaFieldType::Number)
+                    .with_field("seller", SchemaFieldType::Did)
+                    .with_field("category", SchemaFieldType::String)
+                    .with_field("active", SchemaFieldType::Bool)
+                    .with_index("seller")
+                    .with_index("category"),
+                optional: false,
+                description: "Aktive Angebote".to_string(),
+            })
+            .with_personal_store(StoreTemplate {
+                schema: StoreSchema::new("favorites", true)
+                    .with_field("listing_ids", SchemaFieldType::List {
+                        item_type: Box::new(SchemaFieldType::String),
+                    }),
+                optional: true,
+                description: "Deine Favoriten".to_string(),
+            })
     }
 }
 

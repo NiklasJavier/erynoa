@@ -2,17 +2,49 @@
 //!
 //! Embedded Key-Value Store basierend auf Fjall.
 //! Ersetzt PostgreSQL für eine Single-Binary Architektur.
+//!
+//! ## Intelligente Speicherverwaltung
+//!
+//! Das System nutzt nur wenige globale Partitionen mit intelligenter Prefixing-Strategie:
+//!
+//! ```text
+//! ┌─────────────────────────────────────────────────────────────────────────────┐
+//! │                     STORAGE PARTITIONEN                                     │
+//! ├─────────────┬─────────────┬─────────────┬─────────────┬─────────────────────┤
+//! │ identities  │   events    │    trust    │   content   │    realm_storage    │
+//! │ (DIDs,Keys) │  (DAG)      │ (Vektoren)  │  (CAS)      │  (Dynamische Stores)│
+//! └─────────────┴─────────────┴─────────────┴─────────────┴─────────────────────┘
+//! ```
 
 mod content_store;
 mod event_store;
 mod identity_store;
 mod kv_store;
+pub mod realm_storage;
 mod trust_store;
 
 pub use content_store::{ContentId, ContentMetadata, ContentStore, StoredContent};
 pub use event_store::{EventStore, StoredEvent};
 pub use identity_store::{IdentityStore, StoredIdentity};
 pub use kv_store::KvStore;
+pub use realm_storage::{
+    PrefixBuilder,
+    RealmStorage,
+    RealmStorageConfig,
+    // Schema-Evolution-Typen
+    SchemaChange,
+    SchemaChangeStatus,
+    SchemaChangelogEntry,
+    SchemaEvolutionResult,
+    // Schema-Typen
+    SchemaFieldType,
+    SchemaHistory,
+    StoreOptions,
+    StoreSchema,
+    StoreTemplate,
+    StoreType,
+    StoreValue,
+};
 pub use trust_store::{StoredTrust, TrustStore};
 
 use anyhow::Result;
@@ -24,6 +56,14 @@ use std::sync::Arc;
 ///
 /// Verwaltet alle lokalen Daten in einem einzigen Verzeichnis.
 /// Kein externer Datenbank-Server erforderlich.
+///
+/// ## Partitionen
+///
+/// - `identities`: DIDs und kryptographische Schlüssel
+/// - `events`: Kausaler Event-DAG
+/// - `trust`: Trust-Vektoren zwischen Entitäten
+/// - `content`: Content Addressable Storage (BLAKE3)
+/// - `realm_storage`: Dynamische Realm-Stores mit Prefixing
 #[derive(Clone)]
 pub struct DecentralizedStorage {
     /// Fjall Keyspace Instance
@@ -36,6 +76,8 @@ pub struct DecentralizedStorage {
     pub trust: TrustStore,
     /// Content Addressable Storage
     pub content: ContentStore,
+    /// Realm Storage (Dynamische Stores)
+    pub realm: RealmStorage,
 }
 
 impl DecentralizedStorage {
@@ -47,6 +89,7 @@ impl DecentralizedStorage {
         let events = EventStore::new(&keyspace)?;
         let trust = TrustStore::new(&keyspace)?;
         let content = ContentStore::new(&keyspace)?;
+        let realm = RealmStorage::new(&keyspace, RealmStorageConfig::default())?;
 
         Ok(Self {
             keyspace,
@@ -54,6 +97,7 @@ impl DecentralizedStorage {
             events,
             trust,
             content,
+            realm,
         })
     }
 
@@ -66,6 +110,7 @@ impl DecentralizedStorage {
         let events = EventStore::new(&keyspace)?;
         let trust = TrustStore::new(&keyspace)?;
         let content = ContentStore::new(&keyspace)?;
+        let realm = RealmStorage::new(&keyspace, RealmStorageConfig::default())?;
 
         Ok(Self {
             keyspace,
@@ -73,6 +118,30 @@ impl DecentralizedStorage {
             events,
             trust,
             content,
+            realm,
+        })
+    }
+
+    /// Öffnet Storage mit benutzerdefinierter Realm-Konfiguration
+    pub fn open_with_config<P: AsRef<Path>>(
+        path: P,
+        realm_config: RealmStorageConfig,
+    ) -> Result<Self> {
+        let keyspace = Arc::new(fjall::Config::new(path.as_ref().join("data")).open()?);
+
+        let identities = IdentityStore::new(&keyspace)?;
+        let events = EventStore::new(&keyspace)?;
+        let trust = TrustStore::new(&keyspace)?;
+        let content = ContentStore::new(&keyspace)?;
+        let realm = RealmStorage::new(&keyspace, realm_config)?;
+
+        Ok(Self {
+            keyspace,
+            identities,
+            events,
+            trust,
+            content,
+            realm,
         })
     }
 
@@ -107,6 +176,19 @@ impl DecentralizedStorage {
     /// Gibt die Anzahl der gespeicherten Contents zurück
     pub fn content_count(&self) -> usize {
         self.content.count()
+    }
+
+    /// Gibt die Anzahl der Realm-Stores zurück
+    pub fn realm_store_count(&self, realm_id: &crate::domain::RealmId) -> usize {
+        self.realm
+            .list_stores(realm_id)
+            .map(|s| s.len())
+            .unwrap_or(0)
+    }
+
+    /// Zugriff auf den Keyspace (für fortgeschrittene Operationen)
+    pub fn keyspace(&self) -> &Arc<Keyspace> {
+        &self.keyspace
     }
 }
 
