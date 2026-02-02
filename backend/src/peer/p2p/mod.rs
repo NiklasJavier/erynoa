@@ -87,6 +87,10 @@ pub mod transport;
 #[cfg(feature = "privacy")]
 pub mod performance;
 
+// Multi-Circuit-Layer (Phase 5c - Conflux-Style)
+#[cfg(feature = "privacy")]
+pub mod multi_circuit;
+
 #[cfg(feature = "p2p")]
 pub use behaviour::ErynoaBehaviour;
 #[cfg(feature = "p2p")]
@@ -120,4 +124,11 @@ pub use transport::{HybridTransport, QuicConfig, QuicTransport, TransportMode};
 pub use performance::{
     cpu_capabilities, hw_crypto, BatchCryptoConfig, BatchDecryptor, BatchEncryptor, CircuitCache,
     CircuitCacheConfig, HwCryptoEngine, SimdLevel,
+};
+
+// Multi-Circuit Re-exports (Phase 5c - Conflux-Style RL28)
+#[cfg(feature = "privacy")]
+pub use multi_circuit::{
+    ConfluxConfig, ConfluxError, ConfluxManager, ConfluxStats, EgressAggregator, MultiPathStrategy,
+    SecretSharer,
 };
