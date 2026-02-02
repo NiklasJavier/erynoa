@@ -1,0 +1,121 @@
+# ============================================================================
+# Erynoa P2P Testnet Node Dockerfile
+# Multi-Node Entwicklungsumgebung mit Hot-Reloading
+# ============================================================================
+#
+# Features:
+#   - P2P-Stack mit libp2p (Gossipsub, Kademlia, mDNS)
+#   - Hot-Reloading via cargo-watch
+#   - MOLD-Linker für schnelle Rebuilds
+#   - Privacy-Layer Support (optional)
+#
+# Verwendung:
+#   docker compose -f infra/docker/docker-compose.testnet.yml up
+#
+# ============================================================================
+
+FROM rust:1.88-bookworm
+
+# Build-Optimierungen
+ENV CARGO_INCREMENTAL=1 \
+    CARGO_NET_GIT_FETCH_WITH_CLI=true \
+    RUST_BACKTRACE=1 \
+    # libp2p-spezifisch: Noise Protocol Logging reduzieren
+    RUST_LOG=erynoa_api=debug,libp2p_gossipsub=info,libp2p_kad=info,libp2p_mdns=debug,info
+
+# System-Abhängigkeiten inkl. MOLD-Linker
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    build-essential \
+    pkg-config \
+    libssl-dev \
+    cmake \
+    clang \
+    mold \
+    dnsutils \
+    net-tools \
+    iproute2 \
+    && rm -rf /var/lib/apt/lists/*
+
+# cargo-binstall für schnelle Tool-Installation
+RUN curl -L --proto '=https' --tlsv1.2 -sSf \
+    https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+
+# cargo-watch für Hot-Reloading
+RUN cargo binstall cargo-watch -y --force
+
+WORKDIR /workspace/backend
+
+# Nur Cargo-Files für Dependency-Caching
+COPY backend/Cargo.toml ./Cargo.toml
+COPY backend/Cargo.lock ./Cargo.lock
+COPY backend/build.rs ./build.rs
+
+# Pre-fetch dependencies mit P2P-Feature
+# Erstellt einen Dummy-Build um Dependencies zu cachen
+RUN mkdir -p src && \
+    echo "fn main() {}" > src/main.rs && \
+    echo "// lib" > src/lib.rs && \
+    RUSTFLAGS="-C link-arg=-fuse-ld=mold" cargo build --features p2p --lib 2>&1 || true && \
+    rm -rf src
+
+WORKDIR /workspace/backend
+
+# P2P Ports:
+#   4001 - libp2p Swarm (TCP/QUIC)
+#   9000 - HTTP API
+EXPOSE 4001 9000
+
+# Entrypoint-Script für P2P-Node
+RUN cat > /entrypoint.sh << 'EOF'
+#!/bin/bash
+set -e
+
+echo "========================================="
+echo "🌐 Erynoa P2P Testnet Node"
+echo "========================================="
+echo "  Node:      ${NODE_NAME:-relay}"
+echo "  P2P Port:  ${P2P_PORT:-4001}"
+echo "  API Port:  ${API_PORT:-9000}"
+echo "  Bootstrap: ${BOOTSTRAP_PEERS:-none}"
+echo "  Mode:      ${NODE_MODE:-relay}"
+echo "========================================="
+
+# Warte auf DNS-Auflösung der Bootstrap-Peers
+if [ -n "$BOOTSTRAP_PEERS" ]; then
+    echo "Waiting for bootstrap peers..."
+    for peer in $(echo $BOOTSTRAP_PEERS | tr ',' ' '); do
+        host=$(echo $peer | sed 's|/ip4/\([^/]*\)/.*|\1|')
+        # DNS-Namen auflösen wenn nötig
+        if [[ ! $host =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "  Resolving $host..."
+            until getent hosts $host > /dev/null 2>&1; do
+                sleep 1
+            done
+            echo "  ✓ $host resolved"
+        fi
+    done
+fi
+
+# Start mit cargo-watch für Hot-Reloading
+export RUSTFLAGS="-C link-arg=-fuse-ld=mold"
+
+echo ""
+echo "Starting cargo watch with hot-reload..."
+echo "  ├─ Watching: src/, Cargo.toml, config/"
+echo "  ├─ Features: p2p"
+echo "  └─ ⚡ Using MOLD linker"
+echo ""
+
+# Binary mit P2P-Feature starten
+exec cargo watch --poll --why \
+  -x "run --features p2p --bin erynoa-testnet-node" \
+  -w src \
+  -w Cargo.toml \
+  -w config
+EOF
+
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

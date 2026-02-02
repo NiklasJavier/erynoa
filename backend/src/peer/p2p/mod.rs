@@ -104,7 +104,7 @@ pub use identity::PeerIdentity;
 #[cfg(feature = "p2p")]
 pub use protocol::{SyncProtocol, SyncRequest, SyncResponse};
 #[cfg(feature = "p2p")]
-pub use swarm::SwarmManager;
+pub use swarm::{IncomingSyncRequest, SwarmCommand, SwarmEvent2, SwarmManager};
 #[cfg(feature = "p2p")]
 pub use timing::{NetworkConditions, NetworkQuality, SyncTiming, TimingManager, TimingStatus};
 #[cfg(feature = "p2p")]

@@ -19,6 +19,11 @@ name = "ecl"
 path = "src/bin/ecl.rs"
 required-features = ["cli"]
 
+[[bin]]
+name = "erynoa-testnet-node"
+path = "src/bin/testnet_node.rs"
+required-features = ["p2p"]
+
 [dependencies]
 # ============================================================================
 # ASYNC RUNTIME & WEB FRAMEWORK
