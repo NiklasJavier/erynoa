@@ -1,6 +1,6 @@
 # Erynoa P2P-Private-Relay-Logic – Implementierungsplan
 
-> **Version:** 2.4.0 (Performance-Enhanced, Token-Free, Backend-Aligned, Core-Logic-Verified, Verifiable-Commitment)
+> **Version:** 2.5.0 (DC3 Edition – Token-Free, Fully Decentralized)
 > **Datum:** Februar 2026
 > **Referenz:** P2P-PRIVATE-RELAY-LOGIC.md V3.0 (23 Axiome: RL1-RL23 + 3 Verifikations-Axiome: RL-V1 bis RL-V3)
 > **Core-Logic:** LOGIC.md V4.1 (28 Kern-Axiome: Κ1-Κ28)
@@ -9,7 +9,34 @@
 > **Core-Engines:** `/backend/src/core/` (TrustEngine, WorldFormulaEngine)
 > **Protection-Layer:** `/backend/src/protection/` (AntiCalcification, DiversityMonitor)
 > **Neue Optimierungen:** QUIC Transport, LAMP Mixing, HW-Crypto, Lattice-ZK, Multi-Circuit
-> **Sybil-Resistenz:** Resource-Commitment + Guild-Vouching (kein Token-Stake) + **Cryptographic Verification**
+> **Sybil-Resistenz:** Resource-Commitment + **DC3** (kein Token-Stake, keine Gilden) + **Cryptographic Verification**
+
+---
+
+## 📋 V2.5 Changelog – DC3 (Dynamic Challenge-based Cumulative Contribution)
+
+### Änderungen gegenüber V2.4
+
+| Bereich                  | V2.4 (Guild-Vouching)             | V2.5 (DC3)                                      |
+| ------------------------ | --------------------------------- | ----------------------------------------------- |
+| **Trust-Bootstrap**      | Guild-Vouching (sozial, cliquig)  | DC3 – rein automatisiert, keine Gilden          |
+| **Kollusions-Resistenz** | Anti-Kollusions-Mechanismen nötig | Strukturell unmöglich (keine sozialen Elemente) |
+| **Challenge-System**     | -                                 | VRF-basierte dynamische Challenges              |
+| **Score-Berechnung**     | Guild-Trust-Kombination (Κ5)      | Cumulative Contribution Score mit Quality-Bonus |
+| **ZK-Proofs**            | ZK-Eligibility                    | + ZkContributionProof (Score ohne Details)      |
+
+### Neue Strukturen (V2.5)
+
+- `DynamicChallenge`, `ChallengeType`, `ChallengeResponse`, `ChallengeProof`
+- `CumulativeContributionScore`, `ContributionScoreCalculator`, `CategoryWeights`
+- `DC3Service`, `ChallengeGenerator`, `NetworkDemandAnalyzer`
+- `ZkContributionProof` (Bulletproofs + optional Lattice)
+
+### Entfernte Strukturen (V2.5)
+
+- ~~`GuildVouch`~~, ~~`GuildInfrastructure`~~, ~~`VouchStatus`~~
+- ~~`GuildSurveillanceService`~~, ~~`VouchCombinationResult`~~
+- ~~`[p2p.privacy.guild_vouching]`~~, ~~`[p2p.privacy.guild_surveillance]`~~
 
 ---
 
@@ -50,9 +77,9 @@
 | ------------------ | ------------------ | ------------------------------------------------------ |
 | **Axiom-Mapping**  | Implizit           | Explizite §0.4a Tabelle (RL → Κ Verknüpfungen)         |
 | **Κ4 Asymmetrie**  | Nicht explizit     | `LAMBDA_ASYM_STANDARD=1.5`, `LAMBDA_ASYM_CRITICAL=2.0` |
-| **Κ5 Kombination** | Nicht explizit     | `GuildVouch::combine_vouches()` mit ⊕-Operator         |
+| **Κ5 Kombination** | Nicht explizit     | `ContributionScoreCalculator` mit ⊕-Operator (V2.5)    |
 | **Κ17 Vergebung**  | Nicht referenziert | `GAMMA_NEGATIVE/POSITIVE` Decay-Konstanten             |
-| **Guild-Vouch**    | `guild_id: String` | `guild_did: DID` + `combine_vouches()` Methode         |
+| **DC3-System**     | Guild-Vouching     | `CumulativeContributionScore` + `ZkContributionProof`  |
 
 ### Neue Abschnitte (V2.3)
 
@@ -69,7 +96,7 @@
 | -------------------- | ----------------------------- | ----------------------------------------------------------- |
 | **Trust-Vektor**     | `trust_r`, `trust_omega` (2D) | `TrustVector6D` (R,I,C,P,V,Ω) aus `domain/unified/trust.rs` |
 | **RelayCandidate**   | Eigene Struct                 | + `trust_vector: TrustVector6D`, `did: Option<DID>`         |
-| **Guild-Vouch**      | `guild: Option<String>`       | `guild_did: Option<DID>` (DIDNamespace::Guild)              |
+| **DC3-Score**        | -                             | `contribution_score: Option<CumulativeContributionScore>`   |
 | **Score-Berechnung** | Manuelle Gewichtung           | `weighted_norm(&ctx.weights())`                             |
 | **Mixing-Delays**    | Feste τ-Werte                 | + `NetworkConditions::variability_factor()` Integration     |
 | **Config**           | Neue Structs                  | Erweiterung von `TrustGateConfig`                           |
@@ -111,65 +138,70 @@ protection/diversity.rs  ──────────────────�
 
 ### Motivation: Warum kein Token-Stake?
 
-| Token-Stake (ERY)                        | Resource-Commitment                            |
+| Token-Stake (ERY)                        | Resource-Commitment + DC3                      |
 | ---------------------------------------- | ---------------------------------------------- |
 | ❌ Eintrittsbarriere durch Kapitalbedarf | ✅ Jeder kann beitragen                        |
 | ❌ Kaufbar → Sybil-Angriff skaliert      | ✅ Nicht-kaufbar → reale Ressourcenkosten      |
 | ❌ Übertragbar (Markt für "Trust")       | ✅ Nicht-übertragbar (persönliches Commitment) |
 | ❌ Spekulation statt Nutzwert            | ✅ Direkte Korrelation zu Netzwerk-Nutzen      |
 | ❌ Regulatorische Risiken                | ✅ Keine Token-Klassifikation nötig            |
+| ⚠️ Kollusion möglich (soziale Elemente)  | ✅ Keine Kollusion (vollständig automatisiert) |
 
-### Sybil-Resistenz durch verifiable Ressourcenbeiträge
+### Sybil-Resistenz durch DC3 (Dynamic Challenge-based Cumulative Contribution)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                    RESOURCE-COMMITMENT SYBIL-RESISTENZ                              │
+│               DC3 – DYNAMIC CHALLENGE-BASED CUMULATIVE CONTRIBUTION                 │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                     │
 │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐                   │
-│  │  STORAGE (DHT)   │  │    BANDWIDTH     │  │     COMPUTE      │                   │
-│  │  ─────────────   │  │    ─────────     │  │     ───────      │                   │
-│  │  MB·Tage Commit  │  │  GB transferiert │  │  Mixing-Batches  │                   │
-│  │  Verifizierbar   │  │  Verifizierbar   │  │  Verifizierbar   │                   │
-│  │  ~$0.01/MB/Mo    │  │  ~$0.05/GB       │  │  ~$0.001/Batch   │                   │
+│  │  STORAGE-CHAL.   │  │   RELAY-CHAL.    │  │   MIXING-CHAL.   │                   │
+│  │  ─────────────   │  │   ──────────     │  │   ───────────    │                   │
+│  │  "Speichere X    │  │  "Leite N Msgs   │  │  "Verarbeite Y   │                   │
+│  │   für Y Tage"    │  │   mit <Xms"      │  │   Mixing-Batches"│                   │
+│  │  Merkle-Proof    │  │  Attestationen   │  │  ZK-Shuffle-Proof│                   │
 │  └────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘                   │
 │           │                     │                     │                             │
 │           └─────────────────────┼─────────────────────┘                             │
 │                                 ▼                                                   │
 │                    ┌────────────────────────┐                                       │
-│                    │   PROOF OF CONTRIB.    │                                       │
-│                    │   (ΔR Trust-Score)     │                                       │
+│                    │   VRF-CHALLENGE-GEN    │                                       │
+│                    │   (Nicht vorhersagbar) │                                       │
+│                    │   Basiert auf Netzwerk-│                                       │
+│                    │   Bedarf (adaptiv)     │                                       │
 │                    └────────────┬───────────┘                                       │
 │                                 │                                                   │
 │      ┌──────────────────────────┼──────────────────────────┐                        │
 │      │                          │                          │                        │
 │      ▼                          ▼                          ▼                        │
 │  ┌──────────────┐      ┌──────────────┐      ┌──────────────────┐                   │
-│  │  TIME-LOCK   │      │GUILD-VOUCHING│      │  DIVERSITY-BONUS │                   │
-│  │  ──────────  │      │  ───────────  │      │  ──────────────  │                   │
-│  │  Uptime-Wks  │      │  ≥2 Gilden   │      │  ≥3 versch. ASes │                   │
-│  │  Nicht kauf- │      │  bürgen für  │      │  für Vouches     │                   │
-│  │  bar (Zeit)  │      │  Neuling     │      │                  │                   │
+│  │  TIME-LOCK   │      │ QUALITY-BONUS│      │  ZK-CONTRIBUTION │                   │
+│  │  ──────────  │      │ ────────────  │      │  ───────────────  │                   │
+│  │  28 Tage Min │      │ Übererfüllung│      │  Beweist Score ≥ │                   │
+│  │  Nicht kauf- │      │ = bis 1.5×   │      │  Threshold ohne  │                   │
+│  │  bar (Zeit)  │      │ Contribution │      │  Details         │                   │
 │  └──────────────┘      └──────────────┘      └──────────────────┘                   │
 │                                 │                                                   │
 │                                 ▼                                                   │
 │                    ┌────────────────────────┐                                       │
-│                    │   SOCIAL COLLATERAL    │                                       │
-│                    │   (ΔΩ Trust-Score)     │                                       │
-│                    │   Gilden riskieren     │                                       │
-│                    │   eigene Reputation    │                                       │
+│                    │  CUMULATIVE CONTRIB.   │                                       │
+│                    │  SCORE (0.0 - 1.0)     │                                       │
+│                    │  ─────────────────     │                                       │
+│                    │  Rein automatisiert    │                                       │
+│                    │  KEINE GILDEN          │                                       │
+│                    │  KEINE KOLLUSION       │                                       │
 │                    └────────────────────────┘                                       │
 │                                                                                     │
-│  SYBIL-KOSTEN-SCHÄTZUNG:                                                            │
-│  ─────────────────────────                                                          │
-│  • 100 Fake-Identitäten für Apprentice:                                             │
-│    - Storage: 100 × 500MB·Tag = ~$50/Monat                                          │
-│    - Bandwidth: 100 × 10GB = ~$50                                                   │
-│    - Zeit: 100 × 4 Wochen = NICHT PARALLELISIERBAR                                  │
-│    - Guild-Vouches: Soziales Risiko für bürgende Gilden                             │
+│  SYBIL-KOSTEN-SCHÄTZUNG (DC3):                                                      │
+│  ─────────────────────────────                                                      │
+│  • 100 Fake-Identitäten für Full-Relay:                                             │
+│    - Storage-Challenges: 100 × 500MB·Tag = ~$50/Monat                               │
+│    - Relay-Challenges: 100 × 10GB = ~$50                                            │
+│    - Zeit: 100 × 28 Tage = NICHT PARALLELISIERBAR                                   │
+│    - Keine Kollusion möglich (keine sozialen Elemente!)                             │
 │                                                                                     │
-│  → Angreifer muss echte Ressourcen über Zeit bereitstellen                          │
-│  → Keine "Flash-Attacks" durch Token-Kauf möglich                                   │
+│  → Angreifer muss echte Challenges über Zeit erfüllen                               │
+│  → Keine "Flash-Attacks" oder "Guild-Kollusion" möglich                             │
 │                                                                                     │
 └─────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -523,81 +555,849 @@ pub struct VerifiedResourceCommitment {
 }
 ```
 
-#### Spoofing-Resistenz-Analyse
+#### Spoofing-Resistenz-Analyse (V2.4 – Verstärkt)
 
-| Angriff                 | Mitigation                                  | Verbleibende Risiken               |
-| ----------------------- | ------------------------------------------- | ---------------------------------- |
-| **Fake Storage Claims** | Proof-of-Retrievability mit Zeitlimit (<5s) | Kollusion von ≥3 Verifiern         |
-| **Bandwidth Inflation** | Bilaterale Attestation + Witness-Rotation   | Sender-Empfänger-Kollusion (teuer) |
-| **Compute Spoofing**    | ZK-Shuffle-Proofs + Nachbar-Attestation     | Komplexe ZK-Implementierung        |
-| **Sybil-Witnesses**     | High-Trust-Requirement für Witnesses        | Langfristige Trust-Akkumulation    |
-| **Timing-Angriffe**     | Strikte Deadlines + Nonce-Freshness         | Netzwerk-Latenz-Varianz            |
+| Angriff                 | Mitigation                                                                          | Kryptographische Garantie                | Verbleibende Risiken                    |
+| ----------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------- | --------------------------------------- |
+| **Fake Storage Claims** | PoR + Merkle-DAG + Zeitlimit (<5s) + **Randomisierte Challenge-Slots**              | SNARK/STARK-Proof über Merkle-Konsistenz | Kollusion von ≥3 Verifiern              |
+| **Bandwidth Inflation** | Bilaterale Attestation + **Rotating Witness-Committees** + Cross-Epoch-Verification | Ed25519-Signaturen + Hash-Chains         | Sender-Empfänger-Kollusion (teuer)      |
+| **Compute Spoofing**    | **Verifiable Shuffle (Bayer-Groth)** + Nachbar-Attestation + Batch-Aggregation      | Soundness: 2^{-128}                      | Implementierungs-Komplexität            |
+| **Sybil-Witnesses**     | High-Trust-Requirement (≥0.7) + **AS/Jurisdiction-Diversity** + Rate-Limiting       | Distributed-Trust-Aggregation            | Langfristige Trust-Akkumulation         |
+| **Timing-Angriffe**     | Strikte Deadlines + Nonce-Freshness + **VRF-basierte Challenge-Generierung**        | VRF-Unfälschbarkeit                      | Netzwerk-Latenz-Varianz                 |
+| **Replay-Angriffe**     | **Epoch-gebundene Proofs** + Nonce-Registry + Bloom-Filter                          | Uniqueness via Merkle-Accumulator        | Registry-Synchronisation                |
+| **Lazy Prover**         | **Spot-Checks mit exponentieller Bestrafung** + Minimum-Aktivitäts-Schwelle         | Chernoff-Bound auf Challenge-Erfolgsrate | Optimistische Prover bei niedriger Rate |
 
-### Guild-Vouching als Social-Collateral
+#### Verstärkte Verifizierungs-Protokolle (V2.4)
 
 ```rust
-/// Guild-Vouching-Mechanismus (ersetzt Token-Stake für ΔΩ)
+/// V2.4: Verstärkte Challenge-Response-Protokolle
 ///
-/// ## Core-Logic-Verknüpfung:
-/// - **Κ5** (Probabilistische Kombination): t₁ ⊕ t₂ = 1 - (1-t₁)(1-t₂)
-/// - **Κ8** (Delegations-Struktur): Gilden delegieren Vertrauen an Neulinge
-///
-/// ## Funktionsweise:
-/// 1. Etablierte Gilden (≥6 Monate, ≥10 aktive Relays) können für Neulinge bürgen
-/// 2. Vouching kostet die Gilde temporäre Reputation (Risk-Sharing)
-/// 3. Bei Fehlverhalten des Schützlings: Gilde verliert Reputation (Κ4: λ_asym=1.5)
-/// 4. Erfolgreiche Mentorship: Bonus für Gilde
-///
-/// ## Sybil-Resistenz:
-/// - Gilden sind etabliert und haben "Skin in the Game"
-/// - Begrenzte Vouching-Kapazität pro Gilde (max 5 aktive Vouches)
-/// - Cooldown nach Vouch-Failure (30 Tage)
+/// ## Kryptographische Verbesserungen:
+/// 1. VRF-basierte Challenge-Generierung (unvorhersagbar)
+/// 2. Epoch-gebundene Proofs (nicht wiederverwendbar)
+/// 3. Cross-Verification zwischen Ressourcen-Typen
+/// 4. Exponentielle Penalties bei Proof-Failures
 
-pub struct GuildVouch {
-    /// Bürgende Gilde (DID)
-    pub guild_did: DID,
-    /// Gebürgter Peer
-    pub peer_id: libp2p::PeerId,
-    /// Zeitpunkt des Vouch
-    pub vouched_at: u64,
-    /// Reputation-Commitment der Gilde (temporär abgezogen)
-    pub reputation_at_risk: f64,
-    /// Status
-    pub status: VouchStatus,
+/// VRF-basierte Storage-Challenge (unvorhersagbar, nicht manipulierbar)
+pub struct VrfStorageChallenge {
+    /// VRF-Proof dass diese Challenge legitim generiert wurde
+    pub vrf_proof: VrfProof,
+    /// VRF-Output bestimmt Challenge-Blöcke deterministisch
+    pub vrf_output: [u8; 32],
+    /// Epoch-Nummer (verhindert Replay)
+    pub epoch: u64,
+    /// Abgeleitete Block-Indices (aus VRF-Output)
+    pub block_indices: Vec<u64>,
+    /// Zeitlimit
+    pub deadline: Instant,
+    /// Verifier-Signatur auf Challenge
+    pub verifier_sig: Signature,
 }
 
-pub enum VouchStatus {
-    /// Aktiv - Schützling in Apprentice-Phase
-    Active,
-    /// Erfolgreich - Schützling wurde Full-Relay
-    Successful { completed_at: u64 },
-    /// Fehlgeschlagen - Schützling wurde disqualifiziert
-    Failed { reason: String, penalty_applied: f64 },
-    /// Zurückgezogen - Gilde hat Vouch widerrufen
-    Withdrawn,
+impl VrfStorageChallenge {
+    /// Generiere Challenge mit VRF (unvorhersagbar für Prover)
+    pub fn generate(
+        vrf_secret: &VrfSecret,
+        target_peer: &PeerId,
+        current_epoch: u64,
+        storage_merkle_root: &[u8; 32],
+    ) -> Self {
+        // VRF-Input: Peer + Epoch + Merkle-Root (bindet an aktuellen Zustand)
+        let vrf_input = blake3::hash(&[
+            target_peer.to_bytes().as_slice(),
+            &current_epoch.to_le_bytes(),
+            storage_merkle_root,
+        ].concat());
+
+        let (vrf_output, vrf_proof) = vrf_secret.prove(&vrf_input);
+
+        // Deterministisch Block-Indices aus VRF-Output ableiten
+        let block_indices = Self::derive_block_indices(&vrf_output, 5);
+
+        Self {
+            vrf_proof,
+            vrf_output: vrf_output.into(),
+            epoch: current_epoch,
+            block_indices,
+            deadline: Instant::now() + Duration::from_secs(5),
+            verifier_sig: Signature::default(), // Später signieren
+        }
+    }
+
+    /// Verifiziere VRF-Challenge (Prover kann nicht vorher wissen welche Blöcke)
+    pub fn verify_vrf(
+        &self,
+        verifier_vrf_pubkey: &VrfPublic,
+        target_peer: &PeerId,
+        storage_merkle_root: &[u8; 32],
+    ) -> bool {
+        let vrf_input = blake3::hash(&[
+            target_peer.to_bytes().as_slice(),
+            &self.epoch.to_le_bytes(),
+            storage_merkle_root,
+        ].concat());
+
+        verifier_vrf_pubkey.verify(&vrf_input, &self.vrf_proof, &self.vrf_output)
+    }
 }
 
-impl GuildVouch {
-    /// Kombiniere mehrere Vouches nach Κ5 (Probabilistische Kombination)
+/// Exponentielle Penalty-Berechnung bei Proof-Failures
+pub struct VerificationPenaltyCalculator {
+    /// Basis-Penalty (erstes Failure)
+    base_penalty: f64,
+    /// Exponent für wiederholte Failures
+    exponent_base: f64,
+    /// Maximum Penalty
+    max_penalty: f64,
+    /// Cooldown-Periode für Penalty-Reduktion (Tage)
+    cooldown_days: u32,
+}
+
+impl Default for VerificationPenaltyCalculator {
+    fn default() -> Self {
+        Self {
+            base_penalty: 0.05,       // -5% Trust bei erstem Failure
+            exponent_base: 1.8,       // Nahezu-Verdopplung pro Failure
+            max_penalty: 0.5,         // Max -50% Trust
+            cooldown_days: 14,        // 2 Wochen für Penalty-Reduktion
+        }
+    }
+}
+
+impl VerificationPenaltyCalculator {
+    /// Berechne Penalty basierend auf Failure-Historie
     ///
-    /// t_combined = t₁ ⊕ t₂ ⊕ ... ⊕ tₙ
-    ///            = 1 - ∏(1 - tᵢ)
+    /// penalty(n) = base * exponent^(n-1), capped at max_penalty
     ///
-    /// "Mehrere unabhängige Bürgschaften erhöhen Vertrauen super-additiv."
-    pub fn combine_vouches(vouches: &[GuildVouch], trust_lookup: impl Fn(&DID) -> f64) -> f64 {
-        if vouches.is_empty() {
+    /// Beispiel: base=0.05, exp=1.8
+    ///   Failure 1: -5%
+    ///   Failure 2: -9%
+    ///   Failure 3: -16.2%
+    ///   Failure 4: -29.2%
+    ///   Failure 5+: -50% (capped)
+    pub fn calculate_penalty(
+        &self,
+        consecutive_failures: u32,
+        days_since_last_success: u32,
+    ) -> f64 {
+        if consecutive_failures == 0 {
             return 0.0;
         }
 
-        // Κ5: t_combined = 1 - ∏(1 - tᵢ)
-        let product: f64 = vouches.iter()
-            .filter(|v| matches!(v.status, VouchStatus::Active))
-            .map(|v| 1.0 - trust_lookup(&v.guild_did))
-            .product();
+        // Exponentielle Steigerung
+        let raw_penalty = self.base_penalty *
+            self.exponent_base.powi((consecutive_failures - 1) as i32);
 
-        1.0 - product
+        // Leichte Reduktion wenn lange ohne Failure (Rehabilitation)
+        let cooldown_factor = if days_since_last_success > self.cooldown_days {
+            0.9_f64.powi((days_since_last_success / self.cooldown_days) as i32)
+        } else {
+            1.0
+        };
+
+        (raw_penalty * cooldown_factor).min(self.max_penalty)
     }
 }
+
+/// Cross-Resource-Verification (erhöht Spoofing-Kosten)
+pub struct CrossResourceVerifier {
+    /// Korrelations-Schwelle (Storage <-> Bandwidth)
+    storage_bandwidth_correlation_min: f64,
+    /// Korrelations-Schwelle (Bandwidth <-> Compute)
+    bandwidth_compute_correlation_min: f64,
+}
+
+impl CrossResourceVerifier {
+    /// Prüfe Plausibilität zwischen Ressourcen-Typen
+    ///
+    /// Attacke: Faker claimt hohe Storage aber keine Bandwidth
+    /// Detection: Inkonsistenz zwischen Ressourcen-Typen
+    pub fn verify_cross_consistency(
+        &self,
+        commitment: &VerifiedResourceCommitment,
+    ) -> CrossVerificationResult {
+        // Storage ohne Bandwidth ist verdächtig
+        // (Wer speichert Daten, aber transferiert nichts?)
+        let storage_bandwidth_ratio = commitment.verified_storage_mb_days as f64 /
+            (commitment.verified_bandwidth_gb * 1024.0 + 1.0);
+
+        // Hohe Compute ohne Bandwidth ist verdächtig
+        // (Mixing erfordert Traffic)
+        let compute_bandwidth_ratio = commitment.verified_mixing_batches as f64 /
+            (commitment.verified_bandwidth_gb * 100.0 + 1.0);
+
+        if storage_bandwidth_ratio > 100.0 {
+            CrossVerificationResult::Suspicious {
+                reason: "High storage but low bandwidth - potential fake storage claims".into(),
+                confidence_reduction: 0.3,
+            }
+        } else if compute_bandwidth_ratio > 50.0 {
+            CrossVerificationResult::Suspicious {
+                reason: "High compute but low bandwidth - potential fake mixing claims".into(),
+                confidence_reduction: 0.2,
+            }
+        } else {
+            CrossVerificationResult::Consistent
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum CrossVerificationResult {
+    Consistent,
+    Suspicious {
+        reason: String,
+        confidence_reduction: f64,
+    },
+}
+```
+
+### DC3 – Dynamic Challenge-based Cumulative Contribution (V2.5)
+
+> **Design-Prinzip:** Vollständig automatisiert, keine sozialen Elemente, rein dezentral.
+>
+> _"Guild-Vouching ist zu sozial, cliquig und kompliziert – DC3 basiert ausschließlich_
+> _auf verifizierbaren, nützlichen Beiträgen zum Netzwerk."_
+>
+> **Inspiriert von:** BalancedMixnet (PoPETs 2025), Resource-Based Approaches in Mixnets
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  DC3 – Dynamic Challenge-based Cumulative Contribution             │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  1. KEIN VOUCHING         → Keine sozialen Abhängigkeiten          │
+│  2. KEINE GILDEN          → Keine Cliquen-Bildung möglich          │
+│  3. NUR BEITRÄGE ZÄHLEN   → Verifizierbare, nützliche Arbeit       │
+│  4. NETZWERK STELLT       → Dynamische Challenges automatisch      │
+│  5. ZK-BEWEIS FÜR SCORE   → Privacy-preserving Reputation          │
+│                                                                     │
+│  Sybil-Kosten: Real-Resources + Time-Lock + Dynamic-Verification   │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+```rust
+/// DC3-Mechanismus (ersetzt Guild-Vouching für ΔΩ)
+///
+/// ## Core-Logic-Verknüpfung:
+/// - **Κ5** (Probabilistische Kombination): Kumulative Scores kombinieren
+/// - **Κ20** (Diversitäts-Anforderungen): Verschiedene Challenge-Typen
+/// - **Κ17** (Temporale Vergebung): Alte Beiträge decayen
+///
+/// ## Funktionsweise:
+/// 1. Netzwerk generiert dynamische Challenges via VRF (nicht vorhersagbar)
+/// 2. Peer erfüllt Challenges (Storage, Relay, Mixing, Compute, Uptime)
+/// 3. Jede Erfüllung generiert verifizierbare Proofs
+/// 4. Kumulativer Score wächst mit Zeit und Qualität
+/// 5. ZK-Proof beweist Score ≥ Threshold ohne Details zu verraten
+///
+/// ## Sybil-Resistenz:
+/// - Keine sozialen Elemente → keine Kollusion möglich
+/// - Time-Lock: Mindestens 28 Tage für volle Eligibility
+/// - Reale Ressourcen: Jede Challenge kostet CPU, Storage, Bandwidth
+/// - VRF-Challenges: Nicht vorhersagbar, nicht gaming-bar
+
+// Datei: backend/src/peer/privacy/dc3_challenges.rs
+
+/// Dynamische Challenge vom Netzwerk
+pub struct DynamicChallenge {
+    /// Eindeutige Challenge-ID
+    pub challenge_id: [u8; 32],
+    /// Assignee (wer muss erfüllen)
+    pub assignee: libp2p::PeerId,
+    /// Challenge-Typ
+    pub challenge_type: ChallengeType,
+    /// Deadline für Erfüllung
+    pub deadline: u64,
+    /// Contribution-Gewicht bei Erfolg
+    pub contribution_weight: f64,
+    /// VRF-Seed (für Nicht-Vorhersagbarkeit)
+    pub vrf_seed: [u8; 32],
+}
+
+/// Challenge-Typen (vom Netzwerk basierend auf Bedarf ausgewählt)
+#[derive(Debug, Clone)]
+pub enum ChallengeType {
+    /// "Speichere DHT-Chunk X für Y Tage"
+    StorageRetention {
+        chunk_hash: [u8; 32],
+        retention_days: u16,
+        size_bytes: u64,
+    },
+    /// "Leite N Nachrichten mit < X ms Latenz"
+    RelayPerformance {
+        min_messages: u32,
+        max_latency_ms: u32,
+        quality_threshold: f64,
+    },
+    /// "Verarbeite X Mixing-Batches korrekt"
+    MixingBatch {
+        batch_count: u32,
+        min_k: u8,
+        require_shuffle_proof: bool,
+    },
+    /// "Führe X ZK-Proof-Verifikationen durch"
+    ComputeContribution {
+        proof_verifications: u32,
+        max_latency_ms: u32,
+    },
+    /// "Bleibe X Stunden online mit Y% Response-Rate"
+    UptimeWindow {
+        required_hours: u16,
+        min_response_rate: f64,
+    },
+}
+
+/// Antwort auf eine Challenge mit Proof
+pub struct ChallengeResponse {
+    pub challenge_id: [u8; 32],
+    pub responder: libp2p::PeerId,
+    pub proof: ChallengeProof,
+    pub completed_at: u64,
+    pub quality_metrics: QualityMetrics,
+}
+
+/// Verifizierbare Proofs für Challenge-Erfüllung
+#[derive(Debug, Clone)]
+pub enum ChallengeProof {
+    /// Merkle-Proof für Storage-Retention
+    StorageProof {
+        merkle_path: Vec<[u8; 32]>,
+        leaf_hash: [u8; 32],
+        timestamp_sig: Vec<u8>,
+    },
+    /// Bilaterale Attestationen für Relay
+    RelayProof {
+        attestations: Vec<BilateralAttestation>,
+        latency_measurements: Vec<u32>,
+        success_count: u32,
+    },
+    /// ZK-Shuffle-Proofs für Mixing
+    MixingProof {
+        batch_commitments: Vec<[u8; 32]>,
+        shuffle_proofs: Vec<Vec<u8>>,
+        processed_count: u32,
+    },
+    /// Verifikations-Receipts für Compute
+    ComputeProof {
+        verification_receipts: Vec<Vec<u8>>,
+        total_verified: u32,
+    },
+    /// Signierte Heartbeats für Uptime
+    UptimeProof {
+        heartbeats: Vec<Vec<u8>>,
+        uptime_percentage: f64,
+    },
+}
+
+/// Qualitäts-Metriken (Bonus für Übererfüllung)
+#[derive(Debug, Clone, Default)]
+pub struct QualityMetrics {
+    /// Schneller als gefordert
+    pub latency_bonus: f64,
+    /// Mehr als gefordert
+    pub volume_bonus: f64,
+    /// Konstant gute Performance
+    pub consistency_bonus: f64,
+}
+```
+
+#### Cumulative Contribution Score
+
+```rust
+// Datei: backend/src/peer/privacy/contribution_scoring.rs
+
+/// Kumulativer Beitrags-Score mit adaptiver Gewichtung
+pub struct CumulativeContributionScore {
+    /// Peer-Identität
+    pub peer_id: libp2p::PeerId,
+    /// Gesamt-Score (0.0 - 1.0, normalisiert)
+    pub total_score: f64,
+    /// Aufschlüsselung nach Kategorie
+    pub category_scores: CategoryScores,
+    /// Erfolgreiche Challenges
+    pub completed_challenges: u32,
+    /// Fehlgeschlagene Challenges
+    pub failed_challenges: u32,
+    /// Längste Erfolgs-Streak
+    pub max_success_streak: u32,
+    /// Aktuelle Streak
+    pub current_streak: u32,
+    /// Erster Beitrag (Unix-Timestamp)
+    pub first_contribution: u64,
+    /// Letzter Beitrag (Unix-Timestamp)
+    pub last_contribution: u64,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct CategoryScores {
+    /// Storage-Beiträge (MB-Tage)
+    pub storage: f64,
+    /// Relay-Beiträge (Nachrichten × Qualität)
+    pub relay: f64,
+    /// Mixing-Beiträge (Batches × Korrektheit)
+    pub mixing: f64,
+    /// Compute-Beiträge (Verifikationen)
+    pub compute: f64,
+    /// Uptime-Beiträge (Stunden × Zuverlässigkeit)
+    pub uptime: f64,
+}
+
+impl CumulativeContributionScore {
+    /// Success-Rate berechnen
+    pub fn success_rate(&self) -> f64 {
+        let total = self.completed_challenges + self.failed_challenges;
+        if total == 0 { 0.0 } else { self.completed_challenges as f64 / total as f64 }
+    }
+
+    /// Contribution-Rate pro Tag
+    pub fn daily_rate(&self) -> f64 {
+        let days = (self.last_contribution - self.first_contribution) / 86400;
+        if days == 0 { 0.0 } else { self.completed_challenges as f64 / days as f64 }
+    }
+
+    /// Streak-Bonus (belohnt Konsistenz)
+    pub fn streak_bonus(&self) -> f64 {
+        (1.0 + self.current_streak as f64).ln() / 5.0
+    }
+}
+
+/// Adaptiver Score-Calculator
+pub struct ContributionScoreCalculator {
+    /// Gewichtungen pro Kategorie (vom Netzwerk anpassbar)
+    pub category_weights: CategoryWeights,
+    /// Decay-Parameter für Κ17
+    pub decay_gamma: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct CategoryWeights {
+    pub storage: f64,  // Default: 0.25
+    pub relay: f64,    // Default: 0.25
+    pub mixing: f64,   // Default: 0.25
+    pub compute: f64,  // Default: 0.15
+    pub uptime: f64,   // Default: 0.10
+}
+
+impl Default for CategoryWeights {
+    fn default() -> Self {
+        Self {
+            storage: 0.25,
+            relay: 0.25,
+            mixing: 0.25,
+            compute: 0.15,
+            uptime: 0.10,
+        }
+    }
+}
+
+impl ContributionScoreCalculator {
+    /// Update Score nach Challenge-Completion
+    pub fn update_score(
+        &self,
+        current: &mut CumulativeContributionScore,
+        challenge: &DynamicChallenge,
+        response: &ChallengeResponse,
+    ) {
+        // 1. Kategorie-Gewichtung
+        let cat_weight = match &challenge.challenge_type {
+            ChallengeType::StorageRetention { .. } => self.category_weights.storage,
+            ChallengeType::RelayPerformance { .. } => self.category_weights.relay,
+            ChallengeType::MixingBatch { .. } => self.category_weights.mixing,
+            ChallengeType::ComputeContribution { .. } => self.category_weights.compute,
+            ChallengeType::UptimeWindow { .. } => self.category_weights.uptime,
+        };
+
+        // 2. Quality-Multiplikator (1.0 - 1.5)
+        let quality_mult = 1.0
+            + response.quality_metrics.latency_bonus * 0.2
+            + response.quality_metrics.volume_bonus * 0.2
+            + response.quality_metrics.consistency_bonus * 0.1;
+
+        // 3. Delta berechnen
+        let delta = challenge.contribution_weight
+            * cat_weight
+            * quality_mult.min(1.5)
+            * (1.0 + current.streak_bonus());
+
+        // 4. Κ17: Decay alten Score und add Delta
+        let age_days = (response.completed_at - current.last_contribution) as f64 / 86400.0;
+        let decay = (-self.decay_gamma * age_days).exp();
+
+        current.total_score = ((current.total_score * decay) + delta).min(1.0);
+        current.completed_challenges += 1;
+        current.current_streak += 1;
+        current.max_success_streak = current.max_success_streak.max(current.current_streak);
+        current.last_contribution = response.completed_at;
+    }
+
+    /// Handle Challenge-Failure (Κ4: asymmetrisch)
+    pub fn handle_failure(&self, current: &mut CumulativeContributionScore) {
+        // Streak reset
+        current.current_streak = 0;
+        current.failed_challenges += 1;
+
+        // Κ4: Asymmetrischer Penalty (1.5× stärker als Reward)
+        current.total_score = (current.total_score - 0.015).max(0.0);
+    }
+}
+```
+
+#### DC3-Service (Challenge-Orchestrierung)
+
+```rust
+// Datei: backend/src/peer/privacy/dc3_service.rs
+
+/// DC3-Service: Automatische Challenge-Generierung und -Verifizierung
+pub struct DC3Service {
+    /// Aktive Challenges pro Peer
+    active_challenges: HashMap<libp2p::PeerId, Vec<DynamicChallenge>>,
+    /// Score-Datenbank
+    scores: HashMap<libp2p::PeerId, CumulativeContributionScore>,
+    /// Challenge-Generator mit VRF
+    challenge_generator: ChallengeGenerator,
+    /// Score-Calculator
+    score_calculator: ContributionScoreCalculator,
+    /// Netzwerk-Bedarfs-Analysator
+    network_demand: NetworkDemandAnalyzer,
+}
+
+impl DC3Service {
+    /// Generiere nächste Challenge für Peer (via VRF - nicht vorhersagbar)
+    pub fn issue_challenge(&mut self, peer: &libp2p::PeerId) -> DynamicChallenge {
+        let score = self.scores.get(peer).cloned().unwrap_or_default();
+        let demand = self.network_demand.analyze();
+
+        self.challenge_generator.generate(peer, &score, &demand)
+    }
+
+    /// Verifiziere Challenge-Response und update Score
+    pub fn process_response(
+        &mut self,
+        response: ChallengeResponse,
+    ) -> Result<(), ChallengeError> {
+        // 1. Finde zugehörige Challenge
+        let challenges = self.active_challenges.get_mut(&response.responder)
+            .ok_or(ChallengeError::NoChallengeFound)?;
+
+        let challenge_idx = challenges.iter()
+            .position(|c| c.challenge_id == response.challenge_id)
+            .ok_or(ChallengeError::ChallengeNotFound)?;
+
+        let challenge = challenges.remove(challenge_idx);
+
+        // 2. Deadline prüfen
+        if response.completed_at > challenge.deadline {
+            self.handle_failure(&response.responder);
+            return Err(ChallengeError::DeadlineExceeded);
+        }
+
+        // 3. Proof verifizieren
+        self.verify_proof(&challenge, &response.proof)?;
+
+        // 4. Score updaten
+        let score = self.scores.entry(response.responder.clone())
+            .or_insert_with(|| CumulativeContributionScore::new(&response.responder));
+
+        self.score_calculator.update_score(score, &challenge, &response);
+
+        Ok(())
+    }
+
+    fn verify_proof(
+        &self,
+        challenge: &DynamicChallenge,
+        proof: &ChallengeProof,
+    ) -> Result<(), ChallengeError> {
+        match (&challenge.challenge_type, proof) {
+            (ChallengeType::StorageRetention { chunk_hash, .. }, ChallengeProof::StorageProof { merkle_path, leaf_hash, .. }) => {
+                // Merkle-Proof verifizieren
+                if !verify_merkle_path(merkle_path, leaf_hash, chunk_hash) {
+                    return Err(ChallengeError::InvalidProof);
+                }
+            }
+            (ChallengeType::RelayPerformance { min_messages, .. }, ChallengeProof::RelayProof { success_count, .. }) => {
+                if *success_count < *min_messages {
+                    return Err(ChallengeError::InsufficientCount);
+                }
+            }
+            // ... weitere Proof-Typen
+            _ => return Err(ChallengeError::ProofTypeMismatch),
+        }
+        Ok(())
+    }
+
+    fn handle_failure(&mut self, peer: &libp2p::PeerId) {
+        if let Some(score) = self.scores.get_mut(peer) {
+            self.score_calculator.handle_failure(score);
+        }
+    }
+}
+
+/// Challenge-Generator mit VRF für Nicht-Vorhersagbarkeit
+pub struct ChallengeGenerator {
+    /// VRF-Schlüsselpaar
+    vrf_keypair: VrfKeypair,
+}
+
+impl ChallengeGenerator {
+    /// Generiert Challenge basierend auf Netzwerk-Bedarf (via VRF)
+    pub fn generate(
+        &self,
+        peer: &libp2p::PeerId,
+        score: &CumulativeContributionScore,
+        demand: &NetworkDemand,
+    ) -> DynamicChallenge {
+        // VRF für deterministische aber nicht vorhersagbare Auswahl
+        let vrf_output = self.vrf_keypair.evaluate(peer.to_bytes().as_slice());
+
+        // Challenge-Typ basierend auf Netzwerk-Bedarf
+        let challenge_type = self.select_type(&vrf_output, demand);
+
+        // Schwierigkeit basierend auf Score (höherer Score = schwierigere Challenges)
+        let difficulty = 1.0 + score.total_score * 0.5;
+
+        // Deadline basierend auf Challenge-Typ
+        let deadline = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            + self.deadline_for(&challenge_type);
+
+        DynamicChallenge {
+            challenge_id: vrf_output[0..32].try_into().unwrap(),
+            assignee: peer.clone(),
+            challenge_type,
+            deadline,
+            contribution_weight: 0.01 * difficulty,
+            vrf_seed: vrf_output[0..32].try_into().unwrap(),
+        }
+    }
+
+    fn select_type(&self, vrf: &[u8], demand: &NetworkDemand) -> ChallengeType {
+        // Weighted random basierend auf Netzwerk-Bedarf
+        let weights = [
+            demand.storage_demand,
+            demand.relay_demand,
+            demand.mixing_demand,
+            demand.compute_demand,
+            demand.uptime_demand,
+        ];
+        let total: f64 = weights.iter().sum();
+        let selector = (vrf[0] as f64 / 255.0) * total;
+
+        let mut cumulative = 0.0;
+        for (i, &w) in weights.iter().enumerate() {
+            cumulative += w;
+            if selector < cumulative {
+                return match i {
+                    0 => ChallengeType::StorageRetention {
+                        chunk_hash: vrf[0..32].try_into().unwrap(),
+                        retention_days: 7 + (vrf[32] as u16 % 21),
+                        size_bytes: 1_000_000 + (vrf[33] as u64 * 35000),
+                    },
+                    1 => ChallengeType::RelayPerformance {
+                        min_messages: 100 + (vrf[32] as u32 * 2),
+                        max_latency_ms: 100 + (vrf[33] as u32 % 100),
+                        quality_threshold: 0.95,
+                    },
+                    2 => ChallengeType::MixingBatch {
+                        batch_count: 10 + (vrf[32] as u32 % 40),
+                        min_k: 3,
+                        require_shuffle_proof: true,
+                    },
+                    3 => ChallengeType::ComputeContribution {
+                        proof_verifications: 50 + (vrf[32] as u32 % 150),
+                        max_latency_ms: 200,
+                    },
+                    _ => ChallengeType::UptimeWindow {
+                        required_hours: 24 + (vrf[32] as u16 % 144),
+                        min_response_rate: 0.98,
+                    },
+                };
+            }
+        }
+        // Fallback
+        ChallengeType::UptimeWindow {
+            required_hours: 24,
+            min_response_rate: 0.95,
+        }
+    }
+
+    fn deadline_for(&self, challenge_type: &ChallengeType) -> u64 {
+        match challenge_type {
+            ChallengeType::StorageRetention { retention_days, .. } => {
+                *retention_days as u64 * 86400
+            }
+            ChallengeType::RelayPerformance { .. } => 7 * 86400, // 1 Woche
+            ChallengeType::MixingBatch { .. } => 7 * 86400,
+            ChallengeType::ComputeContribution { .. } => 3 * 86400, // 3 Tage
+            ChallengeType::UptimeWindow { required_hours, .. } => {
+                *required_hours as u64 * 3600 + 86400 // + 1 Tag Buffer
+            }
+        }
+    }
+}
+
+/// Netzwerk-Bedarfs-Analysator
+pub struct NetworkDemandAnalyzer {
+    metrics: NetworkMetrics,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct NetworkDemand {
+    pub storage_demand: f64,
+    pub relay_demand: f64,
+    pub mixing_demand: f64,
+    pub compute_demand: f64,
+    pub uptime_demand: f64,
+}
+
+impl NetworkDemandAnalyzer {
+    /// Analysiert aktuellen Netzwerk-Bedarf
+    pub fn analyze(&self) -> NetworkDemand {
+        NetworkDemand {
+            storage_demand: (self.metrics.storage_utilization * 0.7
+                + self.metrics.storage_trend * 0.3).min(1.0),
+            relay_demand: (self.metrics.relay_queue_pressure * 0.6
+                + (self.metrics.avg_relay_latency / 100.0).min(1.0) * 0.4).min(1.0),
+            mixing_demand: (1.0 - (self.metrics.mixing_pool_size / 50.0).min(1.0)).max(0.2),
+            compute_demand: (self.metrics.verification_backlog as f64 / 1000.0).min(1.0),
+            uptime_demand: (1.0 - (self.metrics.online_nodes as f64
+                / self.metrics.target_nodes as f64)).max(0.1),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+struct NetworkMetrics {
+    storage_utilization: f64,
+    storage_trend: f64,
+    relay_queue_pressure: f64,
+    avg_relay_latency: f64,
+    mixing_pool_size: f64,
+    verification_backlog: u32,
+    online_nodes: u32,
+    target_nodes: u32,
+}
+```
+
+#### ZK-Proof für Cumulative Score (Privacy-Preserving)
+
+```rust
+// Datei: backend/src/peer/privacy/zk_contribution.rs
+
+/// ZK-Proof für Contribution-Score (beweist Score ≥ Threshold ohne Details)
+pub struct ZkContributionProof {
+    /// Commitment zum Score
+    pub score_commitment: [u8; 32],
+    /// Range-Proof: Score ∈ [threshold, 1.0]
+    pub range_proof: Vec<u8>,
+    /// Duration-Commitment (beweist Mindest-Aktivitätsdauer)
+    pub duration_commitment: [u8; 32],
+    /// Duration-Range-Proof
+    pub duration_range_proof: Vec<u8>,
+    /// Post-Quantum Alternative (optional)
+    pub lattice_proof: Option<Vec<u8>>,
+}
+
+impl ZkContributionProof {
+    /// Erstellt ZK-Proof für Contribution-Score
+    pub fn create(
+        score: &CumulativeContributionScore,
+        threshold: f64,
+    ) -> Result<Self, ZkError> {
+        // 1. Score als Integer (0-10000 für 4 Dezimalstellen)
+        let score_int = (score.total_score * 10000.0) as u64;
+        let threshold_int = (threshold * 10000.0) as u64;
+
+        // 2. Pedersen-Commitment für Score
+        let (score_commitment, score_blinding) = pedersen_commit(score_int);
+
+        // 3. Bulletproof: score ≥ threshold
+        let range_proof = bulletproof_prove(
+            score_int,
+            score_blinding,
+            threshold_int..=10000,
+        )?;
+
+        // 4. Duration (Tage seit erstem Beitrag)
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let duration_days = (now - score.first_contribution) / 86400;
+
+        let (duration_commitment, duration_blinding) = pedersen_commit(duration_days);
+
+        // 5. Duration Range-Proof (min 28 Tage)
+        let duration_range_proof = bulletproof_prove(
+            duration_days,
+            duration_blinding,
+            28..=u64::MAX,
+        )?;
+
+        Ok(Self {
+            score_commitment,
+            range_proof,
+            duration_commitment,
+            duration_range_proof,
+            lattice_proof: None,
+        })
+    }
+
+    /// Verifiziert ZK-Proof
+    pub fn verify(&self, threshold: f64) -> Result<bool, ZkError> {
+        let threshold_int = (threshold * 10000.0) as u64;
+
+        // 1. Score Range-Proof verifizieren
+        if !bulletproof_verify(
+            &self.score_commitment,
+            &self.range_proof,
+            threshold_int..=10000,
+        )? {
+            return Ok(false);
+        }
+
+        // 2. Duration Range-Proof verifizieren
+        if !bulletproof_verify(
+            &self.duration_commitment,
+            &self.duration_range_proof,
+            28..=u64::MAX,
+        )? {
+            return Ok(false);
+        }
+
+        Ok(true)
+    }
+}
+```
+
+#### DC3 Sybil-Resistenz-Analyse
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│              DC3 Sybil-Resistenz-Analyse                           │
+├────────────────────┬────────────────────────────────────────────────┤
+│ Angriffs-Vektor    │ DC3-Schutz                                     │
+├────────────────────┼────────────────────────────────────────────────┤
+│ Fake-Challenges    │ VRF macht Challenges nicht vorhersagbar        │
+│ Challenge-Gaming   │ Netzwerk wählt Typ basierend auf Bedarf        │
+│ Score-Inflation    │ Jede Challenge verifizierbar (Merkle, ZK)      │
+│ Time-Compression   │ 28-Tage-Minimum nicht beschleunigbar           │
+│ Multi-Identity     │ Jede ID muss eigene Ressourcen liefern         │
+│ Kollusion          │ Keine sozialen Elemente → unmöglich            │
+│ Score-Transfer     │ ZK-Proofs peer-gebunden, nicht übertragbar     │
+└────────────────────┴────────────────────────────────────────────────┘
+
+Sybil-Kosten-Formel:
+    Cost(N identities) = N × (Storage + Bandwidth + Compute + Time)
+                       = N × (~$5/Monat + 28 Tage Minimum)
+                       → 100 Identitäten ≈ $500/Monat + 28 Tage
+
+Vergleich mit Token-Stake:
+    ❌ Token: Flash-Loans, Übertragbarkeit, parallelisierbar
+    ✅ DC3:   Time-Lock, nicht-übertragbar, sequentiell
 ```
 
 ---
@@ -629,7 +1429,7 @@ Dieser Plan transformiert die mathematische Spezifikation (2608 Zeilen, 23 Axiom
 | Datei           | Strukturen                                                     | Integration-Punkt              |
 | --------------- | -------------------------------------------------------------- | ------------------------------ |
 | `trust.rs`      | `TrustVector6D` (R,I,C,P,V,Ω), `TrustDimension`, `ContextType` | → RelayCandidate.trust_vector  |
-| `identity.rs`   | `DID`, `DIDNamespace` (Self\_, Guild, Spirit, etc.)            | → GuildVouch.guild_did         |
+| `identity.rs`   | `DID`, `DIDNamespace` (Self\_, Guild, Spirit, etc.)            | → DC3 Peer-Identifikation      |
 | `primitives.rs` | `UniversalId`, `TemporalCoord`                                 | → Resource-Commitment Tracking |
 | `cost.rs`       | `Cost`, `Budget`, `CostTable`                                  | → Bandwidth/Compute-Commitment |
 
@@ -729,8 +1529,8 @@ pub struct PeerTrustInfoExtended {
     pub trust_vector: TrustVector6D,
     /// Resource-Commitment (neu, ersetzt Token-Stake)
     pub resource_commitment: Option<ResourceCommitment>,
-    /// Guild-Vouches (neu)
-    pub guild_vouches: Vec<GuildVouch>,
+    /// DC3 Contribution-Score (V2.5, ersetzt Guild-Vouching)
+    pub contribution_score: Option<CumulativeContributionScore>,
 }
 ```
 
@@ -765,7 +1565,7 @@ impl RelaySelector {
 | `newcomer_grace_period` | 60s                       | 4 Wochen (RL1a)   | ⚠️ Upgrade needed |
 | `reject_unknown_peers`  | false                     | false             | ✅ Aligned        |
 | Resource-Commitment     | ❌ N/A                    | MinimumCommitment | 🆕 Hinzufügen     |
-| Guild-Vouching          | ❌ N/A                    | GuildVouch        | 🆕 Hinzufügen     |
+| DC3-Challenges          | ❌ N/A                    | DC3Service        | 🆕 V2.5           |
 
 ### ConnectionLevel-Mapping (RL1 ↔ trust_gate.rs)
 
@@ -873,7 +1673,12 @@ backend/src/peer/p2p/
 │   ├── cover_traffic.rs      # RL10, RL18: Cover-Traffic
 │   ├── eligibility.rs        # RL1, RL1a: ZK-Eligibility + Bootstrap
 │   ├── wire_format.rs        # Section XII: Byte-Level Protocol
-│   └── metrics.rs            # RL9: Anonymitäts-Metriken
+│   ├── metrics.rs            # RL9: Anonymitäts-Metriken
+│   ├── resource_verification.rs  # 🆕 V2.4: RL-V1/V2/V3 Verification
+│   ├── dc3_challenges.rs     # 🆕 V2.5: Dynamic Challenge-based Contribution
+│   ├── contribution_scoring.rs   # 🆕 V2.5: Cumulative Contribution Score
+│   ├── dc3_service.rs        # 🆕 V2.5: DC3 Challenge-Orchestrierung
+│   └── zk_contribution.rs    # 🆕 V2.5: ZK-Proof für Contribution-Score
 │
 ├── relay/                    # 🆕 NEU: Relay-Node Funktionalität
 │   ├── mod.rs
@@ -949,7 +1754,7 @@ backend/src/peer/p2p/
 | ------------------ | ---------------------------------- | ------------------------------------------------ | --------------------------- |
 | **Trust-Basis**    | `domain/unified/trust.rs`          | `TrustVector6D`, `TrustDimension`                | RelayCandidate.trust_vector |
 | **Trust-Κ2-Κ5**    | `core/trust_engine.rs`             | `TrustEngine`, `process_event()`                 | RL11 BayesianUpdate         |
-| **DID-System**     | `domain/unified/identity.rs`       | `DID`, `DIDNamespace::Guild`                     | GuildVouch.guild_did        |
+| **DID-System**     | `domain/unified/identity.rs`       | `DID`, `DIDNamespace::Self_`                     | DC3 Peer-Identifikation     |
 | **Cost-Algebra**   | `domain/unified/cost.rs`           | `Cost`, `Budget`                                 | ResourceCommitment          |
 | **Trust-Gate**     | `peer/p2p/trust_gate.rs`           | `TrustGate`, `PeerTrustInfo`, `ConnectionLevel`  | RL1 Eligibility             |
 | **τ-Variabilität** | `peer/p2p/timing.rs`               | `NetworkConditions`, `variability_factor()`      | RL8 Mixing-Delays           |
@@ -959,20 +1764,24 @@ backend/src/peer/p2p/
 | **Anomalie**       | `protection/anomaly.rs`            | `AnomalyDetector`                                | RL12 Misbehavior            |
 | **Anti-Kalk.**     | `protection/anti_calcification.rs` | `AntiCalcification`                              | Relay-Power-Limit           |
 
-### 0.4a Core-Logic-Axiom-Mapping (V2.2) – LOGIC.md Verknüpfungen
+### 0.4a Core-Logic-Axiom-Mapping (V2.5) – LOGIC.md Verknüpfungen
 
 Diese Tabelle zeigt die expliziten Verknüpfungen zwischen den RL-Axiomen der Privacy-Layer-Spezifikation und den Kern-Axiomen (Κ1-Κ28) aus [LOGIC.md](LOGIC.md) V4.1.
 
-| RL-Axiom                    | Core-Logic (Κ)                                                   | Verknüpfung                                                 | Implementierung                |
-| --------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------ |
-| **RL1** (Relay-Eligibility) | **Κ3** (6D-Vektor), **Κ26** (Offenheit)                          | Trust-Schwellen auf 6D-Vektor; Offenheit via Bootstrap-Pfad | `ZkEligibilityProof`           |
-| **RL1a** (Cold-Start)       | **Κ7** (Aktivitäts-Präsenz), **Κ26** (Offenheit)                 | 𝔸(s) durch Nicht-Relay-Aktivitäten; Jeder kann beitreten    | `apprentice_eligible()`        |
-| **RL5** (Trust-Score)       | **Κ3** (Dimensionale Unabhängigkeit), **Κ15b** (Gewichtete Norm) | 𝕊_relay = ‖𝕎‖\_w mit kontextabhängigen Gewichten            | `calculate_relay_score_6d()`   |
-| **RL6** (Diversität)        | **Κ19** (Anti-Calcification), **Κ20** (Diversity-Requirement)    | Entropie-Maximierung; collusion(tx)-Dämpfung                | `DiversityConstraints`         |
-| **RL11** (Bayesian Update)  | **Κ4** (Asymmetrische Evolution), **Κ5** (⊕-Kombination)         | Δ⁻ = λ_asym · Δ⁺ mit λ=1.5/2.0; Trust-Kombination           | `TrustEngine.process_event()`  |
-| **RL12** (Misbehavior)      | **Κ4** (Asymmetrie), **Κ17** (Temporale Vergebung)               | Schneller Trust-Verlust; aber Vergebung über Zeit           | `AnomalyDetector`              |
-| **Guild-Vouch**             | **Κ5** (t₁ ⊕ t₂ = 1-(1-t₁)(1-t₂)), **Κ8** (Delegation)           | Probabilistische Vouch-Kombination                          | `GuildVouch.combine_vouches()` |
-| **Cover-Traffic**           | **Κ15a** (Trust-gedämpfte Surprisal)                             | Rate ∝ Trust²; Low-Trust-Noise wird gedämpft                | `CoverTrafficConfig.lambda()`  |
+| RL-Axiom                    | Core-Logic (Κ)                                                   | Verknüpfung                                                 | Implementierung                       |
+| --------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------- |
+| **RL1** (Relay-Eligibility) | **Κ3** (6D-Vektor), **Κ26** (Offenheit)                          | Trust-Schwellen auf 6D-Vektor; Offenheit via Bootstrap-Pfad | `ZkEligibilityProof`                  |
+| **RL1a** (Cold-Start)       | **Κ7** (Aktivitäts-Präsenz), **Κ26** (Offenheit)                 | 𝔸(s) durch Nicht-Relay-Aktivitäten; Jeder kann beitreten    | `apprentice_eligible()`               |
+| **RL5** (Trust-Score)       | **Κ3** (Dimensionale Unabhängigkeit), **Κ15b** (Gewichtete Norm) | 𝕊_relay = ‖𝕎‖\_w mit kontextabhängigen Gewichten            | `calculate_relay_score_6d()`          |
+| **RL6** (Diversität)        | **Κ19** (Anti-Calcification), **Κ20** (Diversity-Requirement)    | Entropie-Maximierung; collusion(tx)-Dämpfung                | `DiversityConstraints`                |
+| **RL11** (Bayesian Update)  | **Κ4** (Asymmetrische Evolution), **Κ5** (⊕-Kombination)         | Δ⁻ = λ_asym · Δ⁺ mit λ=1.5/2.0; Trust-Kombination           | `TrustEngine.process_event()`         |
+| **RL12** (Misbehavior)      | **Κ4** (Asymmetrie), **Κ17** (Temporale Vergebung)               | Schneller Trust-Verlust; aber Vergebung über Zeit           | `AnomalyDetector`                     |
+| **DC3-System**              | **Κ5** (⊕-Kombination), **Κ20** (Diversity)                      | Kumulative Contribution-Kombination; Challenge-Diversität   | `ContributionScoreCalculator` 🆕 V2.5 |
+| **Cover-Traffic**           | **Κ15a** (Trust-gedämpfte Surprisal)                             | Rate ∝ Trust²; Low-Trust-Noise wird gedämpft                | `CoverTrafficConfig.lambda()`         |
+| **RL-V1** (Storage-Proof)   | **Κ4** (Asymmetrie bei Failure)                                  | VRF-Challenge + PoR + Exponentielle Penalties               | `VrfStorageChallenge` 🆕 V2.4         |
+| **RL-V2** (Bandwidth-Proof) | **Κ20** (Diversity-Requirement)                                  | Rotating Witness-Committees + Cross-Epoch                   | `BandwidthEpochProof` 🆕 V2.4         |
+| **RL-V3** (Compute-Proof)   | **Κ15b** (Gewichtete Aggregation)                                | Bayer-Groth ZK-Shuffle + Nachbar-Attestation                | `ZkShuffleProof` 🆕 V2.4              |
+| **ZK-Contribution**         | **Κ5** (Probabilistische Kombination), **Κ17** (Decay)           | Bulletproof Range-Proof für Score ≥ Threshold               | `ZkContributionProof` 🆕 V2.5         |
 
 #### Κ4 Asymmetrische Evolution – Konkrete Werte
 
@@ -986,16 +1795,21 @@ RELAY-TRUST-UPDATE (aus Κ4):
     Protokoll-Verletzung:   Δ𝕎.Ω = -0.010 (= 2.0 × base, λ_asym = 2.0)
 ```
 
-#### Κ5 Probabilistische Kombination – Guild-Vouch
+#### Κ5 Probabilistische Kombination – DC3 Contribution-Aggregation
 
 ```
-GUILD-VOUCH-KOMBINATION (aus Κ5):
-    t_combined = t₁ ⊕ t₂ = 1 - (1 - t₁)(1 - t₂)
+DC3-CONTRIBUTION-KOMBINATION (aus Κ5):
+    score_combined = score₁ ⊕ score₂ = 1 - (1 - score₁)(1 - score₂)
 
-    Beispiel: 2 Gilden mit Trust 0.7 und 0.8 bürgen
-    → t_combined = 1 - (1-0.7)(1-0.8) = 1 - 0.3 × 0.2 = 0.94
+    Beispiel: Storage-Challenge (0.3) + Relay-Challenge (0.4)
+    → score_combined = 1 - (1-0.3)(1-0.4) = 1 - 0.7 × 0.6 = 0.58
 
-    "Mehrere unabhängige Bürgschaften erhöhen Vertrauen super-additiv."
+    "Mehrere verschiedene Challenge-Erfüllungen erhöhen Score super-additiv."
+
+DC3-QUALITY-BONUS (aus Κ20 - Diversität):
+    quality_mult = 1.0 + latency_bonus × 0.2 + volume_bonus × 0.2
+
+    "Übererfüllung wird belohnt, aber gedeckelt (max 1.5×)"
 ```
 
 #### Κ17 Temporale Vergebung – Relay-Decay
@@ -1028,7 +1842,7 @@ newcomer_grace_period = "60s"     # Legacy - wird für Privacy erweitert
 apprentice_duration = "28d"       # RL1a: 4 Wochen Apprentice-Phase
 min_resource_commitment_mb_days = 500   # V2.1: Minimum Storage-Beitrag
 min_bandwidth_contribution_gb = 10.0    # V2.1: Minimum Bandwidth
-required_guild_vouches = 2              # V2.1: Minimum Guild-Bürgschaften
+min_contribution_score = 0.3      # V2.5: Minimum DC3 Contribution-Score
 
 # 🆕 V2.2: Relay-Selection (RL5-RL7)
 [p2p.privacy.relay_selection]
@@ -1075,6 +1889,45 @@ min_witnesses = 3                 # RL-V2: Minimum Witness-Attestationen
 min_witness_trust = 0.7           # RL-V2: Minimum Trust für Witnesses
 bandwidth_epoch_hours = 1         # RL-V2: Stündliche Epochs
 compute_proof_aggregation_days = 1 # RL-V3: Tägliche Aggregation
+use_vrf_challenges = true         # V2.4: VRF-basierte Challenge-Generierung
+cross_resource_verification = true # V2.4: Plausibilitäts-Checks zwischen Ressourcen
+spot_check_probability = 0.1      # V2.4: 10% zufällige Spot-Checks
+
+# 🆕 V2.4: Exponentielle Verification-Penalties
+[p2p.privacy.verification_penalties]
+base_penalty = 0.05               # Basis-Penalty bei erstem Failure (-5%)
+exponent_base = 1.8               # Nahezu-Verdopplung pro konsekutivem Failure
+max_penalty = 0.5                 # Maximum -50% Trust
+cooldown_days = 14                # Tage für Penalty-Reduktion
+
+# 🆕 V2.5: DC3 – Dynamic Challenge-based Cumulative Contribution
+[p2p.privacy.dc3]
+# Challenge-Generierung
+challenge_interval_hours = 24     # Durchschnittliche Challenge-Frequenz
+min_active_challenges = 1         # Minimum aktive Challenges pro Peer
+max_active_challenges = 5         # Maximum aktive Challenges
+use_vrf_selection = true          # VRF für nicht-vorhersagbare Challenge-Auswahl
+
+# Contribution-Score-Parameter
+min_score_for_relay = 0.3         # Minimum Score für Relay-Eligibility
+score_decay_gamma = 0.000380      # Κ17: ln(2) / (5 Jahre) pro Tag
+quality_bonus_max = 1.5           # Max 1.5× für Übererfüllung
+streak_bonus_factor = 0.2         # Bonus pro 10er-Streak
+
+# Challenge-Typ-Gewichtungen (anpassbar nach Netzwerk-Bedarf)
+storage_weight = 0.25
+relay_weight = 0.25
+mixing_weight = 0.25
+compute_weight = 0.15
+uptime_weight = 0.10
+
+# ZK-Proof-Parameter
+zk_proof_ttl_hours = 24           # Gültigkeit eines ZK-Contribution-Proofs
+enable_lattice_proofs = false     # Post-Quantum-Alternative (optional)
+
+# Failure-Handling (Κ4: asymmetrisch)
+failure_penalty_factor = 1.5      # Penalty = 1.5× normaler Contribution-Wert
+consecutive_failure_escalation = 2.0  # Verdopplung bei konsekutiven Failures
 ```
 
 ### 0.6 ErynoaBehaviour-Erweiterung (V2.2)
@@ -1537,8 +2390,6 @@ pub struct RelayCandidate {
     pub asn: u32,
     /// Jurisdiktion (Rechtsraum)
     pub jurisdiction: String,
-    /// Guild-Zugehörigkeit (für RL6-iv) - DIDNamespace::Guild
-    pub guild_did: Option<DID>,
     /// Durchschnittliche Latenz in ms
     pub avg_latency_ms: u32,
     /// Uptime-Ratio (0.0 - 1.0)
@@ -1547,6 +2398,8 @@ pub struct RelayCandidate {
     pub bandwidth_score: f64,
     /// 🆕 V2.1: Resource-Commitment (ersetzt Token-Stake)
     pub resource_commitment: Option<ResourceCommitment>,
+    /// 🆕 V2.5: DC3 Contribution-Score (ersetzt Guild-Vouching)
+    pub contribution_score: Option<CumulativeContributionScore>,
 }
 
 impl RelayCandidate {
@@ -1570,11 +2423,11 @@ impl RelayCandidate {
             region: String::new(),
             asn: 0,
             jurisdiction: String::new(),
-            guild_did: None,
             avg_latency_ms: 0,
             uptime_ratio: 0.0,
             bandwidth_score: 0.0,
             resource_commitment: None,
+            contribution_score: None,
         }
     }
 }
@@ -1590,19 +2443,9 @@ pub struct ResourceCommitment {
     pub mixing_batches: u64,
     /// Uptime in Wochen
     pub uptime_weeks: u32,
-    /// Guild-Vouches erhalten
-    pub guild_vouches: Vec<GuildVouchRef>,
 }
 
-/// Referenz auf Guild-Vouch
-#[derive(Debug, Clone)]
-pub struct GuildVouchRef {
-    pub guild_did: DID,
-    pub vouched_at: u64,
-    pub reputation_at_risk: f64,
-}
-
-/// Relay-Trust-Score Berechnung (RL5) - V2.2 mit vollem 6D-Vektor
+/// Relay-Trust-Score Berechnung (RL5) - V2.5 mit DC3-Integration
 ///
 /// 𝕊_relay(p) = ‖𝕎(p)‖_w + bonus(p) - penalty(p)
 ///
@@ -1617,13 +2460,17 @@ pub fn calculate_relay_score(candidate: &RelayCandidate, ctx: ContextType) -> f6
     let bandwidth_bonus = 0.03 * candidate.bandwidth_score;
     let latency_bonus = 0.02 * (1.0 - (candidate.avg_latency_ms as f64 / 500.0).min(1.0));
 
-    // 🆕 V2.1: Resource-Commitment-Bonus (ersetzt Token-Stake)
-    let commitment_bonus = candidate.resource_commitment.as_ref()
-        .map(|rc| {
-            let storage_factor = (rc.storage_mb_days as f64 / 1000.0).min(0.05);
-            let bandwidth_factor = (rc.bandwidth_gb / 100.0).min(0.05);
-            let vouch_factor = (rc.guild_vouches.len() as f64 * 0.02).min(0.1);
-            storage_factor + bandwidth_factor + vouch_factor
+    // 🆕 V2.5: DC3-Contribution-Bonus (ersetzt Guild-Vouching)
+    let commitment_bonus = candidate.contribution_score.as_ref()
+        .map(|cs| {
+            // Kumulativer Score aus DC3-Challenges
+            let score_factor = (cs.total_score * 0.15).min(0.1);
+            // Bonus für Streaks (konsistente Performance)
+            let streak_bonus = cs.streaks.current_streak.saturating_sub(5) as f64 * 0.01;
+            // Qualitäts-Bonus für überdurchschnittliche Challenge-Erfüllung
+            let quality_bonus = cs.category_scores.values()
+                .filter(|&&v| v > 0.8).count() as f64 * 0.02;
+            (score_factor + streak_bonus + quality_bonus).min(0.15)
         })
         .unwrap_or(0.0);
 
@@ -1644,8 +2491,8 @@ pub struct DiversityConstraints {
     pub max_as_duplicates: usize,
     /// Minimum unterschiedliche Jurisdiktionen (RL6-iii)
     pub min_jurisdictions: usize,
-    /// Erlaube Guild-Duplikate? (RL6-iv)
-    pub allow_guild_duplicates: bool,
+    /// 🆕 V2.5: Erlaube DC3-Score-Cluster-Duplikate? (RL6-iv)
+    pub allow_score_cluster_duplicates: bool,
     /// Maximum Trust-Korrelation (RL6-v)
     pub max_trust_correlation: f64,
     /// Minimum Diversitäts-Score (RL6)
@@ -1658,7 +2505,7 @@ impl Default for DiversityConstraints {
             min_geo_distance_km: 500,
             max_as_duplicates: 1,
             min_jurisdictions: 2,
-            allow_guild_duplicates: false,
+            allow_score_cluster_duplicates: false, // 🆕 V2.5: Diversität auch bei DC3-Scores
             max_trust_correlation: 0.5,
             min_diversity_score: 0.7,
         }
@@ -1667,7 +2514,8 @@ impl Default for DiversityConstraints {
 
 /// Entropie-basierter Diversitäts-Score (RL6)
 ///
-/// D(π) = (H_geo + H_as + H_guild + H_juris) / 4
+/// D(π) = (H_geo + H_as + H_score + H_juris) / 4
+/// 🆕 V2.5: H_score ersetzt H_guild (Score-Cluster-Diversität)
 pub fn calculate_diversity_score(route: &[RelayCandidate]) -> f64 {
     let n = route.len() as f64;
     if n < 2.0 {
@@ -1677,7 +2525,13 @@ pub fn calculate_diversity_score(route: &[RelayCandidate]) -> f64 {
     // Entropie für jede Dimension berechnen
     let h_geo = entropy(&route.iter().map(|r| r.region.clone()).collect::<Vec<_>>());
     let h_as = entropy(&route.iter().map(|r| r.asn.to_string()).collect::<Vec<_>>());
-    let h_guild = entropy(&route.iter().filter_map(|r| r.guild.clone()).collect::<Vec<_>>());
+    // 🆕 V2.5: Score-Cluster statt Guild (kategorisiere DC3-Scores in Buckets)
+    let h_score = entropy(&route.iter()
+        .map(|r| {
+            let score = r.contribution_score.as_ref().map(|s| s.total_score).unwrap_or(0.0);
+            format!("{:.1}", (score * 10.0).floor() / 10.0) // 0.1er Buckets
+        })
+        .collect::<Vec<_>>());
     let h_juris = entropy(&route.iter().map(|r| r.jurisdiction.clone()).collect::<Vec<_>>());
 
     // Maximum-Entropie für Normalisierung
@@ -1687,7 +2541,7 @@ pub fn calculate_diversity_score(route: &[RelayCandidate]) -> f64 {
         return 1.0; // Nur 1 Element
     }
 
-    ((h_geo + h_as + h_guild + h_juris) / 4.0) / h_max
+    ((h_geo + h_as + h_score + h_juris) / 4.0) / h_max
 }
 
 /// Shannon-Entropie berechnen
@@ -1761,28 +2615,30 @@ impl RelaySelector {
         // Greedy-Entropie-Maximierung
         let mut route = Vec::with_capacity(total_hops);
         let mut used_asns = HashSet::new();
-        let mut used_guilds = HashSet::new();
+        // 🆕 V2.5: Score-Cluster statt Guild-Tracking für Diversität
+        let mut used_score_clusters = HashSet::new();
 
         // 1. Ingress-Auswahl (höchster Trust, quadratische Gewichtung)
         let ingress = self.select_ingress(&eligible)?;
         used_asns.insert(ingress.asn);
-        if let Some(ref g) = ingress.guild {
-            used_guilds.insert(g.clone());
+        // 🆕 V2.5: Score-Cluster tracking (0.1er Buckets)
+        if let Some(ref cs) = ingress.contribution_score {
+            used_score_clusters.insert(format!("{:.1}", (cs.total_score * 10.0).floor() / 10.0));
         }
         route.push(ingress);
 
         // 2. Middle-Auswahl (Diversität + Trust)
         for i in 1..total_hops - 1 {
-            let middle = self.select_middle(&eligible, &route, &used_asns, &used_guilds)?;
+            let middle = self.select_middle(&eligible, &route, &used_asns, &used_score_clusters)?;
             used_asns.insert(middle.asn);
-            if let Some(ref g) = middle.guild {
-                used_guilds.insert(g.clone());
+            if let Some(ref cs) = middle.contribution_score {
+                used_score_clusters.insert(format!("{:.1}", (cs.total_score * 10.0).floor() / 10.0));
             }
             route.push(middle);
         }
 
         // 3. Egress-Auswahl (Trust + Latency)
-        let egress = self.select_egress(&eligible, &route, &used_asns, &used_guilds)?;
+        let egress = self.select_egress(&eligible, &route, &used_asns, &used_score_clusters)?;
         route.push(egress);
 
         // Validierung
@@ -1812,17 +2668,21 @@ impl RelaySelector {
         candidates: &[RelayCandidate],
         route: &[RelayCandidate],
         used_asns: &HashSet<u32>,
-        used_guilds: &HashSet<String>,
+        used_score_clusters: &HashSet<String>, // 🆕 V2.5
     ) -> Result<RelayCandidate, RouteSelectionError> {
         let filtered: Vec<_> = candidates.iter()
             .filter(|c| {
                 // Diversitäts-Constraints prüfen
                 let as_ok = !used_asns.contains(&c.asn) ||
                     used_asns.len() < self.constraints.max_as_duplicates;
-                let guild_ok = self.constraints.allow_guild_duplicates ||
-                    c.guild.as_ref().map_or(true, |g| !used_guilds.contains(g));
+                // 🆕 V2.5: Score-Cluster Diversität statt Guild
+                let cluster = c.contribution_score.as_ref()
+                    .map(|cs| format!("{:.1}", (cs.total_score * 10.0).floor() / 10.0))
+                    .unwrap_or_else(|| "0.0".to_string());
+                let score_ok = self.constraints.allow_score_cluster_duplicates ||
+                    !used_score_clusters.contains(&cluster);
 
-                as_ok && guild_ok && !route.iter().any(|r| r.peer_id == c.peer_id)
+                as_ok && score_ok && !route.iter().any(|r| r.peer_id == c.peer_id)
             })
             .cloned()
             .collect();
@@ -1844,17 +2704,21 @@ impl RelaySelector {
         candidates: &[RelayCandidate],
         route: &[RelayCandidate],
         used_asns: &HashSet<u32>,
-        used_guilds: &HashSet<String>,
+        used_score_clusters: &HashSet<String>, // 🆕 V2.5
     ) -> Result<RelayCandidate, RouteSelectionError> {
         // Egress: Balance Trust + Latency
         let filtered: Vec<_> = candidates.iter()
             .filter(|c| {
                 let as_ok = !used_asns.contains(&c.asn) ||
                     used_asns.len() < self.constraints.max_as_duplicates;
-                let guild_ok = self.constraints.allow_guild_duplicates ||
-                    c.guild.as_ref().map_or(true, |g| !used_guilds.contains(g));
+                // 🆕 V2.5: Score-Cluster Diversität statt Guild
+                let cluster = c.contribution_score.as_ref()
+                    .map(|cs| format!("{:.1}", (cs.total_score * 10.0).floor() / 10.0))
+                    .unwrap_or_else(|| "0.0".to_string());
+                let score_ok = self.constraints.allow_score_cluster_duplicates ||
+                    !used_score_clusters.contains(&cluster);
 
-                as_ok && guild_ok && !route.iter().any(|r| r.peer_id == c.peer_id)
+                as_ok && score_ok && !route.iter().any(|r| r.peer_id == c.peer_id)
             })
             .cloned()
             .collect();
@@ -2797,20 +3661,21 @@ pub struct BootstrapStatus {
 
 /// Foundation-Trust aus Nicht-Relay-Aktivitäten (RL1a Phase 1)
 ///
-/// ## Resource-Commitment statt Token-Stake
+/// ## 🆕 V2.5: DC3-basiertes Resource-Commitment
 ///
 /// Sybil-Resistenz wird durch nachweisbare Ressourcenbeiträge erreicht:
 /// - **Storage-Commitment**: Bereitgestellter DHT-Speicher (MB·Tage)
 /// - **Bandwidth-Commitment**: Relay-Kapazität (GB transferiert)
 /// - **Compute-Commitment**: Verarbeitete Mixing-Operationen
 /// - **Time-Lock**: Längere Aktivität = höheres Commitment (kein "Buy-in")
-/// - **Guild-Vouching**: Etablierte Gilden bürgen für neue Mitglieder
+/// - **DC3-Challenges**: VRF-basierte automatische Verifikation (ersetzt Guild-Vouching)
 ///
-/// Vorteile gegenüber Token-Stake:
+/// Vorteile gegenüber Token-Stake und Guild-Vouching:
 /// - Keine Eintrittsbarriere durch Kapitalbedarf
 /// - Direkte Korrelation zu Netzwerk-Nutzen
 /// - Nicht übertragbar (kein Markt für "Trust")
 /// - Schwerer zu simulieren als Token-Kauf
+/// - Keine sozialen Abhängigkeiten (keine Gilden-Cliquen)
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct FoundationTrust {
     /// DHT-Storage Beitrag (MB·Tage) - Sybil-Cost: ~$0.01/MB/Monat
@@ -2823,20 +3688,20 @@ pub struct FoundationTrust {
     pub mixing_operations: u64,
     /// Uptime-Wochen mit >99% Verfügbarkeit (Time-Lock)
     pub uptime_weeks: u32,
-    /// Guild-Vouching: Anzahl aktiver Bürgen aus etablierten Gilden
-    pub guild_vouches: u32,
-    /// Vouching-Guild-IDs (für Verifikation)
-    pub vouching_guilds: Vec<String>,
+    /// 🆕 V2.5: DC3-Score (ersetzt Guild-Vouching)
+    pub dc3_score: f64,
+    /// 🆕 V2.5: Erfolgreich abgeschlossene Challenges
+    pub completed_challenges: u32,
 }
 
 impl FoundationTrust {
     /// Berechne initiales 𝕎 aus Foundation-Aktivitäten (RL1a)
     ///
-    /// ## Resource-Commitment Trust-Berechnung
+    /// ## V2.5: DC3-basierte Trust-Berechnung
     ///
-    /// Ersetzt Token-Stake durch gewichtete Ressourcenbeiträge:
+    /// Ersetzt Token-Stake und Guild-Vouching durch:
     /// - Storage + Bandwidth + Compute = "Proof of Contribution"
-    /// - Guild-Vouching als Social-Collateral
+    /// - DC3-Score aus automatischen Challenges
     /// - Time-Lock (Uptime) als nicht-kaufbares Commitment
     pub fn calculate_initial_trust(&self) -> (f64, f64) {
         // ΔR aus verifizierbaren Ressourcenbeiträgen
@@ -2848,15 +3713,15 @@ impl FoundationTrust {
 
         let delta_r = storage_score + gossip_score + bandwidth_score + mixing_score + uptime_score;
 
-        // ΔΩ aus Guild-Vouching (Social-Collateral statt Token-Stake)
-        // Jeder Vouch von einer etablierten Gilde = +0.05, max +0.3
-        // Gilden riskieren eigene Reputation durch Vouching
-        let vouch_score = (self.guild_vouches as f64 * 0.05).min(0.3);
+        // 🆕 V2.5: ΔΩ aus DC3-Score (automatisch, nicht sozial)
+        // DC3-Score akkumuliert durch VRF-basierte Challenges
+        // Kein soziales Element - rein ressourcenbasiert
+        let dc3_contribution = (self.dc3_score * 0.35).min(0.3);
 
-        // Bonus für diverse Gilden (nicht alle vom selben Cluster)
-        let diversity_bonus = if self.vouching_guilds.len() >= 3 { 0.05 } else { 0.0 };
+        // Bonus für konsistente Challenge-Erfüllung
+        let consistency_bonus = if self.completed_challenges >= 20 { 0.05 } else { 0.0 };
 
-        let delta_omega = vouch_score + diversity_bonus;
+        let delta_omega = dc3_contribution + consistency_bonus;
 
         (delta_r.min(1.0), delta_omega.min(0.35))
     }
@@ -2898,9 +3763,11 @@ pub struct MinimumCommitment {
     pub min_storage: f64,
     /// Minimum Uptime (Wochen)
     pub min_uptime_weeks: u32,
-    /// Minimum Guild-Vouches
-    pub min_guild_vouches: u32,
-    /// Alternative: Hohe Einzelbeiträge können fehlende Vouches kompensieren
+    /// 🆕 V2.5: Minimum DC3-Score (ersetzt Guild-Vouches)
+    pub min_dc3_score: f64,
+    /// 🆕 V2.5: Minimum abgeschlossene Challenges
+    pub min_completed_challenges: u32,
+    /// Alternative: Hohe Einzelbeiträge können fehlende Challenges kompensieren
     pub high_contribution_threshold: f64,
 }
 
@@ -2909,7 +3776,8 @@ impl Default for MinimumCommitment {
         Self {
             min_storage: 500.0,        // 500 MB·Tage (~2 Wochen bei 1GB)
             min_uptime_weeks: 4,       // 4 Wochen kontinuierliche Aktivität
-            min_guild_vouches: 2,      // 2 Gilden müssen bürgen
+            min_dc3_score: 0.3,        // 🆕 V2.5: DC3-Score ≥ 0.3
+            min_completed_challenges: 10, // 🆕 V2.5: Mind. 10 Challenges erfüllt
             high_contribution_threshold: 0.5, // Alternativ: 50% Trust durch reine Beiträge
         }
     }
@@ -2917,17 +3785,17 @@ impl Default for MinimumCommitment {
 
 /// Prüfe Eligibility für eine Phase (RL1, RL1a)
 ///
-/// ## Resource-Commitment statt Token-Stake
+/// ## V2.5: DC3-basierte Eligibility
 ///
 /// Eligibility basiert auf:
 /// 1. Trust-Score aus Ressourcenbeiträgen (ΔR)
-/// 2. Guild-Vouching als Social-Collateral (ΔΩ)
+/// 2. DC3-Score aus automatischen Challenges (ΔΩ)
 /// 3. Time-Lock durch Uptime-Anforderung
 ///
-/// Keine Token-Anforderung - Sybil-Resistenz durch:
+/// Keine Token oder soziale Anforderungen - Sybil-Resistenz durch:
 /// - Reale Ressourcenkosten (Storage, Bandwidth)
 /// - Nicht-übertragbares Time-Commitment
-/// - Soziale Accountability durch Guild-Vouching
+/// - Automatische, VRF-basierte Challenge-Verifikation
 pub fn check_eligibility(
     trust_r: f64,
     trust_i: f64,
@@ -2938,23 +3806,25 @@ pub fn check_eligibility(
 ) -> EligibilityResult {
     // Phase 1 → Phase 2: Apprentice-Eligibility
     if bootstrap_status.phase == BootstrapPhase::Foundation {
-        // Pfad A: Guild-Vouching + Basis-Commitment
-        let has_guild_vouches = foundation_trust.guild_vouches >= min_commitment.min_guild_vouches;
+        // 🆕 V2.5: DC3-Score statt Guild-Vouching
+        let has_sufficient_dc3 = foundation_trust.dc3_score >= min_commitment.min_dc3_score
+            && foundation_trust.completed_challenges >= min_commitment.min_completed_challenges;
         let has_min_uptime = foundation_trust.uptime_weeks >= min_commitment.min_uptime_weeks;
         let has_min_storage = foundation_trust.storage_contribution >= min_commitment.min_storage;
 
-        // Pfad B: Hohe Ressourcenbeiträge ohne Guild-Vouching
+        // Pfad B: Hohe Ressourcenbeiträge ohne DC3-Challenges
         let high_contribution = trust_r >= min_commitment.high_contribution_threshold;
 
-        if trust_r >= 0.4 && has_min_uptime && (has_guild_vouches || high_contribution) {
+        if trust_r >= 0.4 && has_min_uptime && (has_sufficient_dc3 || high_contribution) {
             return EligibilityResult::EligibleForApprentice;
         }
 
         return EligibilityResult::NotEligible {
             reason: format!(
-                "Insufficient commitment: trust_r={:.2} (need 0.4), uptime={}w (need {}), vouches={} (need {})",
+                "Insufficient commitment: trust_r={:.2} (need 0.4), uptime={}w (need {}), dc3_score={:.2} (need {:.2}), challenges={} (need {})",
                 trust_r, foundation_trust.uptime_weeks, min_commitment.min_uptime_weeks,
-                foundation_trust.guild_vouches, min_commitment.min_guild_vouches
+                foundation_trust.dc3_score, min_commitment.min_dc3_score,
+                foundation_trust.completed_challenges, min_commitment.min_completed_challenges
             ),
             required_r: 0.4,
             current_r: trust_r,
@@ -4873,22 +5743,28 @@ lazy_static! {
 
 ---
 
-## Risiken & Mitigationen
+## Risiken & Mitigationen (V2.4 – Verstärkt)
 
-| Risiko                        | Wahrscheinlichkeit | Impact   | Mitigation                                     |
-| ----------------------------- | ------------------ | -------- | ---------------------------------------------- |
-| Crypto-Bug                    | Medium             | Critical | External Audit, Fuzzing                        |
-| Performance-Regression        | High               | Medium   | Benchmark-Suite, CI-Gates                      |
-| Relay-Knappheit               | Medium             | High     | Guild-Recruitment-Incentives, Foundation-Nodes |
-| Timing-Leaks                  | Medium             | High     | Constant-Time-Implementierung                  |
-| Backward-Compatibility        | Low                | Medium   | Wire-Format-Versionierung                      |
-| QUIC-Blocking 🆕              | Low                | Medium   | Hybrid-Fallback zu TCP                         |
-| Lattice-ZK-Soundness 🆕       | Low                | Critical | Formal-Verification, Academic Review           |
-| Multi-Circuit-Korrelation 🆕  | Medium             | High     | AS-Diversitäts-Constraints, Mixing-Pool        |
-| **Resource-Commitment V2.1:** |                    |          |                                                |
-| Guild-Vouching-Missbrauch     | Low                | Medium   | Vouch-Kapazitätslimits, Cooldown bei Failure   |
-| Ressourcen-Spoofing           | Low                | High     | Kryptographische Beitrags-Beweise, Audits      |
-| Cold-Start-Problem            | Medium             | Medium   | Foundation-Gilden als initiale Bürgen          |
+| Risiko                        | Wahrscheinlichkeit | Impact   | Mitigation                                                                                   |
+| ----------------------------- | ------------------ | -------- | -------------------------------------------------------------------------------------------- |
+| Crypto-Bug                    | Medium             | Critical | External Audit, Fuzzing                                                                      |
+| Performance-Regression        | High               | Medium   | Benchmark-Suite, CI-Gates                                                                    |
+| Relay-Knappheit               | Medium             | High     | DC3-Incentives, Foundation-Nodes, Quality-Bonus                                              |
+| Timing-Leaks                  | Medium             | High     | Constant-Time-Implementierung                                                                |
+| Backward-Compatibility        | Low                | Medium   | Wire-Format-Versionierung                                                                    |
+| QUIC-Blocking 🆕              | Low                | Medium   | Hybrid-Fallback zu TCP                                                                       |
+| Lattice-ZK-Soundness 🆕       | Low                | Critical | Formal-Verification, Academic Review                                                         |
+| Multi-Circuit-Korrelation 🆕  | Medium             | High     | AS-Diversitäts-Constraints, Mixing-Pool                                                      |
+| **Resource-Commitment V2.4:** |                    |          |                                                                                              |
+| Ressourcen-Spoofing           | **Mittel → Low**   | High     | **VRF-Challenges, Cross-Resource-Verification, Exponentielle Penalties, Frühzeitiges Audit** |
+| Storage-Fake-Claims           | Low                | High     | **PoR + Merkle-DAG + VRF-Challenges + Spot-Checks**                                          |
+| Bandwidth-Inflation           | Low                | Medium   | **Rotating Witness-Committees + Epoch-Binding + Cross-Verification**                         |
+| Compute-Spoofing              | Low                | Medium   | **Bayer-Groth ZK-Shuffle + Nachbar-Attestation**                                             |
+| **DC3 V2.5:**                 |                    |          |                                                                                              |
+| Challenge-Gaming              | Low                | Medium   | **VRF-basierte Challenge-Auswahl, Netzwerk-Bedarfs-Gewichtung**                              |
+| Fake-Contribution-Claims      | Low                | High     | **Merkle-Proofs, Bilaterale Attestationen, ZK-Shuffle-Proofs**                               |
+| Score-Transfer-Versuche       | Low                | Medium   | **ZK-Proofs sind peer-gebunden, nicht übertragbar**                                          |
+| Time-Compression-Attacken     | Low                | Medium   | **28-Tage-Minimum im ZK-Proof verifiziert**                                                  |
 
 ---
 
@@ -4907,12 +5783,12 @@ lazy_static! {
 6. **Woche 7**: `cover_traffic.rs` + Protocol-Pledge
 7. **Woche 8**: Integration in `behaviour.rs` und `swarm.rs`
 
-### Phase 3: Wochen 9-12 (ZK-Eligibility + Resource-Verification)
+### Phase 3: Wochen 9-12 (ZK-Eligibility + DC3)
 
-> **⚠️ Abhängigkeits-Reihenfolge (V2.4):**
+> **⚠️ Abhängigkeits-Reihenfolge (V2.5):**
 >
 > ```
-> ResourceVerificationService → VerifiedResourceCommitment → GuildVouch → EligibilityCheck
+> ResourceVerificationService → DC3Service → CumulativeContributionScore → ZkContributionProof → EligibilityCheck
 > ```
 
 8. **Woche 9**: `resource_verification.rs` mit RL-V1/V2/V3 Protokollen 🆕 V2.4
@@ -4920,7 +5796,11 @@ lazy_static! {
    - `RelayReceipt`, `BilateralAttestation`, `BandwidthEpochProof` (RL-V2)
    - `MixingBatchCommitment`, `ZkShuffleProof`, `DailyComputeProof` (RL-V3)
 9. **Woche 10**: `eligibility.rs` mit Bootstrap-Phasen + `VerifiedResourceCommitment` 🆕
-10. **Woche 10**: `guild_vouching.rs` Social-Collateral-System (benötigt ResourceVerificationService) 🆕
+10. **Woche 10**: DC3-System (ersetzt Guild-Vouching) 🆕 V2.5
+    - `dc3_challenges.rs`: `DynamicChallenge`, `ChallengeType`, `ChallengeProof`
+    - `contribution_scoring.rs`: `CumulativeContributionScore`, `ContributionScoreCalculator`
+    - `dc3_service.rs`: `DC3Service`, `ChallengeGenerator`, `NetworkDemandAnalyzer`
+    - `zk_contribution.rs`: `ZkContributionProof` (Bulletproofs + optional Lattice)
 11. **Woche 11**: Bulletproofs-Integration (klassisches ZK)
 12. **Woche 12**: `lattice_zk.rs` Post-Quantum Alternative 🆕
 
@@ -4938,9 +5818,9 @@ lazy_static! {
 
 ---
 
-## Performance-Benchmark-Ziele (V2.1)
+## Performance-Benchmark-Ziele (V2.5)
 
-| Metrik                    | V1.0 Baseline  | V2.1 Target     | Verbesserung |
+| Metrik                    | V1.0 Baseline  | V2.5 Target     | Verbesserung |
 | ------------------------- | -------------- | --------------- | ------------ |
 | First-Message-Latency     | ~300ms         | < 50ms          | 6×           |
 | Mixing-Delay (Avg.)       | 200ms          | ~70ms           | 3×           |
@@ -4952,25 +5832,27 @@ lazy_static! {
 
 ---
 
-## Appendix: Resource-Commitment vs. Token-Stake Vergleich
+## Appendix: Resource-Commitment + DC3 vs. Token-Stake Vergleich
 
 ### Sybil-Kosten-Analyse
 
-| Angriffsszenario              | Token-Stake (ERY) | Resource-Commitment        |
+| Angriffsszenario              | Token-Stake (ERY) | Resource-Commitment + DC3  |
 | ----------------------------- | ----------------- | -------------------------- |
 | 100 Sybil-Identitäten kaufen  | ~$10.000 sofort   | ~$500/Monat + 4 Wochen min |
 | Identitäten parallelisieren   | ✅ Möglich        | ❌ Time-Lock verhindert    |
 | Trust wiederverwenden         | ✅ Übertragbar    | ❌ Nicht-übertragbar       |
 | Flash-Loan-Attacke            | ✅ Möglich        | ❌ Nicht möglich           |
 | Identität nach Angriff dumpen | ✅ Verkaufbar     | ❌ Kein Restwert           |
+| Kollusion mit anderen         | ⚠️ Schwieriger    | ❌ Keine sozialen Elemente |
 
-### Sicherheits-Garantien (gleichwertig zu Token-Stake)
+### Sicherheits-Garantien (stärker als Token-Stake)
 
 1. **Economic Sybil-Resistenz**: Reale Ressourcenkosten (Storage, Bandwidth, Compute)
-2. **Temporal Sybil-Resistenz**: Time-Lock durch Uptime-Anforderung (nicht kaufbar)
-3. **Social Sybil-Resistenz**: Guild-Vouching mit Reputation-at-Risk
-4. **Diversity-Constraint**: Vouches von ≥3 verschiedenen Gilden für Bonus
+2. **Temporal Sybil-Resistenz**: Time-Lock durch 28-Tage-Minimum (nicht kaufbar)
+3. **Contribution-Based**: DC3 – nur verifizierbare, nützliche Beiträge zählen
+4. **Anti-Kollusion**: Keine sozialen Elemente → Kollusion strukturell unmöglich
+5. **Privacy-Preserving**: ZK-Proofs beweisen Eligibility ohne Score-Details
 
 ---
 
-_Dokument V2.4 (Verifiable-Commitment Edition) basierend auf P2P-PRIVATE-RELAY-LOGIC.md V3.0 – **Token-Free Edition** mit Resource-Commitment-System, kryptographischer Verifizierung (RL-V1 bis RL-V3) und Performance-Optimierungen für Sybil-Resistenz_
+_Dokument V2.5 (DC3 Edition) basierend auf P2P-PRIVATE-RELAY-LOGIC.md V3.0 – **Token-Free Edition** mit Resource-Commitment-System, DC3 (Dynamic Challenge-based Cumulative Contribution), kryptographischer Verifizierung (RL-V1 bis RL-V3) und Performance-Optimierungen für maximale Sybil-Resistenz_
