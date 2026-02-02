@@ -2,127 +2,63 @@
 # Erynoa P2P Testnet - Multi-Node Docker Compose
 # ============================================================================
 #
-# 🌐 4-Node Testnetzwerk für P2P-Entwicklung
-#
-# Architektur:
-#   ┌─────────────────────────────────────────────────────────────────────┐
-#   │                      erynoa-testnet (Bridge Network)               │
-#   │                                                                     │
-#   │   ┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐    │
-#   │   │ relay1  │◄───►│ relay2  │◄───►│ relay3  │◄───►│ client  │    │
-#   │   │ :4001   │     │ :4002   │     │ :4003   │     │ :4004   │    │
-#   │   │ :9001   │     │ :9002   │     │ :9003   │     │ :9004   │    │
-#   │   │ GENESIS │     │         │     │         │     │         │    │
-#   │   └─────────┘     └─────────┘     └─────────┘     └─────────┘    │
-#   │        △               │               │               │         │
-#   │        └───────────────┴───────────────┴───────────────┘         │
-#   │                     Bootstrap via relay1                          │
-#   └─────────────────────────────────────────────────────────────────────┘
-#
 # Verwendung:
-#   # Starten
-#   docker compose -f infra/docker/docker-compose.testnet.yml up -d
-#
-#   # Logs anzeigen
-#   docker compose -f infra/docker/docker-compose.testnet.yml logs -f
-#
-#   # Einzelnen Node-Logs
-#   docker compose -f infra/docker/docker-compose.testnet.yml logs -f relay1
-#
-#   # Stoppen
-#   docker compose -f infra/docker/docker-compose.testnet.yml down
-#
-#   # Komplett neu bauen
-#   docker compose -f infra/docker/docker-compose.testnet.yml up -d --build
+#   just testnet run     # Starten
+#   just testnet down    # Stoppen
+#   just testnet status  # Status
+#   just testnet logs    # Logs
 #
 # ============================================================================
 
 name: erynoa-testnet
 
-# ===========================================================================
-# Shared Configuration (YAML Anchors)
-# ===========================================================================
-x-common-env: &common-env
-  RUST_LOG: "erynoa_api=debug,libp2p_gossipsub=info,libp2p_kad=info,libp2p_mdns=debug,info"
-  RUST_BACKTRACE: "1"
-  # Storage-Pfad im Container
-  APP_STORAGE__DATA_DIR: "/data"
-
-x-common-volumes: &common-volumes # Source-Code für Hot-Reloading
-  - ../../backend/src:/workspace/backend/src:cached
-  - ../../backend/Cargo.toml:/workspace/backend/Cargo.toml:cached
-  - ../../backend/Cargo.lock:/workspace/backend/Cargo.lock:cached
-  - ../../backend/config:/workspace/backend/config:cached
-  - ../../backend/build.rs:/workspace/backend/build.rs:cached
-  # Proto-Files
-  - ../../backend/proto:/workspace/backend/proto:cached
-  - ../../buf.gen.yaml:/workspace/buf.gen.yaml:cached
-  - ../../buf.yaml:/workspace/buf.yaml:cached
-  # Generated Code
-  - ../../backend/src/gen:/workspace/backend/src/gen:cached
-
-x-common-build: &common-build
-  context: ../..
-  dockerfile: infra/docker/Dockerfile.testnet
-
-x-healthcheck: &healthcheck
-  test: ["CMD", "curl", "-f", "http://localhost:${API_PORT:-9000}/health"]
-  interval: 10s
-  timeout: 5s
-  retries: 3
-  start_period: 60s
-
-# ===========================================================================
-# Services
-# ===========================================================================
 services:
-  # -------------------------------------------------------------------------
-  # Relay 1 - Genesis/Bootstrap Node
-  # -------------------------------------------------------------------------
-  # Dieser Node startet zuerst und dient als Bootstrap für alle anderen.
-  # Er generiert seine PeerId beim ersten Start.
   relay1:
-    build: *common-build
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.testnet
     container_name: erynoa-relay1
     hostname: relay1
     networks:
       testnet:
         ipv4_address: 172.28.0.10
     ports:
-      - "4001:4001" # P2P Swarm
-      - "9001:9000" # HTTP API
+      - "4001:4001"
+      - "9001:9000"
     environment:
-      <<: *common-env
+      RUST_LOG: "erynoa_api=debug,libp2p=info,info"
+      RUST_BACKTRACE: "1"
+      APP_STORAGE__DATA_DIR: "/data"
       NODE_NAME: relay1
       NODE_MODE: relay
       P2P_PORT: "4001"
       API_PORT: "9000"
-      # relay1 ist Bootstrap - keine Bootstrap-Peers nötig
       BOOTSTRAP_PEERS: ""
-      # Genesis-Node Flag
       GENESIS_NODE: "true"
-      # mDNS für lokale Discovery
       P2P_ENABLE_MDNS: "true"
     volumes:
-      - *common-volumes
-      # Shared cargo caches für schnelle Rebuilds
+      - ../../backend/src:/workspace/backend/src:cached
+      - ../../backend/Cargo.toml:/workspace/backend/Cargo.toml:cached
+      - ../../backend/Cargo.lock:/workspace/backend/Cargo.lock:cached
+      - ../../backend/config:/workspace/backend/config:cached
+      - ../../backend/build.rs:/workspace/backend/build.rs:cached
+      - ../../backend/proto:/workspace/backend/proto:cached
+      - ../../buf.gen.yaml:/workspace/buf.gen.yaml:cached
+      - ../../buf.yaml:/workspace/buf.yaml:cached
+      - ../../backend/src/gen:/workspace/backend/src/gen:cached
       - testnet-cargo-registry:/usr/local/cargo/registry
       - testnet-cargo-git:/usr/local/cargo/git
-      # Node-spezifische Build-Artifacts
       - relay1-target:/workspace/backend/target
-      # Persistenter Storage
       - relay1-data:/data
 
-  # -------------------------------------------------------------------------
-  # Relay 2
-  # -------------------------------------------------------------------------
   relay2:
-    build: *common-build
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.testnet
     container_name: erynoa-relay2
     hostname: relay2
     depends_on:
-      relay1:
-        condition: service_started
+      - relay1
     networks:
       testnet:
         ipv4_address: 172.28.0.11
@@ -130,31 +66,38 @@ services:
       - "4002:4001"
       - "9002:9000"
     environment:
-      <<: *common-env
+      RUST_LOG: "erynoa_api=debug,libp2p=info,info"
+      RUST_BACKTRACE: "1"
+      APP_STORAGE__DATA_DIR: "/data"
       NODE_NAME: relay2
       NODE_MODE: relay
       P2P_PORT: "4001"
       API_PORT: "9000"
-      # Bootstrap via relay1 (IP-Adresse im Docker-Netzwerk)
       BOOTSTRAP_PEERS: "/ip4/172.28.0.10/tcp/4001"
       P2P_ENABLE_MDNS: "true"
     volumes:
-      - *common-volumes
+      - ../../backend/src:/workspace/backend/src:cached
+      - ../../backend/Cargo.toml:/workspace/backend/Cargo.toml:cached
+      - ../../backend/Cargo.lock:/workspace/backend/Cargo.lock:cached
+      - ../../backend/config:/workspace/backend/config:cached
+      - ../../backend/build.rs:/workspace/backend/build.rs:cached
+      - ../../backend/proto:/workspace/backend/proto:cached
+      - ../../buf.gen.yaml:/workspace/buf.gen.yaml:cached
+      - ../../buf.yaml:/workspace/buf.yaml:cached
+      - ../../backend/src/gen:/workspace/backend/src/gen:cached
       - testnet-cargo-registry:/usr/local/cargo/registry
       - testnet-cargo-git:/usr/local/cargo/git
       - relay2-target:/workspace/backend/target
       - relay2-data:/data
 
-  # -------------------------------------------------------------------------
-  # Relay 3
-  # -------------------------------------------------------------------------
   relay3:
-    build: *common-build
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.testnet
     container_name: erynoa-relay3
     hostname: relay3
     depends_on:
-      relay1:
-        condition: service_started
+      - relay1
     networks:
       testnet:
         ipv4_address: 172.28.0.12
@@ -162,7 +105,9 @@ services:
       - "4003:4001"
       - "9003:9000"
     environment:
-      <<: *common-env
+      RUST_LOG: "erynoa_api=debug,libp2p=info,info"
+      RUST_BACKTRACE: "1"
+      APP_STORAGE__DATA_DIR: "/data"
       NODE_NAME: relay3
       NODE_MODE: relay
       P2P_PORT: "4001"
@@ -170,27 +115,30 @@ services:
       BOOTSTRAP_PEERS: "/ip4/172.28.0.10/tcp/4001"
       P2P_ENABLE_MDNS: "true"
     volumes:
-      - *common-volumes
+      - ../../backend/src:/workspace/backend/src:cached
+      - ../../backend/Cargo.toml:/workspace/backend/Cargo.toml:cached
+      - ../../backend/Cargo.lock:/workspace/backend/Cargo.lock:cached
+      - ../../backend/config:/workspace/backend/config:cached
+      - ../../backend/build.rs:/workspace/backend/build.rs:cached
+      - ../../backend/proto:/workspace/backend/proto:cached
+      - ../../buf.gen.yaml:/workspace/buf.gen.yaml:cached
+      - ../../buf.yaml:/workspace/buf.yaml:cached
+      - ../../backend/src/gen:/workspace/backend/src/gen:cached
       - testnet-cargo-registry:/usr/local/cargo/registry
       - testnet-cargo-git:/usr/local/cargo/git
       - relay3-target:/workspace/backend/target
       - relay3-data:/data
 
-  # -------------------------------------------------------------------------
-  # Client Node
-  # -------------------------------------------------------------------------
-  # Client-Node für Tests - verbindet sich mit allen Relays
   client:
-    build: *common-build
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.testnet
     container_name: erynoa-client
     hostname: client
     depends_on:
-      relay1:
-        condition: service_started
-      relay2:
-        condition: service_started
-      relay3:
-        condition: service_started
+      - relay1
+      - relay2
+      - relay3
     networks:
       testnet:
         ipv4_address: 172.28.0.20
@@ -198,24 +146,30 @@ services:
       - "4004:4001"
       - "9004:9000"
     environment:
-      <<: *common-env
+      RUST_LOG: "erynoa_api=debug,libp2p=info,info"
+      RUST_BACKTRACE: "1"
+      APP_STORAGE__DATA_DIR: "/data"
       NODE_NAME: client
       NODE_MODE: client
       P2P_PORT: "4001"
       API_PORT: "9000"
-      # Bootstrap über alle Relays für Redundanz
       BOOTSTRAP_PEERS: "/ip4/172.28.0.10/tcp/4001,/ip4/172.28.0.11/tcp/4001,/ip4/172.28.0.12/tcp/4001"
       P2P_ENABLE_MDNS: "true"
     volumes:
-      - *common-volumes
+      - ../../backend/src:/workspace/backend/src:cached
+      - ../../backend/Cargo.toml:/workspace/backend/Cargo.toml:cached
+      - ../../backend/Cargo.lock:/workspace/backend/Cargo.lock:cached
+      - ../../backend/config:/workspace/backend/config:cached
+      - ../../backend/build.rs:/workspace/backend/build.rs:cached
+      - ../../backend/proto:/workspace/backend/proto:cached
+      - ../../buf.gen.yaml:/workspace/buf.gen.yaml:cached
+      - ../../buf.yaml:/workspace/buf.yaml:cached
+      - ../../backend/src/gen:/workspace/backend/src/gen:cached
       - testnet-cargo-registry:/usr/local/cargo/registry
       - testnet-cargo-git:/usr/local/cargo/git
       - client-target:/workspace/backend/target
       - client-data:/data
 
-# ===========================================================================
-# Networks
-# ===========================================================================
 networks:
   testnet:
     driver: bridge
@@ -225,21 +179,13 @@ networks:
         - subnet: 172.28.0.0/16
           gateway: 172.28.0.1
 
-# ===========================================================================
-# Volumes
-# ===========================================================================
 volumes:
-  # Shared cargo caches (einmal für alle Nodes)
   testnet-cargo-registry:
   testnet-cargo-git:
-
-  # Node-spezifische Build-Artifacts
   relay1-target:
   relay2-target:
   relay3-target:
   client-target:
-
-  # Node-spezifische persistente Daten
   relay1-data:
   relay2-data:
   relay3-data:

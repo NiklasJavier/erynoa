@@ -278,3 +278,103 @@ proto-lint:
 # Proto format
 proto-format:
     cd {{WORKSPACE_ROOT}} && buf format -w
+
+# ═══════════════════════════════════════════════════════
+# 🌐 P2P TESTNET
+# ═══════════════════════════════════════════════════════
+
+# Testnet steuern (run, down, status, logs, build, clean)
+testnet cmd="status":
+    #!/usr/bin/env bash
+    set -e
+    COMPOSE_FILE="{{WORKSPACE_ROOT}}/infra/docker/docker-compose.testnet.yml"
+
+    case "{{cmd}}" in
+        run|up|start)
+            echo "🌐 Starte Erynoa P2P Testnet..."
+            docker compose -f "$COMPOSE_FILE" up -d
+            echo ""
+            echo "  Nodes:"
+            echo "    relay1: http://localhost:9001/status (Genesis)"
+            echo "    relay2: http://localhost:9002/status"
+            echo "    relay3: http://localhost:9003/status"
+            echo "    client: http://localhost:9004/status"
+            echo ""
+            echo "  Logs:   just testnet logs"
+            echo "  Status: just testnet status"
+            echo "  Stop:   just testnet down"
+            ;;
+        down|stop)
+            echo "🛑 Stoppe Testnet..."
+            docker compose -f "$COMPOSE_FILE" down
+            echo "✓ Testnet gestoppt"
+            ;;
+        status)
+            echo "📊 Testnet Status:"
+            echo ""
+            docker compose -f "$COMPOSE_FILE" ps
+            echo ""
+            echo "───────────────────────────────────────────"
+            for node in relay1 relay2 relay3 client; do
+                case $node in
+                    relay1) port=9001 ;;
+                    relay2) port=9002 ;;
+                    relay3) port=9003 ;;
+                    client) port=9004 ;;
+                esac
+                status=$(curl -s "http://localhost:$port/status" 2>/dev/null || echo "")
+                if [ -n "$status" ]; then
+                    peers=$(echo "$status" | grep -o '"peer_count":[0-9]*' | cut -d: -f2)
+                    uptime=$(echo "$status" | grep -o '"uptime_secs":[0-9]*' | cut -d: -f2)
+                    printf "  ✓ %-10s Peers: %2s  Uptime: %ss\n" "$node" "${peers:-?}" "${uptime:-?}"
+                else
+                    printf "  ✗ %-10s (offline)\n" "$node"
+                fi
+            done
+            echo ""
+            ;;
+        logs)
+            docker compose -f "$COMPOSE_FILE" logs -f
+            ;;
+        build)
+            echo "🔨 Baue Testnet-Container..."
+            docker compose -f "$COMPOSE_FILE" build
+            echo "✓ Build abgeschlossen"
+            ;;
+        clean)
+            echo "🧹 Räume Testnet auf..."
+            docker compose -f "$COMPOSE_FILE" down -v --remove-orphans
+            echo "✓ Aufräumen abgeschlossen"
+            ;;
+        restart)
+            docker compose -f "$COMPOSE_FILE" down
+            docker compose -f "$COMPOSE_FILE" up -d
+            echo "✓ Testnet neugestartet"
+            ;;
+        shell)
+            docker compose -f "$COMPOSE_FILE" exec relay1 bash
+            ;;
+        *)
+            echo "Verwendung: just testnet [COMMAND]"
+            echo ""
+            echo "Commands:"
+            echo "  run      Startet das Testnet (4 Nodes)"
+            echo "  down     Stoppt alle Nodes"
+            echo "  status   Zeigt Status aller Nodes"
+            echo "  logs     Zeigt Logs aller Nodes"
+            echo "  build    Baut Container neu"
+            echo "  clean    Entfernt Container und Volumes"
+            echo "  restart  Neustart aller Nodes"
+            echo "  shell    Shell in relay1"
+            ;;
+    esac
+
+# Testnet Logs für spezifischen Node
+testnet-logs node="":
+    #!/usr/bin/env bash
+    COMPOSE_FILE="{{WORKSPACE_ROOT}}/infra/docker/docker-compose.testnet.yml"
+    if [ -z "{{node}}" ]; then
+        docker compose -f "$COMPOSE_FILE" logs -f
+    else
+        docker compose -f "$COMPOSE_FILE" logs -f {{node}}
+    fi
