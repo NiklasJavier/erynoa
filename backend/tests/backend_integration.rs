@@ -859,3 +859,726 @@ mod invariant_tests {
         assert!(InvariantChecker::check_cost_algebra(c1, c2, c3).is_ok());
     }
 }
+
+// ============================================================================
+// ERROR CASES AND EDGE CASES
+// ============================================================================
+
+mod error_cases {
+    use super::*;
+
+    /// Test: Invalid Trust-Faktor (0.0) wird abgelehnt (Κ8)
+    #[test]
+    fn test_invalid_trust_factor_zero() {
+        let result = InvariantChecker::check_delegation_trust_factor(0.0);
+        assert!(result.is_err(), "Trust factor 0.0 should be rejected");
+    }
+
+    /// Test: Invalid Trust-Faktor (>1.0) wird abgelehnt (Κ8)
+    #[test]
+    fn test_invalid_trust_factor_above_one() {
+        let result = InvariantChecker::check_delegation_trust_factor(1.5);
+        assert!(result.is_err(), "Trust factor > 1.0 should be rejected");
+
+        let result2 = InvariantChecker::check_delegation_trust_factor(100.0);
+        assert!(result2.is_err(), "Trust factor 100.0 should be rejected");
+    }
+
+    /// Test: Negative Trust-Faktoren werden abgelehnt (Κ8)
+    #[test]
+    fn test_invalid_trust_factor_negative() {
+        let result = InvariantChecker::check_delegation_trust_factor(-0.5);
+        assert!(result.is_err(), "Negative trust factor should be rejected");
+    }
+
+    /// Test: Kausale Ordnung - gleichzeitige Events verletzen Kausalität (Κ9)
+    #[test]
+    fn test_causal_order_same_timestamp_violation() {
+        let coord = TemporalCoord::new(1000, 5, 42);
+
+        // Gleicher Timestamp als Parent ist ungültig
+        let result = InvariantChecker::check_causal_order(&coord, &coord);
+        assert!(result.is_err(), "Same timestamp should violate causality");
+    }
+
+    /// Test: Kausale Ordnung - Parent nach Event verletzt Kausalität (Κ9)
+    #[test]
+    fn test_causal_order_parent_after_event() {
+        let event = TemporalCoord::new(1000, 5, 42);
+        let parent_in_future = TemporalCoord::new(2000, 10, 42);
+
+        let result = InvariantChecker::check_causal_order(&event, &parent_in_future);
+        assert!(result.is_err(), "Parent in future should violate causality");
+    }
+
+    /// Test: Gas-Exhaustion in ExecutionContext
+    #[test]
+    fn test_gas_exhaustion_error() {
+        let mut ctx = ExecutionContext::minimal(); // Nur 10_000 Gas
+
+        // Versuche mehr Gas zu verbrauchen als verfügbar
+        let result = ctx.consume_gas(100_000);
+
+        assert!(result.is_err());
+        match result {
+            Err(erynoa_api::execution::ExecutionError::GasExhausted {
+                required,
+                available,
+            }) => {
+                assert_eq!(required, 100_000);
+                assert_eq!(available, 10_000);
+            }
+            _ => panic!("Expected GasExhausted error"),
+        }
+    }
+
+    /// Test: Mana-Exhaustion in ExecutionContext
+    #[test]
+    fn test_mana_exhaustion_error() {
+        let mut ctx = ExecutionContext::minimal(); // Nur 1_000 Mana
+
+        // Versuche mehr Mana zu verbrauchen als verfügbar
+        let result = ctx.consume_mana(10_000);
+
+        assert!(result.is_err());
+        match result {
+            Err(erynoa_api::execution::ExecutionError::ManaExhausted {
+                required,
+                available,
+            }) => {
+                assert_eq!(required, 10_000);
+                assert_eq!(available, 1_000);
+            }
+            _ => panic!("Expected ManaExhausted error"),
+        }
+    }
+
+    /// Test: Vollständige Gas-Erschöpfung blockiert weitere Operationen
+    #[test]
+    fn test_complete_gas_exhaustion_blocks_operations() {
+        let mut ctx = ExecutionContext::minimal();
+
+        // Verbrauche alles Gas
+        ctx.consume_gas(10_000)
+            .expect("Initial consumption should work");
+
+        // Jede weitere Operation sollte fehlschlagen
+        let result = ctx.consume_gas(1);
+        assert!(result.is_err());
+
+        // Execute sollte auch fehlschlagen
+        let exec_result = ctx.execute(|_| Ok(42));
+        assert!(exec_result.is_err());
+    }
+
+    /// Test: Trust-Vektor Clamping bei ungültigen Werten
+    #[test]
+    fn test_trust_vector_clamping() {
+        // TrustVector6D::new clamped automatisch
+        let trust = TrustVector6D::new(2.0, -0.5, 0.5, 0.5, 0.5, 0.5);
+
+        // Werte sollten auf [0, 1] begrenzt sein
+        assert!(trust.r >= 0.0 && trust.r <= 1.0);
+        assert!(trust.i >= 0.0 && trust.i <= 1.0);
+    }
+
+    /// Test: Event ohne Parents (Genesis-Event) ist gültig
+    #[test]
+    fn test_genesis_event_no_parents() {
+        let actor = DID::new(DIDNamespace::Self_, b"genesis-actor");
+        let actor_id = UniversalId::new(UniversalId::TAG_DID, 1, actor.id.as_bytes());
+
+        let genesis_event = Event::new(
+            actor_id,
+            vec![], // Keine Parents
+            EventPayload::Custom {
+                event_type: "genesis".to_string(),
+                data: vec![],
+            },
+            0,
+        );
+
+        // Genesis-Event sollte valide sein
+        assert!(genesis_event.parents.is_empty());
+        assert!(!genesis_event.id.as_bytes().is_empty());
+    }
+
+    /// Test: Duplizierte Event-IDs (deterministisch)
+    #[test]
+    fn test_duplicate_event_ids_deterministic() {
+        let actor = DID::new(DIDNamespace::Self_, b"dup-actor");
+        let actor_id = UniversalId::new(UniversalId::TAG_DID, 1, actor.id.as_bytes());
+
+        // Zwei identische Events sollten gleiche ID haben
+        let event1 = Event::new(
+            actor_id.clone(),
+            vec![],
+            EventPayload::Custom {
+                event_type: "test".to_string(),
+                data: vec![1, 2, 3],
+            },
+            1,
+        );
+
+        let event2 = Event::new(
+            actor_id,
+            vec![],
+            EventPayload::Custom {
+                event_type: "test".to_string(),
+                data: vec![1, 2, 3],
+            },
+            1,
+        );
+
+        // Gleicher Content → gleiche ID (Content-Addressing)
+        assert_eq!(event1.id, event2.id);
+    }
+
+    /// Test: Cost mit extremen Werten
+    #[test]
+    fn test_cost_extreme_values() {
+        // Max-Werte
+        let max_cost = Cost::new(u64::MAX, u64::MAX, 1.0);
+        assert_eq!(max_cost.gas, u64::MAX);
+        assert_eq!(max_cost.mana, u64::MAX);
+        assert_eq!(max_cost.trust_risk, 1.0);
+
+        // Zero-Cost
+        let zero = Cost::ZERO;
+        assert_eq!(zero.gas, 0);
+        assert_eq!(zero.mana, 0);
+        assert_eq!(zero.trust_risk, 0.0);
+
+        // Seq mit Zero ist Identity
+        let with_zero = max_cost.seq(zero);
+        assert_eq!(with_zero.gas, u64::MAX);
+    }
+
+    /// Test: TemporalCoord Ordnung
+    #[test]
+    fn test_temporal_coord_ordering_edge_cases() {
+        // Gleiche wall_time, unterschiedliche lamport
+        let t1 = TemporalCoord::new(1000, 5, 1);
+        let t2 = TemporalCoord::new(1000, 10, 1);
+
+        // t2 ist "nach" t1 (höherer Lamport)
+        assert!(t2 > t1);
+
+        // Gleiche wall_time und lamport, unterschiedlicher node_hash
+        let t3 = TemporalCoord::new(1000, 5, 2);
+        let t4 = TemporalCoord::new(1000, 5, 1);
+
+        // Sortierung nach node_hash als Tiebreaker
+        assert_ne!(t3, t4);
+    }
+}
+
+// ============================================================================
+// EXTENDED CONSENSUS TESTS
+// ============================================================================
+
+mod extended_consensus_tests {
+    use super::*;
+
+    /// Test: Ungenügende Trust-Summe erreicht keine Finalität
+    #[test]
+    fn test_insufficient_trust_no_finality() {
+        let mut trust_engine = TrustEngine::default();
+        let mut consensus = ConsensusEngine::default();
+
+        // Nur 1 Witness (braucht mindestens 3)
+        let witness = DID::new(DIDNamespace::Self_, b"lone-witness");
+        trust_engine.initialize_trust_for_did(&witness);
+        let trust = *trust_engine.get_trust_for_did(&witness).unwrap();
+        consensus.register_witness(witness.clone(), trust);
+
+        // Event erstellen
+        let event_id = event_id_from_content(b"insufficient-trust-event");
+
+        // Attestation hinzufügen
+        let _ = consensus.add_attestation(event_id.clone(), witness, "sig".to_string());
+
+        // Finalität prüfen
+        let check = consensus.check_finality(&event_id).unwrap();
+
+        assert!(
+            !check.reached,
+            "Finality should not be reached with only 1 witness"
+        );
+        assert_eq!(check.witness_count, 1);
+    }
+
+    /// Test: Witness mit zu niedrigem Trust wird abgelehnt
+    #[test]
+    fn test_low_trust_witness_rejected() {
+        let mut consensus = ConsensusEngine::default();
+
+        let witness = DID::new(DIDNamespace::Self_, b"low-trust-witness");
+
+        // Registriere mit sehr niedrigem Trust (unter Minimum 0.5)
+        let low_trust = TrustVector6D::new(0.1, 0.1, 0.1, 0.1, 0.1, 0.1);
+        consensus.register_witness(witness.clone(), low_trust);
+
+        // Attestation sollte fehlschlagen
+        let event_id = event_id_from_content(b"low-trust-event");
+        let result = consensus.add_attestation(event_id, witness, "sig".to_string());
+
+        assert!(result.is_err());
+    }
+
+    /// Test: Unregistrierter Witness wird abgelehnt
+    #[test]
+    fn test_unregistered_witness_rejected() {
+        let consensus = ConsensusEngine::default();
+
+        let unknown_witness = DID::new(DIDNamespace::Self_, b"unknown-witness");
+        let event_id = event_id_from_content(b"unauthorized-event");
+
+        // Cast to mutable for test (in real code this would be different)
+        let mut consensus = consensus;
+        let result = consensus.add_attestation(event_id, unknown_witness, "sig".to_string());
+
+        assert!(result.is_err());
+    }
+
+    /// Test: Exakt k=3 Witnesses erreichen Finalität
+    #[test]
+    fn test_exact_threshold_witnesses() {
+        let mut trust_engine = TrustEngine::default();
+        let mut consensus = ConsensusEngine::default();
+
+        // Exakt 3 Witnesses
+        let witnesses: Vec<_> = (0..3)
+            .map(|i| DID::new(DIDNamespace::Self_, format!("witness-{i}").as_bytes()))
+            .collect();
+
+        for w in &witnesses {
+            trust_engine.initialize_trust_for_did(w);
+            let trust = *trust_engine.get_trust_for_did(w).unwrap();
+            consensus.register_witness(w.clone(), trust);
+        }
+
+        let event_id = event_id_from_content(b"threshold-event");
+
+        // Alle 3 attestieren
+        for w in &witnesses {
+            let _ = consensus.add_attestation(event_id.clone(), w.clone(), "sig".to_string());
+        }
+
+        let check = consensus.check_finality(&event_id).unwrap();
+
+        assert!(
+            check.reached,
+            "Finality should be reached with exactly 3 witnesses"
+        );
+        assert_eq!(check.witness_count, 3);
+    }
+
+    /// Test: Finalität mit unterschiedlichen Trust-Levels
+    #[test]
+    fn test_finality_with_varied_trust_levels() {
+        let mut consensus = ConsensusEngine::default();
+
+        // Witnesses mit unterschiedlichen Trust-Levels
+        let w1 = DID::new(DIDNamespace::Self_, b"high-trust");
+        let w2 = DID::new(DIDNamespace::Self_, b"medium-trust");
+        let w3 = DID::new(DIDNamespace::Self_, b"low-but-valid");
+
+        consensus.register_witness(w1.clone(), TrustVector6D::new(0.9, 0.9, 0.9, 0.9, 0.9, 0.9));
+        consensus.register_witness(w2.clone(), TrustVector6D::new(0.7, 0.7, 0.7, 0.7, 0.7, 0.7));
+        consensus.register_witness(w3.clone(), TrustVector6D::new(0.5, 0.5, 0.5, 0.5, 0.5, 0.5));
+
+        let event_id = event_id_from_content(b"varied-trust-event");
+
+        let _ = consensus.add_attestation(event_id.clone(), w1, "sig1".to_string());
+        let _ = consensus.add_attestation(event_id.clone(), w2, "sig2".to_string());
+        let _ = consensus.add_attestation(event_id.clone(), w3, "sig3".to_string());
+
+        let check = consensus.check_finality(&event_id).unwrap();
+
+        assert!(check.reached);
+        assert!(check.total_trust > 0.0);
+        assert!(check.trust_ratio > 0.0);
+    }
+
+    /// Test: Revert-Wahrscheinlichkeit sinkt mit mehr Witnesses
+    #[test]
+    fn test_revert_probability_decreases() {
+        let mut consensus = ConsensusEngine::default();
+
+        // Viele hochvertrauenswürdige Witnesses
+        let witnesses: Vec<_> = (0..10)
+            .map(|i| DID::new(DIDNamespace::Self_, format!("trusted-{i}").as_bytes()))
+            .collect();
+
+        for w in &witnesses {
+            consensus.register_witness(w.clone(), TrustVector6D::new(0.9, 0.9, 0.9, 0.9, 0.9, 0.9));
+        }
+
+        let event_id = event_id_from_content(b"revert-prob-event");
+
+        // Attestiere nach und nach
+        let mut last_revert_prob = 1.0;
+        for w in &witnesses {
+            let _ = consensus.add_attestation(event_id.clone(), w.clone(), "sig".to_string());
+
+            let check = consensus.check_finality(&event_id).unwrap();
+
+            // Revert-Wahrscheinlichkeit sollte sinken
+            assert!(
+                check.revert_probability <= last_revert_prob,
+                "Revert probability should decrease: {} <= {}",
+                check.revert_probability,
+                last_revert_prob
+            );
+            last_revert_prob = check.revert_probability;
+        }
+
+        // Am Ende sollte sie sehr niedrig sein
+        let final_check = consensus.check_finality(&event_id).unwrap();
+        assert!(final_check.revert_probability < 1e-10);
+    }
+
+    /// Test: Stats werden korrekt berechnet
+    #[test]
+    fn test_consensus_stats() {
+        let mut consensus = ConsensusEngine::default();
+
+        // Registriere Witnesses
+        for i in 0..5 {
+            let w = DID::new(DIDNamespace::Self_, format!("stats-witness-{i}").as_bytes());
+            consensus.register_witness(w, TrustVector6D::DEFAULT);
+        }
+
+        let stats = consensus.stats();
+        assert_eq!(stats.registered_witnesses, 5);
+        assert_eq!(stats.total_attestations, 0);
+        assert_eq!(stats.events_with_attestations, 0);
+    }
+}
+
+// ============================================================================
+// STORAGE PERSISTENCE TESTS
+// ============================================================================
+
+mod storage_persistence_tests {
+    use super::*;
+
+    /// Test: In-Memory Storage behält Daten über Operationen hinweg
+    #[test]
+    fn test_storage_data_retention() {
+        let storage = DecentralizedStorage::open_temporary().expect("Failed to create storage");
+
+        // Erstelle mehrere Entitäten
+        let identity1 = storage
+            .identities
+            .create_identity(DIDNamespace::Self_)
+            .expect("Failed to create identity 1");
+        let identity2 = storage
+            .identities
+            .create_identity(DIDNamespace::Guild)
+            .expect("Failed to create identity 2");
+
+        let content1 = b"Content 1";
+        let content2 = b"Content 2";
+
+        let cid1 = storage
+            .content
+            .put(content1.to_vec(), "text/plain", None, vec![])
+            .expect("Failed to store content 1");
+        let cid2 = storage
+            .content
+            .put(content2.to_vec(), "text/plain", None, vec![])
+            .expect("Failed to store content 2");
+
+        // Verifiziere alle Daten noch vorhanden
+        assert!(storage.identities.get(&identity1.did).unwrap().is_some());
+        assert!(storage.identities.get(&identity2.did).unwrap().is_some());
+        assert!(storage.content.get(&cid1).unwrap().is_some());
+        assert!(storage.content.get(&cid2).unwrap().is_some());
+    }
+
+    /// Test: Trust-Relationen bleiben erhalten
+    #[test]
+    fn test_trust_relations_retention() {
+        let storage = DecentralizedStorage::open_temporary().expect("Failed to create storage");
+
+        let from1 = DID::new(DIDNamespace::Self_, b"from1");
+        let from2 = DID::new(DIDNamespace::Self_, b"from2");
+        let to = DID::new(DIDNamespace::Self_, b"to");
+
+        let trust1 = TrustVector6D::new(0.8, 0.8, 0.8, 0.8, 0.8, 0.8);
+        let trust2 = TrustVector6D::new(0.6, 0.6, 0.6, 0.6, 0.6, 0.6);
+
+        storage
+            .trust
+            .put(from1.clone(), to.clone(), trust1)
+            .expect("Failed to set trust 1");
+        storage
+            .trust
+            .put(from2.clone(), to.clone(), trust2)
+            .expect("Failed to set trust 2");
+
+        // Verifiziere beide Trust-Relationen
+        let r1 = storage.trust.get(&from1, &to).unwrap().unwrap();
+        let r2 = storage.trust.get(&from2, &to).unwrap().unwrap();
+
+        assert!((r1.r - 0.8).abs() < 0.01);
+        assert!((r2.r - 0.6).abs() < 0.01);
+    }
+
+    /// Test: Event-Kette bleibt konsistent
+    #[test]
+    fn test_event_chain_consistency() {
+        let storage = DecentralizedStorage::open_temporary().expect("Failed to create storage");
+
+        let actor = DID::new(DIDNamespace::Self_, b"chain-actor");
+        let actor_id = UniversalId::new(UniversalId::TAG_DID, 1, actor.id.as_bytes());
+
+        // Erstelle Event-Kette
+        let mut events: Vec<Event> = vec![];
+
+        for i in 0..10 {
+            let parents = if events.is_empty() {
+                vec![]
+            } else {
+                vec![events.last().unwrap().id.clone()]
+            };
+
+            let event = Event::new(
+                actor_id.clone(),
+                parents,
+                EventPayload::Custom {
+                    event_type: format!("chain-event-{i}"),
+                    data: vec![i as u8],
+                },
+                i,
+            );
+
+            storage
+                .events
+                .put(event.clone())
+                .expect("Failed to store event");
+            events.push(event);
+        }
+
+        // Verifiziere Kette
+        for (i, event) in events.iter().enumerate() {
+            let stored = storage.events.get(&event.id).unwrap().unwrap();
+
+            if i > 0 {
+                assert!(!stored.event.parents.is_empty());
+                assert_eq!(stored.event.parents[0], events[i - 1].id);
+            }
+        }
+    }
+
+    /// Test: Content-Deduplication funktioniert
+    #[test]
+    fn test_content_deduplication() {
+        let storage = DecentralizedStorage::open_temporary().expect("Failed to create storage");
+
+        let content = b"Duplicate content";
+
+        // Store same content multiple times
+        let id1 = storage
+            .content
+            .put(
+                content.to_vec(),
+                "text/plain",
+                None,
+                vec!["tag1".to_string()],
+            )
+            .expect("Store 1");
+        let id2 = storage
+            .content
+            .put(
+                content.to_vec(),
+                "text/plain",
+                None,
+                vec!["tag2".to_string()],
+            )
+            .expect("Store 2");
+        let id3 = storage
+            .content
+            .put(content.to_vec(), "text/plain", None, vec![])
+            .expect("Store 3");
+
+        // Alle sollten die gleiche Content-ID haben
+        assert_eq!(id1, id2);
+        assert_eq!(id2, id3);
+    }
+}
+
+// ============================================================================
+// EXECUTION CONTEXT DEEP TESTS
+// ============================================================================
+
+mod execution_context_deep_tests {
+    use super::*;
+
+    /// Test: Execute mit Gas-Verbrauch tracking
+    #[test]
+    fn test_execute_with_gas_tracking() {
+        let mut ctx = ExecutionContext::default_for_testing();
+        let initial_gas = ctx.gas_remaining;
+
+        let result = ctx.execute(|ctx| {
+            ctx.consume_gas(100)?;
+            ctx.consume_gas(50)?;
+            Ok(42)
+        });
+
+        assert!(result.is_ok());
+        assert_eq!(ctx.gas_remaining, initial_gas - 150);
+        assert_eq!(ctx.accumulated_cost.gas, 150);
+    }
+
+    /// Test: Nested Execute mit Rollback-Simulation
+    #[test]
+    fn test_nested_execute_partial_failure() {
+        let mut ctx = ExecutionContext::default_for_testing();
+
+        // Erste Operation erfolgreich
+        let r1 = ctx.execute(|ctx| {
+            ctx.consume_gas(100)?;
+            Ok(1)
+        });
+        assert!(r1.is_ok());
+
+        let gas_after_first = ctx.gas_remaining;
+
+        // Zweite Operation fehlschlägt
+        let r2: erynoa_api::execution::ExecutionResult<()> = ctx.execute(|ctx| {
+            ctx.consume_gas(100)?;
+            // Simuliere Fehler
+            Err(erynoa_api::execution::ExecutionError::PolicyViolation {
+                policy: "test".to_string(),
+                reason: "simulated failure".to_string(),
+            })
+        });
+        assert!(r2.is_err());
+
+        // Gas wurde trotzdem verbraucht (kein automatischer Rollback)
+        assert!(ctx.gas_remaining < gas_after_first);
+    }
+
+    /// Test: Timeout-Check ist korrekt
+    #[test]
+    fn test_timeout_not_exceeded_initially() {
+        let ctx = ExecutionContext::minimal();
+
+        // Frisch erstellter Context sollte nicht getimed out sein
+        assert!(!ctx.is_timed_out());
+    }
+
+    /// Test: Cost-Tracking akkumuliert korrekt
+    #[test]
+    fn test_cost_tracking_accumulation() {
+        let mut ctx = ExecutionContext::default_for_testing();
+
+        // Mehrere Costs tracken
+        ctx.track_cost(Cost::new(10, 5, 0.1));
+        ctx.track_cost(Cost::new(20, 10, 0.2));
+
+        // Akkumulierte Kosten sollten addiert sein
+        assert_eq!(ctx.accumulated_cost.gas, 30);
+        assert_eq!(ctx.accumulated_cost.mana, 15);
+    }
+
+    /// Test: Metadata kann gesetzt und gelesen werden
+    #[test]
+    fn test_metadata_operations() {
+        let mut ctx = ExecutionContext::default_for_testing();
+
+        ctx.metadata
+            .insert("key1".to_string(), "value1".to_string());
+        ctx.metadata
+            .insert("key2".to_string(), "value2".to_string());
+
+        assert_eq!(ctx.metadata.get("key1"), Some(&"value1".to_string()));
+        assert_eq!(ctx.metadata.get("key2"), Some(&"value2".to_string()));
+        assert_eq!(ctx.metadata.get("nonexistent"), None);
+    }
+
+    /// Test: Gas-Erschöpfung während Execute
+    #[test]
+    fn test_gas_exhaustion_during_execute() {
+        let mut ctx = ExecutionContext::minimal(); // 10_000 Gas
+
+        let result = ctx.execute(|ctx| {
+            // Verbrauche alles
+            ctx.consume_gas(10_000)?;
+            // Versuche noch mehr
+            ctx.consume_gas(1)?;
+            Ok(())
+        });
+
+        assert!(result.is_err());
+    }
+
+    /// Test: Mana und Gas kombiniert verbrauchen
+    #[test]
+    fn test_combined_resource_consumption() {
+        let mut ctx = ExecutionContext::default_for_testing();
+
+        let cost = Cost::new(500, 100, 0.05);
+        let result = ctx.consume_cost(cost);
+
+        assert!(result.is_ok());
+        assert!(ctx.gas_remaining < ctx.gas_initial);
+        assert!(ctx.mana_remaining < ctx.mana_initial);
+        assert!(ctx.accumulated_cost.trust_risk > 0.0);
+    }
+
+    /// Test: Trust-Context ist korrekt gesetzt
+    #[test]
+    fn test_trust_context_access() {
+        let ctx = ExecutionContext::default_for_testing();
+
+        // Trust-Context sollte Executor-ID haben
+        assert!(!ctx.trust_context.executor_id.as_bytes().is_empty());
+    }
+
+    /// Test: Lamport-Clock wird korrekt aktualisiert
+    #[test]
+    fn test_lamport_clock_updates() {
+        let mut ctx = ExecutionContext::default_for_testing();
+
+        let initial_lamport = ctx.state.lamport;
+        ctx.state.tick();
+        let after_advance = ctx.state.lamport;
+
+        assert!(after_advance > initial_lamport);
+    }
+
+    /// Test: Execute-Sequenz verarbeitet mehrere Operationen
+    #[test]
+    fn test_execute_sequence() {
+        let mut ctx = ExecutionContext::default_for_testing();
+
+        let ops: Vec<
+            Box<dyn FnOnce(&mut ExecutionContext) -> erynoa_api::execution::ExecutionResult<i32>>,
+        > = vec![
+            Box::new(|ctx| {
+                ctx.consume_gas(10)?;
+                Ok(1)
+            }),
+            Box::new(|ctx| {
+                ctx.consume_gas(20)?;
+                Ok(2)
+            }),
+            Box::new(|ctx| {
+                ctx.consume_gas(30)?;
+                Ok(3)
+            }),
+        ];
+
+        let results = ctx.execute_seq(ops);
+        assert!(results.is_ok());
+
+        let values = results.unwrap();
+        assert_eq!(values, vec![1, 2, 3]);
+        assert_eq!(ctx.accumulated_cost.gas, 60);
+    }
+}

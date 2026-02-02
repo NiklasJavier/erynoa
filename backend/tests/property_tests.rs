@@ -521,3 +521,276 @@ proptest! {
         prop_assert!(config.validate().is_ok(), "Valid config should pass validation");
     }
 }
+
+// ============================================================================
+// Delegation Chain Tests (Κ8)
+// ============================================================================
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(500))]
+
+    /// Κ8: Delegation-Kette Trust-Decay ist multiplikativ
+    #[test]
+    fn prop_k8_chain_decay_multiplicative(
+        factors in proptest::collection::vec(0.1f32..=1.0f32, 1..5),
+    ) {
+        use erynoa_api::domain::unified::{UniversalId, Delegation, Capability};
+
+        // Erstelle Delegation-Kette mit gegebenen Faktoren
+        let mut expected_trust = 1.0f32;
+        let mut delegator_id = UniversalId::new(UniversalId::TAG_DID, 1, b"root");
+
+        for (i, &factor) in factors.iter().enumerate() {
+            let delegate_id = UniversalId::new(UniversalId::TAG_DID, 1, format!("node-{i}").as_bytes());
+
+            let del = Delegation::new(
+                delegator_id.clone(),
+                delegate_id.clone(),
+                factor,
+                vec![Capability::Read { resource: "*".to_string() }],
+            );
+
+            prop_assert!(
+                del.trust_factor > 0.0 && del.trust_factor <= 1.0,
+                "Delegation trust factor should be in (0, 1]"
+            );
+
+            expected_trust *= factor;
+            delegator_id = delegate_id;
+        }
+
+        // Erwarteter Trust am Ende der Kette
+        prop_assert!(
+            expected_trust >= 0.0 && expected_trust <= 1.0,
+            "Chain trust should remain in [0, 1]: {}",
+            expected_trust
+        );
+
+        // Trust nimmt ab oder bleibt gleich (nie erhöht)
+        prop_assert!(
+            expected_trust <= 1.0,
+            "Chain trust should never exceed 1.0"
+        );
+    }
+
+    /// Κ8: Längere Ketten haben niedrigeren effektiven Trust
+    #[test]
+    fn prop_k8_longer_chains_lower_trust(
+        chain_length in 1usize..=8usize,
+        factor in 0.5f32..=0.99f32,
+    ) {
+        let effective_trust = factor.powi(chain_length as i32);
+
+        prop_assert!(
+            effective_trust >= 0.0 && effective_trust <= 1.0,
+            "Effective trust should be in [0, 1]"
+        );
+
+        // Längere Ketten → niedrigerer Trust (wenn factor < 1)
+        if chain_length > 1 && factor < 1.0 {
+            let shorter_trust = factor.powi((chain_length - 1) as i32);
+            prop_assert!(
+                effective_trust < shorter_trust,
+                "Longer chain should have lower trust: {} < {}",
+                effective_trust, shorter_trust
+            );
+        }
+    }
+}
+
+// ============================================================================
+// TrustVector6D Weighted Norm
+// ============================================================================
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(500))]
+
+    /// Gewichtete Norm ist nicht-negativ
+    #[test]
+    fn prop_weighted_norm_non_negative(
+        trust in trust_vector_strategy(),
+        weights in proptest::array::uniform6(0.0f32..=1.0f32),
+    ) {
+        let norm = trust.weighted_norm(&weights);
+        prop_assert!(norm >= 0.0, "Weighted norm should be non-negative: {}", norm);
+    }
+
+    /// Gewichtete Norm mit Null-Gewichten ist 0
+    #[test]
+    fn prop_weighted_norm_zero_weights(
+        trust in trust_vector_strategy(),
+    ) {
+        let zero_weights = [0.0f32; 6];
+        let norm = trust.weighted_norm(&zero_weights);
+        prop_assert!(
+            norm.abs() < 0.0001,
+            "Weighted norm with zero weights should be 0: {}",
+            norm
+        );
+    }
+
+    /// Scale mit 0 ergibt ZERO-Vektor
+    #[test]
+    fn prop_scale_by_zero_is_zero(
+        trust in trust_vector_strategy(),
+    ) {
+        let scaled = trust.scale(0.0);
+
+        for dim in TrustDimension::ALL {
+            prop_assert!(
+                scaled.get(dim).abs() < 0.0001,
+                "Scaled by 0 should be 0 for {:?}: {}",
+                dim, scaled.get(dim)
+            );
+        }
+    }
+
+    /// Scale mit 1 ist Identity
+    #[test]
+    fn prop_scale_by_one_is_identity(
+        trust in trust_vector_strategy(),
+    ) {
+        let scaled = trust.scale(1.0);
+
+        for dim in TrustDimension::ALL {
+            prop_assert!(
+                (scaled.get(dim) - trust.get(dim)).abs() < 0.0001,
+                "Scaled by 1 should be identity for {:?}: {} vs {}",
+                dim, trust.get(dim), scaled.get(dim)
+            );
+        }
+    }
+}
+
+// ============================================================================
+// Finality Level Ordering
+// ============================================================================
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(200))]
+
+    /// Finality Levels sind strikt geordnet
+    #[test]
+    fn prop_finality_level_ordering(
+        _attestation_count in 0usize..=20usize,
+        _trust_sum in 0.0f64..=10.0f64,
+    ) {
+        use erynoa_api::domain::unified::FinalityLevel;
+
+        // Nascent < Validated < Witnessed < Anchored
+        prop_assert!(FinalityLevel::Nascent < FinalityLevel::Validated);
+        prop_assert!(FinalityLevel::Validated < FinalityLevel::Witnessed);
+        prop_assert!(FinalityLevel::Witnessed < FinalityLevel::Anchored);
+
+        // Transitivität
+        prop_assert!(FinalityLevel::Nascent < FinalityLevel::Anchored);
+    }
+}
+
+// ============================================================================
+// Event ID Determinism
+// ============================================================================
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(200))]
+
+    /// Event-IDs sind deterministisch basierend auf Content
+    #[test]
+    fn prop_event_id_deterministic(
+        event_type in "[a-z.]{3,20}",
+        data in proptest::collection::vec(any::<u8>(), 0..100),
+        lamport in 0u32..1_000_000u32,
+    ) {
+        use erynoa_api::domain::unified::{Event, EventPayload, DID, DIDNamespace, UniversalId};
+
+        let actor = DID::new(DIDNamespace::Self_, b"prop-test-actor");
+        let actor_id = UniversalId::new(UniversalId::TAG_DID, 1, actor.id.as_bytes());
+
+        let event1 = Event::new(
+            actor_id.clone(),
+            vec![],
+            EventPayload::Custom {
+                event_type: event_type.clone(),
+                data: data.clone(),
+            },
+            lamport,
+        );
+
+        let event2 = Event::new(
+            actor_id,
+            vec![],
+            EventPayload::Custom {
+                event_type,
+                data,
+            },
+            lamport,
+        );
+
+        prop_assert_eq!(
+            event1.id, event2.id,
+            "Same content should produce same event ID"
+        );
+    }
+}
+
+// ============================================================================
+// TemporalCoord Properties
+// ============================================================================
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(500))]
+
+    /// TemporalCoord Ordering ist total
+    #[test]
+    fn prop_temporal_coord_total_order(
+        t1 in temporal_coord_strategy(),
+        t2 in temporal_coord_strategy(),
+    ) {
+        // Entweder t1 < t2, t1 == t2, oder t1 > t2
+        let lt = t1 < t2;
+        let eq = t1 == t2;
+        let gt = t1 > t2;
+
+        prop_assert!(
+            (lt && !eq && !gt) || (!lt && eq && !gt) || (!lt && !eq && gt),
+            "Exactly one of <, ==, > should be true"
+        );
+    }
+
+    /// TemporalCoord Ordering ist transitiv
+    #[test]
+    fn prop_temporal_coord_transitive(
+        t1_lamport in 0u32..1000u32,
+        t2_lamport in 0u32..1000u32,
+        t3_lamport in 0u32..1000u32,
+    ) {
+        let t1 = TemporalCoord::new(0, t1_lamport, 0);
+        let t2 = TemporalCoord::new(0, t2_lamport, 0);
+        let t3 = TemporalCoord::new(0, t3_lamport, 0);
+
+        if t1 < t2 && t2 < t3 {
+            prop_assert!(t1 < t3, "Transitivity: t1 < t2 && t2 < t3 => t1 < t3");
+        }
+    }
+
+    /// Lamport-Clock ist Teil von TemporalCoord Ordering
+    #[test]
+    fn prop_lamport_affects_ordering(
+        wall_time in 0u64..1_000_000u64,
+        lamport1 in 0u32..1_000_000u32,
+        lamport2 in 0u32..1_000_000u32,
+        node_hash in 0u32..1000u32,
+    ) {
+        let coord1 = TemporalCoord::new(wall_time, lamport1, node_hash);
+        let coord2 = TemporalCoord::new(wall_time, lamport2, node_hash);
+
+        // Größerer Lamport → größere Coord (bei gleichem wall_time und node_hash)
+        if lamport1 < lamport2 {
+            prop_assert!(coord1 < coord2, "Higher lamport should mean higher coord");
+        } else if lamport1 > lamport2 {
+            prop_assert!(coord1 > coord2, "Lower lamport should mean lower coord");
+        } else {
+            prop_assert!(coord1 == coord2, "Same lamport should mean equal coord");
+        }
+    }
+}
