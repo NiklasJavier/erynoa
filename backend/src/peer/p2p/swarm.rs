@@ -8,10 +8,15 @@
 //! - Event-Loop verarbeiten
 //! - Bootstrapping und Discovery
 //! - Message-Routing zu Topics
+//! - Privacy-Layer Integration (Phase 2 Woche 8)
 
 use crate::peer::p2p::behaviour::{ErynoaBehaviour, ErynoaBehaviourEvent};
 use crate::peer::p2p::config::P2PConfig;
 use crate::peer::p2p::identity::{PeerIdentity, SignedPeerInfo};
+#[cfg(feature = "privacy")]
+use crate::peer::p2p::privacy::{
+    CoverMessage, PrivacyService, PrivacyServiceConfig, RelayCandidate, SensitivityLevel,
+};
 use crate::peer::p2p::protocol::{SyncRequest, SyncResponse};
 use crate::peer::p2p::topics::{RealmTopic, TopicManager, TopicMessage};
 use crate::peer::p2p::trust_gate::TrustGate;
@@ -82,6 +87,22 @@ pub enum SwarmCommand {
     GetListenAddresses {
         response: oneshot::Sender<Vec<Multiaddr>>,
     },
+    // ========================================================================
+    // Privacy-Layer Commands (Phase 2 Woche 8)
+    // ========================================================================
+    /// Sende Privacy-Nachricht (Onion-verschlüsselt + Mixing)
+    #[cfg(feature = "privacy")]
+    SendPrivacyMessage {
+        destination: PeerId,
+        payload: Vec<u8>,
+        sensitivity: SensitivityLevel,
+        response: oneshot::Sender<Result<()>>,
+    },
+    /// Hole Privacy-Service Statistiken
+    #[cfg(feature = "privacy")]
+    GetPrivacyStats {
+        response: oneshot::Sender<crate::peer::p2p::privacy::PrivacyServiceStats>,
+    },
 }
 
 /// Event vom Swarm an Applikation (Clone-fähig)
@@ -146,6 +167,17 @@ pub struct SwarmManager {
     /// Pending Request-Response
     pending_requests:
         Arc<RwLock<HashMap<OutboundRequestId, oneshot::Sender<Result<SyncResponse>>>>>,
+
+    // ========================================================================
+    // Privacy-Layer (Phase 2 Woche 8)
+    // ========================================================================
+    /// Privacy-Service für Onion-Routing, Mixing und Cover-Traffic
+    #[cfg(feature = "privacy")]
+    privacy_service: Option<Arc<PrivacyService>>,
+
+    /// Relay-Candidates Cache für Route-Auswahl
+    #[cfg(feature = "privacy")]
+    relay_candidates: Arc<RwLock<Vec<RelayCandidate>>>,
 }
 
 impl SwarmManager {
@@ -172,9 +204,34 @@ impl SwarmManager {
                 running: Arc::new(RwLock::new(false)),
                 pending_dht_gets: Arc::new(RwLock::new(HashMap::new())),
                 pending_requests: Arc::new(RwLock::new(HashMap::new())),
+                #[cfg(feature = "privacy")]
+                privacy_service: None,
+                #[cfg(feature = "privacy")]
+                relay_candidates: Arc::new(RwLock::new(Vec::new())),
             },
             sync_request_rx,
         )
+    }
+
+    /// Erstelle SwarmManager mit Privacy-Service (Phase 2 Woche 8)
+    #[cfg(feature = "privacy")]
+    pub fn with_privacy(
+        config: P2PConfig,
+        identity: PeerIdentity,
+        privacy_config: PrivacyServiceConfig,
+    ) -> (
+        Self,
+        mpsc::Receiver<IncomingSyncRequest>,
+        mpsc::Receiver<(PeerId, Vec<u8>)>,
+        mpsc::Receiver<CoverMessage>,
+    ) {
+        let (mut manager, sync_rx) = Self::new(config, identity);
+
+        // Privacy-Service erstellen
+        let (service, output_rx, cover_rx) = PrivacyService::new(privacy_config);
+        manager.privacy_service = Some(Arc::new(service));
+
+        (manager, sync_rx, output_rx, cover_rx)
     }
 
     /// Erhalte Command-Sender
@@ -195,6 +252,24 @@ impl SwarmManager {
     /// Trust-Gate
     pub fn trust_gate(&self) -> Arc<TrustGate> {
         self.trust_gate.clone()
+    }
+
+    /// Privacy-Service (Phase 2 Woche 8)
+    #[cfg(feature = "privacy")]
+    pub fn privacy_service(&self) -> Option<Arc<PrivacyService>> {
+        self.privacy_service.clone()
+    }
+
+    /// Update Relay-Candidates für Route-Auswahl
+    #[cfg(feature = "privacy")]
+    pub fn update_relay_candidates(&self, candidates: Vec<RelayCandidate>) {
+        *self.relay_candidates.write() = candidates;
+    }
+
+    /// Hole aktuelle Relay-Candidates
+    #[cfg(feature = "privacy")]
+    pub fn relay_candidates(&self) -> Vec<RelayCandidate> {
+        self.relay_candidates.read().clone()
     }
 
     /// Ist Swarm aktiv?
@@ -245,10 +320,26 @@ impl SwarmManager {
         *self.running.write() = true;
 
         // Command-Channel
-        let (command_tx, mut command_rx) = mpsc::channel::<SwarmCommand>(256);
+        let (_command_tx, mut command_rx) = mpsc::channel::<SwarmCommand>(256);
         // Update self.command_tx würde &mut self benötigen, daher hier separat
 
         tracing::info!(peer_id = %self.peer_id(), "Swarm started");
+
+        // Starte Privacy-Service Background-Tasks (Phase 2 Woche 8)
+        #[cfg(feature = "privacy")]
+        let _privacy_task = if let Some(ref service) = self.privacy_service {
+            let relay_candidates = self.relay_candidates.clone();
+            let service_clone = service.clone();
+            Some(tokio::spawn(async move {
+                let route_provider =
+                    move || relay_candidates.read().iter().map(|c| c.peer_id).collect();
+                if let Err(e) = service_clone.run_background_tasks(route_provider).await {
+                    tracing::error!(error = %e, "Privacy service background tasks failed");
+                }
+            }))
+        } else {
+            None
+        };
 
         // Event-Loop
         loop {
@@ -265,6 +356,12 @@ impl SwarmManager {
                     }
                 }
             }
+        }
+
+        // Stoppe Privacy-Service
+        #[cfg(feature = "privacy")]
+        if let Some(ref service) = self.privacy_service {
+            service.stop();
         }
 
         *self.running.write() = false;
@@ -548,6 +645,36 @@ impl SwarmManager {
                 let _ = response.send(addrs);
             }
 
+            // ================================================================
+            // Privacy-Layer Commands (Phase 2 Woche 8)
+            // ================================================================
+            #[cfg(feature = "privacy")]
+            SwarmCommand::SendPrivacyMessage {
+                destination,
+                payload,
+                sensitivity,
+                response,
+            } => {
+                let result = if let Some(ref service) = self.privacy_service {
+                    let candidates = self.relay_candidates.read().clone();
+                    service
+                        .send_message(destination, payload, sensitivity, &candidates)
+                        .await
+                        .map_err(|e| anyhow!("Privacy send failed: {:?}", e))
+                } else {
+                    Err(anyhow!("Privacy service not configured"))
+                };
+                let _ = response.send(result);
+            }
+
+            #[cfg(feature = "privacy")]
+            SwarmCommand::GetPrivacyStats { response } => {
+                if let Some(ref service) = self.privacy_service {
+                    let _ = response.send(service.stats());
+                }
+            }
+
+            #[allow(unreachable_patterns)]
             _ => {}
         }
 
@@ -685,6 +812,96 @@ impl SwarmManager {
 
         rx.await.map_err(|_| anyhow!("Channel closed"))
     }
+
+    // ========================================================================
+    // Privacy-Layer APIs (Phase 2 Woche 8)
+    // ========================================================================
+
+    /// Sende Privacy-Nachricht (Onion-verschlüsselt + Mixing)
+    ///
+    /// Die Nachricht wird:
+    /// 1. Onion-verschlüsselt mit Trust-basierter Route
+    /// 2. In den Mixing-Pool gelegt (LAMP-Enhanced)
+    /// 3. Nach Delay-Ablauf gesendet
+    ///
+    /// # Beispiel
+    ///
+    /// ```rust,ignore
+    /// manager.send_privacy_message(
+    ///     destination_peer,
+    ///     payload,
+    ///     SensitivityLevel::High
+    /// ).await?;
+    /// ```
+    #[cfg(feature = "privacy")]
+    pub async fn send_privacy_message(
+        &self,
+        destination: PeerId,
+        payload: Vec<u8>,
+        sensitivity: SensitivityLevel,
+    ) -> Result<()> {
+        let (tx, rx) = oneshot::channel();
+        self.command_tx
+            .send(SwarmCommand::SendPrivacyMessage {
+                destination,
+                payload,
+                sensitivity,
+                response: tx,
+            })
+            .await
+            .map_err(|_| anyhow!("Failed to send command"))?;
+
+        rx.await.map_err(|_| anyhow!("Channel closed"))?
+    }
+
+    /// Hole Privacy-Service Statistiken
+    ///
+    /// Gibt Informationen über:
+    /// - Mixing-Pool (Buffer-Größe, k_opt, Flush-Counts)
+    /// - Cover-Traffic (gesendete Dummies, Rate)
+    /// - Nachrichten-Counts (gesendet, empfangen, verworfen)
+    #[cfg(feature = "privacy")]
+    pub async fn privacy_stats(&self) -> Result<crate::peer::p2p::privacy::PrivacyServiceStats> {
+        let (tx, rx) = oneshot::channel();
+        self.command_tx
+            .send(SwarmCommand::GetPrivacyStats { response: tx })
+            .await
+            .map_err(|_| anyhow!("Failed to send command"))?;
+
+        rx.await.map_err(|_| anyhow!("Channel closed"))
+    }
+
+    /// Sende Event mit Privacy-Layer
+    ///
+    /// Kombiniert `publish_event` mit Privacy-Routing.
+    #[cfg(feature = "privacy")]
+    pub async fn publish_event_private(
+        &self,
+        _realm_id: &str,
+        event_data: Vec<u8>,
+        sender: &str,
+        sensitivity: SensitivityLevel,
+    ) -> Result<()> {
+        let message = TopicMessage::Event {
+            event_id: uuid::Uuid::new_v4().to_string(),
+            event_data,
+            sender: sender.to_string(),
+        };
+
+        let payload = message.to_bytes()?;
+
+        // Wähle einen zufälligen Peer im Realm als Eintrittspunkt
+        let connected = self.connected_peers().await?;
+        if connected.is_empty() {
+            return Err(anyhow!("No connected peers"));
+        }
+
+        // TODO: Bessere Auswahl basierend auf Realm-Membership
+        let destination = connected[0];
+
+        self.send_privacy_message(destination, payload, sensitivity)
+            .await
+    }
 }
 
 #[cfg(test)]
@@ -714,5 +931,90 @@ mod tests {
 
         topics.leave_realm("test-realm");
         assert!(!topics.is_realm_member("test-realm"));
+    }
+
+    // ========================================================================
+    // Privacy-Layer Tests (Phase 2 Woche 8)
+    // ========================================================================
+
+    #[cfg(feature = "privacy")]
+    #[test]
+    fn test_swarm_manager_with_privacy() {
+        let config = P2PConfig::default();
+        let identity = PeerIdentity::generate();
+        let privacy_config = PrivacyServiceConfig::default();
+
+        let (manager, _sync_rx, _output_rx, _cover_rx) =
+            SwarmManager::with_privacy(config, identity, privacy_config);
+
+        assert!(!manager.is_running());
+        assert!(manager.privacy_service().is_some());
+    }
+
+    #[cfg(feature = "privacy")]
+    #[test]
+    fn test_relay_candidates_update() {
+        let config = P2PConfig::default();
+        let identity = PeerIdentity::generate();
+        let privacy_config = PrivacyServiceConfig::default();
+
+        let (manager, _sync_rx, _output_rx, _cover_rx) =
+            SwarmManager::with_privacy(config, identity, privacy_config);
+
+        // Initial leer
+        assert!(manager.relay_candidates().is_empty());
+
+        // Update
+        let secret1 = x25519_dalek::StaticSecret::random_from_rng(&mut rand::thread_rng());
+        let secret2 = x25519_dalek::StaticSecret::random_from_rng(&mut rand::thread_rng());
+
+        // Erstelle Test-TrustInfo
+        let trust_info = crate::peer::p2p::trust_gate::PeerTrustInfo {
+            did: None,
+            trust_r: 0.8,
+            trust_omega: 0.7,
+            last_seen: 0,
+            successful_interactions: 10,
+            failed_interactions: 0,
+            is_newcomer: false,
+            newcomer_since: None,
+            connection_level: crate::peer::p2p::trust_gate::ConnectionLevel::Full,
+        };
+
+        let candidates = vec![
+            RelayCandidate::from_peer_info(
+                PeerId::random(),
+                trust_info.clone(),
+                x25519_dalek::PublicKey::from(&secret1),
+            )
+            .with_diversity("eu-west", 12345, "EU")
+            .with_performance(50, 0.95, 0.8),
+            RelayCandidate::from_peer_info(
+                PeerId::random(),
+                trust_info.clone(),
+                x25519_dalek::PublicKey::from(&secret2),
+            )
+            .with_diversity("us-east", 54321, "US")
+            .with_performance(100, 0.9, 0.7),
+        ];
+
+        manager.update_relay_candidates(candidates);
+        assert_eq!(manager.relay_candidates().len(), 2);
+    }
+
+    #[cfg(feature = "privacy")]
+    #[test]
+    fn test_privacy_config_presets() {
+        // Relay-Config
+        let relay = PrivacyServiceConfig::for_relay();
+        assert!(relay.cover_traffic.peer_type == crate::peer::p2p::privacy::PeerType::FullRelay);
+
+        // High-Privacy
+        let high = PrivacyServiceConfig::high_privacy();
+        assert!(high.default_sensitivity == SensitivityLevel::High);
+
+        // Mobile
+        let mobile = PrivacyServiceConfig::mobile();
+        assert!(mobile.default_sensitivity == SensitivityLevel::Low);
     }
 }

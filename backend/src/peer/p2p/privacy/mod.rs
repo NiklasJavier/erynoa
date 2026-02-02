@@ -91,6 +91,10 @@ pub mod eligibility;
 #[cfg(feature = "privacy")]
 pub mod dc3;
 
+// Phase 2 Woche 8: Integration Service
+#[cfg(feature = "privacy")]
+pub mod service;
+
 // Phase 3 Woche 9-12: ZK-Contribution & Post-Quantum
 #[cfg(feature = "privacy-zk")]
 pub mod resource_verification;
@@ -145,6 +149,13 @@ pub use eligibility::{
 pub use dc3::{
     ChallengeGenerator, ChallengeParams, ChallengeResponse, ChallengeResult, ChallengeType,
     CumulativeContributionScore, DC3Service, DC3Stats, DynamicChallenge, ResponseProof,
+};
+
+// Phase 2 Woche 8: Privacy-Service Integration Re-Exports
+#[cfg(feature = "privacy")]
+pub use service::{
+    PrivacyError, PrivacyMessage, PrivacyService, PrivacyServiceConfig, PrivacyServiceStats,
+    ProcessingResult,
 };
 
 // Phase 3 Woche 9-12: ZK-Contribution & Post-Quantum Re-Exports
