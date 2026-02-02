@@ -27,6 +27,7 @@ use std::net::SocketAddr;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use tokio::signal;
+use tokio::sync::RwLock;
 use tracing::{error, info, warn, Level};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
@@ -108,6 +109,9 @@ impl Args {
 /// Peer-Counter für Status
 static PEER_COUNT: AtomicUsize = AtomicUsize::new(0);
 
+/// Connected Peers Liste für API
+type ConnectedPeers = Arc<RwLock<Vec<String>>>;
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // Logging initialisieren
@@ -137,24 +141,20 @@ async fn main() -> anyhow::Result<()> {
     std::fs::create_dir_all(&args.data_dir)?;
     info!(path = %args.data_dir, "💾 Storage directory ready");
 
+    // Connected Peers Liste für API
+    let connected_peers: ConnectedPeers = Arc::new(RwLock::new(Vec::new()));
+
     // P2P-Stack initialisieren
     #[cfg(feature = "p2p")]
     {
-        use erynoa_api::peer::p2p::{P2PConfig, PeerIdentity, SwarmManager};
+        use erynoa_api::peer::p2p::{P2PConfig, TestnetEvent, TestnetSwarm};
+        use libp2p::identity::Keypair;
 
-        // Peer-Identität generieren oder laden
-        let identity_path = format!("{}/identity.key", args.data_dir);
-        let identity = if std::path::Path::new(&identity_path).exists() {
-            info!(path = %identity_path, "🔑 Loading existing identity");
-            // TODO: Implementiere load/save für PeerIdentity
-            // Für jetzt: immer neue generieren
-            PeerIdentity::generate()
-        } else {
-            info!(path = %identity_path, "🔑 Generating new identity");
-            PeerIdentity::generate()
-        };
+        // Keypair generieren
+        let keypair = Keypair::generate_ed25519();
+        let peer_id = libp2p::PeerId::from(keypair.public());
 
-        info!(peer_id = %identity.peer_id, "🆔 Peer ID");
+        info!(peer_id = %peer_id, "🆔 Peer ID");
 
         // P2P-Konfiguration erstellen
         let mut config = P2PConfig::default();
@@ -174,44 +174,51 @@ async fn main() -> anyhow::Result<()> {
         info!(
             listen = ?config.listen_addresses,
             mdns = config.enable_mdns,
+            bootstrap = ?config.bootstrap_peers,
             "⚙️  P2P configuration"
         );
 
-        // Swarm erstellen
-        let (swarm_manager, mut sync_request_rx) = SwarmManager::new(config, identity);
-        let swarm_manager = Arc::new(swarm_manager);
+        // TestnetSwarm erstellen
+        let (mut swarm, mut event_rx) = TestnetSwarm::new(keypair, &config)?;
 
-        // Event-Receiver für Peer-Tracking
-        let mut event_rx = swarm_manager.event_receiver();
+        info!(peer_id = %swarm.peer_id(), "✅ Testnet swarm created");
 
-        // Peer-Tracking Task
-        let _event_task = tokio::spawn(async move {
+        // Event-Handler Task
+        let connected_peers_clone = connected_peers.clone();
+        let event_task = tokio::spawn(async move {
             while let Ok(event) = event_rx.recv().await {
                 match event {
-                    erynoa_api::peer::p2p::SwarmEvent2::PeerConnected { peer_id } => {
-                        let count = PEER_COUNT.fetch_add(1, Ordering::SeqCst) + 1;
-                        info!(peer_id = %peer_id, total_peers = count, "✅ Peer connected");
+                    TestnetEvent::PeerConnected { peer_id } => {
+                        let peer_str = peer_id.to_string();
+                        let mut peers = connected_peers_clone.write().await;
+                        if !peers.contains(&peer_str) {
+                            peers.push(peer_str);
+                            let count = PEER_COUNT.fetch_add(1, Ordering::SeqCst) + 1;
+                            info!(peer_id = %peer_id, total_peers = count, "✅ Peer connected");
+                        }
                     }
-                    erynoa_api::peer::p2p::SwarmEvent2::PeerDisconnected { peer_id } => {
-                        let count = PEER_COUNT.fetch_sub(1, Ordering::SeqCst) - 1;
-                        info!(peer_id = %peer_id, total_peers = count, "👋 Peer disconnected");
+                    TestnetEvent::PeerDisconnected { peer_id } => {
+                        let peer_str = peer_id.to_string();
+                        let mut peers = connected_peers_clone.write().await;
+                        if peers.contains(&peer_str) {
+                            peers.retain(|p| p != &peer_str);
+                            let count = PEER_COUNT.fetch_sub(1, Ordering::SeqCst).saturating_sub(1);
+                            info!(peer_id = %peer_id, total_peers = count, "👋 Peer disconnected");
+                        }
                     }
-                    erynoa_api::peer::p2p::SwarmEvent2::MdnsDiscovered { peer_id, addresses } => {
+                    TestnetEvent::MdnsDiscovered { peer_id, addresses } => {
                         info!(peer_id = %peer_id, addresses = ?addresses, "🔍 mDNS discovered peer");
                     }
-                    erynoa_api::peer::p2p::SwarmEvent2::BootstrapComplete => {
-                        info!("🎉 Bootstrap complete!");
+                    TestnetEvent::MdnsExpired { peer_id } => {
+                        info!(peer_id = %peer_id, "🔍 mDNS peer expired");
                     }
-                    _ => {}
+                    TestnetEvent::KademliaBootstrapComplete => {
+                        info!("🎉 Kademlia bootstrap complete!");
+                    }
+                    TestnetEvent::GossipMessage { topic, source, .. } => {
+                        info!(topic = %topic, source = ?source, "📨 Gossip message received");
+                    }
                 }
-            }
-        });
-
-        // Sync-Request Handler (für Tests)
-        let _sync_task = tokio::spawn(async move {
-            while let Some(req) = sync_request_rx.recv().await {
-                info!(peer_id = %req.peer_id, "📨 Received sync request");
-                // TODO: Handle sync requests
             }
         });
 
@@ -220,8 +227,20 @@ async fn main() -> anyhow::Result<()> {
         let node_name = args.node_name.clone();
         let mode = args.mode.clone();
         let is_genesis = args.genesis_node;
+        let peer_id_string = peer_id.to_string();
+        let connected_peers_api = connected_peers.clone();
+
         let api_task = tokio::spawn(async move {
-            if let Err(e) = start_api_server(api_addr, node_name, mode, is_genesis).await {
+            if let Err(e) = start_api_server(
+                api_addr,
+                node_name,
+                mode,
+                is_genesis,
+                peer_id_string,
+                connected_peers_api,
+            )
+            .await
+            {
                 error!(error = %e, "API server error");
             }
         });
@@ -229,9 +248,9 @@ async fn main() -> anyhow::Result<()> {
         info!(addr = %api_addr, "🌐 HTTP API server started");
 
         // Swarm starten
-        let swarm_manager_clone = swarm_manager.clone();
+        let config_clone = config.clone();
         let swarm_task = tokio::spawn(async move {
-            if let Err(e) = swarm_manager_clone.run().await {
+            if let Err(e) = swarm.run(&config_clone).await {
                 error!(error = %e, "Swarm error");
             }
         });
@@ -243,11 +262,16 @@ async fn main() -> anyhow::Result<()> {
             _ = signal::ctrl_c() => {
                 info!("Received Ctrl+C, shutting down...");
             }
-            _ = swarm_task => {
-                error!("Swarm task ended unexpectedly");
+            result = swarm_task => {
+                if let Err(e) = result {
+                    error!(error = %e, "Swarm task error");
+                }
             }
             _ = api_task => {
                 error!("API task ended unexpectedly");
+            }
+            _ = event_task => {
+                error!("Event task ended unexpectedly");
             }
         }
 
@@ -269,28 +293,59 @@ async fn start_api_server(
     node_name: String,
     mode: String,
     is_genesis: bool,
+    peer_id: String,
+    connected_peers: ConnectedPeers,
 ) -> anyhow::Result<()> {
     use axum::{routing::get, Json, Router};
     use std::time::Instant;
 
     let start_time = Instant::now();
-    let node_name_clone = node_name.clone();
-    let mode_clone = mode.clone();
 
     let app = Router::new()
         .route("/health", get(|| async { "OK" }))
         .route(
             "/status",
-            get(move || async move {
-                let status = serde_json::json!({
-                    "node_name": node_name_clone.clone(),
-                    "mode": mode_clone.clone(),
-                    "is_genesis": is_genesis,
-                    "peer_count": PEER_COUNT.load(Ordering::SeqCst),
-                    "uptime_secs": start_time.elapsed().as_secs(),
-                    "version": env!("CARGO_PKG_VERSION"),
-                });
-                Json(status)
+            get({
+                let node_name = node_name.clone();
+                let mode = mode.clone();
+                let peer_id = peer_id.clone();
+                let connected_peers = connected_peers.clone();
+                move || {
+                    let node_name = node_name.clone();
+                    let mode = mode.clone();
+                    let peer_id = peer_id.clone();
+                    let connected_peers = connected_peers.clone();
+                    async move {
+                        let peers = connected_peers.read().await.clone();
+                        let status = serde_json::json!({
+                            "node_name": node_name,
+                            "mode": mode,
+                            "peer_id": peer_id,
+                            "is_genesis": is_genesis,
+                            "peer_count": PEER_COUNT.load(Ordering::SeqCst),
+                            "connected_peers": peers,
+                            "uptime_secs": start_time.elapsed().as_secs(),
+                            "version": env!("CARGO_PKG_VERSION"),
+                        });
+                        Json(status)
+                    }
+                }
+            }),
+        )
+        .route(
+            "/peers",
+            get({
+                let connected_peers = connected_peers.clone();
+                move || {
+                    let connected_peers = connected_peers.clone();
+                    async move {
+                        let peers = connected_peers.read().await.clone();
+                        Json(serde_json::json!({
+                            "count": peers.len(),
+                            "peers": peers
+                        }))
+                    }
+                }
             }),
         );
 

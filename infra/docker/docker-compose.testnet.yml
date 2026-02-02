@@ -24,9 +24,9 @@ services:
         ipv4_address: 172.28.0.10
     ports:
       - "4001:4001"
-      - "9001:9000"
+      - "9101:9000"
     environment:
-      RUST_LOG: "erynoa_api=debug,libp2p=info,info"
+      RUST_LOG: "erynoa=info,libp2p_gossipsub=info,libp2p_kad=info,libp2p_mdns=info,info"
       RUST_BACKTRACE: "1"
       APP_STORAGE__DATA_DIR: "/data"
       NODE_NAME: relay1
@@ -37,19 +37,13 @@ services:
       GENESIS_NODE: "true"
       P2P_ENABLE_MDNS: "true"
     volumes:
-      - ../../backend/src:/workspace/backend/src:cached
-      - ../../backend/Cargo.toml:/workspace/backend/Cargo.toml:cached
-      - ../../backend/Cargo.lock:/workspace/backend/Cargo.lock:cached
-      - ../../backend/config:/workspace/backend/config:cached
-      - ../../backend/build.rs:/workspace/backend/build.rs:cached
-      - ../../backend/proto:/workspace/backend/proto:cached
-      - ../../buf.gen.yaml:/workspace/buf.gen.yaml:cached
-      - ../../buf.yaml:/workspace/buf.yaml:cached
-      - ../../backend/src/gen:/workspace/backend/src/gen:cached
-      - testnet-cargo-registry:/usr/local/cargo/registry
-      - testnet-cargo-git:/usr/local/cargo/git
-      - relay1-target:/workspace/backend/target
       - relay1-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   relay2:
     build:
@@ -58,15 +52,16 @@ services:
     container_name: erynoa-relay2
     hostname: relay2
     depends_on:
-      - relay1
+      relay1:
+        condition: service_started
     networks:
       testnet:
         ipv4_address: 172.28.0.11
     ports:
       - "4002:4001"
-      - "9002:9000"
+      - "9102:9000"
     environment:
-      RUST_LOG: "erynoa_api=debug,libp2p=info,info"
+      RUST_LOG: "erynoa=info,libp2p_gossipsub=info,libp2p_kad=info,libp2p_mdns=info,info"
       RUST_BACKTRACE: "1"
       APP_STORAGE__DATA_DIR: "/data"
       NODE_NAME: relay2
@@ -76,19 +71,13 @@ services:
       BOOTSTRAP_PEERS: "/ip4/172.28.0.10/tcp/4001"
       P2P_ENABLE_MDNS: "true"
     volumes:
-      - ../../backend/src:/workspace/backend/src:cached
-      - ../../backend/Cargo.toml:/workspace/backend/Cargo.toml:cached
-      - ../../backend/Cargo.lock:/workspace/backend/Cargo.lock:cached
-      - ../../backend/config:/workspace/backend/config:cached
-      - ../../backend/build.rs:/workspace/backend/build.rs:cached
-      - ../../backend/proto:/workspace/backend/proto:cached
-      - ../../buf.gen.yaml:/workspace/buf.gen.yaml:cached
-      - ../../buf.yaml:/workspace/buf.yaml:cached
-      - ../../backend/src/gen:/workspace/backend/src/gen:cached
-      - testnet-cargo-registry:/usr/local/cargo/registry
-      - testnet-cargo-git:/usr/local/cargo/git
-      - relay2-target:/workspace/backend/target
       - relay2-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   relay3:
     build:
@@ -97,15 +86,16 @@ services:
     container_name: erynoa-relay3
     hostname: relay3
     depends_on:
-      - relay1
+      relay1:
+        condition: service_started
     networks:
       testnet:
         ipv4_address: 172.28.0.12
     ports:
       - "4003:4001"
-      - "9003:9000"
+      - "9103:9000"
     environment:
-      RUST_LOG: "erynoa_api=debug,libp2p=info,info"
+      RUST_LOG: "erynoa=info,libp2p_gossipsub=info,libp2p_kad=info,libp2p_mdns=info,info"
       RUST_BACKTRACE: "1"
       APP_STORAGE__DATA_DIR: "/data"
       NODE_NAME: relay3
@@ -115,19 +105,13 @@ services:
       BOOTSTRAP_PEERS: "/ip4/172.28.0.10/tcp/4001"
       P2P_ENABLE_MDNS: "true"
     volumes:
-      - ../../backend/src:/workspace/backend/src:cached
-      - ../../backend/Cargo.toml:/workspace/backend/Cargo.toml:cached
-      - ../../backend/Cargo.lock:/workspace/backend/Cargo.lock:cached
-      - ../../backend/config:/workspace/backend/config:cached
-      - ../../backend/build.rs:/workspace/backend/build.rs:cached
-      - ../../backend/proto:/workspace/backend/proto:cached
-      - ../../buf.gen.yaml:/workspace/buf.gen.yaml:cached
-      - ../../buf.yaml:/workspace/buf.yaml:cached
-      - ../../backend/src/gen:/workspace/backend/src/gen:cached
-      - testnet-cargo-registry:/usr/local/cargo/registry
-      - testnet-cargo-git:/usr/local/cargo/git
-      - relay3-target:/workspace/backend/target
       - relay3-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   client:
     build:
@@ -136,17 +120,20 @@ services:
     container_name: erynoa-client
     hostname: client
     depends_on:
-      - relay1
-      - relay2
-      - relay3
+      relay1:
+        condition: service_started
+      relay2:
+        condition: service_started
+      relay3:
+        condition: service_started
     networks:
       testnet:
         ipv4_address: 172.28.0.20
     ports:
       - "4004:4001"
-      - "9004:9000"
+      - "9104:9000"
     environment:
-      RUST_LOG: "erynoa_api=debug,libp2p=info,info"
+      RUST_LOG: "erynoa=info,libp2p_gossipsub=info,libp2p_kad=info,libp2p_mdns=info,info"
       RUST_BACKTRACE: "1"
       APP_STORAGE__DATA_DIR: "/data"
       NODE_NAME: client
@@ -156,19 +143,13 @@ services:
       BOOTSTRAP_PEERS: "/ip4/172.28.0.10/tcp/4001,/ip4/172.28.0.11/tcp/4001,/ip4/172.28.0.12/tcp/4001"
       P2P_ENABLE_MDNS: "true"
     volumes:
-      - ../../backend/src:/workspace/backend/src:cached
-      - ../../backend/Cargo.toml:/workspace/backend/Cargo.toml:cached
-      - ../../backend/Cargo.lock:/workspace/backend/Cargo.lock:cached
-      - ../../backend/config:/workspace/backend/config:cached
-      - ../../backend/build.rs:/workspace/backend/build.rs:cached
-      - ../../backend/proto:/workspace/backend/proto:cached
-      - ../../buf.gen.yaml:/workspace/buf.gen.yaml:cached
-      - ../../buf.yaml:/workspace/buf.yaml:cached
-      - ../../backend/src/gen:/workspace/backend/src/gen:cached
-      - testnet-cargo-registry:/usr/local/cargo/registry
-      - testnet-cargo-git:/usr/local/cargo/git
-      - client-target:/workspace/backend/target
       - client-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
 networks:
   testnet:
@@ -177,15 +158,8 @@ networks:
       driver: default
       config:
         - subnet: 172.28.0.0/16
-          gateway: 172.28.0.1
 
 volumes:
-  testnet-cargo-registry:
-  testnet-cargo-git:
-  relay1-target:
-  relay2-target:
-  relay3-target:
-  client-target:
   relay1-data:
   relay2-data:
   relay3-data:

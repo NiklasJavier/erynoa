@@ -295,10 +295,10 @@ testnet cmd="status":
             docker compose -f "$COMPOSE_FILE" up -d
             echo ""
             echo "  Nodes:"
-            echo "    relay1: http://localhost:9001/status (Genesis)"
-            echo "    relay2: http://localhost:9002/status"
-            echo "    relay3: http://localhost:9003/status"
-            echo "    client: http://localhost:9004/status"
+            echo "    relay1: http://localhost:9101/status (Genesis)"
+            echo "    relay2: http://localhost:9102/status"
+            echo "    relay3: http://localhost:9103/status"
+            echo "    client: http://localhost:9104/status"
             echo ""
             echo "  Logs:   just testnet logs"
             echo "  Status: just testnet status"
@@ -317,10 +317,10 @@ testnet cmd="status":
             echo "───────────────────────────────────────────"
             for node in relay1 relay2 relay3 client; do
                 case $node in
-                    relay1) port=9001 ;;
-                    relay2) port=9002 ;;
-                    relay3) port=9003 ;;
-                    client) port=9004 ;;
+                    relay1) port=9101 ;;
+                    relay2) port=9102 ;;
+                    relay3) port=9103 ;;
+                    client) port=9104 ;;
                 esac
                 status=$(curl -s "http://localhost:$port/status" 2>/dev/null || echo "")
                 if [ -n "$status" ]; then

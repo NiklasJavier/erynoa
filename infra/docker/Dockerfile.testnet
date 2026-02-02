@@ -45,20 +45,37 @@ RUN curl -L --proto '=https' --tlsv1.2 -sSf \
 # cargo-watch für Hot-Reloading
 RUN cargo binstall cargo-watch -y --force
 
+WORKDIR /workspace
+
+# Copy workspace root files needed for build
+COPY buf.yaml ./buf.yaml
+COPY buf.gen.yaml ./buf.gen.yaml
+
 WORKDIR /workspace/backend
 
-# Nur Cargo-Files für Dependency-Caching
+# Kopiere Proto-Dateien
+COPY backend/proto ./proto
+
+# Kopiere Cargo-Files und build.rs für Dependency-Caching
 COPY backend/Cargo.toml ./Cargo.toml
 COPY backend/Cargo.lock ./Cargo.lock
 COPY backend/build.rs ./build.rs
 
+# Kopiere src/gen für generierte Proto-Files
+COPY backend/src/gen ./src/gen
+
 # Pre-fetch dependencies mit P2P-Feature
 # Erstellt einen Dummy-Build um Dependencies zu cachen
-RUN mkdir -p src && \
+RUN mkdir -p src/bin && \
     echo "fn main() {}" > src/main.rs && \
+    echo "fn main() {}" > src/bin/testnet_node.rs && \
     echo "// lib" > src/lib.rs && \
-    RUSTFLAGS="-C link-arg=-fuse-ld=mold" cargo build --features p2p --lib 2>&1 || true && \
-    rm -rf src
+    RUSTFLAGS="-C link-arg=-fuse-ld=mold" cargo fetch && \
+    rm -rf src/main.rs src/bin/testnet_node.rs src/lib.rs
+
+# Kopiere den Rest des Source-Codes
+COPY backend/src ./src
+COPY backend/config ./config
 
 WORKDIR /workspace/backend
 
@@ -66,6 +83,9 @@ WORKDIR /workspace/backend
 #   4001 - libp2p Swarm (TCP/QUIC)
 #   9000 - HTTP API
 EXPOSE 4001 9000
+
+# Build the testnet binary - this caches the compilation
+RUN RUSTFLAGS="-C link-arg=-fuse-ld=mold" cargo build --release --features p2p --bin erynoa-testnet-node
 
 # Entrypoint-Script für P2P-Node
 RUN cat > /entrypoint.sh << 'EOF'
@@ -98,22 +118,12 @@ if [ -n "$BOOTSTRAP_PEERS" ]; then
     done
 fi
 
-# Start mit cargo-watch für Hot-Reloading
-export RUSTFLAGS="-C link-arg=-fuse-ld=mold"
-
 echo ""
-echo "Starting cargo watch with hot-reload..."
-echo "  ├─ Watching: src/, Cargo.toml, config/"
-echo "  ├─ Features: p2p"
-echo "  └─ ⚡ Using MOLD linker"
+echo "Starting testnet node..."
 echo ""
 
-# Binary mit P2P-Feature starten
-exec cargo watch --poll --why \
-  -x "run --features p2p --bin erynoa-testnet-node" \
-  -w src \
-  -w Cargo.toml \
-  -w config
+# Run the pre-built binary
+exec /workspace/backend/target/release/erynoa-testnet-node
 EOF
 
 RUN chmod +x /entrypoint.sh

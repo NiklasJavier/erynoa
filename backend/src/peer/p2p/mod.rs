@@ -69,6 +69,8 @@ pub mod protocol;
 #[cfg(feature = "p2p")]
 pub mod swarm;
 #[cfg(feature = "p2p")]
+pub mod testnet;
+#[cfg(feature = "p2p")]
 pub mod timing;
 #[cfg(feature = "p2p")]
 pub mod topics;
@@ -105,6 +107,8 @@ pub use identity::PeerIdentity;
 pub use protocol::{SyncProtocol, SyncRequest, SyncResponse};
 #[cfg(feature = "p2p")]
 pub use swarm::{IncomingSyncRequest, SwarmCommand, SwarmEvent2, SwarmManager};
+#[cfg(feature = "p2p")]
+pub use testnet::{TestnetBehaviour, TestnetEvent, TestnetSwarm};
 #[cfg(feature = "p2p")]
 pub use timing::{NetworkConditions, NetworkQuality, SyncTiming, TimingManager, TimingStatus};
 #[cfg(feature = "p2p")]
