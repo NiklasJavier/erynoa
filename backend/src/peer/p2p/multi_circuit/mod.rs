@@ -17,6 +17,6 @@ pub mod parallel_paths;
 // Re-exports
 pub use parallel_paths::{
     ActiveCircuit, CircuitStats, ConfluxConfig, ConfluxError, ConfluxManager, ConfluxStats,
-    EgressAggregator, MultiPathResult, MultiPathStrategy, SecretSharer, MAX_PARALLEL_CIRCUITS,
-    MIN_AS_DISTANCE,
+    EgressAggregator, EgressAggregatorStats, MultiPathResult, MultiPathStrategy, SecretSharer,
+    MAX_PARALLEL_CIRCUITS, MIN_AS_DISTANCE,
 };

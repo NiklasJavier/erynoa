@@ -133,8 +133,8 @@ pub use performance::{
 // Multi-Circuit Re-exports (Phase 5c - Conflux-Style RL28)
 #[cfg(feature = "privacy")]
 pub use multi_circuit::{
-    ConfluxConfig, ConfluxError, ConfluxManager, ConfluxStats, EgressAggregator, MultiPathStrategy,
-    SecretSharer,
+    ConfluxConfig, ConfluxError, ConfluxManager, ConfluxStats, EgressAggregator,
+    EgressAggregatorStats, MultiPathStrategy, SecretSharer,
 };
 
 // Censorship-Resistance Re-exports (Phase 6 - RL19)

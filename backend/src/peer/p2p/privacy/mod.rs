@@ -136,9 +136,9 @@ pub use mixing::{
 
 #[cfg(feature = "privacy")]
 pub use cover_traffic::{
-    quantize_size, random_size_class, ComplianceMonitor, ComplianceResult, CoverGeneratorStats,
-    CoverMessage, CoverTrafficConfig, CoverTrafficGenerator, CoverTrafficStats, PeerType,
-    SIZE_CLASSES,
+    quantize_size, random_size_class, ComplianceMonitor, ComplianceResult, ComplianceStatus,
+    CoverGeneratorStats, CoverMessage, CoverTrafficConfig, CoverTrafficGenerator,
+    CoverTrafficStats, PeerType, SelfComplianceResult, SIZE_CLASSES,
 };
 
 #[cfg(feature = "privacy")]
@@ -165,9 +165,8 @@ pub use service::{
 // Phase 4 Woche 11: Wire-Format Re-Exports
 #[cfg(feature = "privacy")]
 pub use wire_format::{
-    MessageType, OnionLayerHeader, PacketFlags, PacketHeader, PrivacyPacket, WireError,
-    quantize_to_size_class, unpad_from_size_class,
-    SIZE_CLASSES as WIRE_SIZE_CLASSES,
+    quantize_to_size_class, unpad_from_size_class, MessageType, OnionLayerHeader, PacketFlags,
+    PacketHeader, PrivacyPacket, WireError, SIZE_CLASSES as WIRE_SIZE_CLASSES,
 };
 
 // Phase 3 Woche 9-12: ZK-Contribution & Post-Quantum Re-Exports
