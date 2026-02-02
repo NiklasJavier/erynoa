@@ -1,20 +1,39 @@
 # Erynoa API Referenz – gRPC/Connect-RPC
 
-> **Version:** 1.0.0
-> **Datum:** Februar 2026
-> **Status:** Production-Ready
-> **Protokoll:** Connect-RPC (gRPC-Web kompatibel)
+> **Version:** 1.1.0  
+> **Datum:** Februar 2026  
+> **Status:** Production-Ready  
+> **Protokoll:** Connect-RPC (gRPC-Web kompatibel)  
+> **Axiom-Basis:** Κ1-Κ28, PR1-PR6
 
 ---
 
 ## Executive Summary
 
-Die Erynoa API verwendet **Connect-RPC** als primäres Kommunikationsprotokoll. Connect-RPC bietet:
+Die Erynoa API verwendet **Connect-RPC** als primäres Kommunikationsprotokoll und bildet das Unified Data Model (UDM) vollständig ab. Connect-RPC bietet:
 
 - **Typsicherheit**: Protobuf-Schema als Single Source of Truth
 - **Performance**: Binary Encoding für effiziente Übertragung
 - **Browser-Kompatibilität**: gRPC-Web Support ohne Proxy
 - **Streaming**: Bidirektionales Streaming für Echtzeit-Updates
+
+### Domain-Architektur
+
+```
+┌───────────────────────────────────────────────────────────────────┐
+│                         API LAYER                                 │
+│  Connect-RPC Services  ←→  REST Fallbacks  ←→  WebAuthn/Passkey   │
+├───────────────────────────────────────────────────────────────────┤
+│                        PEER LAYER (Κ22-Κ24)                       │
+│   IntentParser  ←→  SagaComposer  ←→  GatewayGuard  ←→  P2P      │
+├───────────────────────────────────────────────────────────────────┤
+│                        CORE LAYER                                 │
+│   TrustEngine (Κ2-Κ5)  │  EventEngine (Κ9-Κ12)  │  WorldFormula  │
+├───────────────────────────────────────────────────────────────────┤
+│                       DOMAIN LAYER (UDM)                          │
+│   Identity (Κ6-Κ8)  │  Realm (Κ1)  │  Trust  │  Saga  │  Event   │
+└───────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -40,22 +59,184 @@ Content-Type: application/proto
 POST /api/v1/connect/erynoa.v1.HealthService/Check
 ```
 
-### 1.3 REST-Fallback (Nur Health/Info)
+### 1.3 REST-Fallback Endpoints
 
-Für Load Balancer und Kubernetes-Probes existieren REST-Fallbacks:
+Für Load Balancer, Kubernetes-Probes und einfache HTTP-Clients:
 
-| Endpoint             | Beschreibung    |
-| -------------------- | --------------- |
-| `GET /api/v1/health` | Liveness Probe  |
-| `GET /api/v1/ready`  | Readiness Probe |
-| `GET /api/v1/info`   | API-Info        |
-| `GET /api/v1/status` | Service-Status  |
+| Endpoint             | Methode | Handler                   | Beschreibung                   |
+| -------------------- | ------- | ------------------------- | ------------------------------ |
+| `/api/v1/health`     | GET     | `rest_handlers::health`   | Liveness Probe (immer healthy) |
+| `/api/v1/ready`      | GET     | `rest_handlers::ready`    | Readiness Probe mit Storage    |
+| `/api/v1/info`       | GET     | `rest_handlers::info`     | Version, Environment, Auth     |
+| `/api/v1/status`     | GET     | `rest_handlers::status`   | Service-Status-Übersicht       |
+
+### 1.4 WebAuthn/Passkey Endpoints
+
+| Endpoint                        | Methode | Handler                      | Beschreibung             |
+| ------------------------------- | ------- | ---------------------------- | ------------------------ |
+| `/api/v1/auth/challenge`        | GET     | `auth_handlers::get_challenge` | 32-Byte Challenge (5 Min) |
+| `/api/v1/auth/passkey/register` | POST    | `auth_handlers::register_passkey` | Ed25519/ES256 Credential |
+| `/api/v1/auth/passkey/verify`   | POST    | `auth_handlers::verify_passkey` | Signatur-Verifizierung   |
 
 ---
 
-## II. Services
+## II. Domain-Konzepte (UDM)
 
-### 2.1 HealthService
+Bevor wir die Services beschreiben, hier die fundamentalen Domain-Typen gemäß Unified Data Model:
+
+### 2.1 Identity – DID System (Κ6-Κ8)
+
+10 DID-Namespaces für verschiedene Entitätstypen:
+
+| Namespace | URI-Prefix        | Beschreibung              | Beispiel                          |
+| --------- | ----------------- | ------------------------- | --------------------------------- |
+| `self`    | `did:erynoa:self` | Persönliche Identität     | `did:erynoa:self:abc123`          |
+| `guild`   | `did:erynoa:guild`| Organisation/DAO          | `did:erynoa:guild:energy-coop`    |
+| `spirit`  | `did:erynoa:spirit`| KI-Agent                 | `did:erynoa:spirit:advisor-v1`    |
+| `thing`   | `did:erynoa:thing`| IoT-Gerät                 | `did:erynoa:thing:meter-001`      |
+| `vessel`  | `did:erynoa:vessel`| Smart Contract           | `did:erynoa:vessel:escrow-001`    |
+| `source`  | `did:erynoa:source`| Datenquelle              | `did:erynoa:source:weather-api`   |
+| `craft`   | `did:erynoa:craft`| Herstellungsprozess       | `did:erynoa:craft:solar-panel`    |
+| `vault`   | `did:erynoa:vault`| Tresor/Custody            | `did:erynoa:vault:multisig-001`   |
+| `pact`    | `did:erynoa:pact` | Vertrag/Agreement         | `did:erynoa:pact:energy-supply`   |
+| `circle`  | `did:erynoa:circle`| Community/Gruppe         | `did:erynoa:circle:local-energy`  |
+
+```rust
+// Domain: src/domain/unified/identity.rs
+pub struct DID {
+    pub id: UniversalId,        // 256-bit unique identifier
+    pub namespace: DIDNamespace, // Einer der 10 Typen
+    pub document: DIDDocument,   // Κ7: Cryptographic binding
+}
+
+pub struct DIDDocument {
+    pub verification_methods: Vec<VerificationMethod>,
+    pub authentication: Vec<String>,
+    pub capability_delegation: Vec<String>,
+}
+```
+
+### 2.2 Realm – Hierarchie (Κ1)
+
+3-Schichten-Architektur mit monotoner Regelvererbung:
+
+```
+                    ROOT REALM (Global)
+                         │
+            ┌────────────┼────────────┐
+            ▼            ▼            ▼
+      VIRTUAL REALM  VIRTUAL REALM  VIRTUAL REALM
+      (EU Energy)    (US Finance)   (Asia Trade)
+            │
+    ┌───────┼───────┐
+    ▼       ▼       ▼
+PARTITION PARTITION PARTITION
+(Berlin)  (Munich)  (Hamburg)
+```
+
+| Ebene        | Beschreibung                  | Regeln          |
+| ------------ | ----------------------------- | --------------- |
+| RootRealm    | Globale Basis-Regeln          | Foundation      |
+| VirtualRealm | Spezialisierte Communities    | Inherited + Own |
+| Partition    | Lokale Untereinheiten         | Inherited + Own |
+
+```rust
+// Domain: src/domain/unified/realm.rs
+pub enum RuleCategory {
+    Trust,      // Trust-Anforderungen
+    Governance, // Governance-Regeln
+    Compliance, // Compliance/Regulatory
+    Economic,   // Wirtschaftliche Regeln
+    Technical,  // Technische Constraints
+    Custom,     // Benutzerdefiniert
+}
+
+pub struct Rule {
+    pub id: String,
+    pub category: RuleCategory,
+    pub expression: String,      // ECL-Ausdruck
+    pub description: String,
+    pub optional: bool,          // Muss erfüllt werden?
+    pub inheritable: bool,       // An Sub-Realms vererben?
+}
+```
+
+### 2.3 Trust – 6D-Vektor (Κ2-Κ5)
+
+6 Dimensionen mit asymmetrischer Update-Logik:
+
+| Dimension | Symbol | Beschreibung         | Aufbau-Rate | Abbau-Rate |
+| --------- | ------ | -------------------- | ----------- | ---------- |
+| R         | 𝑅      | Reliability          | 0.05        | 0.15       |
+| I         | 𝐼      | Integrity            | 0.03        | 0.20       |
+| C         | 𝐶      | Competence           | 0.04        | 0.10       |
+| P         | 𝑃      | Prestige             | 0.02        | 0.08       |
+| V         | 𝑉      | Vigilance            | 0.06        | 0.12       |
+| Ω         | Ω      | Long-term Factor     | 0.01        | 0.05       |
+
+```rust
+// Core: src/core/trust_engine.rs
+pub struct TrustEngine {
+    records: HashMap<UniversalId, TrustRecord>,
+    config: TrustEngineConfig,
+}
+
+// Axiom Κ3: Asymmetric Update
+// trust_new = trust_old + Δ * rate_factor
+// rate_factor = growth_rate if Δ > 0 else decay_rate
+```
+
+### 2.4 Intent & Saga (Κ22-Κ24)
+
+6 Goal-Typen für Intent-Auflösung:
+
+| Goal        | Parameter                         | Saga-Steps                     |
+| ----------- | --------------------------------- | ------------------------------ |
+| `Transfer`  | to, amount, asset_type            | Lock → Transfer                |
+| `Attest`    | subject, claim                    | Validate → CreateEvent         |
+| `Delegate`  | to, capabilities, ttl, trust      | Validate → DelegateEvent       |
+| `Query`     | predicate                         | Execute Query                  |
+| `Create`    | entity_type, params               | Mint/Create                    |
+| `Complex`   | description, sub_goals            | Composed Steps                 |
+
+```rust
+// Domain: src/domain/unified/saga.rs
+pub enum Constraint {
+    MaxCost { amount: u64, asset: String },
+    Deadline { lamport: u64 },
+    RequireCredential { issuer: UniversalId, cred_type: String },
+    RequireTrust { dimension: String, minimum: f32 },
+    RequireRealm { realm: RealmId },
+    Custom { key: String, value: String },
+}
+```
+
+### 2.5 Event – Finalitätsstufen (Κ9-Κ12)
+
+DAG-basierte Events mit 5 Finalitätsstufen:
+
+| Level      | Beschreibung              | Witnesses | Reversible |
+| ---------- | ------------------------- | --------- | ---------- |
+| `Nascent`  | Gerade erstellt           | 0         | Ja         |
+| `Validated`| Signatur geprüft          | 0         | Ja         |
+| `Witnessed`| Von Peers bestätigt       | ≥ 3       | Schwer     |
+| `Anchored` | Auf Blockchain verankert  | Chain     | Nein       |
+| `Eternal`  | Repliziert & archiviert   | Multiple  | Nein       |
+
+```rust
+// Core: src/core/event_engine.rs
+pub struct EventEngine {
+    events: HashMap<EventId, EventEntry>,
+    dag: HashMap<EventId, HashSet<EventId>>,  // Parent-Beziehungen
+    finality: HashMap<EventId, FinalityState>,
+}
+```
+
+---
+
+## III. Services
+
+### 3.1 HealthService
 
 Health-Checks für Liveness und Readiness Probes.
 
@@ -85,6 +266,15 @@ message CheckResponse {
 }
 ```
 
+**REST-Äquivalent:** `GET /api/v1/health`
+
+```json
+{
+  "status": "healthy",
+  "version": "0.3.0"
+}
+```
+
 #### Ready
 
 Gibt detaillierten Readiness-Status mit Dependency-Checks zurück.
@@ -109,9 +299,24 @@ message ServiceStatus {
 }
 ```
 
+**REST-Äquivalent:** `GET /api/v1/ready`
+
+```json
+{
+  "status": "ready",
+  "services": {
+    "storage": {
+      "healthy": true,
+      "message": "decentralized",
+      "latency_ms": 2
+    }
+  }
+}
+```
+
 ---
 
-### 2.2 InfoService
+### 3.2 InfoService
 
 Liefert öffentliche Konfiguration für Clients.
 
@@ -154,9 +359,19 @@ message FeatureFlags {
 }
 ```
 
+**REST-Äquivalent:** `GET /api/v1/info`
+
+```json
+{
+  "version": "0.3.0",
+  "environment": "local",
+  "auth_method": "DID-Auth"
+}
+```
+
 ---
 
-### 2.3 UserService
+### 3.3 UserService
 
 User-Management mit CRUD-Operationen.
 
@@ -217,9 +432,9 @@ Standard CRUD-Operationen für Benutzer.
 
 ---
 
-### 2.4 StorageService
+### 3.4 StorageService
 
-S3-kompatible Storage-Operationen.
+S3-kompatible Storage-Operationen für dezentrale Persistenz (Κ19).
 
 ```protobuf
 service StorageService {
@@ -288,9 +503,9 @@ message GetPresignedUploadUrlResponse {
 
 ---
 
-### 2.5 PeerService
+### 3.5 PeerService
 
-ERY Peer-Management für P2P-Netzwerk und Multichain-Operationen.
+ERY Peer-Management für P2P-Netzwerk und Multichain-Operationen (Κ23, PR3, PR6).
 
 ```protobuf
 service PeerService {
@@ -333,9 +548,15 @@ enum PeerState {
 }
 ```
 
-#### EvaluateGateway
+#### EvaluateGateway (Κ23)
 
-Gateway-Prädikate für Realm-Crossing evaluieren (Axiom PR3, PR6).
+Gateway-Prädikate für Realm-Crossing evaluieren.
+
+**Domain-Mapping:** `peer/gateway.rs::GatewayGuard::validate_crossing()`
+
+```
+cross(s, 𝒞₁, 𝒞₂) requires G(s, 𝒞₂) = true
+```
 
 **Request:**
 
@@ -361,11 +582,28 @@ message EvaluateGatewayResponse {
 }
 ```
 
+**Gateway Validierung:**
+
+1. **Trust-Check**: `trust_norm >= target.min_trust`
+2. **Credential-Check**: Alle erforderlichen Credentials vorhanden
+3. **Rule-Check**: Alle nicht-optionalen Regeln erfüllt
+4. **Trust-Dampening**: 0.7-Faktor bei Cross-Realm (konfigurierbar)
+
+**Use Cases:**
+
+| Szenario                          | Prädikat                          | Ergebnis       |
+| --------------------------------- | --------------------------------- | -------------- |
+| User wechselt zu Energy-Realm     | `min_trust: 0.3`                  | Trust ≥ 0.3    |
+| Guild-Mitglied tritt Sub-Realm bei| `credential: guild-membership`    | Membership ok  |
+| Agent migriert zu anderem Realm   | `rule: agent-certified`           | Zertifikat ok  |
+
 ---
 
-### 2.6 IntentService
+### 3.6 IntentService (Κ22)
 
-Intent-Auflösung für Cross-Chain-Operationen (Axiom PR1).
+Intent-Auflösung für Cross-Chain-Operationen.
+
+**Domain-Mapping:** `peer/intent_parser.rs::IntentParser`
 
 ```protobuf
 service IntentService {
@@ -380,7 +618,7 @@ service IntentService {
 
 #### SubmitIntent
 
-Natural-Language Intent einreichen.
+Natural-Language oder strukturierten Intent einreichen.
 
 **Request:**
 
@@ -423,6 +661,27 @@ enum IntentState {
   INTENT_STATE_FAILED = 6;
   INTENT_STATE_CANCELLED = 7;
 }
+```
+
+**Intent-Parsing (Natural Language):**
+
+| Keywords                         | Goal-Typ    | Beispiel                      |
+| -------------------------------- | ----------- | ----------------------------- |
+| `send`, `transfer`, `pay`        | `Transfer`  | "Send 100 ERY to Bob"         |
+| `attest`, `verify`, `certify`    | `Attest`    | "Certify Alice's diploma"     |
+| `delegate`, `authorize`, `grant` | `Delegate`  | "Grant Bob read access"       |
+| `query`, `find`, `search`        | `Query`     | "Find all energy providers"   |
+| `create`, `new`, `mint`          | `Create`    | "Mint 1000 energy tokens"     |
+
+**Constraint-Typen:**
+
+```rust
+// Domain: src/domain/unified/saga.rs
+Constraint::MaxCost { amount: 100, asset: "USDC".into() }
+Constraint::Deadline { lamport: 1000 }
+Constraint::RequireCredential { issuer, cred_type: "energy-license".into() }
+Constraint::RequireTrust { dimension: "R".into(), minimum: 0.5 }
+Constraint::RequireRealm { realm: RealmId::new("energy-eu") }
 ```
 
 ---
