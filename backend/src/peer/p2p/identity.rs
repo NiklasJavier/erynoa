@@ -67,8 +67,7 @@ impl PeerIdentity {
             .map(|pk| pk.to_bytes())
             .unwrap_or_else(|_| [0u8; 32]);
 
-        let unique_id = bs58::encode(&public_key_bytes).into_string();
-        let did = DID::new_self(unique_id);
+        let did = DID::new_self(&public_key_bytes);
 
         Self {
             did,
@@ -215,17 +214,8 @@ impl SignedPeerInfo {
 
 /// Konvertiere DID zu PeerId (wenn Public-Key bekannt)
 pub fn did_to_peer_id(did: &DID) -> Result<PeerId> {
-    // unique_id ist Base58-encoded Public-Key
-    let public_key_bytes = bs58::decode(&did.unique_id)
-        .into_vec()
-        .map_err(|e| anyhow!("Invalid DID unique_id: {}", e))?;
-
-    if public_key_bytes.len() != 32 {
-        return Err(anyhow!(
-            "Invalid public key length: {} (expected 32)",
-            public_key_bytes.len()
-        ));
-    }
+    // public_key ist direkt im DID
+    let public_key_bytes = did.public_key;
 
     let ed25519_pk = ed25519::PublicKey::try_from_bytes(&public_key_bytes)
         .map_err(|e| anyhow!("Invalid Ed25519 public key: {}", e))?;
@@ -242,8 +232,7 @@ pub fn peer_id_to_did(_peer_id: &PeerId, public_key: &PublicKey) -> Result<DID> 
         .map(|pk| pk.to_bytes())
         .map_err(|_| anyhow!("Only Ed25519 keys can be converted to DID"))?;
 
-    let unique_id = bs58::encode(&bytes).into_string();
-    Ok(DID::new_self(unique_id))
+    Ok(DID::new_self(&bytes))
 }
 
 #[cfg(test)]
@@ -253,7 +242,8 @@ mod tests {
     #[test]
     fn test_generate_identity() {
         let identity = PeerIdentity::generate();
-        assert!(!identity.did.unique_id.is_empty());
+        // DID hat public_key, nicht unique_id
+        assert!(identity.did.public_key != [0u8; 32]);
         assert!(!identity.peer_id.to_string().is_empty());
     }
 
@@ -290,6 +280,6 @@ mod tests {
 
         // PeerId → DID
         let did = peer_id_to_did(&identity.peer_id, &identity.public_key()).unwrap();
-        assert_eq!(did.unique_id, identity.did.unique_id);
+        assert_eq!(did.public_key, identity.did.public_key);
     }
 }

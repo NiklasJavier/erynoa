@@ -146,14 +146,66 @@ libp2p = { version = "0.54", features = [
     "dcutr",   # Direct Connection Upgrade through Relay
     "relay",   # Circuit Relay for NAT traversal
     "upnp",    # UPnP port mapping
+    # QUIC Transport (Phase 1)
+    "quic", # QUIC Transport mit 0-RTT
 ], optional = true }
 futures = { version = "0.3", optional = true }
+
+# ============================================================================
+# PRIVACY-LAYER (P2P-PRIVATE-RELAY-LOGIC V2.6 – Phase 1)
+# ============================================================================
+
+# Kryptographie für Onion-Routing (RL2-RL4)
+x25519-dalek = { version = "2", features = [
+    "static_secrets",
+], optional = true } # X25519 ECDH für Hop-Key-Agreement
+chacha20poly1305 = { version = "0.10", optional = true } # AEAD für Layer-Encryption
+hkdf = { version = "0.12", optional = true } # Key-Derivation für Session-Keys
+zeroize = { version = "1", features = [
+    "derive",
+], optional = true } # Secure Memory Wipe
+getrandom = { version = "0.2", optional = true } # Cryptographic RNG
+
+# Zero-Knowledge Proofs (RL1 ZK-Eligibility) – Phase 3
+bulletproofs = { version = "4", optional = true }                           # Range-Proofs für Trust (Legacy)
+curve25519-dalek = { version = "4", features = ["serde"], optional = true }
+merlin = { version = "3", optional = true }                                 # Transcript-based ZK
+
+# Differential Privacy (RL8 ε-DP Mixing)
+statrs = { version = "0.17", optional = true } # Laplace-Distribution für Delays
+
+# Performance (RL20-RL23)
+arrayvec = { version = "0.7", optional = true } # Stack-allocated vectors
+bytes = { version = "1", optional = true }      # Zero-copy buffers
+
+# Hardware-Beschleunigung Detection
+cpufeatures = { version = "0.2", optional = true } # Runtime CPU-Feature-Detection
 
 [features]
 default = []
 jemalloc = ["dep:tikv-jemallocator"]
 cli = ["dep:clap", "dep:rustyline", "dep:colored", "dep:bincode"]
 p2p = ["dep:libp2p", "dep:futures"]
+
+# Privacy-Layer Features (Phase 1)
+privacy = [
+    "p2p",
+    "dep:x25519-dalek",
+    "dep:chacha20poly1305",
+    "dep:hkdf",
+    "dep:zeroize",
+    "dep:getrandom",
+    "dep:arrayvec",
+    "dep:bytes",
+]
+privacy-zk = [
+    "privacy",
+    "dep:bulletproofs",
+    "dep:curve25519-dalek",
+    "dep:merlin",
+]
+privacy-mixing = ["privacy", "dep:statrs"]
+privacy-full = ["privacy", "privacy-zk", "privacy-mixing", "dep:cpufeatures"]
 
 [build-dependencies]
 axum-connect-build = "0.3"

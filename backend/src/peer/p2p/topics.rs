@@ -107,7 +107,10 @@ impl RealmTopic {
 
     /// Erstelle Direct-Message-Topic
     pub fn direct(sender: &DID, receiver: &DID) -> Self {
-        let topic_str = format!("/erynoa/direct/{}/{}", sender.unique_id, receiver.unique_id);
+        // Verwende public_key in hex für Topic-String
+        let sender_id = hex::encode(&sender.public_key);
+        let receiver_id = hex::encode(&receiver.public_key);
+        let topic_str = format!("/erynoa/direct/{}/{}", sender_id, receiver_id);
         Self {
             topic_type: TopicType::Direct,
             realm_id: None,
@@ -148,8 +151,13 @@ impl RealmTopic {
                 }
             }
             "direct" if parts.len() >= 5 => {
-                let sender = DID::new_self(parts[3]);
-                let receiver = DID::new_self(parts[4]);
+                // parts[3] und parts[4] sind hex-encoded public keys
+                let sender_bytes = hex::decode(parts[3])
+                    .map_err(|e| anyhow!("Invalid sender id: {}", e))?;
+                let receiver_bytes = hex::decode(parts[4])
+                    .map_err(|e| anyhow!("Invalid receiver id: {}", e))?;
+                let sender = DID::new_self(&sender_bytes);
+                let receiver = DID::new_self(&receiver_bytes);
                 Ok(Self::direct(&sender, &receiver))
             }
             "global" if parts.len() >= 4 && parts[3] == "announcements" => {

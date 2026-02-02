@@ -125,7 +125,9 @@ impl ErynoaBehaviour {
         let dcutr = dcutr::Behaviour::new(peer_id);
 
         // Relay-Client
-        let relay_client = relay::client::Behaviour::new(peer_id, Default::default());
+        let (relay_transport, relay_client) = relay::client::new(peer_id);
+        // Note: relay_transport wird im TransportBuilder verwendet
+        let _ = relay_transport;
 
         // UPnP
         let upnp = upnp::tokio::Behaviour::default();

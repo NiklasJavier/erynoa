@@ -1,6 +1,11 @@
 //! # P2P-Konfiguration
 //!
 //! Konfigurationsstruktur für das libp2p-Netzwerk.
+//!
+//! ## V2.6 Erweiterungen
+//!
+//! - **Privacy-Layer**: Onion-Routing, Relay-Selection, Mixing
+//! - **QUIC Transport**: 0-RTT, Connection-Migration, Hybrid-Fallback
 
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -34,6 +39,9 @@ pub struct P2PConfig {
 
     /// NAT-Traversal-Konfiguration (Priorität 3)
     pub nat: NatConfig,
+
+    /// Privacy-Layer-Konfiguration (V2.6)
+    pub privacy: PrivacyConfig,
 }
 
 impl Default for P2PConfig {
@@ -54,6 +62,7 @@ impl Default for P2PConfig {
             sync: SyncConfig::default(),
             connection_limits: ConnectionLimitsConfig::default(),
             nat: NatConfig::default(),
+            privacy: PrivacyConfig::default(),
         }
     }
 }
@@ -302,6 +311,249 @@ impl NatConfig {
     }
 }
 
+// ============================================================================
+// PRIVACY-LAYER-KONFIGURATION (V2.6 Phase 1)
+// ============================================================================
+
+/// Privacy-Layer-Konfiguration (V2.6)
+///
+/// Konfiguriert Onion-Routing, Relay-Selection und QUIC-Transport.
+///
+/// ## Axiom-Referenzen
+///
+/// - **RL2-RL4**: Onion-Verschlüsselung
+/// - **RL5-RL7**: Trust-basierte Relay-Auswahl
+/// - **RL24**: QUIC Transport
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrivacyConfig {
+    /// Privacy-Layer aktivieren
+    pub enabled: bool,
+
+    /// Onion-Routing-Konfiguration
+    pub onion: OnionConfig,
+
+    /// Relay-Selection-Konfiguration
+    pub relay_selection: RelaySelectionConfig,
+
+    /// QUIC-Transport-Konfiguration
+    pub quic: QuicTransportConfig,
+}
+
+impl Default for PrivacyConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false, // Opt-in für Privacy-Layer
+            onion: OnionConfig::default(),
+            relay_selection: RelaySelectionConfig::default(),
+            quic: QuicTransportConfig::default(),
+        }
+    }
+}
+
+impl PrivacyConfig {
+    /// Erstelle Development-Konfiguration
+    pub fn development() -> Self {
+        Self {
+            enabled: true,
+            onion: OnionConfig::development(),
+            relay_selection: RelaySelectionConfig::default(),
+            quic: QuicTransportConfig::development(),
+        }
+    }
+
+    /// Erstelle Production-Konfiguration
+    pub fn production() -> Self {
+        Self {
+            enabled: true,
+            onion: OnionConfig::default(),
+            relay_selection: RelaySelectionConfig::production(),
+            quic: QuicTransportConfig::default(),
+        }
+    }
+}
+
+/// Onion-Routing-Konfiguration (RL2-RL4)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OnionConfig {
+    /// Minimum Hop-Anzahl
+    pub min_hops: usize,
+
+    /// Maximum Hop-Anzahl
+    pub max_hops: usize,
+
+    /// Default-Sensitivitäts-Level
+    pub default_sensitivity: String,
+
+    /// Nonce-Cache-Größe für Replay-Protection (RL15)
+    pub nonce_cache_size: usize,
+
+    /// Nonce-Cache-TTL in Sekunden
+    pub nonce_cache_ttl_secs: u64,
+}
+
+impl Default for OnionConfig {
+    fn default() -> Self {
+        Self {
+            min_hops: 2,
+            max_hops: 7,
+            default_sensitivity: "medium".to_string(),
+            nonce_cache_size: 10_000,
+            nonce_cache_ttl_secs: 3600, // 1 Stunde
+        }
+    }
+}
+
+impl OnionConfig {
+    /// Development-Konfiguration (schneller, weniger sicher)
+    pub fn development() -> Self {
+        Self {
+            min_hops: 2,
+            max_hops: 3,
+            default_sensitivity: "low".to_string(),
+            nonce_cache_size: 1_000,
+            nonce_cache_ttl_secs: 600,
+        }
+    }
+}
+
+/// Relay-Selection-Konfiguration (RL5-RL7)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RelaySelectionConfig {
+    /// Minimum Trust-Score für Relays (0.0 - 1.0)
+    pub min_relay_trust: f64,
+
+    /// Minimum verschiedene Jurisdiktionen in Route
+    pub min_jurisdictions: usize,
+
+    /// Minimum verschiedene ASNs in Route
+    pub min_asns: usize,
+
+    /// Minimum Diversitäts-Entropie (Bits)
+    pub min_diversity_entropy: f64,
+
+    /// Blacklisted Regionen (ISO 3166-1 Alpha-2)
+    pub blacklisted_regions: Vec<String>,
+
+    /// Bevorzugte Regionen (ISO 3166-1 Alpha-2)
+    pub preferred_regions: Vec<String>,
+
+    /// Power-Cap für einzelne Relays (Κ19)
+    pub max_relay_power_ratio: f64,
+
+    /// Latenz-Budget-Multiplikator
+    pub latency_budget_multiplier: f64,
+}
+
+impl Default for RelaySelectionConfig {
+    fn default() -> Self {
+        Self {
+            min_relay_trust: 0.3,
+            min_jurisdictions: 2,
+            min_asns: 2,
+            min_diversity_entropy: 2.0,
+            blacklisted_regions: vec![],
+            preferred_regions: vec![
+                "CH".to_string(), // Schweiz
+                "IS".to_string(), // Island
+                "NO".to_string(), // Norwegen
+                "DE".to_string(), // Deutschland
+            ],
+            max_relay_power_ratio: 0.1, // Max 10%
+            latency_budget_multiplier: 1.0,
+        }
+    }
+}
+
+impl RelaySelectionConfig {
+    /// Production-Konfiguration (strenger)
+    pub fn production() -> Self {
+        Self {
+            min_relay_trust: 0.5,
+            min_jurisdictions: 2,
+            min_asns: 3,
+            min_diversity_entropy: 2.5,
+            max_relay_power_ratio: 0.05, // Max 5%
+            ..Default::default()
+        }
+    }
+}
+
+/// QUIC-Transport-Konfiguration (RL24)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuicTransportConfig {
+    /// QUIC aktivieren
+    pub enabled: bool,
+
+    /// Bind-Adresse für QUIC
+    pub bind_addr: String,
+
+    /// 0-RTT aktivieren
+    pub enable_0rtt: bool,
+
+    /// Connection-Migration aktivieren (für Mobile)
+    pub enable_migration: bool,
+
+    /// Idle-Timeout in Sekunden
+    pub idle_timeout_secs: u64,
+
+    /// Keep-Alive Interval in Sekunden
+    pub keep_alive_secs: u64,
+
+    /// Maximum bi-direktionale Streams
+    pub max_bi_streams: u32,
+
+    /// TCP-Fallback aktivieren
+    pub enable_tcp_fallback: bool,
+
+    /// Fallback-Timeout in Millisekunden
+    pub fallback_timeout_ms: u64,
+}
+
+impl Default for QuicTransportConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            bind_addr: "0.0.0.0:4433".to_string(),
+            enable_0rtt: true,
+            enable_migration: true,
+            idle_timeout_secs: 30,
+            keep_alive_secs: 15,
+            max_bi_streams: 100,
+            enable_tcp_fallback: true,
+            fallback_timeout_ms: 2000,
+        }
+    }
+}
+
+impl QuicTransportConfig {
+    /// Development-Konfiguration
+    pub fn development() -> Self {
+        Self {
+            enabled: true,
+            bind_addr: "127.0.0.1:0".to_string(),
+            enable_0rtt: true,
+            enable_migration: false,
+            idle_timeout_secs: 60,
+            keep_alive_secs: 30,
+            max_bi_streams: 50,
+            enable_tcp_fallback: true,
+            fallback_timeout_ms: 5000,
+        }
+    }
+
+    /// Mobile-Konfiguration
+    pub fn mobile() -> Self {
+        Self {
+            enabled: true,
+            enable_migration: true,
+            idle_timeout_secs: 60,
+            keep_alive_secs: 10,
+            max_bi_streams: 50,
+            ..Default::default()
+        }
+    }
+}
+
 /// Humantime-Serde-Modul für Duration-Serialisierung
 mod humantime_serde {
     use serde::{self, Deserialize, Deserializer, Serializer};
@@ -340,5 +592,29 @@ mod tests {
         let config = TrustGateConfig::default();
         assert_eq!(config.min_incoming_trust_r, 0.1);
         assert!(!config.reject_unknown_peers);
+    }
+
+    #[test]
+    fn test_privacy_config_defaults() {
+        let config = PrivacyConfig::default();
+        assert!(!config.enabled);
+        assert_eq!(config.onion.min_hops, 2);
+        assert_eq!(config.relay_selection.min_jurisdictions, 2);
+        assert!(config.quic.enable_0rtt);
+    }
+
+    #[test]
+    fn test_privacy_config_development() {
+        let config = PrivacyConfig::development();
+        assert!(config.enabled);
+        assert_eq!(config.onion.max_hops, 3);
+    }
+
+    #[test]
+    fn test_relay_selection_production() {
+        let config = RelaySelectionConfig::production();
+        assert_eq!(config.min_relay_trust, 0.5);
+        assert_eq!(config.min_asns, 3);
+        assert_eq!(config.max_relay_power_ratio, 0.05);
     }
 }
