@@ -59,7 +59,6 @@ use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::sync::mpsc;
 use zeroize::Zeroize;
 
 // ============================================================================
@@ -556,7 +555,7 @@ impl ConfluxManager {
     async fn send_single_circuit(
         &self,
         circuit: &ActiveCircuit,
-        payload: &[u8],
+        _payload: &[u8],
     ) -> Result<SendResult, ConfluxError> {
         let start = Instant::now();
 
@@ -585,6 +584,7 @@ impl ConfluxManager {
     /// Statistiken über alle Circuits
     pub fn stats(&self) -> ConfluxStats {
         let circuits = self.circuits.read();
+        let aggregator_stats = self.egress_aggregator.stats();
 
         ConfluxStats {
             active_circuits: circuits.len(),
@@ -596,7 +596,29 @@ impl ConfluxManager {
                 circuits.iter().map(|c| c.stats.avg_latency_ms).sum::<f64>() / circuits.len() as f64
             },
             circuits_built: self.stats.circuits_built.load(Ordering::Relaxed),
+            pending_aggregations: aggregator_stats.pending_aggregations,
+            completed_reconstructions: aggregator_stats.completed_reconstructions,
         }
+    }
+
+    /// Empfange Shares für Secret-Sharing-Rekonstruktion
+    pub fn receive_shares(
+        &self,
+        message_id: [u8; 16],
+        share: Vec<u8>,
+        threshold: usize,
+    ) -> Option<Vec<u8>> {
+        // Füge Share hinzu
+        self.egress_aggregator
+            .add_share(message_id, share, threshold);
+
+        // Versuche Rekonstruktion
+        self.egress_aggregator.try_reconstruct(&message_id)
+    }
+
+    /// Hole Referenz auf EgressAggregator für erweiterte Operationen
+    pub fn aggregator(&self) -> &Arc<EgressAggregator> {
+        &self.egress_aggregator
     }
 
     /// Anzahl aktiver Circuits
@@ -721,6 +743,24 @@ impl EgressAggregator {
         let mut pending = self.pending_shares.write();
         pending.retain(|_, msg| msg.created_at.elapsed() < max_age);
     }
+
+    /// Hole Statistiken
+    pub fn stats(&self) -> EgressAggregatorStats {
+        let pending = self.pending_shares.read();
+        EgressAggregatorStats {
+            pending_aggregations: pending.len(),
+            completed_reconstructions: 0, // TODO: Tracking hinzufügen
+        }
+    }
+}
+
+/// Egress-Aggregator Statistiken
+#[derive(Debug, Clone, Default)]
+pub struct EgressAggregatorStats {
+    /// Anzahl ausstehender Aggregationen
+    pub pending_aggregations: usize,
+    /// Abgeschlossene Rekonstruktionen
+    pub completed_reconstructions: u64,
 }
 
 impl Default for EgressAggregator {
@@ -825,6 +865,10 @@ pub struct ConfluxStats {
     pub avg_circuit_latency_ms: f64,
     /// Anzahl gebauter Circuits
     pub circuits_built: u64,
+    /// Pending Aggregationen (Egress)
+    pub pending_aggregations: usize,
+    /// Abgeschlossene Rekonstruktionen
+    pub completed_reconstructions: u64,
 }
 
 // ============================================================================

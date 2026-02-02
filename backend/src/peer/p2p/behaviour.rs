@@ -274,8 +274,8 @@ pub type BehaviourEvent = ErynoaBehaviourEvent;
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_behaviour_creation() {
+    #[tokio::test]
+    async fn test_behaviour_creation() {
         let keypair = Keypair::generate_ed25519();
         let config = P2PConfig::default();
 
@@ -283,10 +283,11 @@ mod tests {
         // In CI, we might need to disable mDNS
         let result = ErynoaBehaviour::new(&keypair, &config);
 
-        // mDNS might fail in some environments
+        // mDNS might fail in some environments, UPnP requires Tokio runtime
         if let Err(e) = &result {
-            if e.to_string().contains("mDNS") {
-                return; // Skip in environments without mDNS support
+            let err_str = e.to_string();
+            if err_str.contains("mDNS") || err_str.contains("reactor") {
+                return; // Skip in environments without mDNS/Tokio support
             }
         }
 

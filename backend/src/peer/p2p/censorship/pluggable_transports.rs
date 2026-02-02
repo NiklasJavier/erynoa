@@ -648,6 +648,11 @@ impl TransportManager {
 
     /// Wählt besten Transport basierend auf Censorship-Level
     pub fn select_transport(&self) -> Option<Arc<TransportWrapper>> {
+        // Verwende config für Auto-Selection
+        if !self.config.auto_select {
+            return self.active_transport();
+        }
+
         let level = self.censorship_level();
         let preferred_type = TransportType::for_censorship_level(level);
 
@@ -673,13 +678,34 @@ impl TransportManager {
 
     /// Fallback zum nächsten Transport
     pub fn fallback(&self) -> bool {
+        // Prüfe ob Auto-Fallback aktiviert ist
+        if !self.config.auto_fallback {
+            return false;
+        }
+
         let mut index = self.active_index.write();
+
+        // Prüfe max_fallback_attempts
+        if (*index as u32) >= self.config.max_fallback_attempts {
+            return false;
+        }
+
         if *index + 1 < self.transports.len() {
             *index += 1;
             true
         } else {
             false
         }
+    }
+
+    /// Gibt die Konfiguration zurück
+    pub fn config(&self) -> &TransportManagerConfig {
+        &self.config
+    }
+
+    /// Gibt das Probe-Intervall zurück
+    pub fn probe_interval(&self) -> Duration {
+        self.config.probe_interval
     }
 
     /// Gibt alle verfügbaren Transports zurück

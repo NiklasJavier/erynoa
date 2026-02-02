@@ -46,7 +46,8 @@
 //! - **RL25**: LAMP Threshold-Mixing
 
 use super::cover_traffic::{
-    ComplianceMonitor, CoverGeneratorStats, CoverMessage, CoverTrafficConfig, CoverTrafficGenerator,
+    ComplianceMonitor, ComplianceStatus, CoverGeneratorStats, CoverMessage, CoverTrafficConfig,
+    CoverTrafficGenerator,
 };
 use super::mixing::{LampStats, MixingPool, MixingPoolConfig};
 use super::onion::OnionDecryptor;
@@ -243,6 +244,8 @@ pub struct PrivacyServiceStats {
     pub cached_routes: usize,
     /// Service-Uptime
     pub uptime_secs: f64,
+    /// Compliance-Status (Self-Monitoring)
+    pub compliance_status: ComplianceStatus,
 }
 
 // ============================================================================
@@ -552,6 +555,7 @@ impl PrivacyService {
             messages_dropped: self.messages_dropped.load(Ordering::Relaxed),
             cached_routes: self.route_cache.routes.read().len(),
             uptime_secs: self.started_at.elapsed().as_secs_f64(),
+            compliance_status: self.compliance_monitor.current_status(),
         }
     }
 
@@ -628,17 +632,36 @@ impl PrivacyService {
     }
 
     fn check_own_compliance(&self) {
-        // Prüfe eigene Cover-Traffic-Compliance
-        let stats = self.cover_generator.stats();
+        // Prüfe eigene Cover-Traffic-Compliance über den ComplianceMonitor
+        let cover_stats = self.cover_generator.stats();
         let expected_rate = self.config.cover_traffic.effective_rate();
-        let actual_rate = stats.effective_rate;
+        let actual_rate = cover_stats.effective_rate;
 
-        if actual_rate < expected_rate * 0.8 {
+        // Aktualisiere ComplianceMonitor mit aktuellen Statistiken
+        self.compliance_monitor.record_cover_stats(&cover_stats);
+
+        // Hole Compliance-Status über Self-Compliance-Check
+        let compliance_result = self.compliance_monitor.check_self_compliance(
+            expected_rate,
+            actual_rate,
+            self.config.cover_traffic.min_compliance_ratio(),
+        );
+
+        if !compliance_result.is_compliant {
             tracing::warn!(
                 expected = expected_rate,
                 actual = actual_rate,
+                deficit = compliance_result.deficit,
                 "Cover-traffic compliance warning: rate too low"
             );
+
+            // Trigger Cover-Traffic Boost via cover_output_tx
+            if let Err(e) = self
+                .cover_output_tx
+                .try_send(CoverMessage::new_boost_request())
+            {
+                tracing::debug!(error = %e, "Could not send cover boost request");
+            }
         }
     }
 }

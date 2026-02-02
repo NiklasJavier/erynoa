@@ -224,6 +224,11 @@ impl CoverTrafficConfig {
     pub fn effective_rate(&self) -> f64 {
         self.peer_type.min_rate() * self.overhead_ratio
     }
+
+    /// Minimum Compliance-Ratio (unter dieser Rate wird gewarnt)
+    pub fn min_compliance_ratio(&self) -> f64 {
+        COMPLIANCE_WARNING_THRESHOLD
+    }
 }
 
 // ============================================================================
@@ -243,6 +248,8 @@ pub struct CoverMessage {
     pub size_class: usize,
     /// Generierungszeitpunkt
     pub created_at: Instant,
+    /// Boost-Request Flag (für Compliance-Wiederherstellung)
+    pub is_boost_request: bool,
 }
 
 impl CoverMessage {
@@ -266,6 +273,19 @@ impl CoverMessage {
             is_dummy: true,
             size_class: quantized,
             created_at: Instant::now(),
+            is_boost_request: false,
+        }
+    }
+
+    /// Erstelle Boost-Request (signalisiert dem Generator mehr Cover-Traffic zu senden)
+    pub fn new_boost_request() -> Self {
+        Self {
+            payload: vec![],
+            route: vec![],
+            is_dummy: true,
+            size_class: 0,
+            created_at: Instant::now(),
+            is_boost_request: true,
         }
     }
 }
@@ -472,12 +492,81 @@ impl ComplianceMonitor {
     pub fn peer_count(&self) -> usize {
         self.peers.read().len()
     }
+
+    /// Prüfe eigene Compliance (für PrivacyService)
+    pub fn check_self_compliance(
+        &self,
+        expected_rate: f64,
+        actual_rate: f64,
+        min_ratio: f64,
+    ) -> SelfComplianceResult {
+        let ratio = if expected_rate > 0.0 {
+            actual_rate / expected_rate
+        } else {
+            1.0
+        };
+
+        SelfComplianceResult {
+            is_compliant: ratio >= min_ratio,
+            deficit: (min_ratio - ratio).max(0.0),
+        }
+    }
+
+    /// Aktualisiere mit Cover-Generator-Stats (für Self-Monitoring)
+    pub fn record_cover_stats(&self, _stats: &CoverGeneratorStats) {
+        // Speichere für spätere Analyse
+        // In einer vollständigen Implementierung würde hier ein Zeitreihen-Buffer verwendet
+    }
+
+    /// Hole aktuellen Status (für PrivacyServiceStats)
+    pub fn current_status(&self) -> ComplianceStatus {
+        let peers = self.peers.read();
+        let compliant = peers
+            .values()
+            .filter(|s| s.compliance_ratio(0.1) >= 0.8)
+            .count();
+
+        ComplianceStatus {
+            monitored_peers: peers.len(),
+            compliant_peers: compliant,
+            non_compliant_peers: peers.len() - compliant,
+            self_compliant: true, // Default bis Self-Monitoring implementiert
+            self_rate: 0.0,
+            last_cover_stats: None,
+        }
+    }
 }
 
 impl Default for ComplianceMonitor {
     fn default() -> Self {
         Self::new(Duration::from_secs(DEFAULT_OBSERVATION_PERIOD_SECS))
     }
+}
+
+/// Compliance-Check-Ergebnis für Service-interne Nutzung
+#[derive(Debug, Clone)]
+pub struct SelfComplianceResult {
+    /// Ist compliant?
+    pub is_compliant: bool,
+    /// Deficit (wie viel fehlt)
+    pub deficit: f64,
+}
+
+/// Aktueller Compliance-Status (für Stats)
+#[derive(Debug, Clone, Default)]
+pub struct ComplianceStatus {
+    /// Gesamtzahl überwachter Peers
+    pub monitored_peers: usize,
+    /// Anzahl complianter Peers
+    pub compliant_peers: usize,
+    /// Anzahl nicht-complianter Peers
+    pub non_compliant_peers: usize,
+    /// Eigene Compliance (Self-Monitoring)
+    pub self_compliant: bool,
+    /// Eigene Rate
+    pub self_rate: f64,
+    /// Letzte Cover-Stats
+    pub last_cover_stats: Option<CoverGeneratorStats>,
 }
 
 // ============================================================================

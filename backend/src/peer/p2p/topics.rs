@@ -152,10 +152,10 @@ impl RealmTopic {
             }
             "direct" if parts.len() >= 5 => {
                 // parts[3] und parts[4] sind hex-encoded public keys
-                let sender_bytes = hex::decode(parts[3])
-                    .map_err(|e| anyhow!("Invalid sender id: {}", e))?;
-                let receiver_bytes = hex::decode(parts[4])
-                    .map_err(|e| anyhow!("Invalid receiver id: {}", e))?;
+                let sender_bytes =
+                    hex::decode(parts[3]).map_err(|e| anyhow!("Invalid sender id: {}", e))?;
+                let receiver_bytes =
+                    hex::decode(parts[4]).map_err(|e| anyhow!("Invalid receiver id: {}", e))?;
                 let sender = DID::new_self(&sender_bytes);
                 let receiver = DID::new_self(&receiver_bytes);
                 Ok(Self::direct(&sender, &receiver))
@@ -418,8 +418,10 @@ mod tests {
         let topic = RealmTopic::direct(&sender, &receiver);
 
         assert_eq!(topic.topic_type, TopicType::Direct);
-        assert!(topic.to_string().contains("alice"));
-        assert!(topic.to_string().contains("bob"));
+        // Topic enthält hex-encoded public keys, nicht die Namen
+        assert!(topic.to_string().contains("/erynoa/direct/"));
+        assert!(topic.sender.is_some());
+        assert!(topic.receiver.is_some());
     }
 
     #[test]
