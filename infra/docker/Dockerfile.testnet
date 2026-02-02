@@ -87,6 +87,79 @@ EXPOSE 4001 9000
 # Build the testnet binary - this caches the compilation
 RUN RUSTFLAGS="-C link-arg=-fuse-ld=mold" cargo build --release --features p2p --bin erynoa-testnet-node
 
+# ============================================================================
+# Development Entrypoint (Hot-Reloading mit cargo-watch)
+# ============================================================================
+RUN cat > /entrypoint-dev.sh << 'DEVEOF'
+#!/bin/bash
+set -e
+
+# Bestimme welche Features zu aktivieren sind
+FEATURES="${CARGO_FEATURES:-p2p}"
+
+echo "========================================="
+echo "🔥 Erynoa P2P Testnet Node - DEV MODE"
+echo "========================================="
+echo "  Node:      ${NODE_NAME:-relay}"
+echo "  P2P Port:  ${P2P_PORT:-4001}"
+echo "  API Port:  ${API_PORT:-9000}"
+echo "  Bootstrap: ${BOOTSTRAP_PEERS:-none}"
+echo "  Mode:      ${NODE_MODE:-relay}"
+echo "  Features:  ${FEATURES}"
+echo "========================================="
+echo ""
+echo "🔄 Hot-Reloading aktiviert!"
+echo "   Änderungen an src/ werden automatisch erkannt."
+echo ""
+
+# Warte auf Bootstrap-Peers
+if [ -n "$BOOTSTRAP_PEERS" ]; then
+    echo "Waiting for bootstrap peers..."
+    for peer in $(echo $BOOTSTRAP_PEERS | tr ',' ' '); do
+        host=$(echo $peer | sed 's|/ip4/\([^/]*\)/.*|\1|')
+        if [[ ! $host =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "  Resolving $host..."
+            until getent hosts $host > /dev/null 2>&1; do
+                sleep 1
+            done
+            echo "  ✓ $host resolved"
+        fi
+    done
+fi
+
+# Staggered start für verschiedene Nodes
+case $NODE_NAME in
+    relay1) DELAY=0 ;;
+    relay2) DELAY=5 ;;
+    relay3) DELAY=10 ;;
+    client) DELAY=15 ;;
+    *) DELAY=0 ;;
+esac
+
+if [ $DELAY -gt 0 ]; then
+    echo "⏳ Warte ${DELAY}s für gestaffelten Start..."
+    sleep $DELAY
+fi
+
+echo ""
+echo "🚀 Starte mit cargo-watch..."
+echo "   Features: ${FEATURES}"
+echo "   Bei Änderungen wird automatisch neu kompiliert."
+echo ""
+
+# cargo-watch: Beobachtet src/ und startet bei Änderungen neu
+exec cargo watch \
+    --watch src \
+    --watch Cargo.toml \
+    -x "build --features ${FEATURES} --bin erynoa-testnet-node" \
+    -s "RUST_LOG=${RUST_LOG:-info} ./target/debug/erynoa-testnet-node"
+DEVEOF
+
+RUN chmod +x /entrypoint-dev.sh
+
+# ============================================================================
+# Production Entrypoint
+# ============================================================================
 # Entrypoint-Script für P2P-Node
 RUN cat > /entrypoint.sh << 'EOF'
 #!/bin/bash

@@ -147,7 +147,7 @@ async fn main() -> anyhow::Result<()> {
     // P2P-Stack initialisieren
     #[cfg(feature = "p2p")]
     {
-        use erynoa_api::peer::p2p::{P2PConfig, TestnetEvent, TestnetSwarm};
+        use erynoa_api::peer::p2p::{NatStatus, P2PConfig, SwarmState, TestnetEvent, TestnetSwarm};
         use libp2p::identity::Keypair;
 
         // Keypair generieren
@@ -183,19 +183,28 @@ async fn main() -> anyhow::Result<()> {
 
         info!(peer_id = %swarm.peer_id(), "✅ Testnet swarm created with full NAT-Traversal stack");
 
-        // Event-Handler Task
+        // SwarmState für echte Diagnostics erstellen
+        let swarm_state = Arc::new(SwarmState::new(peer_id.to_string()));
+
+        // Event-Handler Task - befüllt SwarmState mit echten Daten
         let connected_peers_clone = connected_peers.clone();
+        let swarm_state_clone = swarm_state.clone();
         let event_task = tokio::spawn(async move {
             let mut event_rx = event_rx;
             while let Ok(event) = event_rx.recv().await {
                 match event {
-                    TestnetEvent::PeerConnected { peer_id } => {
+                    TestnetEvent::PeerConnected {
+                        peer_id,
+                        is_inbound,
+                    } => {
                         let peer_str = peer_id.to_string();
                         let mut peers = connected_peers_clone.write().await;
                         if !peers.contains(&peer_str) {
-                            peers.push(peer_str);
+                            peers.push(peer_str.clone());
                             let count = PEER_COUNT.fetch_add(1, Ordering::SeqCst) + 1;
-                            info!(peer_id = %peer_id, total_peers = count, "✅ Peer connected");
+                            info!(peer_id = %peer_id, total_peers = count, inbound = is_inbound, "✅ Peer connected");
+                            // SwarmState aktualisieren
+                            swarm_state_clone.peer_connected(&peer_str, is_inbound, false);
                         }
                     }
                     TestnetEvent::PeerDisconnected { peer_id } => {
@@ -205,32 +214,79 @@ async fn main() -> anyhow::Result<()> {
                             peers.retain(|p| p != &peer_str);
                             let count = PEER_COUNT.fetch_sub(1, Ordering::SeqCst).saturating_sub(1);
                             info!(peer_id = %peer_id, total_peers = count, "👋 Peer disconnected");
+                            // SwarmState aktualisieren
+                            swarm_state_clone.peer_disconnected(&peer_str);
                         }
                     }
                     TestnetEvent::MdnsDiscovered { peer_id, addresses } => {
                         info!(peer_id = %peer_id, addresses = ?addresses, "🔍 mDNS discovered peer");
+                        swarm_state_clone.mdns_peer_discovered();
                     }
                     TestnetEvent::MdnsExpired { peer_id } => {
                         info!(peer_id = %peer_id, "🔍 mDNS peer expired");
                     }
                     TestnetEvent::KademliaBootstrapComplete => {
                         info!("🎉 Kademlia bootstrap complete!");
+                        swarm_state_clone.kademlia_bootstrap_done();
+                    }
+                    TestnetEvent::KademliaRoutingUpdate {
+                        peer_id,
+                        bucket_size,
+                    } => {
+                        // Routing Table Size aktualisieren (approximativ)
+                        let current = swarm_state_clone
+                            .kademlia_routing_table_size
+                            .load(Ordering::Relaxed);
+                        if bucket_size > current {
+                            swarm_state_clone.set_kademlia_routing_table_size(bucket_size);
+                        }
+                        let _ = peer_id; // Unused but part of event
                     }
                     TestnetEvent::GossipMessage { topic, source, .. } => {
                         info!(topic = %topic, source = ?source, "📨 Gossip message received");
+                        swarm_state_clone.gossip_message_received();
                     }
                     // NAT-Traversal Events
                     TestnetEvent::AutoNatStatus { nat_status } => {
                         info!(status = %nat_status, "🌐 AutoNAT status changed");
+                        // Parse NAT status
+                        let status = if nat_status.contains("Public") {
+                            NatStatus::Public
+                        } else if nat_status.contains("Private") {
+                            NatStatus::Private
+                        } else {
+                            NatStatus::Unknown
+                        };
+                        swarm_state_clone.set_nat_status(status);
                     }
                     TestnetEvent::RelayReservation { relay_peer } => {
                         info!(relay = %relay_peer, "🔄 Relay reservation accepted");
+                        swarm_state_clone.relay_reservation_accepted(relay_peer.to_string());
                     }
                     TestnetEvent::DirectConnectionEstablished { peer_id } => {
                         info!(peer_id = %peer_id, "✅ DCUTR: Direct connection established via holepunching");
+                        swarm_state_clone.dcutr_success();
+                    }
+                    TestnetEvent::DirectConnectionFailed { peer_id } => {
+                        info!(peer_id = %peer_id, "❌ DCUTR: Holepunching failed");
+                        swarm_state_clone.dcutr_failure();
                     }
                     TestnetEvent::UpnpMapped { protocol, addr } => {
                         info!(protocol = %protocol, addr = %addr, "🌐 UPnP: Port mapped");
+                        swarm_state_clone.upnp_mapped(addr.to_string());
+                    }
+                    TestnetEvent::UpnpUnavailable => {
+                        swarm_state_clone.upnp_unavailable();
+                    }
+                    TestnetEvent::PingResult { peer_id, rtt_ms } => {
+                        // Ping-RTT aufzeichnen
+                        swarm_state_clone.record_ping(
+                            &peer_id.to_string(),
+                            std::time::Duration::from_millis(rtt_ms),
+                        );
+                    }
+                    TestnetEvent::ConnectionError { peer_id: _ } => {
+                        swarm_state_clone.connection_error();
                     }
                 }
             }
@@ -243,6 +299,7 @@ async fn main() -> anyhow::Result<()> {
         let is_genesis = args.genesis_node;
         let peer_id_string = peer_id.to_string();
         let connected_peers_api = connected_peers.clone();
+        let swarm_state_api = swarm_state.clone();
 
         let api_task = tokio::spawn(async move {
             if let Err(e) = start_api_server(
@@ -252,6 +309,7 @@ async fn main() -> anyhow::Result<()> {
                 is_genesis,
                 peer_id_string,
                 connected_peers_api,
+                swarm_state_api,
             )
             .await
             {
@@ -309,11 +367,44 @@ async fn start_api_server(
     is_genesis: bool,
     peer_id: String,
     connected_peers: ConnectedPeers,
+    swarm_state: Arc<erynoa_api::peer::p2p::SwarmState>,
 ) -> anyhow::Result<()> {
-    use axum::{routing::get, Json, Router};
-    use std::time::Instant;
+    use axum::{
+        extract::State,
+        response::{
+            sse::{Event, KeepAlive, Sse},
+            Html, IntoResponse,
+        },
+        routing::get,
+        Json, Router,
+    };
+    use erynoa_api::peer::p2p::{
+        create_diagnostic_state, generate_dashboard_html, ConnectionType, DiagnosticEvent,
+        DiagnosticRunner, DiagnosticState, HealthStatus, NetworkMetrics, SwarmSnapshot,
+    };
+    use futures::stream::Stream;
+    use std::convert::Infallible;
+    use std::time::{Duration, Instant};
+    use tokio_stream::wrappers::IntervalStream;
+    use tokio_stream::StreamExt;
 
     let start_time = Instant::now();
+
+    // Diagnostic State erstellen (Legacy - wird noch für Events gebraucht)
+    let diagnostic_state = create_diagnostic_state(peer_id.clone());
+
+    // Snapshot-Typ für SSE - jetzt mit SwarmSnapshot
+    #[derive(serde::Serialize)]
+    struct StreamSnapshot {
+        timestamp: String,
+        metrics: NetworkMetrics,
+        peer_count: usize,
+        recent_events: Vec<DiagnosticEvent>,
+        health: HealthStatus,
+        /// Echte Swarm-Daten (optional für backwards compatibility)
+        #[serde(skip_serializing_if = "Option::is_none")]
+        swarm: Option<SwarmSnapshot>,
+    }
 
     let app = Router::new()
         .route("/health", get(|| async { "OK" }))
@@ -324,13 +415,16 @@ async fn start_api_server(
                 let mode = mode.clone();
                 let peer_id = peer_id.clone();
                 let connected_peers = connected_peers.clone();
+                let swarm_state = swarm_state.clone();
                 move || {
                     let node_name = node_name.clone();
                     let mode = mode.clone();
                     let peer_id = peer_id.clone();
                     let connected_peers = connected_peers.clone();
+                    let swarm_state = swarm_state.clone();
                     async move {
                         let peers = connected_peers.read().await.clone();
+                        let snapshot = swarm_state.snapshot();
                         let status = serde_json::json!({
                             "node_name": node_name,
                             "mode": mode,
@@ -340,6 +434,11 @@ async fn start_api_server(
                             "connected_peers": peers,
                             "uptime_secs": start_time.elapsed().as_secs(),
                             "version": env!("CARGO_PKG_VERSION"),
+                            "nat_status": format!("{:?}", snapshot.nat_status),
+                            "kademlia_peers": snapshot.kademlia_routing_table_size,
+                            "gossip_mesh_size": snapshot.gossip_mesh_size,
+                            "dcutr_success_rate": snapshot.dcutr_success_rate,
+                            "avg_ping_ms": snapshot.avg_ping_ms,
                         });
                         Json(status)
                     }
@@ -349,16 +448,141 @@ async fn start_api_server(
         .route(
             "/peers",
             get({
-                let connected_peers = connected_peers.clone();
+                let swarm_state = swarm_state.clone();
                 move || {
-                    let connected_peers = connected_peers.clone();
+                    let swarm_state = swarm_state.clone();
                     async move {
-                        let peers = connected_peers.read().await.clone();
+                        let peers = swarm_state.get_peers();
                         Json(serde_json::json!({
                             "count": peers.len(),
                             "peers": peers
                         }))
                     }
+                }
+            }),
+        )
+        // =========================================
+        // P2P DIAGNOSTICS ENDPOINTS (mit echten SwarmState Daten!)
+        // =========================================
+        // JSON Diagnostics - jetzt mit echten Swarm-Daten
+        .route(
+            "/diagnostics",
+            get({
+                let peer_id = peer_id.clone();
+                let swarm_state = swarm_state.clone();
+                move || {
+                    let peer_id = peer_id.clone();
+                    let swarm_state = swarm_state.clone();
+                    async move {
+                        // Verwende SwarmState für echte Laufzeit-Daten
+                        let runner = DiagnosticRunner::from_swarm_state(&swarm_state);
+                        let diagnostics = runner.run_all(Some(peer_id)).await;
+
+                        Json(diagnostics)
+                    }
+                }
+            }),
+        )
+        // CLI-friendly ASCII report
+        .route(
+            "/diagnostics/report",
+            get({
+                let peer_id = peer_id.clone();
+                let swarm_state = swarm_state.clone();
+                move || {
+                    let peer_id = peer_id.clone();
+                    let swarm_state = swarm_state.clone();
+                    async move {
+                        let runner = DiagnosticRunner::from_swarm_state(&swarm_state);
+                        let diagnostics = runner.run_all(Some(peer_id)).await;
+
+                        diagnostics.to_cli_report()
+                    }
+                }
+            }),
+        )
+        // Detailed metrics - jetzt SwarmSnapshot
+        .route(
+            "/diagnostics/metrics",
+            get({
+                let swarm_state = swarm_state.clone();
+                move || {
+                    let swarm_state = swarm_state.clone();
+                    async move { Json(swarm_state.snapshot()) }
+                }
+            }),
+        )
+        // Event log (noch vom diagnostic_state)
+        .route(
+            "/diagnostics/events",
+            get({
+                let diagnostic_state = diagnostic_state.clone();
+                move || {
+                    let diagnostic_state = diagnostic_state.clone();
+                    async move { Json(diagnostic_state.get_recent_events(100)) }
+                }
+            }),
+        )
+        // Layer details - mit SwarmState
+        .route(
+            "/diagnostics/layers",
+            get({
+                let peer_id = peer_id.clone();
+                let swarm_state = swarm_state.clone();
+                move || {
+                    let peer_id = peer_id.clone();
+                    let swarm_state = swarm_state.clone();
+                    async move {
+                        let runner = DiagnosticRunner::from_swarm_state(&swarm_state);
+                        let diagnostics = runner.run_all(Some(peer_id)).await;
+                        Json(diagnostics.layers)
+                    }
+                }
+            }),
+        )
+        // Server-Sent Events Stream (Real-Time!) - jetzt mit SwarmSnapshot
+        .route(
+            "/diagnostics/stream",
+            get({
+                let swarm_state = swarm_state.clone();
+                let diagnostic_state = diagnostic_state.clone();
+                move || {
+                    let swarm_state = swarm_state.clone();
+                    let diagnostic_state = diagnostic_state.clone();
+                    async move {
+                        let interval = tokio::time::interval(Duration::from_millis(500));
+                        let stream = IntervalStream::new(interval);
+
+                        let sse_stream = stream.map(move |_| {
+                            // Echte Swarm-Daten
+                            let swarm_snapshot = swarm_state.snapshot();
+
+                            let snapshot = StreamSnapshot {
+                                timestamp: chrono::Utc::now().to_rfc3339(),
+                                metrics: diagnostic_state.get_metrics(),
+                                peer_count: swarm_snapshot.connected_peers_count,
+                                recent_events: diagnostic_state.get_recent_events(5),
+                                health: diagnostic_state.get_health_status(),
+                                swarm: Some(swarm_snapshot),
+                            };
+
+                            let json = serde_json::to_string(&snapshot).unwrap_or_default();
+                            Ok::<_, Infallible>(Event::default().data(json))
+                        });
+
+                        Sse::new(sse_stream).keep_alive(KeepAlive::default())
+                    }
+                }
+            }),
+        )
+        // HTML Dashboard
+        .route(
+            "/diagnostics/dashboard",
+            get({
+                let peer_id = peer_id.clone();
+                move || {
+                    let peer_id = peer_id.clone();
+                    async move { Html(generate_dashboard_html(&peer_id)) }
                 }
             }),
         );

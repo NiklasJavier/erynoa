@@ -271,7 +271,11 @@ impl TestnetBehaviour {
 #[derive(Debug, Clone)]
 pub enum TestnetEvent {
     /// Neuer Peer verbunden
-    PeerConnected { peer_id: PeerId },
+    PeerConnected {
+        peer_id: PeerId,
+        /// True wenn eingehende Verbindung
+        is_inbound: bool,
+    },
     /// Peer getrennt
     PeerDisconnected { peer_id: PeerId },
     /// mDNS Peer entdeckt
@@ -289,14 +293,24 @@ pub enum TestnetEvent {
     },
     /// Kademlia Bootstrap abgeschlossen
     KademliaBootstrapComplete,
+    /// Kademlia Routing Table Update
+    KademliaRoutingUpdate { peer_id: PeerId, bucket_size: usize },
     /// AutoNAT Status-Update
     AutoNatStatus { nat_status: String },
     /// Relay-Reservation erfolgreich
     RelayReservation { relay_peer: PeerId },
     /// DCUTR Holepunching erfolgreich
     DirectConnectionEstablished { peer_id: PeerId },
+    /// DCUTR Holepunching fehlgeschlagen
+    DirectConnectionFailed { peer_id: PeerId },
     /// UPnP Port-Mapping erfolgreich
     UpnpMapped { protocol: String, addr: Multiaddr },
+    /// UPnP nicht verfügbar
+    UpnpUnavailable,
+    /// Ping-Ergebnis
+    PingResult { peer_id: PeerId, rtt_ms: u64 },
+    /// Verbindungsfehler
+    ConnectionError { peer_id: Option<PeerId> },
 }
 
 // ============================================================================
@@ -447,12 +461,14 @@ impl TestnetSwarm {
                 SwarmEvent::ConnectionEstablished {
                     peer_id, endpoint, ..
                 } => {
+                    let is_inbound = endpoint.is_listener();
                     tracing::info!(
                         peer_id = %peer_id,
                         endpoint = ?endpoint,
+                        inbound = is_inbound,
                         "🔗 Connection established"
                     );
-                    let _ = self.event_tx.send(TestnetEvent::PeerConnected { peer_id });
+                    let _ = self.event_tx.send(TestnetEvent::PeerConnected { peer_id, is_inbound });
                 }
                 SwarmEvent::ConnectionClosed { peer_id, cause, .. } => {
                     tracing::info!(peer_id = %peer_id, cause = ?cause, "🔌 Connection closed");
@@ -480,6 +496,7 @@ impl TestnetSwarm {
                         error = %error,
                         "❌ Outgoing connection error"
                     );
+                    let _ = self.event_tx.send(TestnetEvent::ConnectionError { peer_id });
                 }
                 SwarmEvent::ExternalAddrConfirmed { address } => {
                     tracing::info!(addr = %address, "✅ External address confirmed");
@@ -587,8 +604,14 @@ impl TestnetSwarm {
                     }
                 }
             }
-            kad::Event::RoutingUpdated { peer, .. } => {
-                tracing::debug!(peer_id = %peer, "Kademlia routing updated");
+            kad::Event::RoutingUpdated { peer, is_new_peer, bucket_range, .. } => {
+                // bucket_range.1 ist Distance::MAX der Bucket, wir approximieren die Bucket-Größe
+                let bucket_idx = bucket_range.1.ilog2().unwrap_or(0) as usize;
+                tracing::debug!(peer_id = %peer, is_new = is_new_peer, bucket = bucket_idx, "Kademlia routing updated");
+                let _ = self.event_tx.send(TestnetEvent::KademliaRoutingUpdate {
+                    peer_id: peer,
+                    bucket_size: bucket_idx,
+                });
             }
             kad::Event::InboundRequest { request } => {
                 tracing::debug!(request = ?request, "Kademlia inbound request");
@@ -678,6 +701,11 @@ impl TestnetSwarm {
                     error = ?error,
                     "❌ DCUTR: Direct connection upgrade failed"
                 );
+                let _ = self
+                    .event_tx
+                    .send(TestnetEvent::DirectConnectionFailed {
+                        peer_id: remote_peer_id,
+                    });
             }
         }
     }
@@ -847,9 +875,11 @@ impl TestnetSwarm {
             }
             upnp::Event::GatewayNotFound => {
                 tracing::debug!("UPnP: Gateway not found (expected in Docker)");
+                let _ = self.event_tx.send(TestnetEvent::UpnpUnavailable);
             }
             upnp::Event::NonRoutableGateway => {
                 tracing::debug!("UPnP: Non-routable gateway");
+                let _ = self.event_tx.send(TestnetEvent::UpnpUnavailable);
             }
         }
     }
@@ -857,11 +887,16 @@ impl TestnetSwarm {
     fn handle_ping_event(&self, event: ping::Event) {
         match event.result {
             Ok(rtt) => {
+                let rtt_ms = rtt.as_millis() as u64;
                 tracing::trace!(
                     peer_id = %event.peer,
-                    rtt_ms = rtt.as_millis(),
+                    rtt_ms = rtt_ms,
                     "🏓 Ping"
                 );
+                let _ = self.event_tx.send(TestnetEvent::PingResult {
+                    peer_id: event.peer,
+                    rtt_ms,
+                });
             }
             Err(e) => {
                 tracing::debug!(

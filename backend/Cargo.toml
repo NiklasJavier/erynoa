@@ -155,6 +155,7 @@ libp2p = { version = "0.54", features = [
     "quic", # QUIC Transport mit 0-RTT
 ], optional = true }
 futures = { version = "0.3", optional = true }
+tokio-stream = { version = "0.1", features = ["time"], optional = true }
 
 # ============================================================================
 # PRIVACY-LAYER (P2P-PRIVATE-RELAY-LOGIC V2.6 – Phase 1)
@@ -191,7 +192,7 @@ cpufeatures = { version = "0.2", optional = true } # Runtime CPU-Feature-Detecti
 default = []
 jemalloc = ["dep:tikv-jemallocator"]
 cli = ["dep:clap", "dep:rustyline", "dep:colored", "dep:bincode"]
-p2p = ["dep:libp2p", "dep:futures"]
+p2p = ["dep:libp2p", "dep:futures", "dep:tokio-stream"]
 
 # Privacy-Layer Features (Phase 1)
 privacy = [
