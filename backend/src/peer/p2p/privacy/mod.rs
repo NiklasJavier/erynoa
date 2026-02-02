@@ -79,6 +79,12 @@ pub mod onion;
 #[cfg(feature = "privacy")]
 pub mod relay_selection;
 
+#[cfg(feature = "privacy")]
+pub mod mixing;
+
+#[cfg(feature = "privacy")]
+pub mod cover_traffic;
+
 // Re-exports für einfachen Zugriff
 #[cfg(feature = "privacy")]
 pub use onion::{
@@ -90,4 +96,17 @@ pub use onion::{
 pub use relay_selection::{
     DiversityConstraints, RelayCandidate, RelaySelectionError, RelaySelector, RelayTrustScore,
     SensitivityLevel,
+};
+
+#[cfg(feature = "privacy")]
+pub use mixing::{
+    LampStats, MixingPool, MixingPoolConfig, TrafficRateMonitor, K_MAX, K_MIN, TAU_MAX_MS,
+    TAU_MIN_MS,
+};
+
+#[cfg(feature = "privacy")]
+pub use cover_traffic::{
+    quantize_size, random_size_class, ComplianceMonitor, ComplianceResult, CoverGeneratorStats,
+    CoverMessage, CoverTrafficConfig, CoverTrafficGenerator, CoverTrafficStats, PeerType,
+    SIZE_CLASSES,
 };
