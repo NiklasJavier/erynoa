@@ -85,6 +85,28 @@ pub mod mixing;
 #[cfg(feature = "privacy")]
 pub mod cover_traffic;
 
+#[cfg(feature = "privacy")]
+pub mod eligibility;
+
+#[cfg(feature = "privacy")]
+pub mod dc3;
+
+// Phase 3 Woche 9-12: ZK-Contribution & Post-Quantum
+#[cfg(feature = "privacy-zk")]
+pub mod resource_verification;
+
+#[cfg(feature = "privacy-zk")]
+pub mod proof_of_useful_work;
+
+#[cfg(feature = "privacy-zk")]
+pub mod contribution_scoring;
+
+#[cfg(feature = "privacy-zk")]
+pub mod zk_contribution;
+
+#[cfg(feature = "privacy-zk")]
+pub mod lattice_zk;
+
 // Re-exports für einfachen Zugriff
 #[cfg(feature = "privacy")]
 pub use onion::{
@@ -109,4 +131,52 @@ pub use cover_traffic::{
     quantize_size, random_size_class, ComplianceMonitor, ComplianceResult, CoverGeneratorStats,
     CoverMessage, CoverTrafficConfig, CoverTrafficGenerator, CoverTrafficStats, PeerType,
     SIZE_CLASSES,
+};
+
+#[cfg(feature = "privacy")]
+pub use eligibility::{
+    check_eligibility, ApprenticeConstraints, ApprenticeStats, BootstrapPhase, BootstrapStatus,
+    EligibilityResult, EligibilityThresholds, FoundationTrust, MinimumCommitment,
+    ZkEligibilityProof, MIN_APPRENTICE_WEEKS, MIN_DC3_SCORE, MIN_SUCCESS_RATE_FULL,
+    MIN_TRUST_R_APPRENTICE, MIN_TRUST_R_FULL,
+};
+
+#[cfg(feature = "privacy")]
+pub use dc3::{
+    ChallengeGenerator, ChallengeParams, ChallengeResponse, ChallengeResult, ChallengeType,
+    CumulativeContributionScore, DC3Service, DC3Stats, DynamicChallenge, ResponseProof,
+};
+
+// Phase 3 Woche 9-12: ZK-Contribution & Post-Quantum Re-Exports
+#[cfg(feature = "privacy-zk")]
+pub use resource_verification::{
+    BandwidthEpochProof, BilateralAttestation, DailyComputeProof, MerkleProof,
+    MixingBatchCommitment, RelayReceipt, ResourceVerificationService, StorageChallenge,
+    StorageMerkleTree, StorageProof, VerifiedResourceCommitment, ZkShuffleProof,
+};
+
+#[cfg(feature = "privacy-zk")]
+pub use proof_of_useful_work::{
+    ContentRoutingReceipt, ContentRoutingRequest, DailyWorkSummary, DhtIndexUpdate,
+    DhtQueryChallenge, DhtQueryResponse, ProofOfUsefulWorkService, WorkAttestation, WorkType,
+    ZkVerificationChallenge, ZkVerificationResult as PoUWZkVerificationResult,
+};
+
+#[cfg(feature = "privacy-zk")]
+pub use contribution_scoring::{
+    ContributionSummary, CumulativeContributionScore as ZkCumulativeContributionScore,
+    ExponentialDecayCalculator, ScoreAggregator,
+};
+
+#[cfg(feature = "privacy-zk")]
+pub use zk_contribution::{
+    DilithiumZkProof, EligibilityPhase, EligibilityProof, PedersenCommitment, ProofBatchVerifier,
+    RangeProof, ZkContributionProof, ZkProofType, ZkVerificationResult,
+};
+
+#[cfg(feature = "privacy-zk")]
+pub use lattice_zk::{
+    ClassicalProofPart, HybridVerificationResult, HybridZkProof, LatticeCommitment,
+    LatticeProofAggregator, LatticeRangeProof, LatticeVerificationResult, LatticeZkProof,
+    LweParameters, ProofTranscript, QuantumProofPart,
 };
