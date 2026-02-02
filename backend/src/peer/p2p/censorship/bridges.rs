@@ -18,13 +18,12 @@
 
 use std::collections::{HashMap, HashSet};
 use std::fmt;
-use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use parking_lot::RwLock;
 use thiserror::Error;
 
-use super::pluggable_transports::{CensorshipLevel, TransportType};
+use super::pluggable_transports::TransportType;
 
 // ============================================================================
 // Constants
@@ -351,27 +350,32 @@ impl BridgePool {
 
     /// Fügt Bridge hinzu
     pub fn add_bridge(&self, bridge: BridgeInfo) -> Result<(), BridgeError> {
-        let mut bridges = self.bridges.write();
-
-        if bridges.len() >= self.config.max_bridges {
-            return Err(BridgeError::PoolFull);
-        }
-
         let id = bridge.id;
         let regions = bridge.supported_regions.clone();
 
-        bridges.insert(id, bridge);
+        // Scope für bridges lock
+        {
+            let mut bridges = self.bridges.write();
 
-        // Update Region-Index
-        let mut by_region = self.by_region.write();
-        for region in &regions {
-            by_region
-                .entry(region.clone())
-                .or_insert_with(HashSet::new)
-                .insert(id);
+            if bridges.len() >= self.config.max_bridges {
+                return Err(BridgeError::PoolFull);
+            }
+
+            bridges.insert(id, bridge);
         }
 
-        // Update Stats
+        // Update Region-Index (separater Scope)
+        {
+            let mut by_region = self.by_region.write();
+            for region in &regions {
+                by_region
+                    .entry(region.clone())
+                    .or_insert_with(HashSet::new)
+                    .insert(id);
+            }
+        }
+
+        // Update Stats (nach Release aller anderen Locks)
         self.update_stats();
 
         Ok(())
@@ -379,22 +383,29 @@ impl BridgePool {
 
     /// Entfernt Bridge
     pub fn remove_bridge(&self, id: &[u8; 20]) -> Option<BridgeInfo> {
-        let mut bridges = self.bridges.write();
+        let removed_bridge;
 
-        if let Some(bridge) = bridges.remove(id) {
-            // Update Region-Index
-            let mut by_region = self.by_region.write();
-            for region in &bridge.supported_regions {
-                if let Some(ids) = by_region.get_mut(region) {
-                    ids.remove(id);
+        // Scope für alle Locks
+        {
+            let mut bridges = self.bridges.write();
+
+            if let Some(bridge) = bridges.remove(id) {
+                // Update Region-Index
+                let mut by_region = self.by_region.write();
+                for region in &bridge.supported_regions {
+                    if let Some(ids) = by_region.get_mut(region) {
+                        ids.remove(id);
+                    }
                 }
+                removed_bridge = Some(bridge);
+            } else {
+                return None;
             }
-
-            self.update_stats();
-            return Some(bridge);
         }
 
-        None
+        // Update Stats nach Release der Locks
+        self.update_stats();
+        removed_bridge
     }
 
     /// Gibt Bridge nach ID zurück
@@ -491,12 +502,16 @@ impl BridgePool {
 
     /// Meldet Bridge als gebrannt
     pub fn report_burned(&self, id: &[u8; 20]) {
-        let mut bridges = self.bridges.write();
+        // Scope für bridges lock
+        {
+            let mut bridges = self.bridges.write();
 
-        if let Some(bridge) = bridges.get_mut(id) {
-            bridge.report_burned();
+            if let Some(bridge) = bridges.get_mut(id) {
+                bridge.report_burned();
+            }
         }
 
+        // Update Stats nach Release des Locks
         self.update_stats();
     }
 

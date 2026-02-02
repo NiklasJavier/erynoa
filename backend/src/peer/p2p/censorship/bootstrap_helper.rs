@@ -16,7 +16,6 @@
 //! - **Κ23**: Gateway - Realm-Join via P2P
 
 use std::collections::{HashMap, VecDeque};
-use std::fmt;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
