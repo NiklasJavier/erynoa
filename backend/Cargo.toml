@@ -177,6 +177,7 @@ statrs = { version = "0.17", optional = true } # Laplace-Distribution für Delay
 # Performance (RL20-RL23)
 arrayvec = { version = "0.7", optional = true } # Stack-allocated vectors
 bytes = { version = "1", optional = true }      # Zero-copy buffers
+rayon = { version = "1.10", optional = true }   # Parallel batch processing (RL20)
 
 # Hardware-Beschleunigung Detection
 cpufeatures = { version = "0.2", optional = true } # Runtime CPU-Feature-Detection
@@ -197,6 +198,7 @@ privacy = [
     "dep:getrandom",
     "dep:arrayvec",
     "dep:bytes",
+    "dep:rayon",
 ]
 privacy-zk = [
     "privacy",

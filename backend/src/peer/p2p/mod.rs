@@ -83,6 +83,10 @@ pub mod privacy;
 #[cfg(feature = "privacy")]
 pub mod transport;
 
+// Performance-Layer (Phase 5)
+#[cfg(feature = "privacy")]
+pub mod performance;
+
 #[cfg(feature = "p2p")]
 pub use behaviour::ErynoaBehaviour;
 #[cfg(feature = "p2p")]
@@ -110,3 +114,10 @@ pub use privacy::{
 // Transport-Layer Re-exports
 #[cfg(feature = "privacy")]
 pub use transport::{HybridTransport, QuicConfig, QuicTransport, TransportMode};
+
+// Performance-Layer Re-exports (Phase 5)
+#[cfg(feature = "privacy")]
+pub use performance::{
+    cpu_capabilities, hw_crypto, BatchCryptoConfig, BatchDecryptor, BatchEncryptor, CircuitCache,
+    CircuitCacheConfig, HwCryptoEngine, SimdLevel,
+};

@@ -95,6 +95,10 @@ pub mod dc3;
 #[cfg(feature = "privacy")]
 pub mod service;
 
+// Phase 4 Woche 11: Wire-Format
+#[cfg(feature = "privacy")]
+pub mod wire_format;
+
 // Phase 3 Woche 9-12: ZK-Contribution & Post-Quantum
 #[cfg(feature = "privacy-zk")]
 pub mod resource_verification;
@@ -156,6 +160,14 @@ pub use dc3::{
 pub use service::{
     PrivacyError, PrivacyMessage, PrivacyService, PrivacyServiceConfig, PrivacyServiceStats,
     ProcessingResult,
+};
+
+// Phase 4 Woche 11: Wire-Format Re-Exports
+#[cfg(feature = "privacy")]
+pub use wire_format::{
+    MessageType, OnionLayerHeader, PacketFlags, PacketHeader, PrivacyPacket, WireError,
+    quantize_to_size_class, unpad_from_size_class,
+    SIZE_CLASSES as WIRE_SIZE_CLASSES,
 };
 
 // Phase 3 Woche 9-12: ZK-Contribution & Post-Quantum Re-Exports
