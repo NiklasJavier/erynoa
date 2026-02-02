@@ -91,6 +91,10 @@ pub mod performance;
 #[cfg(feature = "privacy")]
 pub mod multi_circuit;
 
+// Censorship-Resistance Layer (Phase 6)
+#[cfg(feature = "privacy")]
+pub mod censorship;
+
 #[cfg(feature = "p2p")]
 pub use behaviour::ErynoaBehaviour;
 #[cfg(feature = "p2p")]
@@ -131,4 +135,11 @@ pub use performance::{
 pub use multi_circuit::{
     ConfluxConfig, ConfluxError, ConfluxManager, ConfluxStats, EgressAggregator, MultiPathStrategy,
     SecretSharer,
+};
+
+// Censorship-Resistance Re-exports (Phase 6 - RL19)
+#[cfg(feature = "privacy")]
+pub use censorship::{
+    BootstrapConfig, BootstrapError, BootstrapHelper, BridgeInfo, BridgePool, CensorshipLevel,
+    RecommendedRelay, TransportManager, TransportType,
 };
