@@ -1,9 +1,9 @@
 # Erynoa API Referenz – gRPC/Connect-RPC
 
-> **Version:** 1.1.0  
-> **Datum:** Februar 2026  
-> **Status:** Production-Ready  
-> **Protokoll:** Connect-RPC (gRPC-Web kompatibel)  
+> **Version:** 1.1.0
+> **Datum:** Februar 2026
+> **Status:** Production-Ready
+> **Protokoll:** Connect-RPC (gRPC-Web kompatibel)
 > **Axiom-Basis:** Κ1-Κ28, PR1-PR6
 
 ---
@@ -63,20 +63,20 @@ POST /api/v1/connect/erynoa.v1.HealthService/Check
 
 Für Load Balancer, Kubernetes-Probes und einfache HTTP-Clients:
 
-| Endpoint             | Methode | Handler                   | Beschreibung                   |
-| -------------------- | ------- | ------------------------- | ------------------------------ |
-| `/api/v1/health`     | GET     | `rest_handlers::health`   | Liveness Probe (immer healthy) |
-| `/api/v1/ready`      | GET     | `rest_handlers::ready`    | Readiness Probe mit Storage    |
-| `/api/v1/info`       | GET     | `rest_handlers::info`     | Version, Environment, Auth     |
-| `/api/v1/status`     | GET     | `rest_handlers::status`   | Service-Status-Übersicht       |
+| Endpoint         | Methode | Handler                 | Beschreibung                   |
+| ---------------- | ------- | ----------------------- | ------------------------------ |
+| `/api/v1/health` | GET     | `rest_handlers::health` | Liveness Probe (immer healthy) |
+| `/api/v1/ready`  | GET     | `rest_handlers::ready`  | Readiness Probe mit Storage    |
+| `/api/v1/info`   | GET     | `rest_handlers::info`   | Version, Environment, Auth     |
+| `/api/v1/status` | GET     | `rest_handlers::status` | Service-Status-Übersicht       |
 
 ### 1.4 WebAuthn/Passkey Endpoints
 
-| Endpoint                        | Methode | Handler                      | Beschreibung             |
-| ------------------------------- | ------- | ---------------------------- | ------------------------ |
-| `/api/v1/auth/challenge`        | GET     | `auth_handlers::get_challenge` | 32-Byte Challenge (5 Min) |
-| `/api/v1/auth/passkey/register` | POST    | `auth_handlers::register_passkey` | Ed25519/ES256 Credential |
-| `/api/v1/auth/passkey/verify`   | POST    | `auth_handlers::verify_passkey` | Signatur-Verifizierung   |
+| Endpoint                        | Methode | Handler                           | Beschreibung              |
+| ------------------------------- | ------- | --------------------------------- | ------------------------- |
+| `/api/v1/auth/challenge`        | GET     | `auth_handlers::get_challenge`    | 32-Byte Challenge (5 Min) |
+| `/api/v1/auth/passkey/register` | POST    | `auth_handlers::register_passkey` | Ed25519/ES256 Credential  |
+| `/api/v1/auth/passkey/verify`   | POST    | `auth_handlers::verify_passkey`   | Signatur-Verifizierung    |
 
 ---
 
@@ -88,18 +88,18 @@ Bevor wir die Services beschreiben, hier die fundamentalen Domain-Typen gemäß 
 
 10 DID-Namespaces für verschiedene Entitätstypen:
 
-| Namespace | URI-Prefix        | Beschreibung              | Beispiel                          |
-| --------- | ----------------- | ------------------------- | --------------------------------- |
-| `self`    | `did:erynoa:self` | Persönliche Identität     | `did:erynoa:self:abc123`          |
-| `guild`   | `did:erynoa:guild`| Organisation/DAO          | `did:erynoa:guild:energy-coop`    |
-| `spirit`  | `did:erynoa:spirit`| KI-Agent                 | `did:erynoa:spirit:advisor-v1`    |
-| `thing`   | `did:erynoa:thing`| IoT-Gerät                 | `did:erynoa:thing:meter-001`      |
-| `vessel`  | `did:erynoa:vessel`| Smart Contract           | `did:erynoa:vessel:escrow-001`    |
-| `source`  | `did:erynoa:source`| Datenquelle              | `did:erynoa:source:weather-api`   |
-| `craft`   | `did:erynoa:craft`| Herstellungsprozess       | `did:erynoa:craft:solar-panel`    |
-| `vault`   | `did:erynoa:vault`| Tresor/Custody            | `did:erynoa:vault:multisig-001`   |
-| `pact`    | `did:erynoa:pact` | Vertrag/Agreement         | `did:erynoa:pact:energy-supply`   |
-| `circle`  | `did:erynoa:circle`| Community/Gruppe         | `did:erynoa:circle:local-energy`  |
+| Namespace | URI-Prefix          | Beschreibung          | Beispiel                         |
+| --------- | ------------------- | --------------------- | -------------------------------- |
+| `self`    | `did:erynoa:self`   | Persönliche Identität | `did:erynoa:self:abc123`         |
+| `guild`   | `did:erynoa:guild`  | Organisation/DAO      | `did:erynoa:guild:energy-coop`   |
+| `spirit`  | `did:erynoa:spirit` | KI-Agent              | `did:erynoa:spirit:advisor-v1`   |
+| `thing`   | `did:erynoa:thing`  | IoT-Gerät             | `did:erynoa:thing:meter-001`     |
+| `vessel`  | `did:erynoa:vessel` | Smart Contract        | `did:erynoa:vessel:escrow-001`   |
+| `source`  | `did:erynoa:source` | Datenquelle           | `did:erynoa:source:weather-api`  |
+| `craft`   | `did:erynoa:craft`  | Herstellungsprozess   | `did:erynoa:craft:solar-panel`   |
+| `vault`   | `did:erynoa:vault`  | Tresor/Custody        | `did:erynoa:vault:multisig-001`  |
+| `pact`    | `did:erynoa:pact`   | Vertrag/Agreement     | `did:erynoa:pact:energy-supply`  |
+| `circle`  | `did:erynoa:circle` | Community/Gruppe      | `did:erynoa:circle:local-energy` |
 
 ```rust
 // Domain: src/domain/unified/identity.rs
@@ -134,11 +134,11 @@ PARTITION PARTITION PARTITION
 (Berlin)  (Munich)  (Hamburg)
 ```
 
-| Ebene        | Beschreibung                  | Regeln          |
-| ------------ | ----------------------------- | --------------- |
-| RootRealm    | Globale Basis-Regeln          | Foundation      |
-| VirtualRealm | Spezialisierte Communities    | Inherited + Own |
-| Partition    | Lokale Untereinheiten         | Inherited + Own |
+| Ebene        | Beschreibung               | Regeln          |
+| ------------ | -------------------------- | --------------- |
+| RootRealm    | Globale Basis-Regeln       | Foundation      |
+| VirtualRealm | Spezialisierte Communities | Inherited + Own |
+| Partition    | Lokale Untereinheiten      | Inherited + Own |
 
 ```rust
 // Domain: src/domain/unified/realm.rs
@@ -165,14 +165,14 @@ pub struct Rule {
 
 6 Dimensionen mit asymmetrischer Update-Logik:
 
-| Dimension | Symbol | Beschreibung         | Aufbau-Rate | Abbau-Rate |
-| --------- | ------ | -------------------- | ----------- | ---------- |
-| R         | 𝑅      | Reliability          | 0.05        | 0.15       |
-| I         | 𝐼      | Integrity            | 0.03        | 0.20       |
-| C         | 𝐶      | Competence           | 0.04        | 0.10       |
-| P         | 𝑃      | Prestige             | 0.02        | 0.08       |
-| V         | 𝑉      | Vigilance            | 0.06        | 0.12       |
-| Ω         | Ω      | Long-term Factor     | 0.01        | 0.05       |
+| Dimension | Symbol | Beschreibung     | Aufbau-Rate | Abbau-Rate |
+| --------- | ------ | ---------------- | ----------- | ---------- |
+| R         | 𝑅      | Reliability      | 0.05        | 0.15       |
+| I         | 𝐼      | Integrity        | 0.03        | 0.20       |
+| C         | 𝐶      | Competence       | 0.04        | 0.10       |
+| P         | 𝑃      | Prestige         | 0.02        | 0.08       |
+| V         | 𝑉      | Vigilance        | 0.06        | 0.12       |
+| Ω         | Ω      | Long-term Factor | 0.01        | 0.05       |
 
 ```rust
 // Core: src/core/trust_engine.rs
@@ -190,14 +190,14 @@ pub struct TrustEngine {
 
 6 Goal-Typen für Intent-Auflösung:
 
-| Goal        | Parameter                         | Saga-Steps                     |
-| ----------- | --------------------------------- | ------------------------------ |
-| `Transfer`  | to, amount, asset_type            | Lock → Transfer                |
-| `Attest`    | subject, claim                    | Validate → CreateEvent         |
-| `Delegate`  | to, capabilities, ttl, trust      | Validate → DelegateEvent       |
-| `Query`     | predicate                         | Execute Query                  |
-| `Create`    | entity_type, params               | Mint/Create                    |
-| `Complex`   | description, sub_goals            | Composed Steps                 |
+| Goal       | Parameter                    | Saga-Steps               |
+| ---------- | ---------------------------- | ------------------------ |
+| `Transfer` | to, amount, asset_type       | Lock → Transfer          |
+| `Attest`   | subject, claim               | Validate → CreateEvent   |
+| `Delegate` | to, capabilities, ttl, trust | Validate → DelegateEvent |
+| `Query`    | predicate                    | Execute Query            |
+| `Create`   | entity_type, params          | Mint/Create              |
+| `Complex`  | description, sub_goals       | Composed Steps           |
 
 ```rust
 // Domain: src/domain/unified/saga.rs
@@ -215,13 +215,13 @@ pub enum Constraint {
 
 DAG-basierte Events mit 5 Finalitätsstufen:
 
-| Level      | Beschreibung              | Witnesses | Reversible |
-| ---------- | ------------------------- | --------- | ---------- |
-| `Nascent`  | Gerade erstellt           | 0         | Ja         |
-| `Validated`| Signatur geprüft          | 0         | Ja         |
-| `Witnessed`| Von Peers bestätigt       | ≥ 3       | Schwer     |
-| `Anchored` | Auf Blockchain verankert  | Chain     | Nein       |
-| `Eternal`  | Repliziert & archiviert   | Multiple  | Nein       |
+| Level       | Beschreibung             | Witnesses | Reversible |
+| ----------- | ------------------------ | --------- | ---------- |
+| `Nascent`   | Gerade erstellt          | 0         | Ja         |
+| `Validated` | Signatur geprüft         | 0         | Ja         |
+| `Witnessed` | Von Peers bestätigt      | ≥ 3       | Schwer     |
+| `Anchored`  | Auf Blockchain verankert | Chain     | Nein       |
+| `Eternal`   | Repliziert & archiviert  | Multiple  | Nein       |
 
 ```rust
 // Core: src/core/event_engine.rs
@@ -591,11 +591,11 @@ message EvaluateGatewayResponse {
 
 **Use Cases:**
 
-| Szenario                          | Prädikat                          | Ergebnis       |
-| --------------------------------- | --------------------------------- | -------------- |
-| User wechselt zu Energy-Realm     | `min_trust: 0.3`                  | Trust ≥ 0.3    |
-| Guild-Mitglied tritt Sub-Realm bei| `credential: guild-membership`    | Membership ok  |
-| Agent migriert zu anderem Realm   | `rule: agent-certified`           | Zertifikat ok  |
+| Szenario                           | Prädikat                       | Ergebnis      |
+| ---------------------------------- | ------------------------------ | ------------- |
+| User wechselt zu Energy-Realm      | `min_trust: 0.3`               | Trust ≥ 0.3   |
+| Guild-Mitglied tritt Sub-Realm bei | `credential: guild-membership` | Membership ok |
+| Agent migriert zu anderem Realm    | `rule: agent-certified`        | Zertifikat ok |
 
 ---
 
@@ -665,13 +665,13 @@ enum IntentState {
 
 **Intent-Parsing (Natural Language):**
 
-| Keywords                         | Goal-Typ    | Beispiel                      |
-| -------------------------------- | ----------- | ----------------------------- |
-| `send`, `transfer`, `pay`        | `Transfer`  | "Send 100 ERY to Bob"         |
-| `attest`, `verify`, `certify`    | `Attest`    | "Certify Alice's diploma"     |
-| `delegate`, `authorize`, `grant` | `Delegate`  | "Grant Bob read access"       |
-| `query`, `find`, `search`        | `Query`     | "Find all energy providers"   |
-| `create`, `new`, `mint`          | `Create`    | "Mint 1000 energy tokens"     |
+| Keywords                         | Goal-Typ   | Beispiel                    |
+| -------------------------------- | ---------- | --------------------------- |
+| `send`, `transfer`, `pay`        | `Transfer` | "Send 100 ERY to Bob"       |
+| `attest`, `verify`, `certify`    | `Attest`   | "Certify Alice's diploma"   |
+| `delegate`, `authorize`, `grant` | `Delegate` | "Grant Bob read access"     |
+| `query`, `find`, `search`        | `Query`    | "Find all energy providers" |
+| `create`, `new`, `mint`          | `Create`   | "Mint 1000 energy tokens"   |
 
 **Constraint-Typen:**
 
