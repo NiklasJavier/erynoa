@@ -179,13 +179,14 @@ async fn main() -> anyhow::Result<()> {
         );
 
         // TestnetSwarm erstellen
-        let (mut swarm, mut event_rx) = TestnetSwarm::new(keypair, &config)?;
+        let (mut swarm, event_rx) = TestnetSwarm::new(keypair, &config)?;
 
-        info!(peer_id = %swarm.peer_id(), "✅ Testnet swarm created");
+        info!(peer_id = %swarm.peer_id(), "✅ Testnet swarm created with full NAT-Traversal stack");
 
         // Event-Handler Task
         let connected_peers_clone = connected_peers.clone();
         let event_task = tokio::spawn(async move {
+            let mut event_rx = event_rx;
             while let Ok(event) = event_rx.recv().await {
                 match event {
                     TestnetEvent::PeerConnected { peer_id } => {
@@ -217,6 +218,19 @@ async fn main() -> anyhow::Result<()> {
                     }
                     TestnetEvent::GossipMessage { topic, source, .. } => {
                         info!(topic = %topic, source = ?source, "📨 Gossip message received");
+                    }
+                    // NAT-Traversal Events
+                    TestnetEvent::AutoNatStatus { nat_status } => {
+                        info!(status = %nat_status, "🌐 AutoNAT status changed");
+                    }
+                    TestnetEvent::RelayReservation { relay_peer } => {
+                        info!(relay = %relay_peer, "🔄 Relay reservation accepted");
+                    }
+                    TestnetEvent::DirectConnectionEstablished { peer_id } => {
+                        info!(peer_id = %peer_id, "✅ DCUTR: Direct connection established via holepunching");
+                    }
+                    TestnetEvent::UpnpMapped { protocol, addr } => {
+                        info!(protocol = %protocol, addr = %addr, "🌐 UPnP: Port mapped");
                     }
                 }
             }
