@@ -46,6 +46,8 @@ pub use state::{
     BlueprintComposerStateSnapshot,
     // ECLVM State (Erynoa Core Language Virtual Machine)
     BlueprintStatus,
+    CircuitBreaker,
+    CircuitBreakerSnapshot,
     // Core State
     ConsensusState,
     ConsensusStateSnapshot,
@@ -55,26 +57,45 @@ pub use state::{
     CoreStateSnapshot,
     DataLogicState,
     DataLogicStateSnapshot,
+    DeltaType,
     ECLPolicyType,
     ECLVMState,
     ECLVMStateSnapshot,
+    // Architektur-Verbesserungen Phase 6.1
+    // Event-Inversion (P2P/Core Entkopplung)
+    EventBus,
+    EventBusSnapshot,
+    EventPriority,
     EventState,
     EventStateSnapshot,
     ExecutionState,
     ExecutionStateSnapshot,
     FormulaState,
     FormulaStateSnapshot,
+    // Architektur-Verbesserungen Phase 6.2
+    // Multi-Level Gas Metering
+    GasLayer,
     GatewayState,
     GatewayStateSnapshot,
     GossipState,
     GossipStateSnapshot,
     GovernanceState,
     GovernanceStateSnapshot,
+    // Differential State Snapshots (Merkle)
+    Hashable,
     IntentParserState,
     IntentParserStateSnapshot,
     KademliaState,
     KademliaStateSnapshot,
+    MerkleDelta,
+    MerkleHash,
+    MerkleNode,
+    MerkleStateTracker,
+    MerkleStateTrackerSnapshot,
+    MultiGas,
+    MultiGasSnapshot,
     NatStatus,
+    NetworkEvent,
     // P2P State
     P2PState,
     P2PStateSnapshot,
@@ -91,6 +112,9 @@ pub use state::{
     RealmECLState,
     RealmECLStateSnapshot,
     RealmGovernanceState,
+    // Self-Healing Realm-Isolierung
+    RealmQuota,
+    RealmQuotaSnapshot,
     // Realm State (Κ22-Κ24) - Per-Realm Isolation
     RealmSpecificState,
     RealmSpecificStateSnapshot,
@@ -99,16 +123,28 @@ pub use state::{
     RealmUIState,
     RelayState,
     RelayStateSnapshot,
+    // Resource-Typen für Quotas
+    ResourceType,
     SagaComposerState,
     SagaComposerStateSnapshot,
     SharedUnifiedState,
+    StateBroadcaster,
+    StateBroadcasterSnapshot,
     StateComponent,
+    // CQRS Light (State Delta Broadcasting)
+    StateDelta,
     StateGraph,
     StateRelation,
+    StorageBackend,
+    // Storage als orthogonale Schicht
+    StorageHandle,
+    StorageMetrics,
     StorageState,
     StorageStateSnapshot,
     SwarmState as CoreSwarmState,
     SwarmStateSnapshot as CoreSwarmStateSnapshot,
+    // Circuit Breaker Pattern
+    SystemMode,
     TrustDistribution,
     TrustState,
     TrustStateSnapshot,
