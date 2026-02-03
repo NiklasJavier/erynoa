@@ -203,20 +203,7 @@ impl StateGraph {
                 (SagaComposer, Triggers, Execution), // Sagas erzeugen Executions
                 (SagaComposer, Aggregates, IntentParser), // Composer nutzt Parser
                 (IntentParser, Validates, Event), // Parser validiert Intent-Events
-                // ──────────────────────────────────────────────────────────────────
                 // REALM-LAYER BEZIEHUNGEN (Κ22-Κ24: Isolation, Crossing, Sagas)
-                // ──────────────────────────────────────────────────────────────────
-                //
-                // Realms sind isolierte Bereiche mit eigenen:
-                // - Trust-Leveln (realm-spezifisch, z.B. höher bei Freunden)
-                // - Regeln (ECL-Policies definieren Membership, Crossing, Governance)
-                // - Identitäten (explizite Mitgliederliste)
-                // - Activity-Metrics (Events, Crossings, Sagas)
-                //
-                // Isolation: Daten bleiben im Realm, Leak-Prevention
-                // Crossing: Gateway (Κ23) prüft Trust/Regeln für Realm-Wechsel
-                // Cross-Realm-Sagas: SagaComposer (Κ22/Κ24) koordiniert Multi-Realm-Ops
-                //
                 (Realm, DependsOn, Trust), // Realm-Trust basiert auf Global-Trust + Realm-Modifikator
                 (Realm, Triggers, Trust),  // Realm-spezifisches Verhalten beeinflusst Global-Trust
                 (Realm, Aggregates, Gateway), // Realm trackt Crossings (in/out)
@@ -276,6 +263,130 @@ impl StateGraph {
             .map(|(_, _, to)| *to)
             .collect()
     }
+
+    /// Finde alle Komponenten die von `component` aggregiert werden
+    pub fn aggregated_by(&self, component: StateComponent) -> Vec<StateComponent> {
+        self.edges
+            .iter()
+            .filter(|(from, rel, _)| *from == component && matches!(rel, StateRelation::Aggregates))
+            .map(|(_, _, to)| *to)
+            .collect()
+    }
+
+    /// Finde alle Komponenten die `component` validiert
+    pub fn validated_by(&self, component: StateComponent) -> Vec<StateComponent> {
+        self.edges
+            .iter()
+            .filter(|(from, rel, _)| *from == component && matches!(rel, StateRelation::Validates))
+            .map(|(_, _, to)| *to)
+            .collect()
+    }
+
+    /// Finde alle Validatoren für `component`
+    pub fn validators_of(&self, component: StateComponent) -> Vec<StateComponent> {
+        self.edges
+            .iter()
+            .filter(|(_, rel, to)| *to == component && matches!(rel, StateRelation::Validates))
+            .map(|(from, _, _)| *from)
+            .collect()
+    }
+
+    /// Finde alle bidirektionalen Partner von `component`
+    pub fn bidirectional_with(&self, component: StateComponent) -> Vec<StateComponent> {
+        self.edges
+            .iter()
+            .filter(|(from, rel, to)| {
+                matches!(rel, StateRelation::Bidirectional)
+                    && (*from == component || *to == component)
+            })
+            .map(|(from, _, to)| if *from == component { *to } else { *from })
+            .collect()
+    }
+
+    /// Finde alle Komponenten von denen `component` abhängt
+    pub fn dependencies_of(&self, component: StateComponent) -> Vec<StateComponent> {
+        self.edges
+            .iter()
+            .filter(|(from, rel, _)| *from == component && matches!(rel, StateRelation::DependsOn))
+            .map(|(_, _, to)| *to)
+            .collect()
+    }
+
+    /// Prüfe ob eine Beziehung existiert
+    pub fn has_relation(
+        &self,
+        from: StateComponent,
+        relation: StateRelation,
+        to: StateComponent,
+    ) -> bool {
+        self.edges.contains(&(from, relation, to))
+    }
+
+    /// Alle Beziehungen einer Komponente (eingehend und ausgehend)
+    pub fn all_relations(
+        &self,
+        component: StateComponent,
+    ) -> Vec<(StateComponent, StateRelation, StateComponent)> {
+        self.edges
+            .iter()
+            .filter(|(from, _, to)| *from == component || *to == component)
+            .cloned()
+            .collect()
+    }
+
+    /// Transitive Abhängigkeiten (rekursiv alle Dependencies)
+    pub fn transitive_dependencies(&self, component: StateComponent) -> HashSet<StateComponent> {
+        let mut visited = HashSet::new();
+        let mut stack = vec![component];
+
+        while let Some(current) = stack.pop() {
+            for dep in self.dependencies_of(current) {
+                if visited.insert(dep) {
+                    stack.push(dep);
+                }
+            }
+        }
+        visited
+    }
+
+    /// Transitive Trigger-Kette (alle Komponenten die transitiv getriggert werden)
+    pub fn transitive_triggers(&self, component: StateComponent) -> HashSet<StateComponent> {
+        let mut visited = HashSet::new();
+        let mut stack = vec![component];
+
+        while let Some(current) = stack.pop() {
+            for triggered in self.triggered_by(current) {
+                if visited.insert(triggered) {
+                    stack.push(triggered);
+                }
+            }
+        }
+        visited
+    }
+
+    /// Ermittle Validierungs-Kette für eine Komponente
+    pub fn validation_chain(&self, component: StateComponent) -> Vec<StateComponent> {
+        let mut chain = Vec::new();
+        let mut visited = HashSet::new();
+        let mut current = component;
+
+        while let Some(validator) = self.validators_of(current).first().copied() {
+            if visited.insert(validator) {
+                chain.push(validator);
+                current = validator;
+            } else {
+                break; // Zyklus erkannt
+            }
+        }
+        chain
+    }
+
+    /// Kritikalitäts-Score einer Komponente (wie viele andere abhängen)
+    pub fn criticality_score(&self, component: StateComponent) -> usize {
+        self.dependents(component).len()
+            + self.transitive_triggers(component).len()
+            + self.aggregated_by(component).len()
+    }
 }
 
 // ============================================================================
@@ -297,11 +408,15 @@ pub struct TrustState {
     pub avg_trust: RwLock<f64>,
     pub trust_distribution: RwLock<TrustDistribution>,
 
-    // Relationships
-    /// Events die durch Trust-Updates ausgelöst wurden
+    // ─────────────────────────────────────────────────────────────────────────
+    // Relationship-Tracking (Beziehungen im StateGraph)
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Events die durch Trust-Updates ausgelöst wurden (Trust → Event)
     pub triggered_events: AtomicU64,
-    /// Trust-Updates die durch Events ausgelöst wurden
+    /// Trust-Updates die durch Events ausgelöst wurden (Event → Trust)
     pub event_triggered_updates: AtomicU64,
+    /// Trust-Updates die durch Realm-Aktivität ausgelöst wurden (Realm → Trust)
+    pub realm_triggered_updates: AtomicU64,
 }
 
 /// Trust-Verteilung für Diversity-Monitoring
@@ -328,6 +443,7 @@ impl TrustState {
             trust_distribution: RwLock::new(TrustDistribution::default()),
             triggered_events: AtomicU64::new(0),
             event_triggered_updates: AtomicU64::new(0),
+            realm_triggered_updates: AtomicU64::new(0),
         }
     }
 
@@ -398,7 +514,7 @@ pub struct TrustStateSnapshot {
     pub distribution: Option<TrustDistribution>,
 }
 
-/// Event-State mit DAG-Tracking
+/// Event-State mit DAG-Tracking und Relationship-Counters
 #[derive(Debug)]
 pub struct EventState {
     // Atomic Counters
@@ -416,9 +532,29 @@ pub struct EventState {
     // Finality Tracking
     pub finality_latency_ms: RwLock<Vec<u64>>,
 
-    // Cross-References
+    // ─────────────────────────────────────────────────────────────────────────
+    // Relationship-Tracking (StateGraph Trigger-Beziehungen → Event)
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Events durch Trust-Updates getriggert (Trust → Event)
     pub trust_triggered: AtomicU64,
+    /// Events durch Consensus validiert (Consensus → Event)
     pub consensus_validated: AtomicU64,
+    /// Events durch Execution getriggert (Execution → Event)
+    pub execution_triggered: AtomicU64,
+    /// Events durch Gateway/Crossing getriggert (Gateway → Event)
+    pub gateway_triggered: AtomicU64,
+    /// Events durch Realm getriggert (Realm → Event)
+    pub realm_triggered: AtomicU64,
+    /// Events durch ECLVM-Ausführung getriggert (ECLVM → Event)
+    pub eclvm_triggered: AtomicU64,
+    /// Events durch ECLPolicy getriggert (ECLPolicy → Event)
+    pub policy_triggered: AtomicU64,
+    /// Events durch ECLBlueprint getriggert (ECLBlueprint → Event)
+    pub blueprint_triggered: AtomicU64,
+    /// Events durch Swarm propagiert (Swarm → Event)
+    pub swarm_triggered: AtomicU64,
+    /// Events durch Gossip verteilt (Gossip → Event)
+    pub gossip_triggered: AtomicU64,
 }
 
 impl EventState {
@@ -435,6 +571,14 @@ impl EventState {
             finality_latency_ms: RwLock::new(Vec::new()),
             trust_triggered: AtomicU64::new(0),
             consensus_validated: AtomicU64::new(0),
+            execution_triggered: AtomicU64::new(0),
+            gateway_triggered: AtomicU64::new(0),
+            realm_triggered: AtomicU64::new(0),
+            eclvm_triggered: AtomicU64::new(0),
+            policy_triggered: AtomicU64::new(0),
+            blueprint_triggered: AtomicU64::new(0),
+            swarm_triggered: AtomicU64::new(0),
+            gossip_triggered: AtomicU64::new(0),
         }
     }
 
@@ -651,6 +795,10 @@ pub struct ConsensusState {
     // BFT-spezifisch
     pub byzantine_detected: AtomicU64,
     pub leader_changes: AtomicU64,
+
+    // Relationship-Tracking
+    /// Events validiert durch Consensus (Consensus ✓ Event)
+    pub events_validated: AtomicU64,
 }
 
 impl ConsensusState {
@@ -663,6 +811,7 @@ impl ConsensusState {
             avg_round_time_ms: RwLock::new(0.0),
             byzantine_detected: AtomicU64::new(0),
             leader_changes: AtomicU64::new(0),
+            events_validated: AtomicU64::new(0),
         }
     }
 
@@ -767,72 +916,220 @@ pub struct CoreStateSnapshot {
 }
 
 // ============================================================================
-// EXECUTION STATE LAYER (IPS ℳ)
+// EXECUTION STATE LAYER (IPS ℳ) - Tiefe Struktur mit Sub-States
 // ============================================================================
 
-/// Execution State mit Resource-Tracking
+/// Gas-State mit Relationship-Tracking
+///
+/// Gas ist die Compute-Ressource für ECL-Ausführungen.
+/// Basiert auf Trust (DependsOn) und wird durch Calibration angepasst (Triggers).
 #[derive(Debug)]
-pub struct ExecutionState {
-    pub active_contexts: AtomicUsize,
-    pub total_executions: AtomicU64,
-    pub successful: AtomicU64,
-    pub failed: AtomicU64,
-
-    // Gas Tracking
-    pub gas_consumed: AtomicU64,
-    pub gas_refunded: AtomicU64,
+pub struct GasState {
+    /// Total verbrauchtes Gas
+    pub consumed: AtomicU64,
+    /// Refundiertes Gas
+    pub refunded: AtomicU64,
+    /// Out-of-Gas Errors
     pub out_of_gas: AtomicU64,
-
-    // Mana Tracking
-    pub mana_consumed: AtomicU64,
-    pub mana_regenerated: AtomicU64,
-    pub rate_limited: AtomicU64,
-
-    // Event Emission
-    pub events_emitted: AtomicU64,
-
-    // Timing
-    pub execution_times_ms: RwLock<Vec<u64>>,
-
-    // Clock
-    pub current_epoch: AtomicU64,
-    pub current_lamport: AtomicU64,
+    /// Aktueller Gas-Preis
+    pub current_price: RwLock<f64>,
+    /// Max Gas pro Block
+    pub max_per_block: AtomicU64,
+    // ─────────────────────────────────────────────────────────────────────────
+    // Relationship-Tracking
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Calibration hat Gas angepasst (Calibration → Gas)
+    pub calibration_adjustments: AtomicU64,
+    /// Trust-Dependency-Updates (Gas ← Trust)
+    pub trust_dependency_updates: AtomicU64,
 }
 
-impl ExecutionState {
+impl GasState {
+    pub fn new() -> Self {
+        Self {
+            consumed: AtomicU64::new(0),
+            refunded: AtomicU64::new(0),
+            out_of_gas: AtomicU64::new(0),
+            current_price: RwLock::new(1.0),
+            max_per_block: AtomicU64::new(10_000_000),
+            calibration_adjustments: AtomicU64::new(0),
+            trust_dependency_updates: AtomicU64::new(0),
+        }
+    }
+
+    pub fn consume(&self, amount: u64) {
+        self.consumed.fetch_add(amount, Ordering::Relaxed);
+    }
+
+    pub fn refund(&self, amount: u64) {
+        self.refunded.fetch_add(amount, Ordering::Relaxed);
+    }
+
+    pub fn snapshot(&self) -> GasStateSnapshot {
+        GasStateSnapshot {
+            consumed: self.consumed.load(Ordering::Relaxed),
+            refunded: self.refunded.load(Ordering::Relaxed),
+            out_of_gas: self.out_of_gas.load(Ordering::Relaxed),
+            current_price: self.current_price.read().map(|v| *v).unwrap_or(1.0),
+            max_per_block: self.max_per_block.load(Ordering::Relaxed),
+            calibration_adjustments: self.calibration_adjustments.load(Ordering::Relaxed),
+            trust_dependency_updates: self.trust_dependency_updates.load(Ordering::Relaxed),
+        }
+    }
+}
+
+impl Default for GasState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GasStateSnapshot {
+    pub consumed: u64,
+    pub refunded: u64,
+    pub out_of_gas: u64,
+    pub current_price: f64,
+    pub max_per_block: u64,
+    pub calibration_adjustments: u64,
+    pub trust_dependency_updates: u64,
+}
+
+/// Mana-State mit Relationship-Tracking
+///
+/// Mana ist die Bandwidth/Event-Ressource.
+/// Regeneriert über Zeit, basiert auf Trust (DependsOn).
+#[derive(Debug)]
+pub struct ManaState {
+    /// Total verbrauchtes Mana
+    pub consumed: AtomicU64,
+    /// Regeneriertes Mana
+    pub regenerated: AtomicU64,
+    /// Rate-Limited wegen Mana
+    pub rate_limited: AtomicU64,
+    /// Aktuelle Regenerations-Rate
+    pub regen_rate: RwLock<f64>,
+    /// Max Mana pro Entity
+    pub max_per_entity: AtomicU64,
+    // ─────────────────────────────────────────────────────────────────────────
+    // Relationship-Tracking
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Calibration hat Mana angepasst (Calibration → Mana)
+    pub calibration_adjustments: AtomicU64,
+    /// Trust-Dependency-Updates (Mana ← Trust)
+    pub trust_dependency_updates: AtomicU64,
+}
+
+impl ManaState {
+    pub fn new() -> Self {
+        Self {
+            consumed: AtomicU64::new(0),
+            regenerated: AtomicU64::new(0),
+            rate_limited: AtomicU64::new(0),
+            regen_rate: RwLock::new(1.0),
+            max_per_entity: AtomicU64::new(100_000),
+            calibration_adjustments: AtomicU64::new(0),
+            trust_dependency_updates: AtomicU64::new(0),
+        }
+    }
+
+    pub fn consume(&self, amount: u64) {
+        self.consumed.fetch_add(amount, Ordering::Relaxed);
+    }
+
+    pub fn regenerate(&self, amount: u64) {
+        self.regenerated.fetch_add(amount, Ordering::Relaxed);
+    }
+
+    pub fn snapshot(&self) -> ManaStateSnapshot {
+        ManaStateSnapshot {
+            consumed: self.consumed.load(Ordering::Relaxed),
+            regenerated: self.regenerated.load(Ordering::Relaxed),
+            rate_limited: self.rate_limited.load(Ordering::Relaxed),
+            regen_rate: self.regen_rate.read().map(|v| *v).unwrap_or(1.0),
+            max_per_entity: self.max_per_entity.load(Ordering::Relaxed),
+            calibration_adjustments: self.calibration_adjustments.load(Ordering::Relaxed),
+            trust_dependency_updates: self.trust_dependency_updates.load(Ordering::Relaxed),
+        }
+    }
+}
+
+impl Default for ManaState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ManaStateSnapshot {
+    pub consumed: u64,
+    pub regenerated: u64,
+    pub rate_limited: u64,
+    pub regen_rate: f64,
+    pub max_per_entity: u64,
+    pub calibration_adjustments: u64,
+    pub trust_dependency_updates: u64,
+}
+
+/// Core Execution State mit Relationship-Tracking
+#[derive(Debug)]
+pub struct ExecutionsState {
+    /// Aktive Execution-Kontexte
+    pub active_contexts: AtomicUsize,
+    /// Total Executions
+    pub total: AtomicU64,
+    /// Erfolgreiche Executions
+    pub successful: AtomicU64,
+    /// Fehlgeschlagene Executions
+    pub failed: AtomicU64,
+    /// Events emittiert
+    pub events_emitted: AtomicU64,
+    /// Ausführungszeiten für Averaging
+    pub execution_times_ms: RwLock<Vec<u64>>,
+    /// Aktuelles Epoch
+    pub current_epoch: AtomicU64,
+    /// Aktueller Lamport-Timestamp
+    pub current_lamport: AtomicU64,
+    // ─────────────────────────────────────────────────────────────────────────
+    // Relationship-Tracking
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Executions durch SagaComposer getriggert (SagaComposer → Execution)
+    pub saga_triggered: AtomicU64,
+    /// Gas-Aggregationen (Execution ⊃ Gas)
+    pub gas_aggregations: AtomicU64,
+    /// Mana-Aggregationen (Execution ⊃ Mana)
+    pub mana_aggregations: AtomicU64,
+}
+
+impl ExecutionsState {
     pub fn new() -> Self {
         Self {
             active_contexts: AtomicUsize::new(0),
-            total_executions: AtomicU64::new(0),
+            total: AtomicU64::new(0),
             successful: AtomicU64::new(0),
             failed: AtomicU64::new(0),
-            gas_consumed: AtomicU64::new(0),
-            gas_refunded: AtomicU64::new(0),
-            out_of_gas: AtomicU64::new(0),
-            mana_consumed: AtomicU64::new(0),
-            mana_regenerated: AtomicU64::new(0),
-            rate_limited: AtomicU64::new(0),
             events_emitted: AtomicU64::new(0),
             execution_times_ms: RwLock::new(Vec::new()),
             current_epoch: AtomicU64::new(0),
             current_lamport: AtomicU64::new(0),
+            saga_triggered: AtomicU64::new(0),
+            gas_aggregations: AtomicU64::new(0),
+            mana_aggregations: AtomicU64::new(0),
         }
     }
 
     pub fn start(&self) {
         self.active_contexts.fetch_add(1, Ordering::Relaxed);
-        self.total_executions.fetch_add(1, Ordering::Relaxed);
+        self.total.fetch_add(1, Ordering::Relaxed);
     }
 
-    pub fn complete(&self, success: bool, gas: u64, mana: u64, events: u64, duration_ms: u64) {
+    pub fn complete(&self, success: bool, events: u64, duration_ms: u64) {
         self.active_contexts.fetch_sub(1, Ordering::Relaxed);
         if success {
             self.successful.fetch_add(1, Ordering::Relaxed);
         } else {
             self.failed.fetch_add(1, Ordering::Relaxed);
         }
-        self.gas_consumed.fetch_add(gas, Ordering::Relaxed);
-        self.mana_consumed.fetch_add(mana, Ordering::Relaxed);
         self.events_emitted.fetch_add(events, Ordering::Relaxed);
 
         if let Ok(mut times) = self.execution_times_ms.write() {
@@ -857,7 +1154,7 @@ impl ExecutionState {
     }
 
     pub fn success_rate(&self) -> f64 {
-        let total = self.total_executions.load(Ordering::Relaxed) as f64;
+        let total = self.total.load(Ordering::Relaxed) as f64;
         if total > 0.0 {
             self.successful.load(Ordering::Relaxed) as f64 / total
         } else {
@@ -865,23 +1162,93 @@ impl ExecutionState {
         }
     }
 
-    pub fn snapshot(&self) -> ExecutionStateSnapshot {
-        ExecutionStateSnapshot {
+    pub fn snapshot(&self) -> ExecutionsStateSnapshot {
+        ExecutionsStateSnapshot {
             active_contexts: self.active_contexts.load(Ordering::Relaxed),
-            total_executions: self.total_executions.load(Ordering::Relaxed),
+            total: self.total.load(Ordering::Relaxed),
             successful: self.successful.load(Ordering::Relaxed),
             failed: self.failed.load(Ordering::Relaxed),
             success_rate: self.success_rate(),
-            gas_consumed: self.gas_consumed.load(Ordering::Relaxed),
-            gas_refunded: self.gas_refunded.load(Ordering::Relaxed),
-            out_of_gas: self.out_of_gas.load(Ordering::Relaxed),
-            mana_consumed: self.mana_consumed.load(Ordering::Relaxed),
-            mana_regenerated: self.mana_regenerated.load(Ordering::Relaxed),
-            rate_limited: self.rate_limited.load(Ordering::Relaxed),
             events_emitted: self.events_emitted.load(Ordering::Relaxed),
             avg_execution_time_ms: self.avg_execution_time(),
             current_epoch: self.current_epoch.load(Ordering::Relaxed),
             current_lamport: self.current_lamport.load(Ordering::Relaxed),
+            saga_triggered: self.saga_triggered.load(Ordering::Relaxed),
+            gas_aggregations: self.gas_aggregations.load(Ordering::Relaxed),
+            mana_aggregations: self.mana_aggregations.load(Ordering::Relaxed),
+        }
+    }
+}
+
+impl Default for ExecutionsState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExecutionsStateSnapshot {
+    pub active_contexts: usize,
+    pub total: u64,
+    pub successful: u64,
+    pub failed: u64,
+    pub success_rate: f64,
+    pub events_emitted: u64,
+    pub avg_execution_time_ms: f64,
+    pub current_epoch: u64,
+    pub current_lamport: u64,
+    pub saga_triggered: u64,
+    pub gas_aggregations: u64,
+    pub mana_aggregations: u64,
+}
+
+/// Execution State Layer mit Sub-States für tiefe Relationship-Integration
+#[derive(Debug)]
+pub struct ExecutionState {
+    /// Gas Sub-State
+    pub gas: GasState,
+    /// Mana Sub-State
+    pub mana: ManaState,
+    /// Core Executions Sub-State
+    pub executions: ExecutionsState,
+}
+
+impl ExecutionState {
+    pub fn new() -> Self {
+        Self {
+            gas: GasState::new(),
+            mana: ManaState::new(),
+            executions: ExecutionsState::new(),
+        }
+    }
+
+    /// Legacy-Kompatibilität: Start Execution
+    pub fn start(&self) {
+        self.executions.start();
+    }
+
+    /// Legacy-Kompatibilität: Complete Execution
+    pub fn complete(&self, success: bool, gas: u64, mana: u64, events: u64, duration_ms: u64) {
+        self.executions.complete(success, events, duration_ms);
+        self.gas.consume(gas);
+        self.mana.consume(mana);
+    }
+
+    /// Legacy-Kompatibilität: Durchschnittliche Ausführungszeit
+    pub fn avg_execution_time(&self) -> f64 {
+        self.executions.avg_execution_time()
+    }
+
+    /// Legacy-Kompatibilität: Erfolgsrate
+    pub fn success_rate(&self) -> f64 {
+        self.executions.success_rate()
+    }
+
+    pub fn snapshot(&self) -> ExecutionStateSnapshot {
+        ExecutionStateSnapshot {
+            gas: self.gas.snapshot(),
+            mana: self.mana.snapshot(),
+            executions: self.executions.snapshot(),
         }
     }
 }
@@ -892,23 +1259,12 @@ impl Default for ExecutionState {
     }
 }
 
+/// Execution State Snapshot mit Sub-States
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExecutionStateSnapshot {
-    pub active_contexts: usize,
-    pub total_executions: u64,
-    pub successful: u64,
-    pub failed: u64,
-    pub success_rate: f64,
-    pub gas_consumed: u64,
-    pub gas_refunded: u64,
-    pub out_of_gas: u64,
-    pub mana_consumed: u64,
-    pub mana_regenerated: u64,
-    pub rate_limited: u64,
-    pub events_emitted: u64,
-    pub avg_execution_time_ms: f64,
-    pub current_epoch: u64,
-    pub current_lamport: u64,
+    pub gas: GasStateSnapshot,
+    pub mana: ManaStateSnapshot,
+    pub executions: ExecutionsStateSnapshot,
 }
 
 // ============================================================================
@@ -1516,89 +1872,345 @@ pub struct ECLVMStateSnapshot {
 }
 
 // ============================================================================
-// PROTECTION STATE LAYER (Κ19-Κ21)
+// PROTECTION STATE LAYER (Κ19-Κ21) - Tiefe Struktur mit Sub-States
 // ============================================================================
 
-/// Protection State mit Validierungs-Tracking
+/// Anomaly Detection Sub-State mit Relationship-Tracking
 #[derive(Debug)]
-pub struct ProtectionState {
-    // Anomaly Detection
-    pub anomalies_total: AtomicU64,
-    pub anomalies_critical: AtomicU64,
-    pub anomalies_high: AtomicU64,
-    pub anomalies_medium: AtomicU64,
-    pub anomalies_low: AtomicU64,
+pub struct AnomalyState {
+    /// Total Anomalien erkannt
+    pub total: AtomicU64,
+    /// Kritische Anomalien
+    pub critical: AtomicU64,
+    /// Hohe Anomalien
+    pub high: AtomicU64,
+    /// Mittlere Anomalien
+    pub medium: AtomicU64,
+    /// Niedrige Anomalien
+    pub low: AtomicU64,
+    /// False Positives
     pub false_positives: AtomicU64,
-
-    // Diversity Monitor (Κ20)
-    pub entropy_dimensions: AtomicUsize,
-    pub monoculture_warnings: AtomicU64,
-    pub entropy_values: RwLock<HashMap<String, f64>>,
-    pub min_entropy: RwLock<f64>,
-
-    // Quadratic Governance (Κ21)
-    pub active_votes: AtomicUsize,
-    pub completed_votes: AtomicU64,
-    pub total_participants: AtomicU64,
-    pub quadratic_reductions: AtomicU64,
-
-    // Anti-Calcification (Κ19)
-    pub power_concentration: RwLock<f64>,
-    pub gini_coefficient: RwLock<f64>,
-    pub interventions: AtomicU64,
-    pub watched_entities: AtomicUsize,
-    pub threshold_violations: AtomicU64,
-
-    // Calibration
-    pub calibration_updates: AtomicU64,
-    pub calibrated_params: RwLock<HashMap<String, f64>>,
+    // ─────────────────────────────────────────────────────────────────────────
+    // Relationship-Tracking (Anomaly ✓ Event/Trust)
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Events validiert (Anomaly ✓ Event)
+    pub events_validated: AtomicU64,
+    /// Trust-Patterns geprüft (Anomaly ✓ Trust)
+    pub trust_patterns_checked: AtomicU64,
 }
 
-impl ProtectionState {
+impl AnomalyState {
     pub fn new() -> Self {
         Self {
-            anomalies_total: AtomicU64::new(0),
-            anomalies_critical: AtomicU64::new(0),
-            anomalies_high: AtomicU64::new(0),
-            anomalies_medium: AtomicU64::new(0),
-            anomalies_low: AtomicU64::new(0),
+            total: AtomicU64::new(0),
+            critical: AtomicU64::new(0),
+            high: AtomicU64::new(0),
+            medium: AtomicU64::new(0),
+            low: AtomicU64::new(0),
             false_positives: AtomicU64::new(0),
-            entropy_dimensions: AtomicUsize::new(0),
-            monoculture_warnings: AtomicU64::new(0),
-            entropy_values: RwLock::new(HashMap::new()),
-            min_entropy: RwLock::new(1.0),
-            active_votes: AtomicUsize::new(0),
-            completed_votes: AtomicU64::new(0),
-            total_participants: AtomicU64::new(0),
-            quadratic_reductions: AtomicU64::new(0),
-            power_concentration: RwLock::new(0.0),
-            gini_coefficient: RwLock::new(0.0),
-            interventions: AtomicU64::new(0),
-            watched_entities: AtomicUsize::new(0),
-            threshold_violations: AtomicU64::new(0),
-            calibration_updates: AtomicU64::new(0),
-            calibrated_params: RwLock::new(HashMap::new()),
+            events_validated: AtomicU64::new(0),
+            trust_patterns_checked: AtomicU64::new(0),
         }
     }
 
-    pub fn anomaly(&self, severity: &str) {
-        self.anomalies_total.fetch_add(1, Ordering::Relaxed);
+    pub fn record(&self, severity: &str) {
+        self.total.fetch_add(1, Ordering::Relaxed);
         match severity {
-            "critical" => self.anomalies_critical.fetch_add(1, Ordering::Relaxed),
-            "high" => self.anomalies_high.fetch_add(1, Ordering::Relaxed),
-            "medium" => self.anomalies_medium.fetch_add(1, Ordering::Relaxed),
-            _ => self.anomalies_low.fetch_add(1, Ordering::Relaxed),
+            "critical" => self.critical.fetch_add(1, Ordering::Relaxed),
+            "high" => self.high.fetch_add(1, Ordering::Relaxed),
+            "medium" => self.medium.fetch_add(1, Ordering::Relaxed),
+            _ => self.low.fetch_add(1, Ordering::Relaxed),
         };
+    }
+
+    pub fn snapshot(&self) -> AnomalyStateSnapshot {
+        AnomalyStateSnapshot {
+            total: self.total.load(Ordering::Relaxed),
+            critical: self.critical.load(Ordering::Relaxed),
+            high: self.high.load(Ordering::Relaxed),
+            medium: self.medium.load(Ordering::Relaxed),
+            low: self.low.load(Ordering::Relaxed),
+            false_positives: self.false_positives.load(Ordering::Relaxed),
+            events_validated: self.events_validated.load(Ordering::Relaxed),
+            trust_patterns_checked: self.trust_patterns_checked.load(Ordering::Relaxed),
+        }
+    }
+}
+
+impl Default for AnomalyState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AnomalyStateSnapshot {
+    pub total: u64,
+    pub critical: u64,
+    pub high: u64,
+    pub medium: u64,
+    pub low: u64,
+    pub false_positives: u64,
+    pub events_validated: u64,
+    pub trust_patterns_checked: u64,
+}
+
+/// Diversity Monitor Sub-State (Κ20) mit Relationship-Tracking
+#[derive(Debug)]
+pub struct DiversityState {
+    /// Dimensionen die überwacht werden
+    pub dimensions: AtomicUsize,
+    /// Monokultur-Warnungen
+    pub monoculture_warnings: AtomicU64,
+    /// Entropy pro Dimension
+    pub entropy_values: RwLock<HashMap<String, f64>>,
+    /// Minimum Entropy
+    pub min_entropy: RwLock<f64>,
+    // ─────────────────────────────────────────────────────────────────────────
+    // Relationship-Tracking (Diversity ✓ Trust/Consensus)
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Trust-Verteilung geprüft (Diversity ✓ Trust)
+    pub trust_distribution_checks: AtomicU64,
+    /// Validator-Mix geprüft (Diversity ✓ Consensus)
+    pub validator_mix_checks: AtomicU64,
+}
+
+impl DiversityState {
+    pub fn new() -> Self {
+        Self {
+            dimensions: AtomicUsize::new(0),
+            monoculture_warnings: AtomicU64::new(0),
+            entropy_values: RwLock::new(HashMap::new()),
+            min_entropy: RwLock::new(1.0),
+            trust_distribution_checks: AtomicU64::new(0),
+            validator_mix_checks: AtomicU64::new(0),
+        }
     }
 
     pub fn set_entropy(&self, dimension: &str, value: f64) {
         if let Ok(mut map) = self.entropy_values.write() {
             map.insert(dimension.to_string(), value);
-            // Update min
             if let Ok(mut min) = self.min_entropy.write() {
                 *min = map.values().copied().fold(f64::MAX, f64::min);
             }
         }
+    }
+
+    pub fn snapshot(&self) -> DiversityStateSnapshot {
+        DiversityStateSnapshot {
+            dimensions: self.dimensions.load(Ordering::Relaxed),
+            monoculture_warnings: self.monoculture_warnings.load(Ordering::Relaxed),
+            min_entropy: self.min_entropy.read().map(|v| *v).unwrap_or(1.0),
+            trust_distribution_checks: self.trust_distribution_checks.load(Ordering::Relaxed),
+            validator_mix_checks: self.validator_mix_checks.load(Ordering::Relaxed),
+        }
+    }
+}
+
+impl Default for DiversityState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiversityStateSnapshot {
+    pub dimensions: usize,
+    pub monoculture_warnings: u64,
+    pub min_entropy: f64,
+    pub trust_distribution_checks: u64,
+    pub validator_mix_checks: u64,
+}
+
+/// Quadratic Governance Sub-State (Κ21) mit Relationship-Tracking
+#[derive(Debug)]
+pub struct QuadraticState {
+    /// Aktive Abstimmungen
+    pub active_votes: AtomicUsize,
+    /// Abgeschlossene Abstimmungen
+    pub completed_votes: AtomicU64,
+    /// Teilnehmer total
+    pub total_participants: AtomicU64,
+    /// Quadratische Reduktionen angewandt
+    pub quadratic_reductions: AtomicU64,
+    // ─────────────────────────────────────────────────────────────────────────
+    // Relationship-Tracking (Quadratic ← Trust)
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Trust-Dependency-Updates (Quadratic ← Trust)
+    pub trust_dependency_updates: AtomicU64,
+}
+
+impl QuadraticState {
+    pub fn new() -> Self {
+        Self {
+            active_votes: AtomicUsize::new(0),
+            completed_votes: AtomicU64::new(0),
+            total_participants: AtomicU64::new(0),
+            quadratic_reductions: AtomicU64::new(0),
+            trust_dependency_updates: AtomicU64::new(0),
+        }
+    }
+
+    pub fn snapshot(&self) -> QuadraticStateSnapshot {
+        QuadraticStateSnapshot {
+            active_votes: self.active_votes.load(Ordering::Relaxed),
+            completed_votes: self.completed_votes.load(Ordering::Relaxed),
+            total_participants: self.total_participants.load(Ordering::Relaxed),
+            quadratic_reductions: self.quadratic_reductions.load(Ordering::Relaxed),
+            trust_dependency_updates: self.trust_dependency_updates.load(Ordering::Relaxed),
+        }
+    }
+}
+
+impl Default for QuadraticState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuadraticStateSnapshot {
+    pub active_votes: usize,
+    pub completed_votes: u64,
+    pub total_participants: u64,
+    pub quadratic_reductions: u64,
+    pub trust_dependency_updates: u64,
+}
+
+/// Anti-Calcification Sub-State (Κ19) mit Relationship-Tracking
+#[derive(Debug)]
+pub struct AntiCalcificationState {
+    /// Power-Konzentration (0.0 = perfekt verteilt, 1.0 = monopol)
+    pub power_concentration: RwLock<f64>,
+    /// Gini-Koeffizient
+    pub gini_coefficient: RwLock<f64>,
+    /// Interventionen durchgeführt
+    pub interventions: AtomicU64,
+    /// Überwachte Entitäten
+    pub watched_entities: AtomicUsize,
+    /// Schwellenwert-Verletzungen
+    pub threshold_violations: AtomicU64,
+    // ─────────────────────────────────────────────────────────────────────────
+    // Relationship-Tracking (AntiCalcification ✓/→ Trust)
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Trust-Limits geprüft (AntiCalcification → Trust)
+    pub trust_limits_checked: AtomicU64,
+    /// Power-Checks durchgeführt (AntiCalcification ✓ Trust)
+    pub power_checks: AtomicU64,
+}
+
+impl AntiCalcificationState {
+    pub fn new() -> Self {
+        Self {
+            power_concentration: RwLock::new(0.0),
+            gini_coefficient: RwLock::new(0.0),
+            interventions: AtomicU64::new(0),
+            watched_entities: AtomicUsize::new(0),
+            threshold_violations: AtomicU64::new(0),
+            trust_limits_checked: AtomicU64::new(0),
+            power_checks: AtomicU64::new(0),
+        }
+    }
+
+    pub fn snapshot(&self) -> AntiCalcificationStateSnapshot {
+        AntiCalcificationStateSnapshot {
+            power_concentration: self.power_concentration.read().map(|v| *v).unwrap_or(0.0),
+            gini_coefficient: self.gini_coefficient.read().map(|v| *v).unwrap_or(0.0),
+            interventions: self.interventions.load(Ordering::Relaxed),
+            watched_entities: self.watched_entities.load(Ordering::Relaxed),
+            threshold_violations: self.threshold_violations.load(Ordering::Relaxed),
+            trust_limits_checked: self.trust_limits_checked.load(Ordering::Relaxed),
+            power_checks: self.power_checks.load(Ordering::Relaxed),
+        }
+    }
+}
+
+impl Default for AntiCalcificationState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AntiCalcificationStateSnapshot {
+    pub power_concentration: f64,
+    pub gini_coefficient: f64,
+    pub interventions: u64,
+    pub watched_entities: usize,
+    pub threshold_violations: u64,
+    pub trust_limits_checked: u64,
+    pub power_checks: u64,
+}
+
+/// Calibration Sub-State
+#[derive(Debug)]
+pub struct CalibrationState {
+    /// Calibration-Updates durchgeführt
+    pub updates: AtomicU64,
+    /// Kalibrierte Parameter
+    pub params: RwLock<HashMap<String, f64>>,
+}
+
+impl CalibrationState {
+    pub fn new() -> Self {
+        Self {
+            updates: AtomicU64::new(0),
+            params: RwLock::new(HashMap::new()),
+        }
+    }
+
+    pub fn snapshot(&self) -> CalibrationStateSnapshot {
+        CalibrationStateSnapshot {
+            updates: self.updates.load(Ordering::Relaxed),
+        }
+    }
+}
+
+impl Default for CalibrationState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CalibrationStateSnapshot {
+    pub updates: u64,
+}
+
+/// Protection State mit tiefgründigen Sub-States
+#[derive(Debug)]
+pub struct ProtectionState {
+    /// Anomaly Detection (Anomaly ✓ Event/Trust)
+    pub anomaly: AnomalyState,
+    /// Diversity Monitor (Κ20) (Diversity ✓ Trust/Consensus)
+    pub diversity: DiversityState,
+    /// Quadratic Governance (Κ21) (Quadratic ← Trust)
+    pub quadratic: QuadraticState,
+    /// Anti-Calcification (Κ19) (AntiCalcification ✓/→ Trust)
+    pub anti_calcification: AntiCalcificationState,
+    /// Calibration (Calibration → Gas/Mana)
+    pub calibration: CalibrationState,
+}
+
+impl ProtectionState {
+    pub fn new() -> Self {
+        Self {
+            anomaly: AnomalyState::new(),
+            diversity: DiversityState::new(),
+            quadratic: QuadraticState::new(),
+            anti_calcification: AntiCalcificationState::new(),
+            calibration: CalibrationState::new(),
+        }
+    }
+
+    /// Legacy-Kompatibilität: Anomalie aufzeichnen
+    pub fn anomaly(&self, severity: &str) {
+        self.anomaly.record(severity);
+    }
+
+    /// Legacy-Kompatibilität: Entropy setzen
+    pub fn set_entropy(&self, dimension: &str, value: f64) {
+        self.diversity.set_entropy(dimension, value);
     }
 
     /// Berechne System-Health basierend auf Protection-Metriken
@@ -1606,17 +2218,20 @@ impl ProtectionState {
         let mut score: f64 = 100.0;
 
         // Anomalien reduzieren Score
-        let critical = self.anomalies_critical.load(Ordering::Relaxed);
-        let high = self.anomalies_high.load(Ordering::Relaxed);
+        let critical = self.anomaly.critical.load(Ordering::Relaxed);
+        let high = self.anomaly.high.load(Ordering::Relaxed);
         score -= (critical * 20) as f64;
         score -= (high * 10) as f64;
 
         // Diversity Warnings
-        let warnings = self.monoculture_warnings.load(Ordering::Relaxed);
+        let warnings = self.diversity.monoculture_warnings.load(Ordering::Relaxed);
         score -= (warnings * 5) as f64;
 
         // Anti-Calc Violations
-        let violations = self.threshold_violations.load(Ordering::Relaxed);
+        let violations = self
+            .anti_calcification
+            .threshold_violations
+            .load(Ordering::Relaxed);
         score -= (violations * 10) as f64;
 
         score.max(0.0).min(100.0)
@@ -1624,25 +2239,11 @@ impl ProtectionState {
 
     pub fn snapshot(&self) -> ProtectionStateSnapshot {
         ProtectionStateSnapshot {
-            anomalies_total: self.anomalies_total.load(Ordering::Relaxed),
-            anomalies_critical: self.anomalies_critical.load(Ordering::Relaxed),
-            anomalies_high: self.anomalies_high.load(Ordering::Relaxed),
-            anomalies_medium: self.anomalies_medium.load(Ordering::Relaxed),
-            anomalies_low: self.anomalies_low.load(Ordering::Relaxed),
-            false_positives: self.false_positives.load(Ordering::Relaxed),
-            entropy_dimensions: self.entropy_dimensions.load(Ordering::Relaxed),
-            monoculture_warnings: self.monoculture_warnings.load(Ordering::Relaxed),
-            min_entropy: self.min_entropy.read().map(|v| *v).unwrap_or(1.0),
-            active_votes: self.active_votes.load(Ordering::Relaxed),
-            completed_votes: self.completed_votes.load(Ordering::Relaxed),
-            total_participants: self.total_participants.load(Ordering::Relaxed),
-            quadratic_reductions: self.quadratic_reductions.load(Ordering::Relaxed),
-            power_concentration: self.power_concentration.read().map(|v| *v).unwrap_or(0.0),
-            gini_coefficient: self.gini_coefficient.read().map(|v| *v).unwrap_or(0.0),
-            interventions: self.interventions.load(Ordering::Relaxed),
-            watched_entities: self.watched_entities.load(Ordering::Relaxed),
-            threshold_violations: self.threshold_violations.load(Ordering::Relaxed),
-            calibration_updates: self.calibration_updates.load(Ordering::Relaxed),
+            anomaly: self.anomaly.snapshot(),
+            diversity: self.diversity.snapshot(),
+            quadratic: self.quadratic.snapshot(),
+            anti_calcification: self.anti_calcification.snapshot(),
+            calibration: self.calibration.snapshot(),
             health_score: self.health_score(),
         }
     }
@@ -1654,27 +2255,14 @@ impl Default for ProtectionState {
     }
 }
 
+/// Protection State Snapshot mit tiefgründigen Sub-Snapshots
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProtectionStateSnapshot {
-    pub anomalies_total: u64,
-    pub anomalies_critical: u64,
-    pub anomalies_high: u64,
-    pub anomalies_medium: u64,
-    pub anomalies_low: u64,
-    pub false_positives: u64,
-    pub entropy_dimensions: usize,
-    pub monoculture_warnings: u64,
-    pub min_entropy: f64,
-    pub active_votes: usize,
-    pub completed_votes: u64,
-    pub total_participants: u64,
-    pub quadratic_reductions: u64,
-    pub power_concentration: f64,
-    pub gini_coefficient: f64,
-    pub interventions: u64,
-    pub watched_entities: usize,
-    pub threshold_violations: u64,
-    pub calibration_updates: u64,
+    pub anomaly: AnomalyStateSnapshot,
+    pub diversity: DiversityStateSnapshot,
+    pub quadratic: QuadraticStateSnapshot,
+    pub anti_calcification: AntiCalcificationStateSnapshot,
+    pub calibration: CalibrationStateSnapshot,
     pub health_score: f64,
 }
 
@@ -3772,8 +4360,8 @@ mod tests {
         let snapshot = state.snapshot();
         assert_eq!(snapshot.core.trust.updates_total, 1);
         assert_eq!(snapshot.core.events.total, 1);
-        assert_eq!(snapshot.execution.total_executions, 1);
-        assert_eq!(snapshot.protection.anomalies_total, 1);
+        assert_eq!(snapshot.execution.executions.total, 1);
+        assert_eq!(snapshot.protection.anomaly.total, 1);
         assert_eq!(snapshot.peer.gateway.crossings_total, 1);
         assert_eq!(snapshot.p2p.swarm.connected_peers, 1);
         assert_eq!(snapshot.p2p.gossip.messages_sent, 1);

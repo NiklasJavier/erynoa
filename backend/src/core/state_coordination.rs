@@ -191,7 +191,7 @@ impl StateCoordinator {
                 }
             }
             Invariant::ExecutionSuccessRate => {
-                let rate = snapshot.execution.success_rate;
+                let rate = snapshot.execution.executions.success_rate;
                 let threshold = 0.95;
                 InvariantResult {
                     invariant,
@@ -227,7 +227,7 @@ impl StateCoordinator {
                 }
             }
             Invariant::DiversityEntropy => {
-                let entropy = snapshot.protection.min_entropy;
+                let entropy = snapshot.protection.diversity.min_entropy;
                 let threshold = 0.7;
                 InvariantResult {
                     invariant,
@@ -312,7 +312,7 @@ impl StateCoordinator {
         match metric {
             "trust_updates" => snapshot.core.trust.updates_total as f64,
             "events_total" => snapshot.core.events.total as f64,
-            "executions" => snapshot.execution.total_executions as f64,
+            "executions" => snapshot.execution.executions.total as f64,
             "health" => snapshot.health_score,
             "world_formula" => snapshot.core.formula.current_e,
             _ => 0.0,
@@ -360,7 +360,10 @@ impl StateCoordinator {
                 "core_consensus",
                 snapshot.core.consensus.success_rate * 100.0,
             ),
-            ("execution", snapshot.execution.success_rate * 100.0),
+            (
+                "execution",
+                snapshot.execution.executions.success_rate * 100.0,
+            ),
             ("protection", snapshot.protection.health_score),
         ];
 

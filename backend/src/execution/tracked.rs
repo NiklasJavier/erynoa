@@ -82,6 +82,7 @@ impl TrackedContext {
         integrator
             .state()
             .execution
+            .executions
             .current_lamport
             .store(inner.state.lamport, Ordering::Relaxed);
 
@@ -156,7 +157,8 @@ impl TrackedContext {
             self.integrator
                 .state()
                 .execution
-                .gas_refunded
+                .gas
+                .refunded
                 .fetch_add(refunded, Ordering::Relaxed);
         }
     }
@@ -197,7 +199,8 @@ impl TrackedContext {
             self.integrator
                 .state()
                 .execution
-                .mana_regenerated
+                .mana
+                .regenerated
                 .fetch_add(regenerated, Ordering::Relaxed);
         }
     }
@@ -266,11 +269,13 @@ impl TrackedContext {
         self.integrator
             .state()
             .execution
+            .executions
             .current_epoch
             .store(self.inner.state.epoch, Ordering::Relaxed);
         self.integrator
             .state()
             .execution
+            .executions
             .current_lamport
             .store(self.inner.state.lamport, Ordering::Relaxed);
 
@@ -453,8 +458,8 @@ mod tests {
         assert_eq!(ctx.mana_remaining(), 950);
 
         let snapshot = state.snapshot();
-        assert!(snapshot.execution.mana_consumed >= 100);
-        assert!(snapshot.execution.mana_regenerated >= 50);
+        assert!(snapshot.execution.mana.consumed >= 100);
+        assert!(snapshot.execution.mana.regenerated >= 50);
     }
 
     #[test]

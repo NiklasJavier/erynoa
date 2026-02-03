@@ -622,29 +622,609 @@ impl StateIntegrator {
     }
 
     /// Propagiere State-Updates basierend auf Beziehungen
+    ///
+    /// Diese Methode implementiert die tiefe Integration aller State-Beziehungen:
+    /// - **Triggers**: Kaskadiert Updates zu abhängigen Komponenten
+    /// - **Aggregates**: Aktualisiert Aggregations-Zähler
+    /// - **Validates**: Führt Validierungen durch
+    /// - **DependsOn**: Trackt Abhängigkeits-Updates
+    /// - **Bidirectional**: Synchronisiert bidirektionale Beziehungen
     fn propagate_update(&self, from: super::state::StateComponent) {
+        use super::state::StateComponent::*;
+
         let graph = StateGraph::erynoa_graph();
 
-        // Finde abhängige Komponenten
+        // ═══════════════════════════════════════════════════════════════════
+        // PHASE 1: TRIGGER PROPAGATION (A → B)
+        // Alle Komponenten die von `from` getriggert werden
+        // ═══════════════════════════════════════════════════════════════════
         for component in graph.triggered_by(from) {
-            match component {
-                super::state::StateComponent::Trust => {
-                    // Trust durch Event getriggert
-                    self.state
-                        .core
-                        .trust
-                        .event_triggered_updates
-                        .fetch_add(1, Ordering::Relaxed);
-                }
-                super::state::StateComponent::Event => {
-                    // Event durch Trust getriggert
+            match (from, component) {
+                // ─────────────────────────────────────────────────────────────
+                // Trust → * Beziehungen
+                // ─────────────────────────────────────────────────────────────
+                (Trust, Event) => {
                     self.state
                         .core
                         .events
                         .trust_triggered
                         .fetch_add(1, Ordering::Relaxed);
                 }
-                _ => {}
+                (Trust, AntiCalcification) => {
+                    // Anti-Calcification prüft Trust-Limits
+                    self.state
+                        .protection
+                        .anti_calcification
+                        .trust_limits_checked
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // Event → * Beziehungen
+                // ─────────────────────────────────────────────────────────────
+                (Event, Trust) => {
+                    self.state
+                        .core
+                        .trust
+                        .event_triggered_updates
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // WorldFormula → * Beziehungen
+                // ─────────────────────────────────────────────────────────────
+                (WorldFormula, Consensus) => {
+                    // 𝔼 beeinflusst Konsens-Parameter
+                    self.state
+                        .core
+                        .consensus
+                        .successful_rounds
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // Execution → * Beziehungen
+                // ─────────────────────────────────────────────────────────────
+                (Execution, Event) => {
+                    // Execution emittiert Events
+                    self.state
+                        .core
+                        .events
+                        .execution_triggered
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // Calibration → * Beziehungen
+                // ─────────────────────────────────────────────────────────────
+                (Calibration, Gas) => {
+                    // Calibration passt Gas-Preise an
+                    self.state
+                        .execution
+                        .gas
+                        .calibration_adjustments
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+                (Calibration, Mana) => {
+                    // Calibration passt Mana-Regen an
+                    self.state
+                        .execution
+                        .mana
+                        .calibration_adjustments
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // Gateway → * Beziehungen (Κ23)
+                // ─────────────────────────────────────────────────────────────
+                (Gateway, Event) => {
+                    // Crossings erzeugen Events
+                    self.state
+                        .core
+                        .events
+                        .gateway_triggered
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // SagaComposer → * Beziehungen (Κ22/Κ24)
+                // ─────────────────────────────────────────────────────────────
+                (SagaComposer, Execution) => {
+                    // Sagas erzeugen Executions
+                    self.state
+                        .execution
+                        .executions
+                        .saga_triggered
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // Realm → * Beziehungen (Κ22-Κ24)
+                // ─────────────────────────────────────────────────────────────
+                (Realm, Trust) => {
+                    // Realm-Aktivität beeinflusst Trust
+                    self.state
+                        .core
+                        .trust
+                        .realm_triggered_updates
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+                (Realm, SagaComposer) => {
+                    // Realm kann Cross-Realm-Sagas auslösen
+                    self.state
+                        .peer
+                        .saga
+                        .cross_realm_sagas
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+                (Realm, Event) => {
+                    // Realm-Events (Registrierung, Membership, Rules)
+                    self.state
+                        .core
+                        .events
+                        .realm_triggered
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // ECLVM → * Beziehungen
+                // ─────────────────────────────────────────────────────────────
+                (ECLVM, Event) => {
+                    // ECL-Ausführungen emittieren Events
+                    self.state
+                        .core
+                        .events
+                        .eclvm_triggered
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // ECLPolicy → * Beziehungen
+                // ─────────────────────────────────────────────────────────────
+                (ECLPolicy, Event) => {
+                    // Policy-Evaluationen erzeugen Events
+                    self.state
+                        .core
+                        .events
+                        .policy_triggered
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // ECLBlueprint → * Beziehungen
+                // ─────────────────────────────────────────────────────────────
+                (ECLBlueprint, Event) => {
+                    // Blueprint-Instanziierungen erzeugen Events
+                    self.state
+                        .core
+                        .events
+                        .blueprint_triggered
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // P2P → * Beziehungen
+                // ─────────────────────────────────────────────────────────────
+                (Swarm, Event) => {
+                    // Swarm propagiert Events
+                    self.state
+                        .core
+                        .events
+                        .swarm_triggered
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+                (Gossip, Event) => {
+                    // Gossip verteilt Events
+                    self.state
+                        .core
+                        .events
+                        .gossip_triggered
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                _ => {
+                    // Unbehandelte Trigger-Beziehung - als Debug loggen in Zukunft
+                }
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // PHASE 2: VALIDATION PROPAGATION (A ✓ B)
+        // Alle Komponenten die von `from` validiert werden
+        // ═══════════════════════════════════════════════════════════════════
+        for component in graph.validated_by(from) {
+            match (from, component) {
+                // ─────────────────────────────────────────────────────────────
+                // Anomaly validiert Event/Trust
+                // ─────────────────────────────────────────────────────────────
+                (Anomaly, Event) => {
+                    self.state
+                        .protection
+                        .anomaly
+                        .events_validated
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+                (Anomaly, Trust) => {
+                    self.state
+                        .protection
+                        .anomaly
+                        .trust_patterns_checked
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // Diversity validiert Trust/Consensus
+                // ─────────────────────────────────────────────────────────────
+                (Diversity, Trust) => {
+                    self.state
+                        .protection
+                        .diversity
+                        .trust_distribution_checks
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+                (Diversity, Consensus) => {
+                    self.state
+                        .protection
+                        .diversity
+                        .validator_mix_checks
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // AntiCalcification validiert Trust
+                // ─────────────────────────────────────────────────────────────
+                (AntiCalcification, Trust) => {
+                    self.state
+                        .protection
+                        .anti_calcification
+                        .power_checks
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // Consensus validiert Event
+                // ─────────────────────────────────────────────────────────────
+                (Consensus, Event) => {
+                    self.state
+                        .core
+                        .consensus
+                        .events_validated
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // Gateway validiert Trust (Κ23)
+                // ─────────────────────────────────────────────────────────────
+                (Gateway, Trust) => {
+                    self.state
+                        .peer
+                        .gateway
+                        .crossings_total
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // IntentParser validiert Event
+                // ─────────────────────────────────────────────────────────────
+                (IntentParser, Event) => {
+                    self.state
+                        .peer
+                        .intent
+                        .validation_errors
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // ECLPolicy validiert Gateway/Realm
+                // ─────────────────────────────────────────────────────────────
+                (ECLPolicy, Gateway) => {
+                    self.state
+                        .eclvm
+                        .crossing_evaluations
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+                (ECLPolicy, Realm) => {
+                    self.state
+                        .eclvm
+                        .policies_executed
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                _ => {
+                    // Unbehandelte Validations-Beziehung
+                }
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // PHASE 3: AGGREGATION PROPAGATION (A ⊃ B)
+        // Alle Komponenten deren Daten in `from` aggregiert werden
+        // ═══════════════════════════════════════════════════════════════════
+        for component in graph.aggregated_by(from) {
+            match (from, component) {
+                // ─────────────────────────────────────────────────────────────
+                // Execution aggregiert Gas/Mana
+                // ─────────────────────────────────────────────────────────────
+                (Execution, Gas) => {
+                    self.state
+                        .execution
+                        .executions
+                        .gas_aggregations
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+                (Execution, Mana) => {
+                    self.state
+                        .execution
+                        .executions
+                        .mana_aggregations
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // Storage aggregiert Events
+                // ─────────────────────────────────────────────────────────────
+                (EventStore, Event) => {
+                    self.state
+                        .storage
+                        .event_store_count
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+                (Archive, EventStore) => {
+                    self.state
+                        .storage
+                        .archived_events
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // SagaComposer aggregiert IntentParser
+                // ─────────────────────────────────────────────────────────────
+                (SagaComposer, IntentParser) => {
+                    self.state
+                        .peer
+                        .saga
+                        .sagas_composed
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // Realm aggregiert Gateway/ECLPolicy
+                // ─────────────────────────────────────────────────────────────
+                (Realm, Gateway) => {
+                    self.state
+                        .peer
+                        .realm
+                        .active_crossings
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+                (Realm, ECLPolicy) => {
+                    self.state
+                        .peer
+                        .realm
+                        .total_realms
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // ECLVM aggregiert Execution
+                // ─────────────────────────────────────────────────────────────
+                (ECLVM, Execution) => {
+                    self.state
+                        .eclvm
+                        .intents_processed
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // ECLBlueprint aggregiert Blueprint
+                // ─────────────────────────────────────────────────────────────
+                (ECLBlueprint, Blueprint) => {
+                    self.state
+                        .eclvm
+                        .blueprints_instantiated
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // Kademlia aggregiert Swarm
+                // ─────────────────────────────────────────────────────────────
+                (Kademlia, Swarm) => {
+                    self.state
+                        .p2p
+                        .kademlia
+                        .queries_successful
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                _ => {
+                    // Unbehandelte Aggregations-Beziehung
+                }
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // PHASE 4: DEPENDENCY TRACKING (A ← B)
+        // Alle Komponenten von denen `from` abhängt - Notify wenn sich diese ändern
+        // ═══════════════════════════════════════════════════════════════════
+        for component in graph.dependencies_of(from) {
+            match (from, component) {
+                // ─────────────────────────────────────────────────────────────
+                // Trust → WorldFormula Dependency
+                // ─────────────────────────────────────────────────────────────
+                (Trust, WorldFormula) => {
+                    self.state
+                        .core
+                        .formula
+                        .computations
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // Gas/Mana → Trust Dependency
+                // ─────────────────────────────────────────────────────────────
+                (Gas, Trust) => {
+                    self.state
+                        .execution
+                        .gas
+                        .trust_dependency_updates
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+                (Mana, Trust) => {
+                    self.state
+                        .execution
+                        .mana
+                        .trust_dependency_updates
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // Quadratic → Trust Dependency
+                // ─────────────────────────────────────────────────────────────
+                (Quadratic, Trust) => {
+                    self.state
+                        .protection
+                        .quadratic
+                        .trust_dependency_updates
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // KvStore/Blueprint → Trust Dependency
+                // ─────────────────────────────────────────────────────────────
+                (KvStore, Trust) => {
+                    self.state.storage.kv_reads.fetch_add(1, Ordering::Relaxed);
+                }
+                (Blueprint, Trust) => {
+                    self.state
+                        .storage
+                        .blueprints_downloaded
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // Gateway/SagaComposer → Trust Dependency (Κ22-Κ24)
+                // ─────────────────────────────────────────────────────────────
+                (Gateway, Trust) => {
+                    self.state
+                        .peer
+                        .gateway
+                        .crossings_total
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+                (Gateway, Realm) => {
+                    self.state
+                        .peer
+                        .gateway
+                        .registered_realms
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+                (Gateway, ECLPolicy) => {
+                    self.state
+                        .peer
+                        .gateway
+                        .rule_violations
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+                (SagaComposer, Trust) => {
+                    self.state
+                        .peer
+                        .saga
+                        .budget_violations
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+                (SagaComposer, ECLVM) => {
+                    self.state
+                        .peer
+                        .saga
+                        .cross_realm_sagas
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // Realm → Trust Dependency
+                // ─────────────────────────────────────────────────────────────
+                (Realm, Trust) => {
+                    self.state
+                        .peer
+                        .realm
+                        .total_realms
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // ECLVM → Gas/Mana/Trust Dependency
+                // ─────────────────────────────────────────────────────────────
+                (ECLVM, Gas) => {
+                    self.state
+                        .eclvm
+                        .total_gas_consumed
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+                (ECLVM, Mana) => {
+                    self.state
+                        .eclvm
+                        .total_mana_consumed
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+                (ECLVM, Trust) => {
+                    self.state
+                        .eclvm
+                        .saga_steps_executed
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // ECLPolicy → ECLVM Dependency
+                // ─────────────────────────────────────────────────────────────
+                (ECLPolicy, ECLVM) => {
+                    self.state
+                        .eclvm
+                        .policies_compiled
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // ECLBlueprint → ECLVM Dependency
+                // ─────────────────────────────────────────────────────────────
+                (ECLBlueprint, ECLVM) => {
+                    self.state
+                        .eclvm
+                        .blueprints_deployed
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // IntentParser → ECLPolicy Dependency
+                // ─────────────────────────────────────────────────────────────
+                (IntentParser, ECLPolicy) => {
+                    self.state
+                        .peer
+                        .intent
+                        .parse_errors
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // P2P → Trust Dependency
+                // ─────────────────────────────────────────────────────────────
+                (Gossip, Trust) => {
+                    self.state
+                        .p2p
+                        .gossip
+                        .messages_validated
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+                (Relay, Trust) => {
+                    self.state
+                        .p2p
+                        .relay
+                        .circuits_served
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+
+                _ => {
+                    // Unbehandelte Dependency-Beziehung
+                }
             }
         }
     }
@@ -842,13 +1422,15 @@ impl ExecutionObserver for StateIntegrator {
     fn on_gas_consumed(&self, amount: u64) {
         self.state
             .execution
-            .gas_consumed
+            .gas
+            .consumed
             .fetch_add(amount, Ordering::Relaxed);
     }
 
     fn on_out_of_gas(&self, _required: u64, _available: u64) {
         self.state
             .execution
+            .gas
             .out_of_gas
             .fetch_add(1, Ordering::Relaxed);
     }
@@ -856,13 +1438,15 @@ impl ExecutionObserver for StateIntegrator {
     fn on_mana_consumed(&self, amount: u64) {
         self.state
             .execution
-            .mana_consumed
+            .mana
+            .consumed
             .fetch_add(amount, Ordering::Relaxed);
     }
 
     fn on_rate_limited(&self, _entity: &EntityId) {
         self.state
             .execution
+            .mana
             .rate_limited
             .fetch_add(1, Ordering::Relaxed);
     }
@@ -888,6 +1472,7 @@ impl ProtectionObserver for StateIntegrator {
     fn on_monoculture_warning(&self, dimension: &str, concentration: f64) {
         self.state
             .protection
+            .diversity
             .monoculture_warnings
             .fetch_add(1, Ordering::Relaxed);
         self.state.add_warning(format!(
@@ -900,6 +1485,7 @@ impl ProtectionObserver for StateIntegrator {
     fn on_intervention(&self, _entity: &EntityId, reason: &str) {
         self.state
             .protection
+            .anti_calcification
             .interventions
             .fetch_add(1, Ordering::Relaxed);
         tracing::info!("Anti-calcification intervention: {}", reason);
@@ -908,9 +1494,10 @@ impl ProtectionObserver for StateIntegrator {
     fn on_calibration_update(&self, param: &str, _old_value: f64, new_value: f64) {
         self.state
             .protection
-            .calibration_updates
+            .calibration
+            .updates
             .fetch_add(1, Ordering::Relaxed);
-        if let Ok(mut params) = self.state.protection.calibrated_params.write() {
+        if let Ok(mut params) = self.state.protection.calibration.params.write() {
             params.insert(param.to_string(), new_value);
         }
     }
@@ -1837,7 +2424,8 @@ impl ECLVMObserver for StateIntegrator {
         // Also update global ExecutionState
         self.state
             .execution
-            .gas_consumed
+            .gas
+            .consumed
             .fetch_add(amount, Ordering::Relaxed);
     }
 
@@ -1861,7 +2449,8 @@ impl ECLVMObserver for StateIntegrator {
         // Also update global ExecutionState
         self.state
             .execution
-            .mana_consumed
+            .mana
+            .consumed
             .fetch_add(amount, Ordering::Relaxed);
     }
 
@@ -2176,10 +2765,10 @@ mod tests {
         integrator.on_execution_complete(1, true, 1000, 100, 5, 50);
 
         let snapshot = state.snapshot();
-        assert_eq!(snapshot.execution.total_executions, 1);
-        assert_eq!(snapshot.execution.successful, 1);
-        assert_eq!(snapshot.execution.gas_consumed, 2000); // 1000 direct + 1000 in complete
-        assert_eq!(snapshot.execution.mana_consumed, 200);
+        assert_eq!(snapshot.execution.executions.total, 1);
+        assert_eq!(snapshot.execution.executions.successful, 1);
+        assert_eq!(snapshot.execution.gas.consumed, 2000); // 1000 direct + 1000 in complete
+        assert_eq!(snapshot.execution.mana.consumed, 200);
     }
 
     #[test]
