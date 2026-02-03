@@ -186,9 +186,16 @@ async fn main() -> anyhow::Result<()> {
         // SwarmState für echte Diagnostics erstellen
         let swarm_state = Arc::new(SwarmState::new(peer_id.to_string()));
 
+        // UnifiedState und Bridge für zentrales State-Management erstellen
+        let unified_state = erynoa_api::core::create_unified_state();
+        let integrator = erynoa_api::core::StateIntegrator::new(unified_state.clone());
+        let bridge = erynoa_api::peer::p2p::UnifiedStateBridge::new(swarm_state.clone(), integrator);
+        let bridge = Arc::new(bridge);
+
         // Event-Handler Task - befüllt SwarmState mit echten Daten
         let connected_peers_clone = connected_peers.clone();
         let swarm_state_clone = swarm_state.clone();
+        let bridge_clone = bridge.clone();
         let event_task = tokio::spawn(async move {
             let mut event_rx = event_rx;
             while let Ok(event) = event_rx.recv().await {
@@ -205,6 +212,8 @@ async fn main() -> anyhow::Result<()> {
                             info!(peer_id = %peer_id, total_peers = count, inbound = is_inbound, "✅ Peer connected");
                             // SwarmState aktualisieren
                             swarm_state_clone.peer_connected(&peer_str, is_inbound, false);
+                            // Bridge synchronisieren
+                            bridge_clone.sync();
                         }
                     }
                     TestnetEvent::PeerDisconnected { peer_id } => {
@@ -216,6 +225,8 @@ async fn main() -> anyhow::Result<()> {
                             info!(peer_id = %peer_id, total_peers = count, "👋 Peer disconnected");
                             // SwarmState aktualisieren
                             swarm_state_clone.peer_disconnected(&peer_str);
+                            // Bridge synchronisieren
+                            bridge_clone.sync();
                         }
                     }
                     TestnetEvent::MdnsDiscovered { peer_id, addresses } => {
@@ -228,6 +239,7 @@ async fn main() -> anyhow::Result<()> {
                     TestnetEvent::KademliaBootstrapComplete => {
                         info!("🎉 Kademlia bootstrap complete!");
                         swarm_state_clone.kademlia_bootstrap_done();
+                        bridge_clone.sync();
                     }
                     TestnetEvent::KademliaRoutingUpdate {
                         peer_id,
@@ -239,20 +251,24 @@ async fn main() -> anyhow::Result<()> {
                             .load(Ordering::Relaxed);
                         if bucket_size > current {
                             swarm_state_clone.set_kademlia_routing_table_size(bucket_size);
+                            bridge_clone.sync();
                         }
                         let _ = peer_id; // Unused but part of event
                     }
                     TestnetEvent::GossipMessage { topic, source, .. } => {
                         info!(topic = %topic, source = ?source, "📨 Gossip message received");
                         swarm_state_clone.gossip_message_received();
+                        // Sync periodisch, nicht bei jeder Message
                     }
                     TestnetEvent::GossipMeshPeerAdded { peer_id, topic } => {
                         info!(peer_id = %peer_id, topic = %topic, "📣 Peer joined gossip mesh");
                         swarm_state_clone.gossip_mesh_peer_added();
+                        bridge_clone.sync();
                     }
                     TestnetEvent::GossipMeshPeerRemoved { peer_id, topic } => {
                         info!(peer_id = %peer_id, topic = %topic, "📣 Peer left gossip mesh");
                         swarm_state_clone.gossip_mesh_peer_removed();
+                        bridge_clone.sync();
                     }
                     TestnetEvent::GossipMessageSent { topic } => {
                         swarm_state_clone.gossip_message_sent();
@@ -270,6 +286,7 @@ async fn main() -> anyhow::Result<()> {
                             NatStatus::Unknown
                         };
                         swarm_state_clone.set_nat_status(status);
+                        bridge_clone.sync();
                     }
                     TestnetEvent::ExternalAddressConfirmed { address } => {
                         info!(addr = %address, "🌐 External address confirmed");
@@ -278,6 +295,7 @@ async fn main() -> anyhow::Result<()> {
                     TestnetEvent::RelayReservation { relay_peer } => {
                         info!(relay = %relay_peer, "🔄 Relay reservation accepted (client)");
                         swarm_state_clone.relay_reservation_accepted(relay_peer.to_string());
+                        bridge_clone.sync();
                     }
                     TestnetEvent::RelayCircuitOpened {
                         src_peer_id,
@@ -285,6 +303,7 @@ async fn main() -> anyhow::Result<()> {
                     } => {
                         info!(src = %src_peer_id, dst = %dst_peer_id, "📡 Relay: Now serving circuit!");
                         swarm_state_clone.relay_circuit_opened();
+                        bridge_clone.sync();
                     }
                     TestnetEvent::RelayCircuitClosed {
                         src_peer_id,

@@ -57,6 +57,10 @@ pub mod error;
 pub mod server;
 pub mod telemetry;
 
+// === Egui Debugger (optional, feature "debug") ===
+#[cfg(feature = "debug")]
+pub mod debug;
+
 pub use error::{ApiError, Result};
 pub use server::AppState;
 

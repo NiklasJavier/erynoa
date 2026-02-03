@@ -1,7 +1,22 @@
 //! Server module - Application startup and state management
+//!
+//! ## State Hierarchy
+//!
+//! ```text
+//! ┌─────────────────────────────────────────────────────────────────────┐
+//! │                         APPLICATION STATE                           │
+//! ├─────────────────────────────────────────────────────────────────────┤
+//! │  AppState                                                           │
+//! │  ├── unified_state: SharedUnifiedState (Core + Execution + ...)    │
+//! │  ├── coordinator: StateCoordinator (Health + Invariants)           │
+//! │  ├── storage: DecentralizedStorage (Persistence)                   │
+//! │  └── config: Settings                                              │
+//! └─────────────────────────────────────────────────────────────────────┘
+//! ```
 
 use crate::api::{create_router, create_static_router, StaticConfig};
 use crate::config::Settings;
+use crate::core::{create_unified_state, SharedUnifiedState, StateCoordinator, StateIntegrator};
 use crate::local::DecentralizedStorage;
 use anyhow::Result;
 use axum::Router;
@@ -11,20 +26,73 @@ use std::time::Instant;
 use tokio::net::TcpListener;
 
 /// Shared application state for all handlers
+///
+/// Enthält hierarchisches State-Management:
+/// - `unified_state`: Atomar Counter für alle Module
+/// - `coordinator`: Invarianten-Checks und Health-Aggregation
+/// - `integrator`: Observer-Pattern für Engine-Updates
+/// - `storage`: Fjall-basierter dezentraler Storage
 #[derive(Clone)]
 pub struct AppState {
+    /// Unified State für alle Module (Thread-safe)
+    pub unified_state: SharedUnifiedState,
+
+    /// State Coordinator für Health und Invarianten
+    pub coordinator: Arc<StateCoordinator>,
+
+    /// State Integrator für Observer-Pattern
+    pub integrator: StateIntegrator,
+
     /// Dezentraler Storage (Fjall)
     pub storage: DecentralizedStorage,
+
     /// Anwendungskonfiguration
     pub config: Arc<Settings>,
+
     /// Startzeitpunkt für Uptime
     pub started_at: Option<Instant>,
 }
 
 impl AppState {
+    /// Erstelle neuen AppState mit Unified State Management
+    pub fn new(storage: DecentralizedStorage, config: Settings) -> Self {
+        // Unified State erstellen
+        let unified_state = create_unified_state();
+
+        // Coordinator für Health-Checks
+        let coordinator = Arc::new(StateCoordinator::new(unified_state.clone()));
+
+        // Integrator für Observer-Pattern
+        let integrator = StateIntegrator::new(unified_state.clone());
+
+        Self {
+            unified_state,
+            coordinator,
+            integrator,
+            storage,
+            config: Arc::new(config),
+            started_at: Some(Instant::now()),
+        }
+    }
+
     /// Check if storage is reachable
     pub async fn health_check(&self) -> bool {
         self.storage.ping().await.is_ok()
+    }
+
+    /// Get system health report
+    pub fn health_report(&self) -> crate::core::HealthReport {
+        self.coordinator.aggregate_health()
+    }
+
+    /// Get unified state snapshot
+    pub fn state_snapshot(&self) -> crate::core::UnifiedStateSnapshot {
+        self.unified_state.snapshot()
+    }
+
+    /// Get uptime in seconds
+    pub fn uptime_secs(&self) -> u64 {
+        self.started_at.map(|s| s.elapsed().as_secs()).unwrap_or(0)
     }
 }
 
@@ -52,11 +120,9 @@ impl Server {
         let storage = DecentralizedStorage::open(data_dir)?;
         tracing::info!(path = %data_dir, "✅ Decentralized storage ready");
 
-        let state = AppState {
-            storage,
-            config: Arc::new(settings.clone()),
-            started_at: Some(Instant::now()),
-        };
+        // AppState mit Unified State Management
+        let state = AppState::new(storage, settings.clone());
+        tracing::info!("✅ Unified state management initialized");
 
         // API Router
         let api_router = create_router(state);

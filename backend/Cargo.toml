@@ -24,6 +24,11 @@ name = "erynoa-testnet-node"
 path = "src/bin/testnet_node.rs"
 required-features = ["p2p"]
 
+[[bin]]
+name = "erynoa-debug"
+path = "src/bin/debug.rs"
+required-features = ["debug"]
+
 [dependencies]
 # ============================================================================
 # ASYNC RUNTIME & WEB FRAMEWORK
@@ -188,6 +193,13 @@ rayon = { version = "1.10", optional = true }   # Parallel batch processing (RL2
 # Hardware-Beschleunigung Detection
 cpufeatures = { version = "0.2", optional = true } # Runtime CPU-Feature-Detection
 
+# ============================================================================
+# EGUI DEBUGGER (src/debug) – Live Cockpit für UnifiedState
+# ============================================================================
+eframe = { version = "0.29", optional = true }
+egui = { version = "0.29", optional = true }
+egui_plot = { version = "0.29", optional = true }
+
 [features]
 default = []
 jemalloc = ["dep:tikv-jemallocator"]
@@ -214,6 +226,9 @@ privacy-zk = [
 ]
 privacy-mixing = ["privacy", "dep:statrs"]
 privacy-full = ["privacy", "privacy-zk", "privacy-mixing", "dep:cpufeatures"]
+
+# Native egui Debugger (UnifiedState, Trust, Events, P2P, Realms, ECLVM)
+debug = ["dep:eframe", "dep:egui", "dep:egui_plot"]
 
 [build-dependencies]
 axum-connect-build = "0.3"

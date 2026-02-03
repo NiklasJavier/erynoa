@@ -146,6 +146,8 @@ pub use diagnostics::{
     // SystemState für Core/ECLVM/Local/Protection Metriken (V2.8)
     SystemSnapshot,
     SystemState,
+    // UnifiedStateBridge für Integration mit core::UnifiedState (V2.9)
+    UnifiedStateBridge,
 };
 #[cfg(feature = "p2p")]
 pub use identity::PeerIdentity;

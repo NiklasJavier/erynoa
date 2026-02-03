@@ -9,6 +9,7 @@
 //! │                        EXECUTION MODULE                            │
 //! ├─────────────────────────────────────────────────────────────────────┤
 //! │  context    - ExecutionContext (IPS-Monade ℳ)                      │
+//! │  tracked    - TrackedContext (State-Integration)                   │
 //! │  error      - ExecutionError (ℳ_VM + ℳ_S + ℳ_P)                    │
 //! └─────────────────────────────────────────────────────────────────────┘
 //! ```
@@ -18,11 +19,12 @@
 //! Die Monade ℳ aus dem IPS-Modell wird durch zwei Komponenten realisiert:
 //!
 //! 1. **ExecutionContext**: Kapselt State, Writer, Reader
-//! 2. **ExecutionError**: Unifizierte Fehler-Hierarchie
+//! 2. **TrackedContext**: ExecutionContext mit automatischem State-Tracking
+//! 3. **ExecutionError**: Unifizierte Fehler-Hierarchie
 //!
 //! Zusammen ergeben sie das Pattern:
 //! ```text
-//! fn operation(ctx: &mut ExecutionContext) -> Result<T, ExecutionError>
+//! fn operation(ctx: &mut TrackedContext) -> Result<T, ExecutionError>
 //! ```
 //!
 //! ## Monadische Gesetze
@@ -48,13 +50,13 @@
 //! ## Beispiel
 //!
 //! ```rust
-//! use erynoa_api::execution::{ExecutionContext, ExecutionError, ExecutionResult};
+//! use erynoa_api::execution::{TrackedContext, TrackedContextBuilder, ExecutionResult};
 //!
-//! fn process_intent(ctx: &mut ExecutionContext) -> ExecutionResult<u64> {
+//! fn process_intent(ctx: &mut TrackedContext) -> ExecutionResult<u64> {
 //!     // Trust-Gate prüfen
-//!     ctx.require_trust(0.5)?;
+//!     ctx.inner().require_trust(0.5)?;
 //!
-//!     // Gas verbrauchen
+//!     // Gas verbrauchen (automatisch getrackt)
 //!     ctx.consume_gas(100)?;
 //!
 //!     // Monadische Ausführung
@@ -72,16 +74,19 @@
 pub mod context;
 pub mod error;
 pub mod information_loss;
+pub mod tracked;
 
 // Re-exports
 pub use context::{
-    DelegationHop, Event, ExecutionContext, ExecutionSummary, TrustContext, WorldState,
+    DelegationHop, Event, ExecutionContext, ExecutionSummary as ContextSummary, TrustContext,
+    WorldState,
 };
 pub use error::{ErrorCategory, ExecutionError, ExecutionResult};
 pub use information_loss::{
     ChannelType, CompressionRecord, InformationLoss, LossReason, LossRegistry, LossSummary,
     LossTracker,
 };
+pub use tracked::{ExecutionSummary, TrackedContext, TrackedContextBuilder};
 
 // ============================================================================
 // Prelude für häufige Imports

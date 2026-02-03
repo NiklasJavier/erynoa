@@ -281,3 +281,207 @@ mod tests {
         assert_eq!(snapshot.eclvm.out_of_gas_count, 1);
     }
 }
+// ============================================================================
+// UNIFIED STATE BRIDGE
+// ============================================================================
+
+/// Brücke zwischen dem alten SwarmState (Diagnostics) und dem neuen UnifiedState (Core).
+///
+/// Diese Struktur synchronisiert Daten vom detaillierten Diagnostics-SwarmState
+/// zum aggregierten UnifiedState für konsistentes System-weites Monitoring.
+///
+/// ## Verwendung
+///
+/// ```rust,ignore
+/// use erynoa_api::peer::p2p::diagnostics::{SwarmState, UnifiedStateBridge};
+/// use erynoa_api::core::{create_unified_state, StateIntegrator};
+///
+/// let swarm_state = Arc::new(SwarmState::new("peer-123"));
+/// let unified_state = create_unified_state();
+/// let integrator = StateIntegrator::new(unified_state.clone());
+///
+/// let bridge = UnifiedStateBridge::new(swarm_state.clone(), integrator);
+///
+/// // Events vom Swarm werden automatisch propagiert
+/// swarm_state.peer_connected("other-peer", true, false);
+/// bridge.sync(); // Synchronisiert zum UnifiedState
+/// ```
+pub struct UnifiedStateBridge {
+    /// Detaillierter Diagnostics-SwarmState
+    swarm_state: Arc<super::SwarmState>,
+
+    /// StateIntegrator für Unified State Updates
+    integrator: crate::core::StateIntegrator,
+}
+
+impl UnifiedStateBridge {
+    /// Erstelle neue Bridge
+    pub fn new(
+        swarm_state: Arc<super::SwarmState>,
+        integrator: crate::core::StateIntegrator,
+    ) -> Self {
+        Self {
+            swarm_state,
+            integrator,
+        }
+    }
+
+    /// Synchronisiere aktuellen SwarmState zum UnifiedState
+    ///
+    /// Sollte periodisch aufgerufen werden (z.B. alle 100ms) oder nach wichtigen Events.
+    pub fn sync(&self) {
+        use std::sync::atomic::Ordering;
+
+        // Peer count synchronisieren (usize -> usize)
+        let connected = self
+            .swarm_state
+            .connected_peers_count
+            .load(Ordering::Relaxed);
+        let inbound = self.swarm_state.inbound_connections.load(Ordering::Relaxed) as u64;
+        let outbound = self
+            .swarm_state
+            .outbound_connections
+            .load(Ordering::Relaxed) as u64;
+
+        // Swarm metrics zum UnifiedState
+        self.integrator
+            .state()
+            .p2p
+            .swarm
+            .connected_peers
+            .store(connected, Ordering::Relaxed);
+        self.integrator
+            .state()
+            .p2p
+            .swarm
+            .inbound_connections
+            .store(inbound, Ordering::Relaxed);
+        self.integrator
+            .state()
+            .p2p
+            .swarm
+            .outbound_connections
+            .store(outbound, Ordering::Relaxed);
+
+        // Gossip metrics (usize/u64 -> usize/u64)
+        let mesh_peers = self.swarm_state.gossip_mesh_size.load(Ordering::Relaxed);
+        let topics = self
+            .swarm_state
+            .gossip_topics_subscribed
+            .load(Ordering::Relaxed);
+        let msgs_received = self
+            .swarm_state
+            .gossip_messages_received
+            .load(Ordering::Relaxed);
+        let msgs_sent = self
+            .swarm_state
+            .gossip_messages_sent
+            .load(Ordering::Relaxed);
+
+        self.integrator
+            .state()
+            .p2p
+            .gossip
+            .mesh_peers
+            .store(mesh_peers, Ordering::Relaxed);
+        self.integrator
+            .state()
+            .p2p
+            .gossip
+            .subscribed_topics
+            .store(topics, Ordering::Relaxed);
+        self.integrator
+            .state()
+            .p2p
+            .gossip
+            .messages_received
+            .store(msgs_received, Ordering::Relaxed);
+        self.integrator
+            .state()
+            .p2p
+            .gossip
+            .messages_sent
+            .store(msgs_sent, Ordering::Relaxed);
+
+        // Kademlia metrics (usize -> usize/u64)
+        let routing_size = self
+            .swarm_state
+            .kademlia_routing_table_size
+            .load(Ordering::Relaxed);
+        let bootstrap = self
+            .swarm_state
+            .kademlia_bootstrap_complete
+            .load(Ordering::Relaxed);
+        let records = self.swarm_state.dht_records_stored.load(Ordering::Relaxed) as u64;
+
+        self.integrator
+            .state()
+            .p2p
+            .kademlia
+            .routing_table_size
+            .store(routing_size, Ordering::Relaxed);
+        if let Ok(mut b) = self
+            .integrator
+            .state()
+            .p2p
+            .kademlia
+            .bootstrap_complete
+            .write()
+        {
+            *b = bootstrap;
+        }
+        self.integrator
+            .state()
+            .p2p
+            .kademlia
+            .records_stored
+            .store(records, Ordering::Relaxed);
+
+        // Relay metrics (usize -> u64, bool -> RwLock<bool>)
+        let has_reservation = self
+            .swarm_state
+            .has_relay_reservation
+            .load(Ordering::Relaxed);
+        let circuits = self
+            .swarm_state
+            .relay_circuits_serving
+            .load(Ordering::Relaxed) as u64;
+        let dcutr_success = self.swarm_state.dcutr_successes.load(Ordering::Relaxed) as u64;
+        let dcutr_fail = self.swarm_state.dcutr_failures.load(Ordering::Relaxed) as u64;
+
+        if let Ok(mut res) = self.integrator.state().p2p.relay.has_reservation.write() {
+            *res = has_reservation;
+        }
+        self.integrator
+            .state()
+            .p2p
+            .relay
+            .circuits_served
+            .store(circuits, Ordering::Relaxed);
+        self.integrator
+            .state()
+            .p2p
+            .relay
+            .dcutr_successes
+            .store(dcutr_success, Ordering::Relaxed);
+        self.integrator
+            .state()
+            .p2p
+            .relay
+            .dcutr_failures
+            .store(dcutr_fail, Ordering::Relaxed);
+
+        // P2P Warnings prüfen
+        self.integrator.check_p2p_health();
+    }
+
+    /// Zugriff auf SwarmState
+    pub fn swarm_state(&self) -> &Arc<super::SwarmState> {
+        &self.swarm_state
+    }
+
+    /// Zugriff auf StateIntegrator
+    pub fn integrator(&self) -> &crate::core::StateIntegrator {
+        &self.integrator
+    }
+}
