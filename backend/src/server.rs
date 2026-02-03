@@ -86,7 +86,7 @@ impl AppState {
     }
 
     /// Get unified state snapshot
-    pub fn state_snapshot(&self) -> crate::core::UnifiedStateSnapshot {
+    pub fn state_snapshot(&self) -> crate::core::UnifiedSnapshot {
         self.unified_state.snapshot()
     }
 

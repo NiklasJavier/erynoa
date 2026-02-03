@@ -10,6 +10,7 @@
 //! ├─────────────────────────────────────────────────────────────────────┤
 //! │  state            - Unified State Management (ALL modules)         │
 //! │  state_integration- Observer-based State Integration               │
+//! │  identity_types   - Identity Types & Traits (Κ6-Κ8)               │
 //! │  event_engine     - Event-Verarbeitung (Κ9-Κ12)                    │
 //! │  trust_engine     - Trust-Berechnung (Κ2-Κ5)                       │
 //! │  surprisal        - Surprisal-Berechnung (Κ15a)                    │
@@ -22,6 +23,7 @@
 pub mod consensus;
 pub mod engine;
 pub mod event_engine;
+pub mod identity_types;
 pub mod state;
 pub mod state_coordination;
 pub mod state_integration;
@@ -41,11 +43,11 @@ pub use state::{
     create_unified_state,
     // Engine-Layer State (Phase 2 Additions)
     APIState,
-    APIStateSnapshot,
+    APISnapshot,
     AnomalySeverity,
     BlueprintActionType,
     BlueprintComposerState,
-    BlueprintComposerStateSnapshot,
+    BlueprintComposerSnapshot,
     // ECLVM State (Erynoa Core Language Virtual Machine)
     BlueprintStatus,
     // ─────────────────────────────────────────────────────────────────────────
@@ -58,13 +60,13 @@ pub use state::{
     CommitResult,
     // Core State
     ConsensusState,
-    ConsensusStateSnapshot,
+    ConsensusSnapshot,
     ControllerState,
-    ControllerStateSnapshot,
+    ControllerSnapshot,
     CoreState,
-    CoreStateSnapshot,
+    CoreSnapshot,
     DataLogicState,
-    DataLogicStateSnapshot,
+    DataLogicSnapshot,
     DeltaType,
     ECLPolicyType,
     ECLVMBudget,
@@ -74,41 +76,41 @@ pub use state::{
     ECLVMExecutionSummary,
     ECLVMState,
     ECLVMStateContext,
-    ECLVMStateSnapshot,
+    ECLVMSnapshot,
     // Architektur-Verbesserungen Phase 6.1
     // Event-Inversion (P2P/Core Entkopplung)
     EventBus,
     EventBusSnapshot,
     EventPriority,
     EventState,
-    EventStateSnapshot,
+    EventSnapshot,
     ExecutionState,
-    ExecutionStateSnapshot,
+    ExecutionSnapshot,
     FormulaState,
-    FormulaStateSnapshot,
+    FormulaSnapshot,
     // Architektur-Verbesserungen Phase 6.2
     // Multi-Level Gas Metering
     GasLayer,
     GatewayState,
-    GatewayStateSnapshot,
+    GatewaySnapshot,
     GossipState,
-    GossipStateSnapshot,
+    GossipSnapshot,
     GovernanceState,
-    GovernanceStateSnapshot,
+    GovernanceSnapshot,
     // Differential State Snapshots (Merkle)
     Hashable,
     IdentityViewData,
     IntentParserState,
-    IntentParserStateSnapshot,
+    IntentParserSnapshot,
     KademliaState,
-    KademliaStateSnapshot,
+    KademliaSnapshot,
     MemberRole,
     MembershipAction,
     MerkleDelta,
     MerkleHash,
     MerkleNode,
     MerkleStateTracker,
-    MerkleStateTrackerSnapshot,
+    MerkleTrackerSnapshot,
     MultiGas,
     MultiGasSnapshot,
     MutationResult,
@@ -117,41 +119,41 @@ pub use state::{
     NetworkMetric,
     // P2P State
     P2PState,
-    P2PStateSnapshot,
+    P2PSnapshot,
     // Peer State (Κ22-Κ24)
     PeerState,
-    PeerStateSnapshot,
+    PeerSnapshot,
     PrivacyState,
-    PrivacyStateSnapshot,
+    PrivacySnapshot,
     ProtectionState,
-    ProtectionStateSnapshot,
+    ProtectionSnapshot,
     // Realm-specific Engine States
     RealmAPIState,
     RealmAction,
     RealmControllerState,
     RealmECLState,
-    RealmECLStateSnapshot,
+    RealmECLSnapshot,
     RealmGovernanceState,
     // Self-Healing Realm-Isolierung
     RealmQuota,
     RealmQuotaSnapshot,
     // Realm State (Κ22-Κ24) - Per-Realm Isolation
     RealmSpecificState,
-    RealmSpecificStateSnapshot,
+    RealmSpecificSnapshot,
     RealmState,
-    RealmStateSnapshot,
+    RealmSnapshot,
     RealmUIState,
     RealmViewData,
     RelayState,
-    RelayStateSnapshot,
+    RelaySnapshot,
     // Resource-Typen für Quotas
     ResourceType,
     RollbackResult,
     SagaComposerState,
-    SagaComposerStateSnapshot,
+    SagaComposerSnapshot,
     SharedUnifiedState,
     StateBroadcaster,
-    StateBroadcasterSnapshot,
+    BroadcasterSnapshot,
     StateComponent,
     // CQRS Light (State Delta Broadcasting)
     StateDelta,
@@ -161,7 +163,7 @@ pub use state::{
     // Event-Typen
     StateEvent,
     StateEventLog,
-    StateEventLogSnapshot,
+    EventLogSnapshot,
     StateGraph,
     // State Handle (Write Access)
     StateHandle,
@@ -173,9 +175,9 @@ pub use state::{
     StorageHandle,
     StorageMetrics,
     StorageState,
-    StorageStateSnapshot,
+    StorageSnapshot,
     SwarmState as CoreSwarmState,
-    SwarmStateSnapshot as CoreSwarmStateSnapshot,
+    SwarmSnapshot as CoreSwarmSnapshot,
     // Circuit Breaker Pattern
     SystemMode,
     // Transaction Guard (RAII)
@@ -184,11 +186,11 @@ pub use state::{
     // Hilfs-Enums für Events
     TrustReason,
     TrustState,
-    TrustStateSnapshot,
+    TrustSnapshot,
     UIState,
-    UIStateSnapshot,
+    UISnapshot,
     UnifiedState,
-    UnifiedStateSnapshot,
+    UnifiedSnapshot,
     WrappedStateEvent,
 };
 
@@ -258,6 +260,27 @@ pub use state_integration::{
 pub use state_coordination::{
     HealthReport, HealthStatus, Invariant, InvariantResult, InvariantSeverity, StateCoordinator,
     StateTransaction, TransactionError,
+};
+
+// Re-exports - Identity Types (Phase 1: Foundations)
+pub use identity_types::{
+    // Enums
+    IdentityError,
+    IdentityMode,
+    KeyStoreType,
+    PasskeyType,
+    RealmRole,
+    // Structs
+    RealmMembership,
+    WalletAddress,
+    // Traits
+    IdentityResolver,
+    PasskeyManager,
+    SecureKeyStore,
+    // Shared Types
+    SharedIdentityResolver,
+    SharedKeyStore,
+    SharedPasskeyManager,
 };
 
 // Re-exports - Unified engine layer (Phase 3)

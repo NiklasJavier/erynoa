@@ -591,6 +591,431 @@ pub enum Capability {
 }
 
 // ============================================================================
+// DID Derivation Methods (Phase 1: Foundations)
+// ============================================================================
+
+impl DID {
+    /// Erstelle Device-Sub-DID von einer Root-DID
+    ///
+    /// # Arguments
+    ///
+    /// - `root` - Die Root-DID von der abgeleitet wird
+    /// - `device_index` - Index des Geräts (0-basiert)
+    ///
+    /// # Returns
+    ///
+    /// Neue DID mit Namespace `Self_` und deterministisch abgeleiteter ID
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use erynoa_api::domain::unified::identity::DID;
+    ///
+    /// let root = DID::new_self(b"root-key");
+    /// let device = DID::derive_device(&root, 0);
+    /// assert!(device.to_uri().starts_with("did:erynoa:self:"));
+    /// ```
+    pub fn derive_device(root: &DID, device_index: u32) -> Self {
+        let derivation_content = [
+            root.public_key.as_slice(),
+            b"device",
+            &device_index.to_be_bytes(),
+        ]
+        .concat();
+
+        let derived_key = blake3::hash(&derivation_content);
+        let mut pk = [0u8; 32];
+        pk.copy_from_slice(derived_key.as_bytes());
+
+        Self::new(DIDNamespace::Self_, &pk)
+    }
+
+    /// Erstelle Agent-Sub-DID von einer Root-DID
+    ///
+    /// Agent-DIDs nutzen den `Spirit` Namespace für KI-Agenten/autonome Systeme.
+    ///
+    /// # Arguments
+    ///
+    /// - `root` - Die Root-DID von der abgeleitet wird
+    /// - `agent_index` - Index des Agents (0-basiert)
+    ///
+    /// # Returns
+    ///
+    /// Neue DID mit Namespace `Spirit`
+    pub fn derive_agent(root: &DID, agent_index: u32) -> Self {
+        let derivation_content = [
+            root.public_key.as_slice(),
+            b"agent",
+            &agent_index.to_be_bytes(),
+        ]
+        .concat();
+
+        let derived_key = blake3::hash(&derivation_content);
+        let mut pk = [0u8; 32];
+        pk.copy_from_slice(derived_key.as_bytes());
+
+        Self::new(DIDNamespace::Spirit, &pk)
+    }
+
+    /// Erstelle Realm-spezifische Sub-DID
+    ///
+    /// Realm-DIDs nutzen den `Circle` Namespace für isolierte Realm-Identitäten.
+    ///
+    /// # Arguments
+    ///
+    /// - `root` - Die Root-DID von der abgeleitet wird
+    /// - `realm_id` - UniversalId des Realms
+    ///
+    /// # Returns
+    ///
+    /// Neue DID mit Namespace `Circle`, spezifisch für dieses Realm
+    pub fn derive_realm(root: &DID, realm_id: &UniversalId) -> Self {
+        let derivation_content = [
+            root.public_key.as_slice(),
+            b"realm",
+            realm_id.as_bytes().as_slice(),
+        ]
+        .concat();
+
+        let derived_key = blake3::hash(&derivation_content);
+        let mut pk = [0u8; 32];
+        pk.copy_from_slice(derived_key.as_bytes());
+
+        Self::new(DIDNamespace::Circle, &pk)
+    }
+
+    /// Erstelle Custom-Sub-DID mit beliebigem Namespace und Kontext
+    ///
+    /// # Arguments
+    ///
+    /// - `root` - Die Root-DID von der abgeleitet wird
+    /// - `namespace` - Ziel-Namespace für die neue DID
+    /// - `context` - Kontext-String für die Derivation (z.B. "vault-backup")
+    /// - `index` - Index für mehrere DIDs mit gleichem Kontext
+    ///
+    /// # Returns
+    ///
+    /// Neue DID mit dem angegebenen Namespace
+    pub fn derive_custom(root: &DID, namespace: DIDNamespace, context: &str, index: u32) -> Self {
+        let derivation_content = [
+            root.public_key.as_slice(),
+            context.as_bytes(),
+            &index.to_be_bytes(),
+        ]
+        .concat();
+
+        let derived_key = blake3::hash(&derivation_content);
+        let mut pk = [0u8; 32];
+        pk.copy_from_slice(derived_key.as_bytes());
+
+        Self::new(namespace, &pk)
+    }
+
+    /// Prüfe ob diese DID zu einem bestimmten Namespace gehört
+    pub fn is_namespace(&self, ns: DIDNamespace) -> bool {
+        self.namespace == ns
+    }
+
+    /// Prüfe ob diese DID eine Device-DID sein könnte
+    ///
+    /// Hinweis: Dies prüft nur den Namespace, nicht die tatsächliche Herkunft
+    pub fn is_device_capable(&self) -> bool {
+        matches!(self.namespace, DIDNamespace::Self_)
+    }
+
+    /// Prüfe ob diese DID eine Agent-DID ist
+    pub fn is_agent(&self) -> bool {
+        matches!(self.namespace, DIDNamespace::Spirit)
+    }
+
+    /// Prüfe ob diese DID eine Realm-DID ist
+    pub fn is_realm_did(&self) -> bool {
+        matches!(self.namespace, DIDNamespace::Circle)
+    }
+
+    /// Berechne Derivation-Pfad-String (BIP44-ähnlich)
+    ///
+    /// # Arguments
+    ///
+    /// - `purpose` - Zweck der Derivation ("device", "agent", "realm", etc.)
+    /// - `index` - Index innerhalb des Zwecks
+    ///
+    /// # Returns
+    ///
+    /// Pfad-String wie "m/44'/erynoa'/0'/device/0"
+    pub fn derivation_path(purpose: &str, index: u32) -> String {
+        format!("m/44'/erynoa'/0'/{}/{}", purpose, index)
+    }
+}
+
+// ============================================================================
+// DIDDocument Extensions (Phase 1: Foundations)
+// ============================================================================
+
+impl DIDDocument {
+    /// Füge Device-Key als Verifikationsmethode hinzu
+    ///
+    /// # Arguments
+    ///
+    /// - `device_did` - Die Device-Sub-DID
+    pub fn add_device_key(&mut self, device_did: &DID) {
+        let vm = VerificationMethod {
+            id: device_did.id,
+            controller: self.id.id, // Root-DID ist Controller
+            method_type: VerificationMethodType::Ed25519,
+            public_key: device_did.public_key,
+        };
+
+        // Prüfe ob bereits vorhanden
+        if !self.verification_methods.iter().any(|v| v.id == vm.id) {
+            self.verification_methods.push(vm.clone());
+            self.authentication.push(vm.id);
+        }
+
+        self.updated_at = TemporalCoord::now(0, &device_did.id);
+    }
+
+    /// Füge Agent-Key als Verifikationsmethode hinzu (mit capabilityDelegation)
+    ///
+    /// # Arguments
+    ///
+    /// - `agent_did` - Die Agent-Sub-DID
+    pub fn add_agent_key(&mut self, agent_did: &DID) {
+        let vm = VerificationMethod {
+            id: agent_did.id,
+            controller: self.id.id,
+            method_type: VerificationMethodType::Ed25519,
+            public_key: agent_did.public_key,
+        };
+
+        if !self.verification_methods.iter().any(|v| v.id == vm.id) {
+            self.verification_methods.push(vm.clone());
+            // Agents bekommen nur assertion_method, nicht authentication
+            self.assertion_method.push(vm.id);
+        }
+
+        self.updated_at = TemporalCoord::now(0, &agent_did.id);
+    }
+
+    /// Finde Delegation für einen bestimmten Delegate
+    ///
+    /// # Arguments
+    ///
+    /// - `delegate` - UniversalId des Delegates
+    ///
+    /// # Returns
+    ///
+    /// Referenz auf die Delegation falls gefunden
+    pub fn find_delegation_for(&self, delegate: &UniversalId) -> Option<&Delegation> {
+        self.delegations.iter().find(|d| d.delegate == *delegate)
+    }
+
+    /// Finde alle aktiven Delegationen
+    ///
+    /// # Arguments
+    ///
+    /// - `now` - Aktueller Zeitpunkt für Gültigkeitsprüfung
+    ///
+    /// # Returns
+    ///
+    /// Liste der aktiven Delegationen
+    pub fn active_delegations(&self, now: &TemporalCoord) -> Vec<&Delegation> {
+        self.delegations.iter().filter(|d| d.is_valid(now)).collect()
+    }
+
+    /// Prüfe ob eine Verifikationsmethode existiert
+    pub fn has_verification_method(&self, method_id: &UniversalId) -> bool {
+        self.verification_methods.iter().any(|vm| &vm.id == method_id)
+    }
+
+    /// Hole alle Verifikationsmethoden eines bestimmten Typs
+    pub fn verification_methods_by_type(
+        &self,
+        method_type: VerificationMethodType,
+    ) -> Vec<&VerificationMethod> {
+        self.verification_methods
+            .iter()
+            .filter(|vm| vm.method_type == method_type)
+            .collect()
+    }
+
+    /// Anzahl der Verifikationsmethoden
+    pub fn verification_method_count(&self) -> usize {
+        self.verification_methods.len()
+    }
+
+    /// Anzahl der aktiven Delegationen
+    pub fn delegation_count(&self) -> usize {
+        self.delegations.len()
+    }
+
+    /// Widerrufe eine Delegation
+    ///
+    /// # Arguments
+    ///
+    /// - `delegation_id` - UniversalId der Delegation
+    ///
+    /// # Returns
+    ///
+    /// `true` wenn die Delegation gefunden und widerrufen wurde
+    pub fn revoke_delegation(&mut self, delegation_id: &UniversalId) -> bool {
+        if let Some(delegation) = self.delegations.iter_mut().find(|d| &d.id == delegation_id) {
+            delegation.revoke();
+            self.updated_at = TemporalCoord::now(0, delegation_id);
+            true
+        } else {
+            false
+        }
+    }
+}
+
+// ============================================================================
+// Capability Extensions (Phase 1: Foundations)
+// ============================================================================
+
+impl Capability {
+    /// Parse Capability aus String
+    ///
+    /// Unterstützte Formate:
+    /// - `"*"` → All
+    /// - `"read:resource"` → Read { resource }
+    /// - `"write:resource"` → Write { resource }
+    /// - `"execute:action"` → Execute { action }
+    /// - `"delegate:N"` → Delegate { max_depth: N }
+    /// - `"attest:type1,type2"` → Attest { claim_types }
+    /// - `"custom:name:params"` → Custom { name, params }
+    pub fn parse(s: &str) -> Result<Self, IdentityError> {
+        let s = s.trim();
+
+        if s == "*" {
+            return Ok(Self::All);
+        }
+
+        let parts: Vec<&str> = s.splitn(2, ':').collect();
+        if parts.len() < 2 {
+            return Err(IdentityError::InvalidFormat(format!(
+                "Invalid capability format: {}",
+                s
+            )));
+        }
+
+        let (prefix, value) = (parts[0], parts[1]);
+
+        match prefix {
+            "read" => Ok(Self::Read {
+                resource: value.to_string(),
+            }),
+            "write" => Ok(Self::Write {
+                resource: value.to_string(),
+            }),
+            "execute" => Ok(Self::Execute {
+                action: value.to_string(),
+            }),
+            "delegate" => {
+                let depth = value.parse::<u8>().map_err(|_| {
+                    IdentityError::InvalidFormat(format!("Invalid delegate depth: {}", value))
+                })?;
+                Ok(Self::Delegate { max_depth: depth })
+            }
+            "attest" => {
+                let types: Vec<String> = value.split(',').map(|s| s.trim().to_string()).collect();
+                Ok(Self::Attest { claim_types: types })
+            }
+            "custom" => {
+                let custom_parts: Vec<&str> = value.splitn(2, ':').collect();
+                if custom_parts.len() < 2 {
+                    Ok(Self::Custom {
+                        name: value.to_string(),
+                        params: String::new(),
+                    })
+                } else {
+                    Ok(Self::Custom {
+                        name: custom_parts[0].to_string(),
+                        params: custom_parts[1].to_string(),
+                    })
+                }
+            }
+            _ => Err(IdentityError::InvalidFormat(format!(
+                "Unknown capability type: {}",
+                prefix
+            ))),
+        }
+    }
+
+    /// Konvertiere Capability zu String
+    pub fn to_string_repr(&self) -> String {
+        match self {
+            Self::All => "*".to_string(),
+            Self::Read { resource } => format!("read:{}", resource),
+            Self::Write { resource } => format!("write:{}", resource),
+            Self::Execute { action } => format!("execute:{}", action),
+            Self::Delegate { max_depth } => format!("delegate:{}", max_depth),
+            Self::Attest { claim_types } => format!("attest:{}", claim_types.join(",")),
+            Self::Custom { name, params } => {
+                if params.is_empty() {
+                    format!("custom:{}", name)
+                } else {
+                    format!("custom:{}:{}", name, params)
+                }
+            }
+        }
+    }
+
+    /// Prüfe ob diese Capability eine andere impliziert
+    ///
+    /// Z.B. `All` impliziert alle anderen, `write:*` impliziert `write:specific`
+    pub fn implies(&self, other: &Self) -> bool {
+        match (self, other) {
+            // All impliziert alles
+            (Self::All, _) => true,
+
+            // Gleiche Typen mit Wildcard
+            (Self::Read { resource: a }, Self::Read { resource: b }) => {
+                a == "*" || a == b || (a.ends_with('*') && b.starts_with(&a[..a.len() - 1]))
+            }
+            (Self::Write { resource: a }, Self::Write { resource: b }) => {
+                a == "*" || a == b || (a.ends_with('*') && b.starts_with(&a[..a.len() - 1]))
+            }
+            (Self::Execute { action: a }, Self::Execute { action: b }) => {
+                a == "*" || a == b || (a.ends_with('*') && b.starts_with(&a[..a.len() - 1]))
+            }
+
+            // Delegate: höhere max_depth impliziert niedrigere
+            (Self::Delegate { max_depth: a }, Self::Delegate { max_depth: b }) => a >= b,
+
+            // Attest: alle claim_types müssen enthalten sein
+            (Self::Attest { claim_types: a }, Self::Attest { claim_types: b }) => {
+                b.iter().all(|t| a.contains(t))
+            }
+
+            // Custom: exakter Match
+            (
+                Self::Custom {
+                    name: n1,
+                    params: p1,
+                },
+                Self::Custom {
+                    name: n2,
+                    params: p2,
+                },
+            ) => n1 == n2 && p1 == p2,
+
+            _ => false,
+        }
+    }
+
+    /// Ist dies eine gefährliche Capability?
+    pub fn is_dangerous(&self) -> bool {
+        match self {
+            Self::All => true,
+            Self::Write { resource } if resource == "*" => true,
+            Self::Delegate { max_depth } if *max_depth > 3 => true,
+            _ => false,
+        }
+    }
+}
+
+// ============================================================================
 // Errors
 // ============================================================================
 
@@ -617,6 +1042,12 @@ pub enum IdentityError {
 
     #[error("Capability not granted: {0}")]
     CapabilityNotGranted(String),
+
+    #[error("Derivation failed: {0}")]
+    DerivationFailed(String),
+
+    #[error("Key not found: {0:?}")]
+    KeyNotFound(UniversalId),
 }
 
 // ============================================================================
@@ -718,5 +1149,257 @@ mod tests {
             let parsed = DIDNamespace::from_byte(byte).unwrap();
             assert_eq!(ns, parsed);
         }
+    }
+
+    // ========================================================================
+    // Phase 1: Foundations - New Tests
+    // ========================================================================
+
+    #[test]
+    fn test_did_derive_device() {
+        let root = DID::new_self(b"root-key-32-bytes-for-testing!!");
+        let device0 = DID::derive_device(&root, 0);
+        let device1 = DID::derive_device(&root, 1);
+
+        // Device-DIDs sollten Self-Namespace haben
+        assert!(device0.is_namespace(DIDNamespace::Self_));
+        assert!(device1.is_namespace(DIDNamespace::Self_));
+
+        // Verschiedene Indices → verschiedene DIDs
+        assert_ne!(device0.id, device1.id);
+
+        // Deterministisch: gleicher Index → gleiche DID
+        let device0_again = DID::derive_device(&root, 0);
+        assert_eq!(device0.id, device0_again.id);
+    }
+
+    #[test]
+    fn test_did_derive_agent() {
+        let root = DID::new_self(b"root-key-32-bytes-for-testing!!");
+        let agent = DID::derive_agent(&root, 0);
+
+        // Agent-DIDs sollten Spirit-Namespace haben
+        assert!(agent.is_namespace(DIDNamespace::Spirit));
+        assert!(agent.is_agent());
+        assert!(agent.is_ai());
+    }
+
+    #[test]
+    fn test_did_derive_realm() {
+        let root = DID::new_self(b"root-key-32-bytes-for-testing!!");
+        let realm_id = UniversalId::new(UniversalId::TAG_REALM, 1, b"test-realm");
+
+        let realm_did = DID::derive_realm(&root, &realm_id);
+
+        // Realm-DIDs sollten Circle-Namespace haben
+        assert!(realm_did.is_namespace(DIDNamespace::Circle));
+        assert!(realm_did.is_realm_did());
+    }
+
+    #[test]
+    fn test_did_derive_custom() {
+        let root = DID::new_self(b"root-key-32-bytes-for-testing!!");
+
+        let vault_did = DID::derive_custom(&root, DIDNamespace::Vault, "backup", 0);
+        assert!(vault_did.is_namespace(DIDNamespace::Vault));
+
+        let pact_did = DID::derive_custom(&root, DIDNamespace::Pact, "contract", 0);
+        assert!(pact_did.is_namespace(DIDNamespace::Pact));
+    }
+
+    #[test]
+    fn test_did_derivation_path() {
+        assert_eq!(
+            DID::derivation_path("device", 0),
+            "m/44'/erynoa'/0'/device/0"
+        );
+        assert_eq!(
+            DID::derivation_path("agent", 5),
+            "m/44'/erynoa'/0'/agent/5"
+        );
+    }
+
+    #[test]
+    fn test_did_document_add_device_key() {
+        let root = DID::new_self(b"root-key");
+        let mut doc = DIDDocument::new(root.clone());
+
+        let device = DID::derive_device(&root, 0);
+        doc.add_device_key(&device);
+
+        assert_eq!(doc.verification_method_count(), 2); // Root + Device
+        assert!(doc.has_verification_method(&device.id));
+        assert!(doc.authentication.contains(&device.id));
+    }
+
+    #[test]
+    fn test_did_document_add_agent_key() {
+        let root = DID::new_self(b"root-key");
+        let mut doc = DIDDocument::new(root.clone());
+
+        let agent = DID::derive_agent(&root, 0);
+        doc.add_agent_key(&agent);
+
+        assert_eq!(doc.verification_method_count(), 2);
+        assert!(doc.has_verification_method(&agent.id));
+        // Agent in assertion_method, nicht authentication
+        assert!(!doc.authentication.contains(&agent.id));
+        assert!(doc.assertion_method.contains(&agent.id));
+    }
+
+    #[test]
+    fn test_did_document_find_delegation() {
+        let root = DID::new_self(b"root-key");
+        let mut doc = DIDDocument::new(root);
+
+        let delegate_id = UniversalId::new(UniversalId::TAG_DID, 1, b"delegate");
+        let delegation = Delegation::new(
+            doc.id.id,
+            delegate_id,
+            0.8,
+            vec![Capability::Read {
+                resource: "*".into(),
+            }],
+        );
+
+        doc.add_delegation(delegation);
+
+        assert!(doc.find_delegation_for(&delegate_id).is_some());
+        assert_eq!(doc.delegation_count(), 1);
+    }
+
+    #[test]
+    fn test_did_document_revoke_delegation() {
+        let root = DID::new_self(b"root-key");
+        let mut doc = DIDDocument::new(root);
+
+        let delegate_id = UniversalId::new(UniversalId::TAG_DID, 1, b"delegate");
+        let delegation = Delegation::new(doc.id.id, delegate_id, 0.8, vec![]);
+        let delegation_id = delegation.id;
+
+        doc.add_delegation(delegation);
+
+        assert!(doc.revoke_delegation(&delegation_id));
+
+        let now = TemporalCoord::now(0, &delegation_id);
+        assert!(doc.active_delegations(&now).is_empty());
+    }
+
+    #[test]
+    fn test_capability_parse() {
+        // All
+        assert!(matches!(Capability::parse("*").unwrap(), Capability::All));
+
+        // Read
+        assert!(matches!(
+            Capability::parse("read:documents").unwrap(),
+            Capability::Read { resource } if resource == "documents"
+        ));
+
+        // Write
+        assert!(matches!(
+            Capability::parse("write:*").unwrap(),
+            Capability::Write { resource } if resource == "*"
+        ));
+
+        // Execute
+        assert!(matches!(
+            Capability::parse("execute:transfer").unwrap(),
+            Capability::Execute { action } if action == "transfer"
+        ));
+
+        // Delegate
+        assert!(matches!(
+            Capability::parse("delegate:3").unwrap(),
+            Capability::Delegate { max_depth: 3 }
+        ));
+
+        // Attest
+        let attest = Capability::parse("attest:kyc,age").unwrap();
+        assert!(matches!(
+            attest,
+            Capability::Attest { claim_types } if claim_types == vec!["kyc", "age"]
+        ));
+
+        // Custom
+        assert!(matches!(
+            Capability::parse("custom:myaction:param1").unwrap(),
+            Capability::Custom { name, params } if name == "myaction" && params == "param1"
+        ));
+    }
+
+    #[test]
+    fn test_capability_implies() {
+        // All implies everything
+        assert!(Capability::All.implies(&Capability::Read {
+            resource: "any".into()
+        }));
+
+        // Wildcard implies specific
+        assert!(Capability::Read {
+            resource: "*".into()
+        }
+        .implies(&Capability::Read {
+            resource: "specific".into()
+        }));
+
+        // Prefix wildcard
+        assert!(Capability::Read {
+            resource: "docs/*".into()
+        }
+        .implies(&Capability::Read {
+            resource: "docs/file.txt".into()
+        }));
+
+        // Delegate depth
+        assert!(Capability::Delegate { max_depth: 5 }.implies(&Capability::Delegate { max_depth: 3 }));
+        assert!(!Capability::Delegate { max_depth: 2 }
+            .implies(&Capability::Delegate { max_depth: 5 }));
+    }
+
+    #[test]
+    fn test_capability_to_string_roundtrip() {
+        let caps = vec![
+            Capability::All,
+            Capability::Read {
+                resource: "docs".into(),
+            },
+            Capability::Write {
+                resource: "*".into(),
+            },
+            Capability::Execute {
+                action: "transfer".into(),
+            },
+            Capability::Delegate { max_depth: 3 },
+            Capability::Attest {
+                claim_types: vec!["kyc".into(), "age".into()],
+            },
+            Capability::Custom {
+                name: "custom".into(),
+                params: "params".into(),
+            },
+        ];
+
+        for cap in caps {
+            let s = cap.to_string_repr();
+            let parsed = Capability::parse(&s).unwrap();
+            assert_eq!(cap.to_string_repr(), parsed.to_string_repr());
+        }
+    }
+
+    #[test]
+    fn test_capability_is_dangerous() {
+        assert!(Capability::All.is_dangerous());
+        assert!(Capability::Write {
+            resource: "*".into()
+        }
+        .is_dangerous());
+        assert!(Capability::Delegate { max_depth: 5 }.is_dangerous());
+
+        assert!(!Capability::Read {
+            resource: "docs".into()
+        }
+        .is_dangerous());
+        assert!(!Capability::Delegate { max_depth: 2 }.is_dangerous());
     }
 }

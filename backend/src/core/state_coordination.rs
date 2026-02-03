@@ -10,7 +10,7 @@
 //! - **Snapshot Isolation**: Konsistente Reads während Updates
 //! - **Health Aggregation**: System-weite Health-Berechnung
 
-use super::state::{SharedUnifiedState, UnifiedStateSnapshot};
+use super::state::{SharedUnifiedState, UnifiedSnapshot};
 use super::state_integration::StateIntegrator;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -98,7 +98,7 @@ pub struct StateCoordinator {
     integrator: StateIntegrator,
 
     /// Snapshot-History für Trend-Analyse
-    snapshot_history: std::sync::RwLock<Vec<(Instant, UnifiedStateSnapshot)>>,
+    snapshot_history: std::sync::RwLock<Vec<(Instant, UnifiedSnapshot)>>,
 
     /// Letzte bekannte Storage-Size für Growth-Rate
     last_storage_check: std::sync::RwLock<(Instant, u64)>,
@@ -127,7 +127,7 @@ impl StateCoordinator {
     }
 
     /// Erstelle Snapshot und speichere in History
-    pub fn snapshot(&self) -> UnifiedStateSnapshot {
+    pub fn snapshot(&self) -> UnifiedSnapshot {
         let snapshot = self.state.snapshot();
 
         // In History speichern
@@ -155,7 +155,7 @@ impl StateCoordinator {
     pub fn check_invariant(
         &self,
         invariant: Invariant,
-        snapshot: &UnifiedStateSnapshot,
+        snapshot: &UnifiedSnapshot,
     ) -> InvariantResult {
         match invariant {
             Invariant::TrustAsymmetry => {
@@ -251,7 +251,7 @@ impl StateCoordinator {
     }
 
     /// Berechne Storage Growth Rate (Bytes/Minute)
-    fn calculate_storage_growth_rate(&self, snapshot: &UnifiedStateSnapshot) -> f64 {
+    fn calculate_storage_growth_rate(&self, snapshot: &UnifiedSnapshot) -> f64 {
         let current_bytes = snapshot.storage.total_bytes;
         let now = Instant::now();
 
@@ -308,7 +308,7 @@ impl StateCoordinator {
         recent_avg - older_avg
     }
 
-    fn extract_metric(&self, snapshot: &UnifiedStateSnapshot, metric: &str) -> f64 {
+    fn extract_metric(&self, snapshot: &UnifiedSnapshot, metric: &str) -> f64 {
         match metric {
             "trust_updates" => snapshot.core.trust.updates_total as f64,
             "events_total" => snapshot.core.events.total as f64,
@@ -350,7 +350,7 @@ impl StateCoordinator {
         let module_scores = vec![
             (
                 "core_trust",
-                100.0 - (snapshot.core.trust.violations as f64).min(100.0),
+                100.0 - (snapshot.core.trust.violations_count as f64).min(100.0),
             ),
             (
                 "core_events",
@@ -655,12 +655,12 @@ mod tests {
 
         let mut tx = StateTransaction::new(coordinator.clone());
         tx.add_change(|s| {
-            s.core.trust.entities.fetch_add(1, Ordering::Relaxed);
+            s.core.trust.entities_count.fetch_add(1, Ordering::Relaxed);
         });
 
         let result = tx.execute();
         assert!(result.is_ok());
-        assert_eq!(state.core.trust.entities.load(Ordering::Relaxed), 1);
+        assert_eq!(state.core.trust.entities_count.load(Ordering::Relaxed), 1);
     }
 
     #[test]

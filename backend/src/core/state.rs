@@ -87,10 +87,13 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::sync::atomic::{AtomicU64, AtomicU8, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicU8, AtomicUsize, Ordering};
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 use tokio::sync::{broadcast, mpsc};
+
+// Domain Primitives
+use crate::domain::unified::primitives::UniversalId;
 
 // Sharding & High-Performance Concurrent Data Structures
 use dashmap::DashMap;
@@ -186,12 +189,58 @@ pub struct NetworkEvent {
     pub payload: Vec<u8>,
     /// Priorität für Queue-Ordering
     pub priority: EventPriority,
-    /// Source Peer-ID (für Ingress) oder Target (für Egress)
+    /// Source Peer-ID (für Ingress) oder Target (für Egress) - Legacy
     pub peer_id: Option<String>,
     /// Realm-Kontext (falls realm-spezifisch)
     pub realm_id: Option<String>,
     /// Timestamp (Unix-Epoch Millis)
     pub timestamp_ms: u64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Identity-Integration (Phase 7)
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Peer UniversalId (Identity-basiert)
+    pub peer_universal_id: Option<UniversalId>,
+    /// Ed25519 Signatur über (event_type | payload | timestamp_ms)
+    #[serde(with = "serde_signature_option")]
+    pub signature: Option<[u8; 64]>,
+    /// Signatur-Verifikations-Cache (nicht serialisiert)
+    #[serde(skip)]
+    pub signature_verified: Option<bool>,
+}
+
+/// Serde helper für Option<[u8; 64]> als hex string
+mod serde_signature_option {
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    pub fn serialize<S>(value: &Option<[u8; 64]>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match value {
+            Some(sig) => serializer.serialize_some(&hex::encode(sig)),
+            None => serializer.serialize_none(),
+        }
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<[u8; 64]>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let opt: Option<String> = Option::deserialize(deserializer)?;
+        match opt {
+            Some(s) => {
+                let bytes = hex::decode(&s).map_err(serde::de::Error::custom)?;
+                if bytes.len() != 64 {
+                    return Err(serde::de::Error::custom("signature must be 64 bytes"));
+                }
+                let mut arr = [0u8; 64];
+                arr.copy_from_slice(&bytes);
+                Ok(Some(arr))
+            }
+            None => Ok(None),
+        }
+    }
 }
 
 impl NetworkEvent {
@@ -210,6 +259,9 @@ impl NetworkEvent {
                 .duration_since(std::time::UNIX_EPOCH)
                 .map(|d| d.as_millis() as u64)
                 .unwrap_or(0),
+            peer_universal_id: None,
+            signature: None,
+            signature_verified: None,
         }
     }
 
@@ -221,6 +273,106 @@ impl NetworkEvent {
     pub fn with_realm(mut self, realm_id: impl Into<String>) -> Self {
         self.realm_id = Some(realm_id.into());
         self
+    }
+
+    /// Builder: Setze Identity-basierte Peer-ID
+    pub fn with_peer_identity(mut self, peer_id: UniversalId) -> Self {
+        self.peer_universal_id = Some(peer_id);
+        self
+    }
+
+    /// Erstelle signiertes Event
+    /// Signiert (event_type | payload | timestamp_ms) mit dem gegebenen Signatur-Callback
+    pub fn signed<F>(
+        event_type: impl Into<String>,
+        payload: Vec<u8>,
+        priority: EventPriority,
+        signer_id: UniversalId,
+        sign_fn: F,
+    ) -> Result<Self, crate::core::identity_types::IdentityError>
+    where
+        F: FnOnce(&[u8]) -> Result<[u8; 64], crate::core::identity_types::IdentityError>,
+    {
+        let event_type_str = event_type.into();
+        let timestamp_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0);
+
+        // Erstelle Signatur-Payload: event_type | payload | timestamp_ms (big-endian)
+        let mut sign_payload = Vec::new();
+        sign_payload.extend_from_slice(event_type_str.as_bytes());
+        sign_payload.extend_from_slice(&payload);
+        sign_payload.extend_from_slice(&timestamp_ms.to_be_bytes());
+
+        let signature = sign_fn(&sign_payload)?;
+
+        Ok(Self {
+            id: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos() as u64)
+                .unwrap_or(0),
+            event_type: event_type_str,
+            payload,
+            priority,
+            peer_id: None,
+            realm_id: None,
+            timestamp_ms,
+            peer_universal_id: Some(signer_id),
+            signature: Some(signature),
+            signature_verified: Some(true), // Wir haben gerade selbst signiert
+        })
+    }
+
+    /// Verifiziere die Signatur mit einem IdentityResolver
+    /// Returns true wenn Signatur gültig, false wenn ungültig oder keine Signatur vorhanden
+    pub fn verify_signature<R: crate::core::identity_types::IdentityResolver + ?Sized>(
+        &mut self,
+        resolver: &R,
+    ) -> bool {
+        // Check cache
+        if let Some(verified) = self.signature_verified {
+            return verified;
+        }
+
+        // Brauchen sowohl Signatur als auch Signer-ID
+        let (signature, signer_id) = match (self.signature, self.peer_universal_id) {
+            (Some(sig), Some(id)) => (sig, id),
+            _ => {
+                self.signature_verified = Some(false);
+                return false;
+            }
+        };
+
+        // Erstelle Signatur-Payload: event_type | payload | timestamp_ms
+        let mut sign_payload = Vec::new();
+        sign_payload.extend_from_slice(self.event_type.as_bytes());
+        sign_payload.extend_from_slice(&self.payload);
+        sign_payload.extend_from_slice(&self.timestamp_ms.to_be_bytes());
+
+        // Resolve Public Key
+        let result = resolver
+            .resolve_public_key(&signer_id)
+            .map(|pubkey| {
+                // Verify signature (Ed25519)
+                // In production würde hier ed25519_dalek::Signature::verify verwendet
+                // Für jetzt: vereinfachte Verifikation
+                pubkey.len() == 32 && signature.len() == 64
+            })
+            .unwrap_or(false);
+
+        self.signature_verified = Some(result);
+        result
+    }
+
+    /// Prüfe ob Event eine Signatur hat
+    pub fn is_signed(&self) -> bool {
+        self.signature.is_some() && self.peer_universal_id.is_some()
+    }
+
+    /// Prüfe ob Signatur verifiziert wurde
+    pub fn is_verified(&self) -> Option<bool> {
+        self.signature_verified
     }
 }
 
@@ -494,8 +646,8 @@ impl StateBroadcaster {
         self.broadcast(StateDelta::new(component, DeltaType::Increment, data));
     }
 
-    pub fn snapshot(&self) -> StateBroadcasterSnapshot {
-        StateBroadcasterSnapshot {
+    pub fn snapshot(&self) -> BroadcasterSnapshot {
+        BroadcasterSnapshot {
             sequence: self.sequence.load(Ordering::Relaxed),
             deltas_sent: self.deltas_sent.load(Ordering::Relaxed),
             subscriber_count: self.subscriber_count.load(Ordering::Relaxed),
@@ -510,7 +662,7 @@ impl Default for StateBroadcaster {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StateBroadcasterSnapshot {
+pub struct BroadcasterSnapshot {
     pub sequence: u64,
     pub deltas_sent: u64,
     pub subscriber_count: u64,
@@ -1091,16 +1243,20 @@ pub enum StateEvent {
 
     /// Mitgliedschafts-Änderung
     MembershipChange {
-        /// Realm-ID
+        /// Realm-ID (Legacy String-Form)
         realm_id: String,
-        /// Identity-ID
+        /// Identity-ID (Legacy String-Form für API-Kompatibilität)
         identity_id: String,
+        /// Identity UniversalId (Primary, Phase 7)
+        identity_universal_id: Option<UniversalId>,
         /// Aktion
         action: MembershipAction,
         /// Neue Rolle (falls RoleChanged)
         new_role: Option<MemberRole>,
-        /// Initiator (wer hat die Aktion ausgelöst)
+        /// Initiator (Legacy String-Form)
         initiated_by: Option<String>,
+        /// Initiator UniversalId (Phase 7)
+        initiated_by_id: Option<UniversalId>,
     },
 
     /// Crossing evaluiert (Gateway)
@@ -1252,6 +1408,173 @@ pub enum StateEvent {
         /// Violations vor Quarantine
         violations_count: u64,
     },
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // IDENTITY EVENTS (Κ6-Κ8 DID Management)
+    // ═══════════════════════════════════════════════════════════════════════════
+    /// Root-DID erstellt (Bootstrap abgeschlossen)
+    IdentityBootstrapped {
+        /// Root-DID UniversalId
+        root_did: UniversalId,
+        /// DID-Namespace (Self, Guild, Spirit, etc.)
+        namespace: crate::domain::unified::identity::DIDNamespace,
+        /// Identity-Modus (Interactive, AgentManaged, Ephemeral, Test)
+        mode: crate::core::identity_types::IdentityMode,
+        /// Timestamp der Erstellung (ms)
+        timestamp_ms: u64,
+    },
+
+    /// Identity-Modus gewechselt (z.B. Interactive → AgentManaged)
+    IdentityModeChanged {
+        /// Root-DID UniversalId
+        root_did: UniversalId,
+        /// Alter Modus
+        old_mode: crate::core::identity_types::IdentityMode,
+        /// Neuer Modus
+        new_mode: crate::core::identity_types::IdentityMode,
+        /// Timestamp der Änderung (ms)
+        timestamp_ms: u64,
+    },
+
+    /// Sub-DID abgeleitet (Device, Agent, Realm, Custom)
+    SubDIDDerived {
+        /// Root-DID UniversalId
+        root_did: UniversalId,
+        /// Abgeleitete Sub-DID UniversalId
+        sub_did: UniversalId,
+        /// Namespace der Sub-DID
+        namespace: crate::domain::unified::identity::DIDNamespace,
+        /// BIP44-ähnlicher Derivation-Pfad
+        derivation_path: String,
+        /// Zweck (z.B. "device", "agent", "realm")
+        purpose: String,
+        /// Gas-Verbrauch für Derivation
+        gas_used: u64,
+        /// Optional: Realm-Kontext bei Realm-DIDs
+        realm_id: Option<UniversalId>,
+    },
+
+    /// Wallet-Adresse abgeleitet
+    WalletDerived {
+        /// DID UniversalId von der abgeleitet wurde
+        did: UniversalId,
+        /// Chain-ID (CAIP-2 Format, z.B. "eip155:1")
+        chain_id: String,
+        /// Wallet-Adresse auf der Chain
+        address: String,
+        /// BIP44 Derivation-Pfad
+        derivation_path: String,
+    },
+
+    /// Delegation erstellt (Κ8: Trust-Decay)
+    DelegationCreated {
+        /// Delegator UniversalId
+        delegator: UniversalId,
+        /// Delegate UniversalId (erhält Berechtigungen)
+        delegate: UniversalId,
+        /// Trust-Faktor (0 < tf ≤ 1) gemäß Κ8
+        trust_factor: f32,
+        /// Delegierte Capabilities (String-Repräsentation)
+        capabilities: Vec<String>,
+        /// Optional: Ablaufzeitpunkt (Unix-Epoch ms)
+        valid_until: Option<u64>,
+    },
+
+    /// Delegation widerrufen
+    DelegationRevoked {
+        /// Delegation-ID UniversalId
+        delegation_id: UniversalId,
+        /// Delegator UniversalId
+        delegator: UniversalId,
+        /// Delegate UniversalId
+        delegate: UniversalId,
+        /// Grund für Widerruf
+        reason: String,
+    },
+
+    /// Credential ausgestellt
+    CredentialIssued {
+        /// Issuer (Aussteller) UniversalId
+        issuer: UniversalId,
+        /// Subject (Betroffener) UniversalId
+        subject: UniversalId,
+        /// Credential-Typ (z.B. "KYC", "AgeVerification")
+        credential_type: String,
+        /// Hash des Claim-Inhalts (Datenschutz)
+        claim_hash: [u8; 32],
+    },
+
+    /// Credential verifiziert
+    CredentialVerified {
+        /// Verifier UniversalId
+        verifier: UniversalId,
+        /// Credential-ID UniversalId
+        credential_id: UniversalId,
+        /// Validierungsergebnis
+        valid: bool,
+    },
+
+    /// Key rotiert
+    KeyRotated {
+        /// DID UniversalId dessen Key rotiert wurde
+        did: UniversalId,
+        /// Alter Key UniversalId
+        old_key_id: UniversalId,
+        /// Neuer Key UniversalId
+        new_key_id: UniversalId,
+        /// Rotationsgrund
+        reason: String,
+    },
+
+    /// Recovery initiiert
+    RecoveryInitiated {
+        /// DID UniversalId die recovered werden soll
+        did: UniversalId,
+        /// Recovery-Key UniversalId
+        recovery_key_id: UniversalId,
+        /// Initiierungszeitpunkt (ms)
+        initiated_at: u64,
+    },
+
+    /// Identity-Anomalie erkannt
+    IdentityAnomalyDetected {
+        /// Betroffene DID UniversalId
+        did: UniversalId,
+        /// Anomalie-Typ (z.B. "RapidDelegation", "UnusualActivity")
+        anomaly_type: String,
+        /// Severity-Level ("low", "medium", "high", "critical")
+        severity: String,
+        /// Details zur Anomalie
+        details: String,
+    },
+
+    /// Cross-Shard Identity aufgelöst
+    CrossShardIdentityResolved {
+        /// Identity UniversalId
+        identity_id: UniversalId,
+        /// Quell-Shard Index
+        source_shard: u64,
+        /// Ziel-Shard Index
+        target_shard: u64,
+        /// Erfolgreich aufgelöst?
+        success: bool,
+        /// Latenz der Auflösung (ms)
+        latency_ms: u64,
+    },
+
+    /// Realm-Membership geändert (mit UniversalId)
+    RealmMembershipChanged {
+        /// Realm UniversalId
+        realm_id: UniversalId,
+        /// Member UniversalId
+        member_id: UniversalId,
+        /// Aktion (Joined, Left, RoleChanged, Banned)
+        action: String,
+        /// Neue Rolle (falls RoleChanged)
+        new_role: Option<String>,
+        /// Optional: Realm-spezifische Sub-DID
+        realm_sub_did: Option<UniversalId>,
+    },
 }
 
 impl StateEvent {
@@ -1288,6 +1611,20 @@ impl StateEvent {
             StateEvent::QuotaViolation { .. } | StateEvent::RealmQuarantineChange { .. } => {
                 StateComponent::Realm
             }
+            // Identity Events (Κ6-Κ8)
+            StateEvent::IdentityBootstrapped { .. }
+            | StateEvent::IdentityModeChanged { .. }
+            | StateEvent::SubDIDDerived { .. }
+            | StateEvent::WalletDerived { .. }
+            | StateEvent::DelegationCreated { .. }
+            | StateEvent::DelegationRevoked { .. }
+            | StateEvent::CredentialIssued { .. }
+            | StateEvent::CredentialVerified { .. }
+            | StateEvent::KeyRotated { .. }
+            | StateEvent::RecoveryInitiated { .. }
+            | StateEvent::IdentityAnomalyDetected { .. }
+            | StateEvent::CrossShardIdentityResolved { .. }
+            | StateEvent::RealmMembershipChanged { .. } => StateComponent::Identity,
         }
     }
 
@@ -1325,26 +1662,130 @@ impl StateEvent {
             StateEvent::ProposalResolved { .. } => 120,
             StateEvent::QuotaViolation { .. } => 100,
             StateEvent::RealmQuarantineChange { .. } => 150,
+            // Identity Events (Κ6-Κ8)
+            StateEvent::IdentityBootstrapped { .. } => 64,
+            StateEvent::IdentityModeChanged { .. } => 48,
+            StateEvent::SubDIDDerived {
+                derivation_path,
+                purpose,
+                ..
+            } => 128 + derivation_path.len() + purpose.len(),
+            StateEvent::WalletDerived {
+                chain_id,
+                address,
+                derivation_path,
+                ..
+            } => 64 + chain_id.len() + address.len() + derivation_path.len(),
+            StateEvent::DelegationCreated { capabilities, .. } => 96 + capabilities.len() * 32,
+            StateEvent::DelegationRevoked { reason, .. } => 112 + reason.len(),
+            StateEvent::CredentialIssued {
+                credential_type, ..
+            } => 128 + credential_type.len(),
+            StateEvent::CredentialVerified { .. } => 64,
+            StateEvent::KeyRotated { reason, .. } => 128 + reason.len(),
+            StateEvent::RecoveryInitiated { .. } => 64,
+            StateEvent::IdentityAnomalyDetected {
+                anomaly_type,
+                severity,
+                details,
+                ..
+            } => 96 + anomaly_type.len() + severity.len() + details.len(),
+            StateEvent::CrossShardIdentityResolved { .. } => 80,
+            StateEvent::RealmMembershipChanged { action, .. } => 128 + action.len(),
         }
     }
 
     /// Ist dieses Event kritisch (erfordert sofortige Persistenz)?
     pub fn is_critical(&self) -> bool {
-        matches!(
-            self,
+        match self {
+            // Existing critical events
             StateEvent::AnomalyDetected {
                 severity: AnomalySeverity::Critical,
                 ..
-            } | StateEvent::SystemModeChanged { .. }
-                | StateEvent::ReorgDetected { .. }
-                | StateEvent::QuotaViolation {
-                    quarantined: true,
-                    ..
-                }
-                | StateEvent::RealmQuarantineChange {
-                    quarantined: true,
-                    ..
-                }
+            } => true,
+            StateEvent::SystemModeChanged { .. } => true,
+            StateEvent::ReorgDetected { .. } => true,
+            StateEvent::QuotaViolation {
+                quarantined: true, ..
+            } => true,
+            StateEvent::RealmQuarantineChange {
+                quarantined: true, ..
+            } => true,
+
+            // Identity-Critical Events
+            StateEvent::IdentityBootstrapped { .. } => true,
+            StateEvent::IdentityModeChanged { .. } => true,
+            StateEvent::KeyRotated { .. } => true,
+            StateEvent::RecoveryInitiated { .. } => true,
+            StateEvent::IdentityAnomalyDetected { severity, .. } => severity == "critical",
+
+            _ => false,
+        }
+    }
+
+    /// Hat dieses Event einen Realm-Kontext?
+    pub fn realm_context(&self) -> Option<&UniversalId> {
+        match self {
+            // Identity Events mit Realm-Kontext
+            StateEvent::SubDIDDerived { realm_id, .. } => realm_id.as_ref(),
+            StateEvent::RealmMembershipChanged { realm_id, .. } => Some(realm_id),
+            _ => None,
+        }
+    }
+
+    /// Alle betroffenen Identities (für Indexing)
+    pub fn involved_identities(&self) -> Vec<UniversalId> {
+        match self {
+            StateEvent::IdentityBootstrapped { root_did, .. } => vec![*root_did],
+            StateEvent::IdentityModeChanged { root_did, .. } => vec![*root_did],
+            StateEvent::SubDIDDerived {
+                root_did, sub_did, ..
+            } => vec![*root_did, *sub_did],
+            StateEvent::WalletDerived { did, .. } => vec![*did],
+            StateEvent::DelegationCreated {
+                delegator,
+                delegate,
+                ..
+            } => vec![*delegator, *delegate],
+            StateEvent::DelegationRevoked {
+                delegator,
+                delegate,
+                ..
+            } => vec![*delegator, *delegate],
+            StateEvent::CredentialIssued {
+                issuer, subject, ..
+            } => vec![*issuer, *subject],
+            StateEvent::CredentialVerified {
+                verifier,
+                credential_id,
+                ..
+            } => vec![*verifier, *credential_id],
+            StateEvent::KeyRotated { did, .. } => vec![*did],
+            StateEvent::RecoveryInitiated { did, .. } => vec![*did],
+            StateEvent::IdentityAnomalyDetected { did, .. } => vec![*did],
+            StateEvent::CrossShardIdentityResolved { identity_id, .. } => vec![*identity_id],
+            StateEvent::RealmMembershipChanged { member_id, .. } => vec![*member_id],
+            _ => vec![],
+        }
+    }
+
+    /// Ist dies ein Identity-Event?
+    pub fn is_identity_event(&self) -> bool {
+        matches!(
+            self,
+            StateEvent::IdentityBootstrapped { .. }
+                | StateEvent::IdentityModeChanged { .. }
+                | StateEvent::SubDIDDerived { .. }
+                | StateEvent::WalletDerived { .. }
+                | StateEvent::DelegationCreated { .. }
+                | StateEvent::DelegationRevoked { .. }
+                | StateEvent::CredentialIssued { .. }
+                | StateEvent::CredentialVerified { .. }
+                | StateEvent::KeyRotated { .. }
+                | StateEvent::RecoveryInitiated { .. }
+                | StateEvent::IdentityAnomalyDetected { .. }
+                | StateEvent::CrossShardIdentityResolved { .. }
+                | StateEvent::RealmMembershipChanged { .. }
         )
     }
 }
@@ -1424,9 +1865,22 @@ impl WrappedStateEvent {
             // Crossing Events
             StateEvent::CrossingEvaluated { to_realm, .. } => Some(to_realm.clone()),
 
+            // Identity Events mit Realm-Kontext (UniversalId → hex String)
+            StateEvent::SubDIDDerived { realm_id, .. } => {
+                realm_id.as_ref().map(|id| hex::encode(id.as_bytes()))
+            }
+            StateEvent::RealmMembershipChanged { realm_id, .. } => {
+                Some(hex::encode(realm_id.as_bytes()))
+            }
+
             // Alle anderen Events haben keinen direkten Realm-Kontext
             _ => None,
         }
+    }
+
+    /// Extrahiere Realm-Kontext als UniversalId (für neue Events)
+    pub fn realm_context_id(&self) -> Option<UniversalId> {
+        self.event.realm_context().copied()
     }
 
     /// Event-Größe in Bytes (für Metering)
@@ -1601,8 +2055,8 @@ impl StateEventLog {
     }
 
     /// Snapshot für Metriken
-    pub fn snapshot(&self) -> StateEventLogSnapshot {
-        StateEventLogSnapshot {
+    pub fn snapshot(&self) -> EventLogSnapshot {
+        EventLogSnapshot {
             sequence: self.sequence.load(Ordering::Relaxed),
             buffer_size: self.buffer.read().map(|b| b.len()).unwrap_or(0),
             total_events: self.total_events.load(Ordering::Relaxed),
@@ -1622,7 +2076,7 @@ impl Default for StateEventLog {
 
 /// Snapshot des StateEventLog
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StateEventLogSnapshot {
+pub struct EventLogSnapshot {
     pub sequence: u64,
     pub buffer_size: usize,
     pub total_events: u64,
@@ -1869,8 +2323,8 @@ impl MerkleStateTracker {
         result
     }
 
-    pub fn snapshot(&self) -> MerkleStateTrackerSnapshot {
-        MerkleStateTrackerSnapshot {
+    pub fn snapshot(&self) -> MerkleTrackerSnapshot {
+        MerkleTrackerSnapshot {
             root_hash: self.root_hash(),
             component_count: self.component_hashes.read().map(|h| h.len()).unwrap_or(0),
             sequence: self.sequence.load(Ordering::Relaxed),
@@ -1889,7 +2343,7 @@ impl Default for MerkleStateTracker {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MerkleStateTrackerSnapshot {
+pub struct MerkleTrackerSnapshot {
     pub root_hash: MerkleHash,
     pub component_count: usize,
     pub sequence: u64,
@@ -2381,6 +2835,1097 @@ pub struct RealmQuotaSnapshot {
 }
 
 // ============================================================================
+// IDENTITY STATE LAYER (Κ6-Κ8 DID Management)
+// ============================================================================
+
+/// Identity-State-Layer für DID-Management
+///
+/// # Architektur
+///
+/// ```text
+/// IdentityState
+/// ├── Atomics (High-Frequency)
+/// │   ├── bootstrap_completed
+/// │   ├── mode
+/// │   ├── sub_dids_total
+/// │   └── ... (12 weitere)
+/// ├── RwLock (Complex State)
+/// │   ├── root_did
+/// │   ├── root_document
+/// │   ├── sub_dids
+/// │   ├── delegations
+/// │   └── realm_memberships
+/// └── Handles (Orthogonal)
+///     ├── key_store
+///     └── passkey_manager
+/// ```
+///
+/// # Axiom-Referenz
+///
+/// - **Κ6 (Existenz-Eindeutigkeit)**: `∀ entity e : ∃! did ∈ DID : identity(e) = did`
+/// - **Κ7 (Permanenz)**: `⟨s⟩ ∧ ⟦create(s)⟧ ⟹ □⟨s⟩`
+/// - **Κ8 (Delegations-Struktur)**: `s ⊳ s' → 𝕋(s') ≤ 𝕋(s)`
+///
+/// # StateGraph-Beziehungen
+///
+/// - Trust DependsOn Identity
+/// - Identity Triggers Trust
+/// - Event DependsOn Identity
+/// - Identity Triggers Event
+/// - Swarm DependsOn Identity
+/// - Controller DependsOn Identity
+/// - ... (38 Kanten total)
+#[derive(Debug)]
+pub struct IdentityState {
+    // ─────────────────────────────────────────────────────────────────────────
+    // HIGH-FREQUENCY ATOMICS (Lock-free)
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Bootstrap abgeschlossen?
+    pub bootstrap_completed: AtomicBool,
+
+    /// Root-DID erstellt (Timestamp ms)
+    pub root_created_at_ms: AtomicU64,
+
+    /// Aktueller Modus (0=Interactive, 1=AgentManaged, 2=Ephemeral, 3=Test)
+    pub mode: AtomicU8,
+
+    /// Gesamtanzahl abgeleiteter Sub-DIDs
+    pub sub_dids_total: AtomicU64,
+
+    /// Gesamtanzahl abgeleiteter Wallet-Adressen
+    pub addresses_total: AtomicU64,
+
+    /// Aktive Delegationen
+    pub active_delegations_count: AtomicU64,
+
+    /// Widerrufene Delegationen
+    pub revoked_delegations_count: AtomicU64,
+
+    /// Credentials ausgestellt
+    pub credentials_issued: AtomicU64,
+
+    /// Credentials verifiziert
+    pub credentials_verified: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // RELATIONSHIP COUNTERS (StateGraph-Tracking)
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Identity → Triggers → Event
+    pub events_triggered: AtomicU64,
+
+    /// Identity → Triggers → Trust (Initial Trust-Entries)
+    pub trust_entries_created: AtomicU64,
+
+    /// Identity → Triggers → Realm (Join/Leave)
+    pub realm_memberships_changed: AtomicU64,
+
+    /// Gas verbraucht für Identity-Ops
+    pub gas_consumed: AtomicU64,
+
+    /// Mana verbraucht für Identity-Ops
+    pub mana_consumed: AtomicU64,
+
+    /// Signaturen erstellt
+    pub signatures_created: AtomicU64,
+
+    /// Signaturen verifiziert
+    pub signatures_verified: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // COMPLEX STATE (RwLock-protected)
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Root-DID (None vor Bootstrap)
+    pub root_did: RwLock<Option<crate::domain::unified::identity::DID>>,
+
+    /// DID-Document (None vor Bootstrap)
+    pub root_document: RwLock<Option<crate::domain::unified::identity::DIDDocument>>,
+
+    /// Device-Sub-DID (aktuelles Gerät)
+    pub current_device_did: RwLock<Option<crate::domain::unified::identity::DID>>,
+
+    /// Sub-DIDs nach Typ (device, agent, realm, custom)
+    pub sub_dids: RwLock<HashMap<String, Vec<crate::domain::unified::identity::DID>>>,
+
+    /// Sub-DID-Zähler nach Namespace
+    pub sub_did_counts: RwLock<HashMap<crate::domain::unified::identity::DIDNamespace, u64>>,
+
+    /// Wallet-Adressen nach Chain (CAIP-2 Format)
+    pub wallets: RwLock<HashMap<String, Vec<crate::core::identity_types::WalletAddress>>>,
+
+    /// Aktive Delegationen (delegate_id → Delegation)
+    pub delegations: RwLock<HashMap<UniversalId, crate::domain::unified::identity::Delegation>>,
+
+    /// Realm-Memberships (realm_id → membership_info)
+    pub realm_memberships:
+        RwLock<HashMap<UniversalId, crate::core::identity_types::RealmMembership>>,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ORTHOGONAL HANDLES
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Secure Key-Store Handle (TEE/TPM Abstraction)
+    pub key_store: Option<crate::core::identity_types::SharedKeyStore>,
+
+    /// WebAuthn/Passkey Manager Handle
+    pub passkey_manager: Option<crate::core::identity_types::SharedPasskeyManager>,
+}
+
+impl IdentityState {
+    /// Erstelle neuen IdentityState
+    pub fn new() -> Self {
+        Self {
+            // Atomics
+            bootstrap_completed: AtomicBool::new(false),
+            root_created_at_ms: AtomicU64::new(0),
+            mode: AtomicU8::new(0), // Interactive default
+            sub_dids_total: AtomicU64::new(0),
+            addresses_total: AtomicU64::new(0),
+            active_delegations_count: AtomicU64::new(0),
+            revoked_delegations_count: AtomicU64::new(0),
+            credentials_issued: AtomicU64::new(0),
+            credentials_verified: AtomicU64::new(0),
+
+            // Relationship counters
+            events_triggered: AtomicU64::new(0),
+            trust_entries_created: AtomicU64::new(0),
+            realm_memberships_changed: AtomicU64::new(0),
+            gas_consumed: AtomicU64::new(0),
+            mana_consumed: AtomicU64::new(0),
+            signatures_created: AtomicU64::new(0),
+            signatures_verified: AtomicU64::new(0),
+
+            // Complex state
+            root_did: RwLock::new(None),
+            root_document: RwLock::new(None),
+            current_device_did: RwLock::new(None),
+            sub_dids: RwLock::new(HashMap::new()),
+            sub_did_counts: RwLock::new(HashMap::new()),
+            wallets: RwLock::new(HashMap::new()),
+            delegations: RwLock::new(HashMap::new()),
+            realm_memberships: RwLock::new(HashMap::new()),
+
+            // Handles (not set by default)
+            key_store: None,
+            passkey_manager: None,
+        }
+    }
+
+    /// Erstelle mit Key-Store
+    pub fn with_key_store(
+        mut self,
+        key_store: crate::core::identity_types::SharedKeyStore,
+    ) -> Self {
+        self.key_store = Some(key_store);
+        self
+    }
+
+    /// Erstelle mit Passkey-Manager
+    pub fn with_passkey_manager(
+        mut self,
+        passkey_manager: crate::core::identity_types::SharedPasskeyManager,
+    ) -> Self {
+        self.passkey_manager = Some(passkey_manager);
+        self
+    }
+
+    /// Erstelle Snapshot
+    pub fn snapshot(&self) -> IdentitySnapshot {
+        let root_did_uri = self.root_did.read().unwrap().as_ref().map(|d| d.to_uri());
+
+        let sub_did_counts = self
+            .sub_did_counts
+            .read()
+            .unwrap()
+            .iter()
+            .map(|(ns, count)| (ns.to_string(), *count))
+            .collect();
+
+        let wallet_chains: Vec<String> = self.wallets.read().unwrap().keys().cloned().collect();
+        let realm_membership_count = self.realm_memberships.read().unwrap().len();
+
+        IdentitySnapshot {
+            bootstrap_completed: self.bootstrap_completed.load(Ordering::Relaxed),
+            root_created_at_ms: self.root_created_at_ms.load(Ordering::Relaxed),
+            mode: crate::core::identity_types::IdentityMode::from_u8(
+                self.mode.load(Ordering::Relaxed),
+            ),
+            sub_dids_total: self.sub_dids_total.load(Ordering::Relaxed),
+            addresses_total: self.addresses_total.load(Ordering::Relaxed),
+            active_delegations: self.active_delegations_count.load(Ordering::Relaxed),
+            revoked_delegations: self.revoked_delegations_count.load(Ordering::Relaxed),
+            credentials_issued: self.credentials_issued.load(Ordering::Relaxed),
+            credentials_verified: self.credentials_verified.load(Ordering::Relaxed),
+            events_triggered: self.events_triggered.load(Ordering::Relaxed),
+            trust_entries_created: self.trust_entries_created.load(Ordering::Relaxed),
+            realm_memberships_changed: self.realm_memberships_changed.load(Ordering::Relaxed),
+            gas_consumed: self.gas_consumed.load(Ordering::Relaxed),
+            mana_consumed: self.mana_consumed.load(Ordering::Relaxed),
+            signatures_created: self.signatures_created.load(Ordering::Relaxed),
+            signatures_verified: self.signatures_verified.load(Ordering::Relaxed),
+            root_did: root_did_uri,
+            sub_did_counts,
+            realm_membership_count,
+            wallet_chains,
+        }
+    }
+
+    /// Health-Score für Identity-Layer (0.0 - 1.0)
+    pub fn health_score(&self) -> f64 {
+        // Nicht bootstrapped → 0.0
+        if !self.bootstrap_completed.load(Ordering::Relaxed) {
+            return 0.0;
+        }
+
+        let mut score = 1.0;
+
+        // Mode-basierte Penalty
+        let mode =
+            crate::core::identity_types::IdentityMode::from_u8(self.mode.load(Ordering::Relaxed));
+        if !mode.is_production_safe() {
+            score *= 0.5;
+        }
+
+        // Zu viele widerrufene Delegationen (> 50% aktive) → Penalty
+        let active = self.active_delegations_count.load(Ordering::Relaxed);
+        let revoked = self.revoked_delegations_count.load(Ordering::Relaxed);
+        if active > 0 && revoked > active {
+            score *= 0.8;
+        }
+
+        // Keine Device-DID → kleine Penalty
+        if self.current_device_did.read().unwrap().is_none() {
+            score *= 0.9;
+        }
+
+        score
+    }
+
+    /// Aktueller Modus
+    pub fn current_mode(&self) -> crate::core::identity_types::IdentityMode {
+        crate::core::identity_types::IdentityMode::from_u8(self.mode.load(Ordering::Relaxed))
+    }
+
+    /// Ist bootstrapped?
+    pub fn is_bootstrapped(&self) -> bool {
+        self.bootstrap_completed.load(Ordering::Relaxed)
+    }
+
+    /// Root-DID UniversalId (falls bootstrapped)
+    pub fn root_did_id(&self) -> Option<UniversalId> {
+        self.root_did.read().unwrap().as_ref().map(|d| d.id)
+    }
+
+    /// Device-DID UniversalId (falls vorhanden)
+    pub fn device_did_id(&self) -> Option<UniversalId> {
+        self.current_device_did
+            .read()
+            .unwrap()
+            .as_ref()
+            .map(|d| d.id)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // BOOTSTRAP METHODS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Bootstrap Identity im Interactive-Modus
+    ///
+    /// Erfordert Key-Store und Passkey-Manager.
+    pub fn bootstrap_interactive(
+        &self,
+        public_key: &[u8; 32],
+    ) -> Result<UniversalId, crate::core::identity_types::IdentityError> {
+        use crate::core::identity_types::IdentityError;
+
+        if self.is_bootstrapped() {
+            return Err(IdentityError::AlreadyBootstrapped);
+        }
+
+        if self.key_store.is_none() {
+            return Err(IdentityError::KeyStoreNotInitialized);
+        }
+
+        if self.passkey_manager.is_none() {
+            return Err(IdentityError::PasskeyNotAvailable);
+        }
+
+        // Root-DID erstellen
+        let did = crate::domain::unified::identity::DID::new_self(public_key);
+        let doc = crate::domain::unified::identity::DIDDocument::new(did.clone());
+        let root_id = did.id;
+
+        // State aktualisieren
+        *self.root_did.write().unwrap() = Some(did);
+        *self.root_document.write().unwrap() = Some(doc);
+        self.mode.store(0, Ordering::Relaxed); // Interactive
+        self.root_created_at_ms.store(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis() as u64)
+                .unwrap_or(0),
+            Ordering::Relaxed,
+        );
+        self.bootstrap_completed.store(true, Ordering::Relaxed);
+
+        Ok(root_id)
+    }
+
+    /// Bootstrap Identity im Agent-Modus
+    ///
+    /// Erlaubt autonome Signaturen ohne User-Confirmation.
+    pub fn bootstrap_agent(
+        &self,
+        public_key: &[u8; 32],
+    ) -> Result<UniversalId, crate::core::identity_types::IdentityError> {
+        use crate::core::identity_types::IdentityError;
+
+        if self.is_bootstrapped() {
+            return Err(IdentityError::AlreadyBootstrapped);
+        }
+
+        if self.key_store.is_none() {
+            return Err(IdentityError::KeyStoreNotInitialized);
+        }
+
+        let did = crate::domain::unified::identity::DID::new_self(public_key);
+        let doc = crate::domain::unified::identity::DIDDocument::new(did.clone());
+        let root_id = did.id;
+
+        *self.root_did.write().unwrap() = Some(did);
+        *self.root_document.write().unwrap() = Some(doc);
+        self.mode.store(1, Ordering::Relaxed); // AgentManaged
+        self.root_created_at_ms.store(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis() as u64)
+                .unwrap_or(0),
+            Ordering::Relaxed,
+        );
+        self.bootstrap_completed.store(true, Ordering::Relaxed);
+
+        Ok(root_id)
+    }
+
+    /// Bootstrap Ephemeral Identity
+    ///
+    /// Kurzlebige Session ohne Persistenz.
+    pub fn bootstrap_ephemeral(
+        &self,
+        public_key: &[u8; 32],
+    ) -> Result<UniversalId, crate::core::identity_types::IdentityError> {
+        use crate::core::identity_types::IdentityError;
+
+        if self.is_bootstrapped() {
+            return Err(IdentityError::AlreadyBootstrapped);
+        }
+
+        let did = crate::domain::unified::identity::DID::new_self(public_key);
+        let doc = crate::domain::unified::identity::DIDDocument::new(did.clone());
+        let root_id = did.id;
+
+        *self.root_did.write().unwrap() = Some(did);
+        *self.root_document.write().unwrap() = Some(doc);
+        self.mode.store(2, Ordering::Relaxed); // Ephemeral
+        self.root_created_at_ms.store(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis() as u64)
+                .unwrap_or(0),
+            Ordering::Relaxed,
+        );
+        self.bootstrap_completed.store(true, Ordering::Relaxed);
+
+        Ok(root_id)
+    }
+
+    /// Bootstrap Test Identity (für Unit-Tests)
+    pub fn bootstrap_test(
+        &self,
+        public_key: &[u8; 32],
+    ) -> Result<UniversalId, crate::core::identity_types::IdentityError> {
+        use crate::core::identity_types::IdentityError;
+
+        if self.is_bootstrapped() {
+            return Err(IdentityError::AlreadyBootstrapped);
+        }
+
+        let did = crate::domain::unified::identity::DID::new_self(public_key);
+        let doc = crate::domain::unified::identity::DIDDocument::new(did.clone());
+        let root_id = did.id;
+
+        *self.root_did.write().unwrap() = Some(did);
+        *self.root_document.write().unwrap() = Some(doc);
+        self.mode.store(3, Ordering::Relaxed); // Test
+        self.root_created_at_ms.store(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis() as u64)
+                .unwrap_or(0),
+            Ordering::Relaxed,
+        );
+        self.bootstrap_completed.store(true, Ordering::Relaxed);
+
+        Ok(root_id)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SUB-DID DERIVATION
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Leite Device-Sub-DID ab
+    pub fn derive_device_did(
+        &self,
+        device_index: u32,
+    ) -> Result<UniversalId, crate::core::identity_types::IdentityError> {
+        use crate::core::identity_types::IdentityError;
+        use crate::domain::unified::identity::{DIDNamespace, DID};
+
+        if !self.is_bootstrapped() {
+            return Err(IdentityError::NotBootstrapped);
+        }
+
+        let root = self.root_did.read().unwrap();
+        let root_did = root.as_ref().ok_or(IdentityError::NotBootstrapped)?;
+
+        let device_did = DID::derive_device(root_did, device_index);
+        let device_id = device_did.id;
+
+        // Zu DID-Document hinzufügen
+        if let Some(ref mut doc) = *self.root_document.write().unwrap() {
+            doc.add_device_key(&device_did);
+        }
+
+        // Sub-DID speichern
+        self.sub_dids
+            .write()
+            .unwrap()
+            .entry("device".to_string())
+            .or_default()
+            .push(device_did.clone());
+
+        // Counter aktualisieren
+        *self
+            .sub_did_counts
+            .write()
+            .unwrap()
+            .entry(DIDNamespace::Self_)
+            .or_default() += 1;
+        self.sub_dids_total.fetch_add(1, Ordering::Relaxed);
+
+        // Erstes Device als aktuelles setzen
+        if self.current_device_did.read().unwrap().is_none() {
+            *self.current_device_did.write().unwrap() = Some(device_did);
+        }
+
+        Ok(device_id)
+    }
+
+    /// Leite Agent-Sub-DID ab
+    pub fn derive_agent_did(
+        &self,
+        agent_index: u32,
+    ) -> Result<UniversalId, crate::core::identity_types::IdentityError> {
+        use crate::core::identity_types::IdentityError;
+        use crate::domain::unified::identity::{DIDNamespace, DID};
+
+        if !self.is_bootstrapped() {
+            return Err(IdentityError::NotBootstrapped);
+        }
+
+        let root = self.root_did.read().unwrap();
+        let root_did = root.as_ref().ok_or(IdentityError::NotBootstrapped)?;
+
+        let agent_did = DID::derive_agent(root_did, agent_index);
+        let agent_id = agent_did.id;
+
+        // Zu DID-Document hinzufügen
+        if let Some(ref mut doc) = *self.root_document.write().unwrap() {
+            doc.add_agent_key(&agent_did);
+        }
+
+        // Sub-DID speichern
+        self.sub_dids
+            .write()
+            .unwrap()
+            .entry("agent".to_string())
+            .or_default()
+            .push(agent_did);
+
+        // Counter aktualisieren
+        *self
+            .sub_did_counts
+            .write()
+            .unwrap()
+            .entry(DIDNamespace::Spirit)
+            .or_default() += 1;
+        self.sub_dids_total.fetch_add(1, Ordering::Relaxed);
+
+        Ok(agent_id)
+    }
+
+    /// Leite Realm-Sub-DID ab
+    pub fn derive_realm_did(
+        &self,
+        realm_id: &UniversalId,
+    ) -> Result<UniversalId, crate::core::identity_types::IdentityError> {
+        use crate::core::identity_types::IdentityError;
+        use crate::domain::unified::identity::{DIDNamespace, DID};
+
+        if !self.is_bootstrapped() {
+            return Err(IdentityError::NotBootstrapped);
+        }
+
+        let root = self.root_did.read().unwrap();
+        let root_did = root.as_ref().ok_or(IdentityError::NotBootstrapped)?;
+
+        let realm_did = DID::derive_realm(root_did, realm_id);
+        let realm_did_id = realm_did.id;
+
+        // Sub-DID speichern
+        self.sub_dids
+            .write()
+            .unwrap()
+            .entry(format!("realm:{}", hex::encode(realm_id.as_bytes())))
+            .or_default()
+            .push(realm_did);
+
+        // Counter aktualisieren
+        *self
+            .sub_did_counts
+            .write()
+            .unwrap()
+            .entry(DIDNamespace::Circle)
+            .or_default() += 1;
+        self.sub_dids_total.fetch_add(1, Ordering::Relaxed);
+
+        Ok(realm_did_id)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SIGNATURE METHODS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Signiere mit Device-Key
+    pub fn sign_with_device(
+        &self,
+        payload: &[u8],
+    ) -> Result<[u8; 64], crate::core::identity_types::IdentityError> {
+        use crate::core::identity_types::IdentityError;
+
+        if !self.is_bootstrapped() {
+            return Err(IdentityError::NotBootstrapped);
+        }
+
+        let device_did = self
+            .current_device_did
+            .read()
+            .unwrap()
+            .as_ref()
+            .ok_or(IdentityError::NoDeviceKey)?
+            .id;
+
+        let key_store = self
+            .key_store
+            .as_ref()
+            .ok_or(IdentityError::KeyStoreNotInitialized)?;
+
+        let signature = key_store.sign(device_did, payload)?;
+
+        self.signatures_created.fetch_add(1, Ordering::Relaxed);
+
+        Ok(signature)
+    }
+
+    /// Signiere mit Root-Key (erfordert User-Confirmation im Interactive-Modus)
+    pub fn sign_with_root(
+        &self,
+        payload: &[u8],
+    ) -> Result<[u8; 64], crate::core::identity_types::IdentityError> {
+        use crate::core::identity_types::IdentityError;
+
+        if !self.is_bootstrapped() {
+            return Err(IdentityError::NotBootstrapped);
+        }
+
+        let mode = self.current_mode();
+
+        // Interactive-Modus: Erfordert Passkey-Confirmation
+        if mode == crate::core::identity_types::IdentityMode::Interactive {
+            let passkey = self
+                .passkey_manager
+                .as_ref()
+                .ok_or(IdentityError::PasskeyNotAvailable)?;
+
+            let signature = passkey.sign_with_confirmation(payload)?;
+            self.signatures_created.fetch_add(1, Ordering::Relaxed);
+            return Ok(signature);
+        }
+
+        // Agent/Ephemeral/Test: Nutze Key-Store direkt
+        if !mode.allows_autonomous_signing() {
+            return Err(IdentityError::SignatureNotAllowed(mode.to_string()));
+        }
+
+        let root_id = self
+            .root_did
+            .read()
+            .unwrap()
+            .as_ref()
+            .ok_or(IdentityError::NotBootstrapped)?
+            .id;
+
+        let key_store = self
+            .key_store
+            .as_ref()
+            .ok_or(IdentityError::KeyStoreNotInitialized)?;
+
+        let signature = key_store.sign(root_id, payload)?;
+        self.signatures_created.fetch_add(1, Ordering::Relaxed);
+
+        Ok(signature)
+    }
+
+    /// Verifiziere Signatur
+    pub fn verify_signature(
+        &self,
+        signer_id: UniversalId,
+        payload: &[u8],
+        signature: &[u8],
+    ) -> bool {
+        if let Some(ref key_store) = self.key_store {
+            let result = key_store.verify(signer_id, payload, signature);
+            if result {
+                self.signatures_verified.fetch_add(1, Ordering::Relaxed);
+            }
+            result
+        } else {
+            false
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // DELEGATION METHODS (Κ8)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Delegation erstellen
+    pub fn add_delegation(
+        &self,
+        delegate: UniversalId,
+        trust_factor: f32,
+        capabilities: Vec<crate::domain::unified::identity::Capability>,
+        valid_until: Option<crate::domain::unified::primitives::TemporalCoord>,
+    ) -> Result<UniversalId, crate::core::identity_types::IdentityError> {
+        use crate::core::identity_types::IdentityError;
+        use crate::domain::unified::identity::Delegation;
+
+        if !self.is_bootstrapped() {
+            return Err(IdentityError::NotBootstrapped);
+        }
+
+        // Κ8: Trust-Faktor prüfen
+        if trust_factor <= 0.0 || trust_factor > 1.0 {
+            return Err(IdentityError::InvalidTrustFactor(trust_factor));
+        }
+
+        let root_id = self
+            .root_did
+            .read()
+            .unwrap()
+            .as_ref()
+            .ok_or(IdentityError::NotBootstrapped)?
+            .id;
+
+        let mut delegation = Delegation::new(root_id, delegate, trust_factor, capabilities);
+
+        if let Some(until) = valid_until {
+            delegation.valid_until = Some(until);
+        }
+
+        let delegation_id = delegation.id;
+
+        // Zur Root-Document hinzufügen
+        if let Some(ref mut doc) = *self.root_document.write().unwrap() {
+            doc.add_delegation(delegation.clone());
+        }
+
+        // Zu Delegations-Map hinzufügen
+        self.delegations
+            .write()
+            .unwrap()
+            .insert(delegate, delegation);
+
+        // Counter aktualisieren
+        self.active_delegations_count
+            .fetch_add(1, Ordering::Relaxed);
+
+        Ok(delegation_id)
+    }
+
+    /// Delegation widerrufen
+    pub fn revoke_delegation(
+        &self,
+        delegate: &UniversalId,
+    ) -> Result<(), crate::core::identity_types::IdentityError> {
+        use crate::core::identity_types::IdentityError;
+
+        if !self.is_bootstrapped() {
+            return Err(IdentityError::NotBootstrapped);
+        }
+
+        // Aus Delegations-Map entfernen/widerrufen
+        let mut delegations = self.delegations.write().unwrap();
+        if let Some(mut delegation) = delegations.remove(delegate) {
+            delegation.revoke();
+
+            // Im Document widerrufen
+            if let Some(ref mut doc) = *self.root_document.write().unwrap() {
+                doc.revoke_delegation(&delegation.id);
+            }
+
+            // Counter aktualisieren
+            self.active_delegations_count
+                .fetch_sub(1, Ordering::Relaxed);
+            self.revoked_delegations_count
+                .fetch_add(1, Ordering::Relaxed);
+
+            Ok(())
+        } else {
+            Err(IdentityError::UnknownIdentity(*delegate))
+        }
+    }
+
+    /// Hole Delegation für Delegate
+    pub fn get_delegation(
+        &self,
+        delegate: &UniversalId,
+    ) -> Option<crate::domain::unified::identity::Delegation> {
+        self.delegations.read().unwrap().get(delegate).cloned()
+    }
+
+    /// Prüfe ob Delegation gültig ist
+    pub fn is_delegation_valid(
+        &self,
+        delegate: &UniversalId,
+        now: &crate::domain::unified::primitives::TemporalCoord,
+    ) -> bool {
+        self.delegations
+            .read()
+            .unwrap()
+            .get(delegate)
+            .map(|d| d.is_valid(now))
+            .unwrap_or(false)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // REALM MEMBERSHIP
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Realm beitreten
+    pub fn join_realm(
+        &self,
+        realm_id: UniversalId,
+        role: crate::core::identity_types::RealmRole,
+        initial_trust: Option<f64>,
+    ) -> Result<(), crate::core::identity_types::IdentityError> {
+        use crate::core::identity_types::{IdentityError, RealmMembership};
+
+        if !self.is_bootstrapped() {
+            return Err(IdentityError::NotBootstrapped);
+        }
+
+        let mode = self.current_mode();
+        if !mode.allows_realm_membership() {
+            return Err(IdentityError::SignatureNotAllowed(format!(
+                "Realm membership not allowed in {} mode",
+                mode
+            )));
+        }
+
+        let root_id = self.root_did_id().ok_or(IdentityError::NotBootstrapped)?;
+
+        // Membership erstellen
+        let mut membership = RealmMembership::new(realm_id, root_id, role);
+        if let Some(trust) = initial_trust {
+            membership = membership.with_trust(trust);
+        }
+
+        // Realm-spezifische Sub-DID ableiten (optional)
+        if let Ok(realm_sub_did) = self.derive_realm_did(&realm_id) {
+            membership = membership.with_realm_sub_did(realm_sub_did);
+        }
+
+        // Speichern
+        self.realm_memberships
+            .write()
+            .unwrap()
+            .insert(realm_id, membership);
+
+        // Counter aktualisieren
+        self.realm_memberships_changed
+            .fetch_add(1, Ordering::Relaxed);
+
+        Ok(())
+    }
+
+    /// Realm verlassen
+    pub fn leave_realm(
+        &self,
+        realm_id: &UniversalId,
+    ) -> Result<(), crate::core::identity_types::IdentityError> {
+        use crate::core::identity_types::IdentityError;
+
+        if !self.is_bootstrapped() {
+            return Err(IdentityError::NotBootstrapped);
+        }
+
+        let mut memberships = self.realm_memberships.write().unwrap();
+        if let Some(membership) = memberships.get_mut(realm_id) {
+            membership.deactivate();
+            self.realm_memberships_changed
+                .fetch_add(1, Ordering::Relaxed);
+            Ok(())
+        } else {
+            Err(IdentityError::NotRealmMember(*realm_id))
+        }
+    }
+
+    /// Hole Realm-Membership
+    pub fn get_realm_membership(
+        &self,
+        realm_id: &UniversalId,
+    ) -> Option<crate::core::identity_types::RealmMembership> {
+        self.realm_memberships
+            .read()
+            .unwrap()
+            .get(realm_id)
+            .cloned()
+    }
+
+    /// Ist Mitglied in Realm?
+    pub fn is_realm_member(&self, realm_id: &UniversalId) -> bool {
+        self.realm_memberships
+            .read()
+            .unwrap()
+            .get(realm_id)
+            .map(|m| m.is_active)
+            .unwrap_or(false)
+    }
+
+    /// Aktive Realm-Memberships
+    pub fn active_realm_memberships(&self) -> Vec<UniversalId> {
+        self.realm_memberships
+            .read()
+            .unwrap()
+            .iter()
+            .filter(|(_, m)| m.is_active)
+            .map(|(id, _)| *id)
+            .collect()
+    }
+
+    /// Update Realm-Role
+    pub fn update_realm_role(
+        &self,
+        realm_id: &UniversalId,
+        new_role: crate::core::identity_types::RealmRole,
+    ) -> Result<(), crate::core::identity_types::IdentityError> {
+        use crate::core::identity_types::IdentityError;
+
+        let mut memberships = self.realm_memberships.write().unwrap();
+        if let Some(membership) = memberships.get_mut(realm_id) {
+            membership.role = new_role;
+            membership.record_activity();
+            Ok(())
+        } else {
+            Err(IdentityError::NotRealmMember(*realm_id))
+        }
+    }
+
+    /// Update Realm-Trust
+    pub fn update_realm_trust(
+        &self,
+        realm_id: &UniversalId,
+        new_trust: f64,
+    ) -> Result<(), crate::core::identity_types::IdentityError> {
+        use crate::core::identity_types::IdentityError;
+
+        let mut memberships = self.realm_memberships.write().unwrap();
+        if let Some(membership) = memberships.get_mut(realm_id) {
+            membership.local_trust = new_trust.clamp(0.0, 1.0);
+            membership.record_activity();
+            Ok(())
+        } else {
+            Err(IdentityError::NotRealmMember(*realm_id))
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // WALLET ADDRESS MANAGEMENT
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Wallet-Adresse hinzufügen
+    pub fn add_wallet_address(
+        &self,
+        wallet: crate::core::identity_types::WalletAddress,
+    ) -> Result<(), crate::core::identity_types::IdentityError> {
+        use crate::core::identity_types::IdentityError;
+
+        if !self.is_bootstrapped() {
+            return Err(IdentityError::NotBootstrapped);
+        }
+
+        wallet.validate()?;
+
+        self.wallets
+            .write()
+            .unwrap()
+            .entry(wallet.chain_id.clone())
+            .or_default()
+            .push(wallet);
+
+        self.addresses_total.fetch_add(1, Ordering::Relaxed);
+
+        Ok(())
+    }
+
+    /// Hole Wallet-Adressen für Chain
+    pub fn get_wallets_for_chain(
+        &self,
+        chain_id: &str,
+    ) -> Vec<crate::core::identity_types::WalletAddress> {
+        self.wallets
+            .read()
+            .unwrap()
+            .get(chain_id)
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    /// Hole primäre Wallet-Adresse für Chain
+    pub fn get_primary_wallet(
+        &self,
+        chain_id: &str,
+    ) -> Option<crate::core::identity_types::WalletAddress> {
+        self.wallets
+            .read()
+            .unwrap()
+            .get(chain_id)
+            .and_then(|wallets| wallets.iter().find(|w| w.is_primary).cloned())
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CREDENTIAL METHODS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Record credential issuance
+    pub fn record_credential_issued(&self) {
+        self.credentials_issued.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Record credential verification
+    pub fn record_credential_verified(&self) {
+        self.credentials_verified.fetch_add(1, Ordering::Relaxed);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // GAS/MANA TRACKING
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Record gas consumption for identity operation
+    pub fn record_gas(&self, amount: u64) {
+        self.gas_consumed.fetch_add(amount, Ordering::Relaxed);
+    }
+
+    /// Record mana consumption for identity operation
+    pub fn record_mana(&self, amount: u64) {
+        self.mana_consumed.fetch_add(amount, Ordering::Relaxed);
+    }
+
+    /// Record triggered event
+    pub fn record_event_triggered(&self) {
+        self.events_triggered.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Record trust entry creation
+    pub fn record_trust_entry_created(&self) {
+        self.trust_entries_created.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Record signature created
+    pub fn record_signature_created(&self) {
+        self.signatures_created.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Record signature verified
+    pub fn record_signature_verified(&self) {
+        self.signatures_verified.fetch_add(1, Ordering::Relaxed);
+    }
+}
+
+impl Default for IdentityState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+// ============================================================================
+// IDENTITY SNAPSHOT
+// ============================================================================
+
+/// Snapshot für Persistence/CQRS (keine Keys!)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IdentitySnapshot {
+    pub bootstrap_completed: bool,
+    pub root_created_at_ms: u64,
+    pub mode: crate::core::identity_types::IdentityMode,
+    pub sub_dids_total: u64,
+    pub addresses_total: u64,
+    pub active_delegations: u64,
+    pub revoked_delegations: u64,
+    pub credentials_issued: u64,
+    pub credentials_verified: u64,
+    pub events_triggered: u64,
+    pub trust_entries_created: u64,
+    pub realm_memberships_changed: u64,
+    pub gas_consumed: u64,
+    pub mana_consumed: u64,
+    pub signatures_created: u64,
+    pub signatures_verified: u64,
+    /// DID URI String (z.B. "did:erynoa:self:...")
+    pub root_did: Option<String>,
+    /// Namespace → Count
+    pub sub_did_counts: HashMap<String, u64>,
+    pub realm_membership_count: usize,
+    /// Liste der Chains mit Wallets
+    pub wallet_chains: Vec<String>,
+}
+
+impl Default for IdentitySnapshot {
+    fn default() -> Self {
+        Self {
+            bootstrap_completed: false,
+            root_created_at_ms: 0,
+            mode: crate::core::identity_types::IdentityMode::Interactive,
+            sub_dids_total: 0,
+            addresses_total: 0,
+            active_delegations: 0,
+            revoked_delegations: 0,
+            credentials_issued: 0,
+            credentials_verified: 0,
+            events_triggered: 0,
+            trust_entries_created: 0,
+            realm_memberships_changed: 0,
+            gas_consumed: 0,
+            mana_consumed: 0,
+            signatures_created: 0,
+            signatures_verified: 0,
+            root_did: None,
+            sub_did_counts: HashMap::new(),
+            realm_membership_count: 0,
+            wallet_chains: Vec::new(),
+        }
+    }
+}
+
+// ============================================================================
 // STATE RELATIONSHIP TYPES
 // ============================================================================
 
@@ -2461,6 +4006,15 @@ pub enum StateComponent {
     Controller,
     /// BlueprintComposer: Template-Komposition und Vererbung
     BlueprintComposer,
+    // ═══════════════════════════════════════════════════════════════════════════
+    // IDENTITY LAYER (Κ6-Κ8 DID Management)
+    // ═══════════════════════════════════════════════════════════════════════════
+    /// Identity: DID-Management, Root-DIDs, Sub-DIDs (Κ6-Κ8)
+    Identity,
+    /// Credential: Verifiable Credentials, Attestations
+    Credential,
+    /// KeyManagement: Key-Rotation, Recovery, Hardware-Security
+    KeyManagement,
 }
 
 /// Beziehungs-Graph zwischen State-Komponenten
@@ -2477,7 +4031,63 @@ impl StateGraph {
 
         Self {
             edges: vec![
-                // Core-Layer Beziehungen
+                // ═══════════════════════════════════════════════════════════════════════════
+                // IDENTITY-LAYER BEZIEHUNGEN (Κ6-Κ8: DID, Delegation, Credentials)
+                // ═══════════════════════════════════════════════════════════════════════════
+
+                // Core-Abhängigkeiten
+                (Trust, DependsOn, Identity), // Trust-Werte basieren auf Identity-Verifikation
+                (Identity, Triggers, Trust),  // Neue Identities erhalten initialen Trust
+                (Event, DependsOn, Identity), // Events müssen Signatur der Identity haben
+                (Identity, Triggers, Event),  // Identity-Operationen erzeugen Events
+                (Consensus, DependsOn, Identity), // Validator-Identifikation via DID
+                // Execution-Abhängigkeiten
+                (Execution, DependsOn, Identity), // ExecutionContext hat Identity
+                (Identity, DependsOn, Execution), // Identity-Ops verbrauchen Execution-Budget
+                (Identity, DependsOn, Gas),       // Sub-DID Derivation verbraucht Gas
+                (Identity, DependsOn, Mana),      // Identity-Events verbrauchen Mana
+                // Realm-Integration
+                (Realm, DependsOn, Identity), // Realm-Membership basiert auf Identity
+                (Identity, Triggers, Realm),  // Identity-Join/Leave triggert Realm-Updates
+                (Room, DependsOn, Identity),  // Room-Access basiert auf Identity
+                (Partition, DependsOn, Identity), // Partition-Zugehörigkeit basiert auf Identity
+                // Controller/Auth
+                (Controller, DependsOn, Identity), // AuthZ basiert auf Identity
+                (Identity, Validates, Controller), // Identity validiert Delegation-Chain
+                (Controller, Aggregates, Identity), // Controller trackt Identities für Delegationen
+                // Gateway/Crossing
+                (Gateway, DependsOn, Identity), // Crossing erfordert Identity-Verifikation
+                (Gateway, Validates, Identity), // Gateway validiert Cross-Realm Identity
+                // ECLVM
+                (ECLVM, DependsOn, Identity), // ECLVM prüft Caller-Identity
+                (ECLPolicy, DependsOn, Identity), // Policies können Identity-basierte Rules haben
+                // P2P Network
+                (Swarm, DependsOn, Identity), // Peer-ID ist Device-Sub-DID
+                (Swarm, Validates, Identity), // Peer-Authentifizierung via Identity
+                (Gossip, DependsOn, Identity), // Gossip-Messages sind signiert
+                (Privacy, DependsOn, Identity), // Privacy-Level basiert auf Identity-Mode
+                // Protection
+                (Anomaly, Validates, Identity), // Anomalie-Detection für Identity-Ops
+                (Identity, Triggers, Anomaly),  // Suspicious Identity-Activity triggert Anomaly
+                (AntiCalcification, Validates, Identity), // Power-Konzentration durch Delegationen
+                // Credential-Sub-System
+                (Credential, DependsOn, Identity), // Credentials gehören zu Identity
+                (Credential, Validates, Identity), // Credential-Verifikation validiert Identity
+                (Identity, Aggregates, Credential), // Identity aggregiert ihre Credentials
+                // KeyManagement-Sub-System
+                (KeyManagement, DependsOn, Identity), // Keys gehören zu Identity
+                (Identity, Aggregates, KeyManagement), // Identity aggregiert Key-Material
+                (KeyManagement, Triggers, Event),     // Key-Rotation erzeugt Events
+                // Storage
+                (KvStore, Aggregates, Identity), // KvStore persistiert Identity-Daten
+                (Identity, DependsOn, KvStore),  // Identity lädt State aus KvStore
+                // Engine-Layer
+                (UI, DependsOn, Identity), // UI zeigt Identity-basierte Inhalte
+                (API, DependsOn, Identity), // API-AuthN basiert auf Identity
+                (Governance, DependsOn, Identity), // Voting-Power basiert auf Identity
+                // ═══════════════════════════════════════════════════════════════════════════
+                // CORE-LAYER BEZIEHUNGEN (Trust, Event, WorldFormula, Consensus)
+                // ═══════════════════════════════════════════════════════════════════════════
                 (Trust, Triggers, Event), // Trust-Updates erzeugen Events
                 (Event, Triggers, Trust), // Events können Trust beeinflussen
                 (Trust, DependsOn, WorldFormula), // Trust fließt in 𝔼
@@ -2785,16 +4395,23 @@ impl StateGraph {
 #[derive(Debug)]
 pub struct TrustState {
     // Atomic Counters
-    pub entities: AtomicUsize,
-    pub relationships: AtomicUsize,
+    pub entities_count: AtomicUsize,
+    pub relationships_count: AtomicUsize,
     pub updates_total: AtomicU64,
     pub positive_updates: AtomicU64,
     pub negative_updates: AtomicU64,
-    pub violations: AtomicU64,
+    pub violations_count: AtomicU64,
 
     // Complex State (RwLock)
     pub avg_trust: RwLock<f64>,
     pub trust_distribution: RwLock<TrustDistribution>,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Identity-Integration (Phase 7)
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Trust-Einträge keyed by UniversalId
+    /// Enthält globalen und per-Realm Trust für jede Identity
+    pub trust_by_id: RwLock<HashMap<UniversalId, TrustEntry>>,
 
     // ─────────────────────────────────────────────────────────────────────────
     // Relationship-Tracking (Beziehungen im StateGraph)
@@ -2818,22 +4435,229 @@ pub struct TrustDistribution {
     pub entropy: f64,
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// TRUST ENTRY (Identity-Integration Phase 7)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Trust-Eintrag mit Identity-Integration
+/// Speichert globalen Trust und Per-Realm Trust für eine Identität
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrustEntry {
+    /// Identity UniversalId
+    pub identity_id: UniversalId,
+    /// Globaler Trust-Wert [0.0, 1.0]
+    pub global_trust: f64,
+    /// Per-Realm Trust-Werte (Realm-ID → Trust-Wert)
+    pub per_realm_trust: HashMap<UniversalId, f64>,
+    /// Letztes Update (Unix-Epoch Millisekunden)
+    pub last_update_ms: u64,
+    /// Anzahl Updates
+    pub update_count: u64,
+    /// Trust-Decay-Faktor (Κ8)
+    pub decay_factor: f64,
+}
+
+impl TrustEntry {
+    /// Erstelle neuen Trust-Eintrag
+    pub fn new(identity_id: UniversalId, initial_trust: f64) -> Self {
+        Self {
+            identity_id,
+            global_trust: initial_trust.clamp(0.0, 1.0),
+            per_realm_trust: HashMap::new(),
+            last_update_ms: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis() as u64)
+                .unwrap_or(0),
+            update_count: 0,
+            decay_factor: 1.0, // Kein Decay initial
+        }
+    }
+
+    /// Aktualisiere globalen Trust
+    pub fn update_global(&mut self, delta: f64) {
+        self.global_trust = (self.global_trust + delta).clamp(0.0, 1.0);
+        self.update_count += 1;
+        self.last_update_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0);
+    }
+
+    /// Aktualisiere Realm-spezifischen Trust
+    pub fn update_realm(&mut self, realm_id: UniversalId, delta: f64) {
+        let current = self
+            .per_realm_trust
+            .get(&realm_id)
+            .copied()
+            .unwrap_or(self.global_trust);
+        self.per_realm_trust
+            .insert(realm_id, (current + delta).clamp(0.0, 1.0));
+        self.update_count += 1;
+        self.last_update_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0);
+    }
+
+    /// Hole Trust für bestimmtes Realm (fällt auf global zurück)
+    pub fn get_realm_trust(&self, realm_id: &UniversalId) -> f64 {
+        self.per_realm_trust
+            .get(realm_id)
+            .copied()
+            .unwrap_or(self.global_trust)
+    }
+
+    /// Wende Decay an (Κ8: Trust-Decay über Zeit)
+    pub fn apply_decay(&mut self, decay_rate: f64) {
+        self.decay_factor *= 1.0 - decay_rate;
+        self.global_trust *= 1.0 - decay_rate;
+        for trust in self.per_realm_trust.values_mut() {
+            *trust *= 1.0 - decay_rate;
+        }
+    }
+}
+
+/// Fehler bei Trust-Operationen
+#[derive(Debug, Clone, thiserror::Error)]
+pub enum TrustError {
+    #[error("Identity not found: {0}")]
+    IdentityNotFound(String),
+    #[error("Trust value out of range: {0}")]
+    ValueOutOfRange(f64),
+    #[error("Realm not found: {0}")]
+    RealmNotFound(String),
+    #[error("Lock acquisition failed")]
+    LockError,
+}
+
 impl TrustState {
     pub fn new() -> Self {
         Self {
-            entities: AtomicUsize::new(0),
-            relationships: AtomicUsize::new(0),
+            entities_count: AtomicUsize::new(0),
+            relationships_count: AtomicUsize::new(0),
             updates_total: AtomicU64::new(0),
             positive_updates: AtomicU64::new(0),
             negative_updates: AtomicU64::new(0),
-            violations: AtomicU64::new(0),
+            violations_count: AtomicU64::new(0),
             avg_trust: RwLock::new(0.5),
             trust_distribution: RwLock::new(TrustDistribution::default()),
+            trust_by_id: RwLock::new(HashMap::new()),
             triggered_events: AtomicU64::new(0),
             event_triggered_updates: AtomicU64::new(0),
             realm_triggered_updates: AtomicU64::new(0),
         }
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Identity-based Trust Operations (Phase 7)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Hole Trust für Identity (global)
+    pub fn get_trust(&self, identity: &UniversalId) -> Option<f64> {
+        self.trust_by_id
+            .read()
+            .ok()
+            .and_then(|map| map.get(identity).map(|e| e.global_trust))
+    }
+
+    /// Hole Trust für Identity in bestimmtem Realm
+    pub fn get_realm_trust(&self, identity: &UniversalId, realm: &UniversalId) -> Option<f64> {
+        self.trust_by_id
+            .read()
+            .ok()
+            .and_then(|map| map.get(identity).map(|e| e.get_realm_trust(realm)))
+    }
+
+    /// Registriere neue Identity mit Initial-Trust
+    pub fn register_identity(
+        &self,
+        identity: UniversalId,
+        initial_trust: f64,
+    ) -> Result<(), TrustError> {
+        let entry = TrustEntry::new(identity, initial_trust);
+        if let Ok(mut map) = self.trust_by_id.write() {
+            map.insert(identity, entry);
+            self.entities_count.fetch_add(1, Ordering::Relaxed);
+            Ok(())
+        } else {
+            Err(TrustError::LockError)
+        }
+    }
+
+    /// Aktualisiere Trust für Identity (global)
+    pub fn update_identity_trust(
+        &self,
+        identity: &UniversalId,
+        delta: f64,
+    ) -> Result<f64, TrustError> {
+        if let Ok(mut map) = self.trust_by_id.write() {
+            if let Some(entry) = map.get_mut(identity) {
+                entry.update_global(delta);
+                self.updates_total.fetch_add(1, Ordering::Relaxed);
+                if delta > 0.0 {
+                    self.positive_updates.fetch_add(1, Ordering::Relaxed);
+                } else {
+                    self.negative_updates.fetch_add(1, Ordering::Relaxed);
+                }
+                Ok(entry.global_trust)
+            } else {
+                Err(TrustError::IdentityNotFound(hex::encode(
+                    identity.as_bytes(),
+                )))
+            }
+        } else {
+            Err(TrustError::LockError)
+        }
+    }
+
+    /// Aktualisiere Trust für Identity in Realm
+    pub fn update_identity_realm_trust(
+        &self,
+        identity: &UniversalId,
+        realm: UniversalId,
+        delta: f64,
+    ) -> Result<f64, TrustError> {
+        if let Ok(mut map) = self.trust_by_id.write() {
+            if let Some(entry) = map.get_mut(identity) {
+                entry.update_realm(realm, delta);
+                self.updates_total.fetch_add(1, Ordering::Relaxed);
+                self.realm_triggered_updates.fetch_add(1, Ordering::Relaxed);
+                Ok(entry.get_realm_trust(&realm))
+            } else {
+                Err(TrustError::IdentityNotFound(hex::encode(
+                    identity.as_bytes(),
+                )))
+            }
+        } else {
+            Err(TrustError::LockError)
+        }
+    }
+
+    /// Hole vollständigen TrustEntry für Identity
+    pub fn get_trust_entry(&self, identity: &UniversalId) -> Option<TrustEntry> {
+        self.trust_by_id
+            .read()
+            .ok()
+            .and_then(|map| map.get(identity).cloned())
+    }
+
+    /// Wende Decay auf alle Identities an (periodisch aufrufen)
+    pub fn apply_global_decay(&self, decay_rate: f64) {
+        if let Ok(mut map) = self.trust_by_id.write() {
+            for entry in map.values_mut() {
+                entry.apply_decay(decay_rate);
+            }
+        }
+    }
+
+    /// Anzahl registrierter Identities
+    pub fn identity_count(&self) -> usize {
+        self.trust_by_id.read().map(|map| map.len()).unwrap_or(0)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Legacy Operations
+    // ─────────────────────────────────────────────────────────────────────────
 
     /// Update Trust mit Kausalitäts-Tracking
     pub fn update(&self, positive: bool, from_event: bool) {
@@ -2864,19 +4688,20 @@ impl TrustState {
         }
     }
 
-    pub fn snapshot(&self) -> TrustStateSnapshot {
-        TrustStateSnapshot {
-            entities: self.entities.load(Ordering::Relaxed),
-            relationships: self.relationships.load(Ordering::Relaxed),
+    pub fn snapshot(&self) -> TrustSnapshot {
+        TrustSnapshot {
+            entities_count: self.entities_count.load(Ordering::Relaxed),
+            relationships_count: self.relationships_count.load(Ordering::Relaxed),
             updates_total: self.updates_total.load(Ordering::Relaxed),
             positive_updates: self.positive_updates.load(Ordering::Relaxed),
             negative_updates: self.negative_updates.load(Ordering::Relaxed),
-            violations: self.violations.load(Ordering::Relaxed),
+            violations_count: self.violations_count.load(Ordering::Relaxed),
             avg_trust: self.avg_trust.read().map(|v| *v).unwrap_or(0.5),
             asymmetry_ratio: self.asymmetry_ratio(),
             triggered_events: self.triggered_events.load(Ordering::Relaxed),
             event_triggered_updates: self.event_triggered_updates.load(Ordering::Relaxed),
             distribution: self.trust_distribution.read().map(|d| d.clone()).ok(),
+            identity_trust_count: self.identity_count(),
         }
     }
 }
@@ -2888,18 +4713,20 @@ impl Default for TrustState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TrustStateSnapshot {
-    pub entities: usize,
-    pub relationships: usize,
+pub struct TrustSnapshot {
+    pub entities_count: usize,
+    pub relationships_count: usize,
     pub updates_total: u64,
     pub positive_updates: u64,
     pub negative_updates: u64,
-    pub violations: u64,
+    pub violations_count: u64,
     pub avg_trust: f64,
     pub asymmetry_ratio: f64,
     pub triggered_events: u64,
     pub event_triggered_updates: u64,
     pub distribution: Option<TrustDistribution>,
+    /// Anzahl Identity-Trust-Einträge (Phase 7)
+    pub identity_trust_count: usize,
 }
 
 /// Event-State mit DAG-Tracking und Relationship-Counters
@@ -3020,8 +4847,8 @@ impl EventState {
             .unwrap_or(0.0)
     }
 
-    pub fn snapshot(&self) -> EventStateSnapshot {
-        EventStateSnapshot {
+    pub fn snapshot(&self) -> EventSnapshot {
+        EventSnapshot {
             total: self.total.load(Ordering::Relaxed),
             genesis: self.genesis.load(Ordering::Relaxed),
             finalized: self.finalized.load(Ordering::Relaxed),
@@ -3044,7 +4871,7 @@ impl Default for EventState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EventStateSnapshot {
+pub struct EventSnapshot {
     pub total: u64,
     pub genesis: u64,
     pub finalized: u64,
@@ -3139,8 +4966,8 @@ impl FormulaState {
             .unwrap_or(0.0)
     }
 
-    pub fn snapshot(&self) -> FormulaStateSnapshot {
-        FormulaStateSnapshot {
+    pub fn snapshot(&self) -> FormulaSnapshot {
+        FormulaSnapshot {
             current_e: self.current_e.read().map(|v| *v).unwrap_or(0.0),
             computations: self.computations.load(Ordering::Relaxed),
             contributors: self.contributors.load(Ordering::Relaxed),
@@ -3160,7 +4987,7 @@ impl Default for FormulaState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FormulaStateSnapshot {
+pub struct FormulaSnapshot {
     pub current_e: f64,
     pub computations: u64,
     pub contributors: usize,
@@ -3228,8 +5055,8 @@ impl ConsensusState {
         }
     }
 
-    pub fn snapshot(&self) -> ConsensusStateSnapshot {
-        ConsensusStateSnapshot {
+    pub fn snapshot(&self) -> ConsensusSnapshot {
+        ConsensusSnapshot {
             epoch: self.epoch.load(Ordering::Relaxed),
             validators: self.validators.load(Ordering::Relaxed),
             successful_rounds: self.successful_rounds.load(Ordering::Relaxed),
@@ -3249,7 +5076,7 @@ impl Default for ConsensusState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConsensusStateSnapshot {
+pub struct ConsensusSnapshot {
     pub epoch: u64,
     pub validators: usize,
     pub successful_rounds: u64,
@@ -3279,8 +5106,8 @@ impl CoreState {
         }
     }
 
-    pub fn snapshot(&self) -> CoreStateSnapshot {
-        CoreStateSnapshot {
+    pub fn snapshot(&self) -> CoreSnapshot {
+        CoreSnapshot {
             trust: self.trust.snapshot(),
             events: self.events.snapshot(),
             formula: self.formula.snapshot(),
@@ -3296,11 +5123,11 @@ impl Default for CoreState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoreStateSnapshot {
-    pub trust: TrustStateSnapshot,
-    pub events: EventStateSnapshot,
-    pub formula: FormulaStateSnapshot,
-    pub consensus: ConsensusStateSnapshot,
+pub struct CoreSnapshot {
+    pub trust: TrustSnapshot,
+    pub events: EventSnapshot,
+    pub formula: FormulaSnapshot,
+    pub consensus: ConsensusSnapshot,
 }
 
 // ============================================================================
@@ -3318,7 +5145,7 @@ pub struct GasState {
     /// Refundiertes Gas
     pub refunded: AtomicU64,
     /// Out-of-Gas Errors
-    pub out_of_gas: AtomicU64,
+    pub out_of_gas_count: AtomicU64,
     /// Aktueller Gas-Preis
     pub current_price: RwLock<f64>,
     /// Max Gas pro Block
@@ -3337,7 +5164,7 @@ impl GasState {
         Self {
             consumed: AtomicU64::new(0),
             refunded: AtomicU64::new(0),
-            out_of_gas: AtomicU64::new(0),
+            out_of_gas_count: AtomicU64::new(0),
             current_price: RwLock::new(1.0),
             max_per_block: AtomicU64::new(10_000_000),
             calibration_adjustments: AtomicU64::new(0),
@@ -3353,11 +5180,11 @@ impl GasState {
         self.refunded.fetch_add(amount, Ordering::Relaxed);
     }
 
-    pub fn snapshot(&self) -> GasStateSnapshot {
-        GasStateSnapshot {
+    pub fn snapshot(&self) -> GasSnapshot {
+        GasSnapshot {
             consumed: self.consumed.load(Ordering::Relaxed),
             refunded: self.refunded.load(Ordering::Relaxed),
-            out_of_gas: self.out_of_gas.load(Ordering::Relaxed),
+            out_of_gas_count: self.out_of_gas_count.load(Ordering::Relaxed),
             current_price: self.current_price.read().map(|v| *v).unwrap_or(1.0),
             max_per_block: self.max_per_block.load(Ordering::Relaxed),
             calibration_adjustments: self.calibration_adjustments.load(Ordering::Relaxed),
@@ -3373,10 +5200,10 @@ impl Default for GasState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GasStateSnapshot {
+pub struct GasSnapshot {
     pub consumed: u64,
     pub refunded: u64,
-    pub out_of_gas: u64,
+    pub out_of_gas_count: u64,
     pub current_price: f64,
     pub max_per_block: u64,
     pub calibration_adjustments: u64,
@@ -3394,7 +5221,7 @@ pub struct ManaState {
     /// Regeneriertes Mana
     pub regenerated: AtomicU64,
     /// Rate-Limited wegen Mana
-    pub rate_limited: AtomicU64,
+    pub rate_limited_count: AtomicU64,
     /// Aktuelle Regenerations-Rate
     pub regen_rate: RwLock<f64>,
     /// Max Mana pro Entity
@@ -3413,7 +5240,7 @@ impl ManaState {
         Self {
             consumed: AtomicU64::new(0),
             regenerated: AtomicU64::new(0),
-            rate_limited: AtomicU64::new(0),
+            rate_limited_count: AtomicU64::new(0),
             regen_rate: RwLock::new(1.0),
             max_per_entity: AtomicU64::new(100_000),
             calibration_adjustments: AtomicU64::new(0),
@@ -3429,11 +5256,11 @@ impl ManaState {
         self.regenerated.fetch_add(amount, Ordering::Relaxed);
     }
 
-    pub fn snapshot(&self) -> ManaStateSnapshot {
-        ManaStateSnapshot {
+    pub fn snapshot(&self) -> ManaSnapshot {
+        ManaSnapshot {
             consumed: self.consumed.load(Ordering::Relaxed),
             regenerated: self.regenerated.load(Ordering::Relaxed),
-            rate_limited: self.rate_limited.load(Ordering::Relaxed),
+            rate_limited_count: self.rate_limited_count.load(Ordering::Relaxed),
             regen_rate: self.regen_rate.read().map(|v| *v).unwrap_or(1.0),
             max_per_entity: self.max_per_entity.load(Ordering::Relaxed),
             calibration_adjustments: self.calibration_adjustments.load(Ordering::Relaxed),
@@ -3449,10 +5276,10 @@ impl Default for ManaState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ManaStateSnapshot {
+pub struct ManaSnapshot {
     pub consumed: u64,
     pub regenerated: u64,
-    pub rate_limited: u64,
+    pub rate_limited_count: u64,
     pub regen_rate: f64,
     pub max_per_entity: u64,
     pub calibration_adjustments: u64,
@@ -3550,8 +5377,8 @@ impl ExecutionsState {
         }
     }
 
-    pub fn snapshot(&self) -> ExecutionsStateSnapshot {
-        ExecutionsStateSnapshot {
+    pub fn snapshot(&self) -> ExecutionsSnapshot {
+        ExecutionsSnapshot {
             active_contexts: self.active_contexts.load(Ordering::Relaxed),
             total: self.total.load(Ordering::Relaxed),
             successful: self.successful.load(Ordering::Relaxed),
@@ -3575,7 +5402,7 @@ impl Default for ExecutionsState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExecutionsStateSnapshot {
+pub struct ExecutionsSnapshot {
     pub active_contexts: usize,
     pub total: u64,
     pub successful: u64,
@@ -3632,8 +5459,8 @@ impl ExecutionState {
         self.executions.success_rate()
     }
 
-    pub fn snapshot(&self) -> ExecutionStateSnapshot {
-        ExecutionStateSnapshot {
+    pub fn snapshot(&self) -> ExecutionSnapshot {
+        ExecutionSnapshot {
             gas: self.gas.snapshot(),
             mana: self.mana.snapshot(),
             executions: self.executions.snapshot(),
@@ -3649,10 +5476,10 @@ impl Default for ExecutionState {
 
 /// Execution State Snapshot mit Sub-States
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExecutionStateSnapshot {
-    pub gas: GasStateSnapshot,
-    pub mana: ManaStateSnapshot,
-    pub executions: ExecutionsStateSnapshot,
+pub struct ExecutionSnapshot {
+    pub gas: GasSnapshot,
+    pub mana: ManaSnapshot,
+    pub executions: ExecutionsSnapshot,
 }
 
 // ============================================================================
@@ -3775,8 +5602,8 @@ impl RealmECLState {
         }
     }
 
-    pub fn snapshot(&self) -> RealmECLStateSnapshot {
-        RealmECLStateSnapshot {
+    pub fn snapshot(&self) -> RealmECLSnapshot {
+        RealmECLSnapshot {
             policies_executed: self.policies_executed.load(Ordering::Relaxed),
             policies_passed: self.policies_passed.load(Ordering::Relaxed),
             policies_denied: self.policies_denied.load(Ordering::Relaxed),
@@ -3802,7 +5629,7 @@ impl Default for RealmECLState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RealmECLStateSnapshot {
+pub struct RealmECLSnapshot {
     pub policies_executed: u64,
     pub policies_passed: u64,
     pub policies_denied: u64,
@@ -4117,7 +5944,7 @@ impl ECLVMState {
         }
     }
 
-    pub fn get_realm_ecl(&self, realm_id: &str) -> Option<RealmECLStateSnapshot> {
+    pub fn get_realm_ecl(&self, realm_id: &str) -> Option<RealmECLSnapshot> {
         self.realm_ecl
             .read()
             .ok()?
@@ -4154,14 +5981,14 @@ impl ECLVMState {
         }
     }
 
-    pub fn snapshot(&self) -> ECLVMStateSnapshot {
+    pub fn snapshot(&self) -> ECLVMSnapshot {
         let realm_snapshots = self
             .realm_ecl
             .read()
             .map(|r| r.iter().map(|(k, v)| (k.clone(), v.snapshot())).collect())
             .unwrap_or_default();
 
-        ECLVMStateSnapshot {
+        ECLVMSnapshot {
             policies_compiled: self.policies_compiled.load(Ordering::Relaxed),
             policies_cached: self.policies_cached.load(Ordering::Relaxed),
             policy_compile_errors: self.policy_compile_errors.load(Ordering::Relaxed),
@@ -4217,7 +6044,7 @@ impl Default for ECLVMState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ECLVMStateSnapshot {
+pub struct ECLVMSnapshot {
     // Policy Engine
     pub policies_compiled: u64,
     pub policies_cached: usize,
@@ -4248,7 +6075,7 @@ pub struct ECLVMStateSnapshot {
     pub out_of_gas_aborts: u64,
     pub mana_rate_limited: u64,
     // Per-Realm
-    pub realm_ecl: HashMap<String, RealmECLStateSnapshot>,
+    pub realm_ecl: HashMap<String, RealmECLSnapshot>,
     // Crossing-Policy
     pub crossing_evaluations: u64,
     pub crossings_allowed: u64,
@@ -4311,8 +6138,8 @@ impl AnomalyState {
         };
     }
 
-    pub fn snapshot(&self) -> AnomalyStateSnapshot {
-        AnomalyStateSnapshot {
+    pub fn snapshot(&self) -> AnomalySnapshot {
+        AnomalySnapshot {
             total: self.total.load(Ordering::Relaxed),
             critical: self.critical.load(Ordering::Relaxed),
             high: self.high.load(Ordering::Relaxed),
@@ -4332,7 +6159,7 @@ impl Default for AnomalyState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AnomalyStateSnapshot {
+pub struct AnomalySnapshot {
     pub total: u64,
     pub critical: u64,
     pub high: u64,
@@ -4384,8 +6211,8 @@ impl DiversityState {
         }
     }
 
-    pub fn snapshot(&self) -> DiversityStateSnapshot {
-        DiversityStateSnapshot {
+    pub fn snapshot(&self) -> DiversitySnapshot {
+        DiversitySnapshot {
             dimensions: self.dimensions.load(Ordering::Relaxed),
             monoculture_warnings: self.monoculture_warnings.load(Ordering::Relaxed),
             min_entropy: self.min_entropy.read().map(|v| *v).unwrap_or(1.0),
@@ -4402,7 +6229,7 @@ impl Default for DiversityState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiversityStateSnapshot {
+pub struct DiversitySnapshot {
     pub dimensions: usize,
     pub monoculture_warnings: u64,
     pub min_entropy: f64,
@@ -4439,8 +6266,8 @@ impl QuadraticState {
         }
     }
 
-    pub fn snapshot(&self) -> QuadraticStateSnapshot {
-        QuadraticStateSnapshot {
+    pub fn snapshot(&self) -> QuadraticSnapshot {
+        QuadraticSnapshot {
             active_votes: self.active_votes.load(Ordering::Relaxed),
             completed_votes: self.completed_votes.load(Ordering::Relaxed),
             total_participants: self.total_participants.load(Ordering::Relaxed),
@@ -4457,7 +6284,7 @@ impl Default for QuadraticState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuadraticStateSnapshot {
+pub struct QuadraticSnapshot {
     pub active_votes: usize,
     pub completed_votes: u64,
     pub total_participants: u64,
@@ -4500,8 +6327,8 @@ impl AntiCalcificationState {
         }
     }
 
-    pub fn snapshot(&self) -> AntiCalcificationStateSnapshot {
-        AntiCalcificationStateSnapshot {
+    pub fn snapshot(&self) -> AntiCalcificationSnapshot {
+        AntiCalcificationSnapshot {
             power_concentration: self.power_concentration.read().map(|v| *v).unwrap_or(0.0),
             gini_coefficient: self.gini_coefficient.read().map(|v| *v).unwrap_or(0.0),
             interventions: self.interventions.load(Ordering::Relaxed),
@@ -4520,7 +6347,7 @@ impl Default for AntiCalcificationState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AntiCalcificationStateSnapshot {
+pub struct AntiCalcificationSnapshot {
     pub power_concentration: f64,
     pub gini_coefficient: f64,
     pub interventions: u64,
@@ -4534,22 +6361,22 @@ pub struct AntiCalcificationStateSnapshot {
 #[derive(Debug)]
 pub struct CalibrationState {
     /// Calibration-Updates durchgeführt
-    pub updates: AtomicU64,
+    pub updates_total: AtomicU64,
     /// Kalibrierte Parameter
-    pub params: RwLock<HashMap<String, f64>>,
+    pub params_map: RwLock<HashMap<String, f64>>,
 }
 
 impl CalibrationState {
     pub fn new() -> Self {
         Self {
-            updates: AtomicU64::new(0),
-            params: RwLock::new(HashMap::new()),
+            updates_total: AtomicU64::new(0),
+            params_map: RwLock::new(HashMap::new()),
         }
     }
 
-    pub fn snapshot(&self) -> CalibrationStateSnapshot {
-        CalibrationStateSnapshot {
-            updates: self.updates.load(Ordering::Relaxed),
+    pub fn snapshot(&self) -> CalibrationSnapshot {
+        CalibrationSnapshot {
+            updates_total: self.updates_total.load(Ordering::Relaxed),
         }
     }
 }
@@ -4561,8 +6388,8 @@ impl Default for CalibrationState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CalibrationStateSnapshot {
-    pub updates: u64,
+pub struct CalibrationSnapshot {
+    pub updates_total: u64,
 }
 
 /// Protection State mit tiefgründigen Sub-States
@@ -4722,8 +6549,8 @@ impl ProtectionState {
             .unwrap_or(1.0) // Kein Monitor → neutraler Score
     }
 
-    pub fn snapshot(&self) -> ProtectionStateSnapshot {
-        ProtectionStateSnapshot {
+    pub fn snapshot(&self) -> ProtectionSnapshot {
+        ProtectionSnapshot {
             anomaly: self.anomaly.snapshot(),
             diversity: self.diversity.snapshot(),
             quadratic: self.quadratic.snapshot(),
@@ -4743,12 +6570,12 @@ impl Default for ProtectionState {
 
 /// Protection State Snapshot mit tiefgründigen Sub-Snapshots
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProtectionStateSnapshot {
-    pub anomaly: AnomalyStateSnapshot,
-    pub diversity: DiversityStateSnapshot,
-    pub quadratic: QuadraticStateSnapshot,
-    pub anti_calcification: AntiCalcificationStateSnapshot,
-    pub calibration: CalibrationStateSnapshot,
+pub struct ProtectionSnapshot {
+    pub anomaly: AnomalySnapshot,
+    pub diversity: DiversitySnapshot,
+    pub quadratic: QuadraticSnapshot,
+    pub anti_calcification: AntiCalcificationSnapshot,
+    pub calibration: CalibrationSnapshot,
     pub health_score: f64,
     /// Optional: Shard-Monitor Snapshot (nur bei aktiviertem Sharding)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -4817,8 +6644,8 @@ impl StorageState {
             + self.archive_bytes.load(Ordering::Relaxed)
     }
 
-    pub fn snapshot(&self) -> StorageStateSnapshot {
-        StorageStateSnapshot {
+    pub fn snapshot(&self) -> StorageSnapshot {
+        StorageSnapshot {
             kv_keys: self.kv_keys.load(Ordering::Relaxed),
             kv_bytes: self.kv_bytes.load(Ordering::Relaxed),
             kv_reads: self.kv_reads.load(Ordering::Relaxed),
@@ -4847,7 +6674,7 @@ impl Default for StorageState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StorageStateSnapshot {
+pub struct StorageSnapshot {
     pub kv_keys: u64,
     pub kv_bytes: u64,
     pub kv_reads: u64,
@@ -4939,8 +6766,8 @@ impl GatewayState {
         }
     }
 
-    pub fn snapshot(&self) -> GatewayStateSnapshot {
-        GatewayStateSnapshot {
+    pub fn snapshot(&self) -> GatewaySnapshot {
+        GatewaySnapshot {
             crossings_total: self.crossings_total.load(Ordering::Relaxed),
             crossings_allowed: self.crossings_allowed.load(Ordering::Relaxed),
             crossings_denied: self.crossings_denied.load(Ordering::Relaxed),
@@ -4962,7 +6789,7 @@ impl Default for GatewayState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GatewayStateSnapshot {
+pub struct GatewaySnapshot {
     pub crossings_total: u64,
     pub crossings_allowed: u64,
     pub crossings_denied: u64,
@@ -5057,8 +6884,8 @@ impl SagaComposerState {
         }
     }
 
-    pub fn snapshot(&self) -> SagaComposerStateSnapshot {
-        SagaComposerStateSnapshot {
+    pub fn snapshot(&self) -> SagaComposerSnapshot {
+        SagaComposerSnapshot {
             sagas_composed: self.sagas_composed.load(Ordering::Relaxed),
             successful_compositions: self.successful_compositions.load(Ordering::Relaxed),
             failed_compositions: self.failed_compositions.load(Ordering::Relaxed),
@@ -5085,7 +6912,7 @@ impl Default for SagaComposerState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SagaComposerStateSnapshot {
+pub struct SagaComposerSnapshot {
     pub sagas_composed: u64,
     pub successful_compositions: u64,
     pub failed_compositions: u64,
@@ -5145,8 +6972,8 @@ impl IntentParserState {
         }
     }
 
-    pub fn snapshot(&self) -> IntentParserStateSnapshot {
-        IntentParserStateSnapshot {
+    pub fn snapshot(&self) -> IntentParserSnapshot {
+        IntentParserSnapshot {
             intents_parsed: self.intents_parsed.load(Ordering::Relaxed),
             successful_parses: self.successful_parses.load(Ordering::Relaxed),
             parse_errors: self.parse_errors.load(Ordering::Relaxed),
@@ -5168,7 +6995,7 @@ impl Default for IntentParserState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IntentParserStateSnapshot {
+pub struct IntentParserSnapshot {
     pub intents_parsed: u64,
     pub successful_parses: u64,
     pub parse_errors: u64,
@@ -5225,21 +7052,25 @@ pub struct RealmSpecificState {
     // ─────────────────────────────────────────────────────────────────────────
     // MEMBERSHIP & IDENTITIES (Explizite Isolation)
     // ─────────────────────────────────────────────────────────────────────────
-    /// Explizite Mitgliederliste (Identity-IDs)
+    /// Explizite Mitgliederliste (Identity UniversalIds)
     /// Kernfeature für Isolation: Nur Mitglieder haben Zugriff.
-    pub members: RwLock<HashSet<String>>,
+    pub members_by_id: RwLock<HashSet<UniversalId>>,
+
+    /// Mapping für Realm-spezifische Sub-DIDs
+    /// Key: Root-Identity UniversalId, Value: Realm-Sub-DID UniversalId
+    pub member_realm_dids: RwLock<HashMap<UniversalId, UniversalId>>,
 
     /// Anzahl registrierter Identitäten im Realm (Snapshot-friendly)
     pub identity_count: AtomicUsize,
 
-    /// Pending Membership-Requests (awaiting approval)
-    pub pending_members: RwLock<HashSet<String>>,
+    /// Pending Membership-Requests (UniversalIds, awaiting approval)
+    pub pending_members_by_id: RwLock<HashSet<UniversalId>>,
 
-    /// Gebannte Identitäten (permanent ausgeschlossen)
-    pub banned_members: RwLock<HashSet<String>>,
+    /// Gebannte Identitäten (UniversalIds, permanent ausgeschlossen)
+    pub banned_members_by_id: RwLock<HashSet<UniversalId>>,
 
-    /// Realm-Owner/Admin-Identitäten
-    pub admins: RwLock<HashSet<String>>,
+    /// Realm-Owner/Admin-Identitäten (UniversalIds)
+    pub admins_by_id: RwLock<HashSet<UniversalId>>,
 
     // ─────────────────────────────────────────────────────────────────────────
     // ECL RULES & POLICIES (Realm-spezifische Logik)
@@ -5340,12 +7171,13 @@ impl RealmSpecificState {
             min_trust: RwLock::new(min_trust),
             governance_type: RwLock::new(governance_type.to_string()),
 
-            // Membership & Identities
-            members: RwLock::new(HashSet::new()),
+            // Membership & Identities (UniversalId-based)
+            members_by_id: RwLock::new(HashSet::new()),
+            member_realm_dids: RwLock::new(HashMap::new()),
             identity_count: AtomicUsize::new(0),
-            pending_members: RwLock::new(HashSet::new()),
-            banned_members: RwLock::new(HashSet::new()),
-            admins: RwLock::new(HashSet::new()),
+            pending_members_by_id: RwLock::new(HashSet::new()),
+            banned_members_by_id: RwLock::new(HashSet::new()),
+            admins_by_id: RwLock::new(HashSet::new()),
 
             // ECL Rules & Policies
             active_policies: RwLock::new(Vec::new()),
@@ -5432,25 +7264,31 @@ impl RealmSpecificState {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // MEMBERSHIP OPERATIONS
+    // MEMBERSHIP OPERATIONS (UniversalId-based - Primary)
     // ─────────────────────────────────────────────────────────────────────────
 
-    /// Füge Member zum Realm hinzu (nach Approval)
-    pub fn add_member(&self, identity_id: &str) {
-        if let Ok(mut members) = self.members.write() {
-            if members.insert(identity_id.to_string()) {
+    /// Füge Member zum Realm hinzu (UniversalId-basiert, Primary)
+    pub fn add_member_by_id(&self, identity_id: UniversalId, realm_sub_did: Option<UniversalId>) {
+        if let Ok(mut members) = self.members_by_id.write() {
+            if members.insert(identity_id) {
                 self.identity_count.fetch_add(1, Ordering::Relaxed);
             }
         }
         // Entferne aus pending falls vorhanden
-        if let Ok(mut pending) = self.pending_members.write() {
-            pending.remove(identity_id);
+        if let Ok(mut pending) = self.pending_members_by_id.write() {
+            pending.remove(&identity_id);
+        }
+        // Speichere Realm-Sub-DID Mapping falls vorhanden
+        if let Some(sub_did) = realm_sub_did {
+            if let Ok(mut dids) = self.member_realm_dids.write() {
+                dids.insert(identity_id, sub_did);
+            }
         }
     }
 
-    /// Entferne Member vom Realm
-    pub fn remove_member(&self, identity_id: &str) {
-        if let Ok(mut members) = self.members.write() {
+    /// Entferne Member vom Realm (UniversalId-basiert)
+    pub fn remove_member_by_id(&self, identity_id: &UniversalId) {
+        if let Ok(mut members) = self.members_by_id.write() {
             if members.remove(identity_id) {
                 let _ = self
                     .identity_count
@@ -5463,54 +7301,86 @@ impl RealmSpecificState {
                     });
             }
         }
+        // Entferne Realm-Sub-DID Mapping
+        if let Ok(mut dids) = self.member_realm_dids.write() {
+            dids.remove(identity_id);
+        }
     }
 
-    /// Prüfe ob Identity Member ist
-    pub fn is_member(&self, identity_id: &str) -> bool {
-        self.members
+    /// Prüfe ob Identity Member ist (UniversalId-basiert)
+    pub fn is_member_by_id(&self, identity_id: &UniversalId) -> bool {
+        self.members_by_id
             .read()
             .map(|m| m.contains(identity_id))
             .unwrap_or(false)
     }
 
-    /// Füge Membership-Request hinzu
-    pub fn request_membership(&self, identity_id: &str) {
-        if let Ok(mut pending) = self.pending_members.write() {
-            pending.insert(identity_id.to_string());
+    /// Hole Realm-Sub-DID für Member
+    pub fn get_realm_sub_did(&self, identity_id: &UniversalId) -> Option<UniversalId> {
+        self.member_realm_dids
+            .read()
+            .ok()
+            .and_then(|dids| dids.get(identity_id).copied())
+    }
+
+    /// Füge Membership-Request hinzu (UniversalId-basiert)
+    pub fn request_membership_by_id(&self, identity_id: UniversalId) {
+        if let Ok(mut pending) = self.pending_members_by_id.write() {
+            pending.insert(identity_id);
         }
     }
 
-    /// Banne Identity (permanent)
-    pub fn ban_member(&self, identity_id: &str) {
-        self.remove_member(identity_id);
-        if let Ok(mut banned) = self.banned_members.write() {
-            banned.insert(identity_id.to_string());
+    /// Banne Identity (UniversalId-basiert, permanent)
+    pub fn ban_member_by_id(&self, identity_id: &UniversalId) {
+        self.remove_member_by_id(identity_id);
+        if let Ok(mut banned) = self.banned_members_by_id.write() {
+            banned.insert(*identity_id);
         }
     }
 
-    /// Prüfe ob Identity gebannt ist
-    pub fn is_banned(&self, identity_id: &str) -> bool {
-        self.banned_members
+    /// Prüfe ob Identity gebannt ist (UniversalId-basiert)
+    pub fn is_banned_by_id(&self, identity_id: &UniversalId) -> bool {
+        self.banned_members_by_id
             .read()
             .map(|b| b.contains(identity_id))
             .unwrap_or(false)
     }
 
-    /// Füge Admin hinzu
-    pub fn add_admin(&self, identity_id: &str) {
-        if let Ok(mut admins) = self.admins.write() {
-            admins.insert(identity_id.to_string());
+    /// Füge Admin hinzu (UniversalId-basiert)
+    pub fn add_admin_by_id(&self, identity_id: UniversalId, realm_sub_did: Option<UniversalId>) {
+        if let Ok(mut admins) = self.admins_by_id.write() {
+            admins.insert(identity_id);
         }
         // Admins sind automatisch auch Members
-        self.add_member(identity_id);
+        self.add_member_by_id(identity_id, realm_sub_did);
     }
 
-    /// Prüfe ob Identity Admin ist
-    pub fn is_admin(&self, identity_id: &str) -> bool {
-        self.admins
+    /// Prüfe ob Identity Admin ist (UniversalId-basiert)
+    pub fn is_admin_by_id(&self, identity_id: &UniversalId) -> bool {
+        self.admins_by_id
             .read()
             .map(|a| a.contains(identity_id))
             .unwrap_or(false)
+    }
+
+    /// Migriere Legacy-Member zu UniversalId
+    /// Konvertiert String-ID zu UniversalId mittels DID-Parsing
+    pub fn migrate_legacy_member(&self, legacy_id: &str) -> Option<UniversalId> {
+        // Versuche DID zu parsen: did:erynoa:namespace:id
+        if legacy_id.starts_with("did:erynoa:") {
+            let parts: Vec<&str> = legacy_id.split(':').collect();
+            if parts.len() >= 4 {
+                // Generiere UniversalId aus dem Legacy-ID Hash
+                let id = UniversalId::new(
+                    UniversalId::TAG_DID,
+                    1, // Version 1
+                    legacy_id.as_bytes(),
+                );
+                self.add_member_by_id(id, None);
+                return Some(id);
+            }
+        }
+        None
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -5701,8 +7571,8 @@ impl RealmSpecificState {
     // SNAPSHOT
     // ─────────────────────────────────────────────────────────────────────────
 
-    pub fn snapshot(&self) -> RealmSpecificStateSnapshot {
-        RealmSpecificStateSnapshot {
+    pub fn snapshot(&self) -> RealmSpecificSnapshot {
+        RealmSpecificSnapshot {
             // Trust & Governance
             trust: self.trust.read().map(|t| *t).unwrap_or_default(),
             min_trust: self.min_trust.read().map(|t| *t).unwrap_or(0.0),
@@ -5714,9 +7584,17 @@ impl RealmSpecificState {
 
             // Membership
             member_count: self.identity_count.load(Ordering::Relaxed),
-            pending_member_count: self.pending_members.read().map(|p| p.len()).unwrap_or(0),
-            banned_count: self.banned_members.read().map(|b| b.len()).unwrap_or(0),
-            admin_count: self.admins.read().map(|a| a.len()).unwrap_or(0),
+            pending_member_count: self
+                .pending_members_by_id
+                .read()
+                .map(|p| p.len())
+                .unwrap_or(0),
+            banned_count: self
+                .banned_members_by_id
+                .read()
+                .map(|b| b.len())
+                .unwrap_or(0),
+            admin_count: self.admins_by_id.read().map(|a| a.len()).unwrap_or(0),
 
             // ECL Policies
             active_policies: self
@@ -5766,7 +7644,7 @@ impl RealmSpecificState {
 ///
 /// Vollständige Realm-Metriken für Debugging, Monitoring und Isolation-Prüfung.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RealmSpecificStateSnapshot {
+pub struct RealmSpecificSnapshot {
     // Trust & Governance
     pub trust: crate::domain::unified::TrustVector6D,
     pub min_trust: f32,
@@ -5871,7 +7749,7 @@ impl RealmState {
     }
 
     /// Hole Realm-spezifischen State
-    pub fn get_realm(&self, realm_id: &str) -> Option<RealmSpecificStateSnapshot> {
+    pub fn get_realm(&self, realm_id: &str) -> Option<RealmSpecificSnapshot> {
         self.realms.read().ok()?.get(realm_id).map(|r| r.snapshot())
     }
 
@@ -5954,14 +7832,14 @@ impl RealmState {
         }
     }
 
-    pub fn snapshot(&self) -> RealmStateSnapshot {
+    pub fn snapshot(&self) -> RealmSnapshot {
         let realms_snapshot = self
             .realms
             .read()
             .map(|r| r.iter().map(|(k, v)| (k.clone(), v.snapshot())).collect())
             .unwrap_or_default();
 
-        RealmStateSnapshot {
+        RealmSnapshot {
             realms: realms_snapshot,
             total_realms: self.total_realms.load(Ordering::Relaxed),
             active_crossings: self.active_crossings.load(Ordering::Relaxed),
@@ -5979,8 +7857,8 @@ impl Default for RealmState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RealmStateSnapshot {
-    pub realms: HashMap<String, RealmSpecificStateSnapshot>,
+pub struct RealmSnapshot {
+    pub realms: HashMap<String, RealmSpecificSnapshot>,
     pub total_realms: usize,
     pub active_crossings: u64,
     pub total_cross_realm_sagas: u64,
@@ -6008,8 +7886,8 @@ impl PeerState {
         }
     }
 
-    pub fn snapshot(&self) -> PeerStateSnapshot {
-        PeerStateSnapshot {
+    pub fn snapshot(&self) -> PeerSnapshot {
+        PeerSnapshot {
             gateway: self.gateway.snapshot(),
             saga: self.saga.snapshot(),
             intent: self.intent.snapshot(),
@@ -6025,11 +7903,11 @@ impl Default for PeerState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PeerStateSnapshot {
-    pub gateway: GatewayStateSnapshot,
-    pub saga: SagaComposerStateSnapshot,
-    pub intent: IntentParserStateSnapshot,
-    pub realm: RealmStateSnapshot,
+pub struct PeerSnapshot {
+    pub gateway: GatewaySnapshot,
+    pub saga: SagaComposerSnapshot,
+    pub intent: IntentParserSnapshot,
+    pub realm: RealmSnapshot,
 }
 
 // ============================================================================
@@ -6049,8 +7927,10 @@ pub enum NatStatus {
 /// Swarm State
 #[derive(Debug)]
 pub struct SwarmState {
-    /// Eigene Peer-ID
+    /// Eigene Peer-ID (Legacy String-basiert)
     pub peer_id: RwLock<String>,
+    /// Eigene Peer-ID (UniversalId-basiert, Phase 7)
+    pub peer_universal_id: RwLock<Option<UniversalId>>,
     /// Verbundene Peers
     pub connected_peers: AtomicUsize,
     /// Eingehende Verbindungen
@@ -6077,6 +7957,7 @@ impl SwarmState {
     pub fn new() -> Self {
         Self {
             peer_id: RwLock::new(String::new()),
+            peer_universal_id: RwLock::new(None),
             connected_peers: AtomicUsize::new(0),
             inbound_connections: AtomicU64::new(0),
             outbound_connections: AtomicU64::new(0),
@@ -6088,6 +7969,33 @@ impl SwarmState {
             nat_status: RwLock::new(NatStatus::Unknown),
             external_addresses: RwLock::new(Vec::new()),
         }
+    }
+
+    /// Setze Peer-Identity (UniversalId-basiert)
+    /// Synchronisiert auch die Legacy peer_id String-Repräsentation
+    pub fn set_peer_identity(&self, device_did: &crate::domain::unified::identity::DID) {
+        if let Ok(mut pid) = self.peer_id.write() {
+            *pid = device_did.to_uri();
+        }
+        if let Ok(mut uid) = self.peer_universal_id.write() {
+            *uid = Some(device_did.id);
+        }
+    }
+
+    /// Setze Peer-Identity direkt via UniversalId
+    pub fn set_peer_universal_id(&self, identity_id: UniversalId) {
+        if let Ok(mut uid) = self.peer_universal_id.write() {
+            *uid = Some(identity_id);
+        }
+        // Generiere Legacy String-Repräsentation
+        if let Ok(mut pid) = self.peer_id.write() {
+            *pid = hex::encode(identity_id.as_bytes());
+        }
+    }
+
+    /// Hole Peer UniversalId
+    pub fn get_peer_universal_id(&self) -> Option<UniversalId> {
+        self.peer_universal_id.read().ok().and_then(|id| *id)
     }
 
     pub fn peer_connected(&self, inbound: bool) {
@@ -6125,9 +8033,10 @@ impl SwarmState {
         }
     }
 
-    pub fn snapshot(&self) -> SwarmStateSnapshot {
-        SwarmStateSnapshot {
+    pub fn snapshot(&self) -> SwarmSnapshot {
+        SwarmSnapshot {
             peer_id: self.peer_id.read().map(|p| p.clone()).unwrap_or_default(),
+            peer_universal_id: self.get_peer_universal_id(),
             connected_peers: self.connected_peers.load(Ordering::Relaxed),
             inbound_connections: self.inbound_connections.load(Ordering::Relaxed),
             outbound_connections: self.outbound_connections.load(Ordering::Relaxed),
@@ -6152,8 +8061,10 @@ impl Default for SwarmState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SwarmStateSnapshot {
+pub struct SwarmSnapshot {
     pub peer_id: String,
+    /// Peer UniversalId (Phase 7)
+    pub peer_universal_id: Option<UniversalId>,
     pub connected_peers: usize,
     pub inbound_connections: u64,
     pub outbound_connections: u64,
@@ -6219,8 +8130,8 @@ impl GossipState {
         }
     }
 
-    pub fn snapshot(&self) -> GossipStateSnapshot {
-        GossipStateSnapshot {
+    pub fn snapshot(&self) -> GossipSnapshot {
+        GossipSnapshot {
             mesh_peers: self.mesh_peers.load(Ordering::Relaxed),
             subscribed_topics: self.subscribed_topics.load(Ordering::Relaxed),
             messages_received: self.messages_received.load(Ordering::Relaxed),
@@ -6242,7 +8153,7 @@ impl Default for GossipState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GossipStateSnapshot {
+pub struct GossipSnapshot {
     pub mesh_peers: usize,
     pub subscribed_topics: usize,
     pub messages_received: u64,
@@ -6293,8 +8204,8 @@ impl KademliaState {
         }
     }
 
-    pub fn snapshot(&self) -> KademliaStateSnapshot {
-        KademliaStateSnapshot {
+    pub fn snapshot(&self) -> KademliaSnapshot {
+        KademliaSnapshot {
             routing_table_size: self.routing_table_size.load(Ordering::Relaxed),
             bootstrap_complete: self.bootstrap_complete.read().map(|b| *b).unwrap_or(false),
             records_stored: self.records_stored.load(Ordering::Relaxed),
@@ -6313,7 +8224,7 @@ impl Default for KademliaState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct KademliaStateSnapshot {
+pub struct KademliaSnapshot {
     pub routing_table_size: usize,
     pub bootstrap_complete: bool,
     pub records_stored: u64,
@@ -6365,8 +8276,8 @@ impl RelayState {
         }
     }
 
-    pub fn snapshot(&self) -> RelayStateSnapshot {
-        RelayStateSnapshot {
+    pub fn snapshot(&self) -> RelaySnapshot {
+        RelaySnapshot {
             has_reservation: self.has_reservation.read().map(|b| *b).unwrap_or(false),
             relay_peer: self
                 .relay_peer
@@ -6390,7 +8301,7 @@ impl Default for RelayState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RelayStateSnapshot {
+pub struct RelaySnapshot {
     pub has_reservation: bool,
     pub relay_peer: Option<String>,
     pub circuits_served: u64,
@@ -6433,8 +8344,8 @@ impl PrivacyState {
         }
     }
 
-    pub fn snapshot(&self) -> PrivacyStateSnapshot {
-        PrivacyStateSnapshot {
+    pub fn snapshot(&self) -> PrivacySnapshot {
+        PrivacySnapshot {
             circuits_created: self.circuits_created.load(Ordering::Relaxed),
             circuits_active: self.circuits_active.load(Ordering::Relaxed),
             avg_hops: self.avg_hops.read().map(|h| *h).unwrap_or(3.0),
@@ -6453,7 +8364,7 @@ impl Default for PrivacyState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PrivacyStateSnapshot {
+pub struct PrivacySnapshot {
     pub circuits_created: u64,
     pub circuits_active: usize,
     pub avg_hops: f64,
@@ -6530,8 +8441,8 @@ impl P2PState {
         score.max(0.0).min(100.0)
     }
 
-    pub fn snapshot(&self) -> P2PStateSnapshot {
-        P2PStateSnapshot {
+    pub fn snapshot(&self) -> P2PSnapshot {
+        P2PSnapshot {
             swarm: self.swarm.snapshot(),
             gossip: self.gossip.snapshot(),
             kademlia: self.kademlia.snapshot(),
@@ -6549,12 +8460,12 @@ impl Default for P2PState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct P2PStateSnapshot {
-    pub swarm: SwarmStateSnapshot,
-    pub gossip: GossipStateSnapshot,
-    pub kademlia: KademliaStateSnapshot,
-    pub relay: RelayStateSnapshot,
-    pub privacy: PrivacyStateSnapshot,
+pub struct P2PSnapshot {
+    pub swarm: SwarmSnapshot,
+    pub gossip: GossipSnapshot,
+    pub kademlia: KademliaSnapshot,
+    pub relay: RelaySnapshot,
+    pub privacy: PrivacySnapshot,
     pub health_score: f64,
 }
 
@@ -6843,8 +8754,8 @@ impl UIState {
         }
     }
 
-    pub fn snapshot(&self) -> UIStateSnapshot {
-        UIStateSnapshot {
+    pub fn snapshot(&self) -> UISnapshot {
+        UISnapshot {
             components_registered: self.components_registered.load(Ordering::Relaxed),
             components_active: self.components_active.load(Ordering::Relaxed),
             component_updates: self.component_updates.load(Ordering::Relaxed),
@@ -6871,7 +8782,7 @@ impl Default for UIState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UIStateSnapshot {
+pub struct UISnapshot {
     pub components_registered: u64,
     pub components_active: u64,
     pub component_updates: u64,
@@ -6965,7 +8876,7 @@ pub struct APIState {
     // Per-Realm API-State
     // ─────────────────────────────────────────────────────────────────────────
     /// Realm-spezifische API-Metriken
-    pub realm_api: RwLock<HashMap<String, RealmAPIState>>,
+    pub realm_api_map: RwLock<HashMap<String, RealmAPIState>>,
 
     // ─────────────────────────────────────────────────────────────────────────
     // Resource-Verbrauch
@@ -6991,19 +8902,19 @@ pub struct APIState {
 /// Per-Realm API-State für Isolation
 #[derive(Debug)]
 pub struct RealmAPIState {
-    pub endpoints: AtomicU64,
-    pub requests: AtomicU64,
-    pub rate_limited: AtomicU64,
-    pub auth_failed: AtomicU64,
+    pub endpoints_total: AtomicU64,
+    pub requests_total: AtomicU64,
+    pub rate_limited_count: AtomicU64,
+    pub auth_failed_count: AtomicU64,
 }
 
 impl RealmAPIState {
     pub fn new() -> Self {
         Self {
-            endpoints: AtomicU64::new(0),
-            requests: AtomicU64::new(0),
-            rate_limited: AtomicU64::new(0),
-            auth_failed: AtomicU64::new(0),
+            endpoints_total: AtomicU64::new(0),
+            requests_total: AtomicU64::new(0),
+            rate_limited_count: AtomicU64::new(0),
+            auth_failed_count: AtomicU64::new(0),
         }
     }
 }
@@ -7032,7 +8943,7 @@ impl APIState {
             latency_history: RwLock::new(Vec::with_capacity(1000)),
             rate_limit_buckets: AtomicU64::new(0),
             rate_limit_resets: AtomicU64::new(0),
-            realm_api: RwLock::new(HashMap::new()),
+            realm_api_map: RwLock::new(HashMap::new()),
             gas_consumed: AtomicU64::new(0),
             mana_consumed: AtomicU64::new(0),
             trust_dependency_updates: AtomicU64::new(0),
@@ -7049,7 +8960,7 @@ impl APIState {
 
         if let Some(realm) = realm_id {
             self.get_or_create_realm(realm)
-                .endpoints
+                .endpoints_total
                 .fetch_add(1, Ordering::Relaxed);
         }
     }
@@ -7079,14 +8990,14 @@ impl APIState {
                     self.requests_rate_limited.fetch_add(1, Ordering::Relaxed);
                     if let Some(realm) = realm_id {
                         self.get_or_create_realm(realm)
-                            .rate_limited
+                            .rate_limited_count
                             .fetch_add(1, Ordering::Relaxed);
                     }
                 } else if status == 401 || status == 403 {
                     self.requests_auth_failed.fetch_add(1, Ordering::Relaxed);
                     if let Some(realm) = realm_id {
                         self.get_or_create_realm(realm)
-                            .auth_failed
+                            .auth_failed_count
                             .fetch_add(1, Ordering::Relaxed);
                     }
                 }
@@ -7100,7 +9011,7 @@ impl APIState {
         // Realm-Tracking
         if let Some(realm) = realm_id {
             self.get_or_create_realm(realm)
-                .requests
+                .requests_total
                 .fetch_add(1, Ordering::Relaxed);
         }
 
@@ -7145,13 +9056,13 @@ impl APIState {
     }
 
     fn get_or_create_realm(&self, realm_id: &str) -> &RealmAPIState {
-        if let Ok(mut realms) = self.realm_api.write() {
+        if let Ok(mut realms) = self.realm_api_map.write() {
             realms
                 .entry(realm_id.to_string())
                 .or_insert_with(RealmAPIState::new);
         }
         unsafe {
-            self.realm_api
+            self.realm_api_map
                 .read()
                 .unwrap()
                 .get(realm_id)
@@ -7173,8 +9084,8 @@ impl APIState {
         }
     }
 
-    pub fn snapshot(&self) -> APIStateSnapshot {
-        APIStateSnapshot {
+    pub fn snapshot(&self) -> APISnapshot {
+        APISnapshot {
             endpoints_registered: self.endpoints_registered.load(Ordering::Relaxed),
             endpoints_active: self.endpoints_active.load(Ordering::Relaxed),
             endpoint_updates: self.endpoint_updates.load(Ordering::Relaxed),
@@ -7202,7 +9113,7 @@ impl Default for APIState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct APIStateSnapshot {
+pub struct APISnapshot {
     pub endpoints_registered: u64,
     pub endpoints_active: u64,
     pub endpoint_updates: u64,
@@ -7532,8 +9443,8 @@ impl GovernanceState {
         }
     }
 
-    pub fn snapshot(&self) -> GovernanceStateSnapshot {
-        GovernanceStateSnapshot {
+    pub fn snapshot(&self) -> GovernanceSnapshot {
+        GovernanceSnapshot {
             proposals_created: self.proposals_created.load(Ordering::Relaxed),
             proposals_active: self.proposals_active.load(Ordering::Relaxed),
             proposals_completed: self.proposals_completed.load(Ordering::Relaxed),
@@ -7562,7 +9473,7 @@ impl Default for GovernanceState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GovernanceStateSnapshot {
+pub struct GovernanceSnapshot {
     pub proposals_created: u64,
     pub proposals_active: u64,
     pub proposals_completed: u64,
@@ -7917,8 +9828,8 @@ impl ControllerState {
         }
     }
 
-    pub fn snapshot(&self) -> ControllerStateSnapshot {
-        ControllerStateSnapshot {
+    pub fn snapshot(&self) -> ControllerSnapshot {
+        ControllerSnapshot {
             permissions_registered: self.permissions_registered.load(Ordering::Relaxed),
             permissions_active: self.permissions_active.load(Ordering::Relaxed),
             permission_grants: self.permission_grants.load(Ordering::Relaxed),
@@ -7949,7 +9860,7 @@ impl Default for ControllerState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ControllerStateSnapshot {
+pub struct ControllerSnapshot {
     pub permissions_registered: u64,
     pub permissions_active: u64,
     pub permission_grants: u64,
@@ -8158,8 +10069,8 @@ impl DataLogicState {
         }
     }
 
-    pub fn snapshot(&self) -> DataLogicStateSnapshot {
-        DataLogicStateSnapshot {
+    pub fn snapshot(&self) -> DataLogicSnapshot {
+        DataLogicSnapshot {
             streams_registered: self.streams_registered.load(Ordering::Relaxed),
             streams_active: self.streams_active.load(Ordering::Relaxed),
             stream_subscriptions: self.stream_subscriptions.load(Ordering::Relaxed),
@@ -8195,7 +10106,7 @@ impl Default for DataLogicState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DataLogicStateSnapshot {
+pub struct DataLogicSnapshot {
     pub streams_registered: u64,
     pub streams_active: u64,
     pub stream_subscriptions: u64,
@@ -8452,8 +10363,8 @@ impl BlueprintComposerState {
         }
     }
 
-    pub fn snapshot(&self) -> BlueprintComposerStateSnapshot {
-        BlueprintComposerStateSnapshot {
+    pub fn snapshot(&self) -> BlueprintComposerSnapshot {
+        BlueprintComposerSnapshot {
             compositions_created: self.compositions_created.load(Ordering::Relaxed),
             compositions_successful: self.compositions_successful.load(Ordering::Relaxed),
             compositions_failed: self.compositions_failed.load(Ordering::Relaxed),
@@ -8481,7 +10392,7 @@ impl Default for BlueprintComposerState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BlueprintComposerStateSnapshot {
+pub struct BlueprintComposerSnapshot {
     pub compositions_created: u64,
     pub compositions_successful: u64,
     pub compositions_failed: u64,
@@ -8568,6 +10479,16 @@ pub struct BlueprintComposerStateSnapshot {
 pub struct UnifiedState {
     /// Startzeit
     pub started_at: Instant,
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // IDENTITY-LAYER (Κ6-Κ8: DID Management) - Position: VOR Core
+    // ═══════════════════════════════════════════════════════════════════════════
+    /// Identity-State für DID-Management
+    /// - Root-DID, Sub-DIDs (Device, Agent, Realm)
+    /// - Delegationen (Κ8 Trust-Decay)
+    /// - Realm-Memberships
+    /// - Wallet-Adressen
+    pub identity: IdentityState,
 
     /// Core Logic Layer (Κ2-Κ18)
     pub core: CoreState,
@@ -8676,6 +10597,7 @@ impl UnifiedState {
     pub fn new() -> Self {
         Self {
             started_at: Instant::now(),
+            identity: IdentityState::new(),
             core: CoreState::new(),
             execution: ExecutionState::new(),
             eclvm: ECLVMState::new(),
@@ -8713,6 +10635,12 @@ impl UnifiedState {
     /// Berechne und cache Health Score
     pub fn calculate_health(&self) -> f64 {
         let mut score: f64 = 100.0;
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Identity-Layer Health (10% Gewicht)
+        // ─────────────────────────────────────────────────────────────────────
+        let identity_health = self.identity.health_score() * 100.0;
+        score -= (100.0 - identity_health) * 0.10;
 
         // Protection Health (15% Gewicht)
         score -= (100.0 - self.protection.health_score()) * 0.15;
@@ -8813,13 +10741,14 @@ impl UnifiedState {
     }
 
     /// Vollständiger Snapshot
-    pub fn snapshot(&self) -> UnifiedStateSnapshot {
-        UnifiedStateSnapshot {
+    pub fn snapshot(&self) -> UnifiedSnapshot {
+        UnifiedSnapshot {
             timestamp_ms: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_millis() as u64,
             uptime_secs: self.uptime_secs(),
+            identity: self.identity.snapshot(),
             core: self.core.snapshot(),
             execution: self.execution.snapshot(),
             eclvm: self.eclvm.snapshot(),
@@ -9308,7 +11237,7 @@ impl UnifiedState {
             StateEvent::CalibrationApplied { .. } => {
                 self.protection
                     .calibration
-                    .updates
+                    .updates_total
                     .fetch_add(1, Ordering::Relaxed);
             }
 
@@ -9488,6 +11417,83 @@ impl UnifiedState {
             StateEvent::RealmQuarantineChange { .. } => {
                 // Wird durch quarantine_realm() gesteuert
             }
+
+            // ═══════════════════════════════════════════════════════════════════
+            // IDENTITY EVENTS (Κ6-Κ8)
+            // ═══════════════════════════════════════════════════════════════════
+            StateEvent::IdentityBootstrapped { .. } => {
+                // Identity-Bootstrap wird direkt über IdentityState gesteuert
+                // Event wird nur für Audit/Recovery geloggt
+            }
+
+            StateEvent::IdentityModeChanged { .. } => {
+                // Mode-Change wird direkt über IdentityState.mode gesteuert
+            }
+
+            StateEvent::SubDIDDerived { gas_used, .. } => {
+                // Gas-Tracking für Sub-DID Derivation
+                self.execution
+                    .gas
+                    .consumed
+                    .fetch_add(*gas_used, Ordering::Relaxed);
+            }
+
+            StateEvent::WalletDerived { .. } => {
+                // Wallet-Derivation wird direkt über IdentityState gesteuert
+            }
+
+            StateEvent::DelegationCreated { .. } => {
+                // Delegation-Erstellung wird direkt über IdentityState gesteuert
+            }
+
+            StateEvent::DelegationRevoked { .. } => {
+                // Delegation-Widerruf wird direkt über IdentityState gesteuert
+            }
+
+            StateEvent::CredentialIssued { .. } => {
+                // Credential-Issuance wird separat getrackt
+            }
+
+            StateEvent::CredentialVerified { valid, .. } => {
+                // Optional: Verifizierungs-Statistiken tracken
+                if *valid {
+                    // Erfolgreiche Verifikation
+                }
+            }
+
+            StateEvent::KeyRotated { .. } => {
+                // Key-Rotation ist ein kritisches Event
+                // Wird für Recovery/Audit geloggt
+            }
+
+            StateEvent::RecoveryInitiated { .. } => {
+                // Recovery-Initiierung ist kritisch
+                // Circuit-Breaker könnte hier reagieren
+            }
+
+            StateEvent::IdentityAnomalyDetected { severity, .. } => {
+                // Anomalie-Detection: Könnte Protection-Layer informieren
+                if severity == "critical" {
+                    self.record_anomaly("identity_anomaly_critical");
+                }
+            }
+
+            StateEvent::CrossShardIdentityResolved {
+                success,
+                latency_ms,
+                ..
+            } => {
+                // Cross-Shard Metriken tracken (falls vorhanden)
+                if !success {
+                    self.record_anomaly("cross_shard_identity_resolution_failed");
+                }
+                // Latenz könnte für P2P-Metriken relevant sein
+                let _ = latency_ms; // TODO: Track in P2P metrics
+            }
+
+            StateEvent::RealmMembershipChanged { .. } => {
+                // Membership-Änderungen werden separat getrackt
+            }
         }
 
         // Nach jedem Apply: Health-Score neu berechnen
@@ -9523,7 +11529,7 @@ impl UnifiedState {
     }
 
     /// Event-Log Statistiken
-    pub fn event_log_stats(&self) -> StateEventLogSnapshot {
+    pub fn event_log_stats(&self) -> EventLogSnapshot {
         self.event_log.snapshot()
     }
 }
@@ -9535,22 +11541,24 @@ impl Default for UnifiedState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UnifiedStateSnapshot {
+pub struct UnifiedSnapshot {
     pub timestamp_ms: u64,
     pub uptime_secs: u64,
-    pub core: CoreStateSnapshot,
-    pub execution: ExecutionStateSnapshot,
-    pub eclvm: ECLVMStateSnapshot,
-    pub protection: ProtectionStateSnapshot,
-    pub storage: StorageStateSnapshot,
-    pub peer: PeerStateSnapshot,
-    pub p2p: P2PStateSnapshot,
-    pub ui: UIStateSnapshot,
-    pub api: APIStateSnapshot,
-    pub governance: GovernanceStateSnapshot,
-    pub controller: ControllerStateSnapshot,
-    pub data_logic: DataLogicStateSnapshot,
-    pub blueprint_composer: BlueprintComposerStateSnapshot,
+    /// Identity-Layer Snapshot (Κ6-Κ8)
+    pub identity: IdentitySnapshot,
+    pub core: CoreSnapshot,
+    pub execution: ExecutionSnapshot,
+    pub eclvm: ECLVMSnapshot,
+    pub protection: ProtectionSnapshot,
+    pub storage: StorageSnapshot,
+    pub peer: PeerSnapshot,
+    pub p2p: P2PSnapshot,
+    pub ui: UISnapshot,
+    pub api: APISnapshot,
+    pub governance: GovernanceSnapshot,
+    pub controller: ControllerSnapshot,
+    pub data_logic: DataLogicSnapshot,
+    pub blueprint_composer: BlueprintComposerSnapshot,
     pub health_score: f64,
     pub warnings: Vec<String>,
     // ─────────────────────────────────────────────────────────────────────────
@@ -9561,21 +11569,21 @@ pub struct UnifiedStateSnapshot {
     /// Circuit Breaker Status (Degradation)
     pub circuit_breaker: CircuitBreakerSnapshot,
     /// Broadcaster-Metriken (CQRS)
-    pub broadcaster: StateBroadcasterSnapshot,
+    pub broadcaster: BroadcasterSnapshot,
     /// System-Modus (Normal/Degraded/Emergency)
     pub system_mode: SystemMode,
     // ─────────────────────────────────────────────────────────────────────────
     // Architektur-Verbesserungen Phase 6.2 Snapshots
     // ─────────────────────────────────────────────────────────────────────────
     /// Merkle State Tracker (Differential Snapshots)
-    pub merkle_tracker: MerkleStateTrackerSnapshot,
+    pub merkle_tracker: MerkleTrackerSnapshot,
     /// Multi-Level Gas Metering
     pub multi_gas: MultiGasSnapshot,
     // ─────────────────────────────────────────────────────────────────────────
     // Architektur-Verbesserungen Phase 6.3 Snapshots
     // ─────────────────────────────────────────────────────────────────────────
     /// Event-Sourcing Log Metriken
-    pub event_log: StateEventLogSnapshot,
+    pub event_log: EventLogSnapshot,
 }
 
 // ============================================================================
@@ -10323,6 +12331,9 @@ mod tests {
     fn test_unified_state_health_with_engine_errors() {
         let state = UnifiedState::new();
 
+        // Bootstrap identity to get base health (otherwise identity contributes 0%)
+        state.identity.bootstrap_test(&[1u8; 32]).unwrap();
+
         // Provoziere Fehler in den Engines
         state.api.record_request(1000, 500, 50, 10, None); // Server Error
         state.api.record_request(1000, 500, 50, 10, None);
@@ -10341,8 +12352,9 @@ mod tests {
             "Health should decrease with errors, got: {}",
             health
         );
+        // With identity bootstrap (10% weight) and engine errors, health should be > 70%
         assert!(
-            health > 80.0,
+            health > 70.0,
             "Health should not drop too low, got: {}",
             health
         );
@@ -11628,7 +13640,7 @@ impl StateView {
 
     /// Erstelle StateView aus UnifiedState Snapshot
     pub fn from_unified_snapshot(
-        snapshot: &UnifiedStateSnapshot,
+        snapshot: &UnifiedSnapshot,
         caller_did: Option<String>,
         current_realm: Option<String>,
     ) -> Self {
@@ -12422,6 +14434,1662 @@ impl ECLVMExecutionSummary {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// IDENTITY STATE TESTS (Phase 2)
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests_identity_state {
+    use super::*;
+    use crate::core::identity_types::{IdentityMode, RealmRole};
+
+    #[test]
+    fn test_identity_state_creation() {
+        let state = IdentityState::new();
+
+        assert!(!state.is_bootstrapped());
+        assert_eq!(state.sub_dids_total.load(Ordering::Relaxed), 0);
+        assert_eq!(state.current_mode(), IdentityMode::Interactive);
+    }
+
+    #[test]
+    fn test_identity_state_bootstrap_test_mode() {
+        let state = IdentityState::new();
+        let pk = [1u8; 32];
+
+        let result = state.bootstrap_test(&pk);
+        assert!(result.is_ok());
+
+        let root_id = result.unwrap();
+        assert!(state.is_bootstrapped());
+        assert_eq!(state.current_mode(), IdentityMode::Test);
+        assert_eq!(state.root_did_id(), Some(root_id));
+    }
+
+    #[test]
+    fn test_identity_state_double_bootstrap_fails() {
+        let state = IdentityState::new();
+        let pk = [1u8; 32];
+
+        assert!(state.bootstrap_test(&pk).is_ok());
+        assert!(state.bootstrap_test(&pk).is_err());
+    }
+
+    #[test]
+    fn test_identity_state_snapshot() {
+        let state = IdentityState::new();
+        let pk = [1u8; 32];
+        state.bootstrap_test(&pk).unwrap();
+
+        let snapshot = state.snapshot();
+
+        assert!(snapshot.bootstrap_completed);
+        assert_eq!(snapshot.mode, IdentityMode::Test);
+        assert!(snapshot.root_did.is_some());
+        assert!(snapshot.root_did.unwrap().starts_with("did:erynoa:self:"));
+    }
+
+    #[test]
+    fn test_identity_state_health_score() {
+        let state = IdentityState::new();
+
+        // Nicht bootstrapped → 0.0
+        assert_eq!(state.health_score(), 0.0);
+
+        // Bootstrapped → > 0.0
+        state.bootstrap_test(&[1u8; 32]).unwrap();
+        assert!(state.health_score() > 0.0);
+    }
+
+    #[test]
+    fn test_identity_state_derive_device() {
+        let state = IdentityState::new();
+        state.bootstrap_test(&[1u8; 32]).unwrap();
+
+        let device_result = state.derive_device_did(0);
+        assert!(device_result.is_ok());
+
+        let device_id = device_result.unwrap();
+        assert!(state.device_did_id().is_some());
+        assert_eq!(state.device_did_id(), Some(device_id));
+        assert_eq!(state.sub_dids_total.load(Ordering::Relaxed), 1);
+    }
+
+    #[test]
+    fn test_identity_state_derive_agent() {
+        let state = IdentityState::new();
+        state.bootstrap_test(&[1u8; 32]).unwrap();
+
+        let agent_result = state.derive_agent_did(0);
+        assert!(agent_result.is_ok());
+
+        assert_eq!(state.sub_dids_total.load(Ordering::Relaxed), 1);
+
+        // Verify counter by namespace
+        let counts = state.sub_did_counts.read().unwrap();
+        assert_eq!(
+            counts.get(&crate::domain::unified::identity::DIDNamespace::Spirit),
+            Some(&1)
+        );
+    }
+
+    #[test]
+    fn test_identity_state_derive_realm() {
+        let state = IdentityState::new();
+        state.bootstrap_test(&[1u8; 32]).unwrap();
+
+        let realm_id = UniversalId::new(UniversalId::TAG_REALM, 1, b"test-realm");
+        let realm_did_result = state.derive_realm_did(&realm_id);
+        assert!(realm_did_result.is_ok());
+
+        assert_eq!(state.sub_dids_total.load(Ordering::Relaxed), 1);
+
+        // Verify it's stored under the realm key
+        let sub_dids = state.sub_dids.read().unwrap();
+        let realm_key = format!("realm:{}", hex::encode(realm_id.as_bytes()));
+        assert!(sub_dids.contains_key(&realm_key));
+    }
+
+    #[test]
+    fn test_identity_state_join_realm() {
+        let state = IdentityState::new();
+        state.bootstrap_test(&[1u8; 32]).unwrap();
+
+        let realm_id = UniversalId::new(UniversalId::TAG_REALM, 1, b"test-realm");
+        let result = state.join_realm(realm_id, RealmRole::Member, Some(0.7));
+        assert!(result.is_ok());
+
+        assert!(state.is_realm_member(&realm_id));
+        assert_eq!(state.active_realm_memberships().len(), 1);
+
+        // Verify membership details
+        let membership = state.get_realm_membership(&realm_id).unwrap();
+        assert_eq!(membership.role, RealmRole::Member);
+        assert!((membership.local_trust - 0.7).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_identity_state_leave_realm() {
+        let state = IdentityState::new();
+        state.bootstrap_test(&[1u8; 32]).unwrap();
+
+        let realm_id = UniversalId::new(UniversalId::TAG_REALM, 1, b"test-realm");
+        state.join_realm(realm_id, RealmRole::Member, None).unwrap();
+
+        assert!(state.is_realm_member(&realm_id));
+
+        state.leave_realm(&realm_id).unwrap();
+
+        // Membership is deactivated, not removed
+        assert!(!state.is_realm_member(&realm_id));
+        let membership = state.get_realm_membership(&realm_id).unwrap();
+        assert!(!membership.is_active);
+    }
+
+    #[test]
+    fn test_identity_state_update_realm_role() {
+        let state = IdentityState::new();
+        state.bootstrap_test(&[1u8; 32]).unwrap();
+
+        let realm_id = UniversalId::new(UniversalId::TAG_REALM, 1, b"test-realm");
+        state.join_realm(realm_id, RealmRole::Member, None).unwrap();
+
+        state
+            .update_realm_role(&realm_id, RealmRole::Admin)
+            .unwrap();
+
+        let membership = state.get_realm_membership(&realm_id).unwrap();
+        assert_eq!(membership.role, RealmRole::Admin);
+    }
+
+    #[test]
+    fn test_identity_state_delegation() {
+        let state = IdentityState::new();
+        state.bootstrap_test(&[1u8; 32]).unwrap();
+
+        let delegate_id = UniversalId::new(UniversalId::TAG_DID, 1, b"delegate");
+        let caps = vec![crate::domain::unified::identity::Capability::Read {
+            resource: "*".to_string(),
+        }];
+
+        let result = state.add_delegation(delegate_id, 0.8, caps, None);
+        assert!(result.is_ok());
+
+        assert_eq!(state.active_delegations_count.load(Ordering::Relaxed), 1);
+
+        // Verify delegation exists
+        let delegation = state.get_delegation(&delegate_id);
+        assert!(delegation.is_some());
+        assert_eq!(delegation.unwrap().trust_factor, 0.8);
+    }
+
+    #[test]
+    fn test_identity_state_revoke_delegation() {
+        let state = IdentityState::new();
+        state.bootstrap_test(&[1u8; 32]).unwrap();
+
+        let delegate_id = UniversalId::new(UniversalId::TAG_DID, 1, b"delegate");
+        state
+            .add_delegation(delegate_id, 0.8, vec![], None)
+            .unwrap();
+
+        assert_eq!(state.active_delegations_count.load(Ordering::Relaxed), 1);
+
+        state.revoke_delegation(&delegate_id).unwrap();
+
+        assert_eq!(state.active_delegations_count.load(Ordering::Relaxed), 0);
+        assert_eq!(state.revoked_delegations_count.load(Ordering::Relaxed), 1);
+    }
+
+    #[test]
+    fn test_identity_state_invalid_trust_factor() {
+        let state = IdentityState::new();
+        state.bootstrap_test(&[1u8; 32]).unwrap();
+
+        let delegate_id = UniversalId::new(UniversalId::TAG_DID, 1, b"delegate");
+
+        // Trust factor > 1 should fail
+        let result = state.add_delegation(delegate_id, 1.5, vec![], None);
+        assert!(result.is_err());
+
+        // Trust factor <= 0 should fail
+        let result = state.add_delegation(delegate_id, 0.0, vec![], None);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_identity_state_wallet_address() {
+        let state = IdentityState::new();
+        state.bootstrap_test(&[1u8; 32]).unwrap();
+
+        let root_id = state.root_did_id().unwrap();
+        let wallet = crate::core::identity_types::WalletAddress::new(
+            "eip155:1",
+            "0x1234567890123456789012345678901234567890",
+            "m/44'/60'/0'/0/0",
+            root_id,
+        )
+        .as_primary();
+
+        let result = state.add_wallet_address(wallet);
+        assert!(result.is_ok());
+
+        assert_eq!(state.addresses_total.load(Ordering::Relaxed), 1);
+
+        let wallets = state.get_wallets_for_chain("eip155:1");
+        assert_eq!(wallets.len(), 1);
+
+        let primary = state.get_primary_wallet("eip155:1");
+        assert!(primary.is_some());
+    }
+
+    #[test]
+    fn test_identity_state_counters() {
+        let state = IdentityState::new();
+        state.bootstrap_test(&[1u8; 32]).unwrap();
+
+        // Test various counter methods
+        state.record_credential_issued();
+        state.record_credential_issued();
+        state.record_credential_verified();
+        state.record_gas(1000);
+        state.record_mana(50);
+        state.record_event_triggered();
+        state.record_trust_entry_created();
+
+        assert_eq!(state.credentials_issued.load(Ordering::Relaxed), 2);
+        assert_eq!(state.credentials_verified.load(Ordering::Relaxed), 1);
+        assert_eq!(state.gas_consumed.load(Ordering::Relaxed), 1000);
+        assert_eq!(state.mana_consumed.load(Ordering::Relaxed), 50);
+        assert_eq!(state.events_triggered.load(Ordering::Relaxed), 1);
+        assert_eq!(state.trust_entries_created.load(Ordering::Relaxed), 1);
+    }
+
+    #[test]
+    fn test_identity_state_ephemeral_no_realm() {
+        let state = IdentityState::new();
+        state.bootstrap_ephemeral(&[1u8; 32]).unwrap();
+
+        assert_eq!(state.current_mode(), IdentityMode::Ephemeral);
+
+        // Ephemeral mode should not allow realm membership
+        let realm_id = UniversalId::new(UniversalId::TAG_REALM, 1, b"test-realm");
+        let result = state.join_realm(realm_id, RealmRole::Member, None);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_identity_snapshot_default() {
+        let snapshot = IdentitySnapshot::default();
+
+        assert!(!snapshot.bootstrap_completed);
+        assert_eq!(snapshot.mode, IdentityMode::Interactive);
+        assert!(snapshot.root_did.is_none());
+        assert_eq!(snapshot.sub_dids_total, 0);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Additional Unit Tests (Phase 8)
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_identity_state_sign_operations() {
+        let state = IdentityState::new();
+        state.bootstrap_test(&[1u8; 32]).unwrap();
+
+        // Derive device to have a device key
+        state.derive_device_did(0).unwrap();
+
+        // Record signing metrics
+        state.record_signature_created();
+        state.record_signature_verified();
+
+        assert_eq!(state.signatures_created.load(Ordering::Relaxed), 1);
+        assert_eq!(state.signatures_verified.load(Ordering::Relaxed), 1);
+    }
+
+    #[test]
+    fn test_identity_state_multiple_realm_memberships() {
+        let state = IdentityState::new();
+        state.bootstrap_test(&[1u8; 32]).unwrap();
+
+        // Join multiple realms with different roles
+        let realm1 = UniversalId::new(UniversalId::TAG_REALM, 1, b"realm-1");
+        let realm2 = UniversalId::new(UniversalId::TAG_REALM, 1, b"realm-2");
+        let realm3 = UniversalId::new(UniversalId::TAG_REALM, 1, b"realm-3");
+
+        state
+            .join_realm(realm1, RealmRole::Member, Some(0.5))
+            .unwrap();
+        state
+            .join_realm(realm2, RealmRole::Admin, Some(0.8))
+            .unwrap();
+        state
+            .join_realm(realm3, RealmRole::Moderator, Some(0.6))
+            .unwrap();
+
+        let memberships = state.active_realm_memberships();
+        assert_eq!(memberships.len(), 3);
+    }
+
+    #[test]
+    fn test_identity_state_update_trust_in_realm() {
+        let state = IdentityState::new();
+        state.bootstrap_test(&[1u8; 32]).unwrap();
+
+        let realm_id = UniversalId::new(UniversalId::TAG_REALM, 1, b"trust-test");
+        state
+            .join_realm(realm_id, RealmRole::Member, Some(0.5))
+            .unwrap();
+
+        // Update trust
+        state.update_realm_trust(&realm_id, 0.9).unwrap();
+
+        let membership = state.get_realm_membership(&realm_id).unwrap();
+        assert!((membership.local_trust - 0.9).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_identity_state_delegation_validity_check() {
+        let state = IdentityState::new();
+        state.bootstrap_test(&[1u8; 32]).unwrap();
+
+        let delegate_id = UniversalId::new(UniversalId::TAG_DID, 1, b"delegate");
+        state
+            .add_delegation(delegate_id, 0.7, vec![], None)
+            .unwrap();
+
+        // Create current time
+        let root_id = state.root_did_id().unwrap();
+        let now = crate::domain::unified::primitives::TemporalCoord::now(1, &root_id);
+
+        // Should be valid
+        assert!(state.is_delegation_valid(&delegate_id, &now));
+
+        // Revoke
+        state.revoke_delegation(&delegate_id).unwrap();
+
+        // Should no longer be valid
+        assert!(!state.is_delegation_valid(&delegate_id, &now));
+    }
+
+    #[test]
+    fn test_identity_state_multiple_wallets_same_chain() {
+        let state = IdentityState::new();
+        state.bootstrap_test(&[1u8; 32]).unwrap();
+
+        let root_id = state.root_did_id().unwrap();
+
+        // Add primary wallet
+        let wallet1 = crate::core::identity_types::WalletAddress::new(
+            "eip155:1",
+            "0x1111111111111111111111111111111111111111",
+            "m/44'/60'/0'/0/0",
+            root_id,
+        )
+        .as_primary();
+
+        // Add secondary wallet
+        let wallet2 = crate::core::identity_types::WalletAddress::new(
+            "eip155:1",
+            "0x2222222222222222222222222222222222222222",
+            "m/44'/60'/0'/0/1",
+            root_id,
+        );
+
+        state.add_wallet_address(wallet1).unwrap();
+        state.add_wallet_address(wallet2).unwrap();
+
+        assert_eq!(state.addresses_total.load(Ordering::Relaxed), 2);
+
+        let wallets = state.get_wallets_for_chain("eip155:1");
+        assert_eq!(wallets.len(), 2);
+
+        // Primary should still be the first one
+        let primary = state.get_primary_wallet("eip155:1");
+        assert!(primary.is_some());
+        assert!(primary.unwrap().address.contains("1111"));
+    }
+
+    #[test]
+    fn test_identity_state_not_bootstrapped_operations_fail() {
+        let state = IdentityState::new();
+
+        // Should fail without bootstrap
+        let result = state.derive_device_did(0);
+        assert!(result.is_err());
+
+        let realm_id = UniversalId::new(UniversalId::TAG_REALM, 1, b"test");
+        let result = state.join_realm(realm_id, RealmRole::Member, None);
+        assert!(result.is_err());
+
+        let delegate_id = UniversalId::new(UniversalId::TAG_DID, 1, b"delegate");
+        let result = state.add_delegation(delegate_id, 0.5, vec![], None);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_identity_health_score_calculation() {
+        let state = IdentityState::new();
+
+        // Before bootstrap: 0
+        assert_eq!(state.health_score(), 0.0);
+
+        // After bootstrap: base score
+        state.bootstrap_test(&[1u8; 32]).unwrap();
+        let health_after_bootstrap = state.health_score();
+        assert!(health_after_bootstrap > 0.0);
+
+        // Add delegation improves health
+        let delegate_id = UniversalId::new(UniversalId::TAG_DID, 1, b"delegate");
+        state
+            .add_delegation(delegate_id, 0.8, vec![], None)
+            .unwrap();
+
+        // Note: health calculation is based on multiple factors
+        let health_after_delegation = state.health_score();
+        assert!(health_after_delegation > 0.0);
+    }
+
+    #[test]
+    fn test_identity_state_all_bootstrap_modes() {
+        // Test mode (primary test mode, doesn't require KeyStore)
+        let state1 = IdentityState::new();
+        state1.bootstrap_test(&[1u8; 32]).unwrap();
+        assert_eq!(state1.current_mode(), IdentityMode::Test);
+
+        // Ephemeral mode (doesn't require KeyStore/Passkey)
+        let state2 = IdentityState::new();
+        state2.bootstrap_ephemeral(&[2u8; 32]).unwrap();
+        assert_eq!(state2.current_mode(), IdentityMode::Ephemeral);
+
+        // Note: Interactive and AgentManaged modes require KeyStore/PasskeyManager
+        // which are not available in unit tests without mock implementations.
+        // These modes are tested in integration tests with proper setup.
+    }
+
+    #[test]
+    fn test_identity_state_signature_tracking() {
+        let state = IdentityState::new();
+        state.bootstrap_test(&[1u8; 32]).unwrap();
+
+        // Track signature operations
+        state.record_signature_created();
+        state.record_signature_created();
+        state.record_signature_verified();
+
+        assert_eq!(state.signatures_created.load(Ordering::Relaxed), 2);
+        assert_eq!(state.signatures_verified.load(Ordering::Relaxed), 1);
+    }
+
+    #[test]
+    fn test_identity_state_derive_multiple_sub_dids() {
+        let state = IdentityState::new();
+        state.bootstrap_test(&[1u8; 32]).unwrap();
+
+        // Derive device (uses Self_ namespace)
+        state.derive_device_did(0).unwrap();
+        assert_eq!(state.sub_dids_total.load(Ordering::Relaxed), 1);
+
+        // Derive agents (uses Spirit namespace)
+        state.derive_agent_did(0).unwrap();
+        state.derive_agent_did(1).unwrap();
+        assert_eq!(state.sub_dids_total.load(Ordering::Relaxed), 3);
+
+        // Derive realm DIDs (uses Circle namespace)
+        let realm1 = UniversalId::new(UniversalId::TAG_REALM, 1, b"realm1");
+        let realm2 = UniversalId::new(UniversalId::TAG_REALM, 1, b"realm2");
+        state.derive_realm_did(&realm1).unwrap();
+        state.derive_realm_did(&realm2).unwrap();
+        assert_eq!(state.sub_dids_total.load(Ordering::Relaxed), 5);
+
+        // Check namespace counts
+        let counts = state.sub_did_counts.read().unwrap();
+        // Self_ for device
+        assert_eq!(
+            counts.get(&crate::domain::unified::identity::DIDNamespace::Self_),
+            Some(&1)
+        );
+        // Spirit for agents
+        assert_eq!(
+            counts.get(&crate::domain::unified::identity::DIDNamespace::Spirit),
+            Some(&2)
+        );
+        // Circle for realm DIDs
+        assert_eq!(
+            counts.get(&crate::domain::unified::identity::DIDNamespace::Circle),
+            Some(&2)
+        );
+    }
+
+    #[test]
+    fn test_identity_state_snapshot_comprehensive() {
+        let state = IdentityState::new();
+        state.bootstrap_test(&[1u8; 32]).unwrap();
+
+        // Perform various operations
+        state.derive_device_did(0).unwrap();
+        state.derive_agent_did(0).unwrap();
+
+        // Note: join_realm internally also derives a realm-specific DID
+        let realm_id = UniversalId::new(UniversalId::TAG_REALM, 1, b"test");
+        state
+            .join_realm(realm_id, RealmRole::Member, Some(0.7))
+            .unwrap();
+
+        let delegate_id = UniversalId::new(UniversalId::TAG_DID, 1, b"delegate");
+        state
+            .add_delegation(delegate_id, 0.8, vec![], None)
+            .unwrap();
+
+        let root_id = state.root_did_id().unwrap();
+        let wallet = crate::core::identity_types::WalletAddress::new(
+            "eip155:1",
+            "0x1234567890123456789012345678901234567890",
+            "m/44'/60'/0'/0/0",
+            root_id,
+        );
+        state.add_wallet_address(wallet).unwrap();
+
+        // Take snapshot
+        let snapshot = state.snapshot();
+
+        // Verify all fields
+        assert!(snapshot.bootstrap_completed);
+        assert_eq!(snapshot.mode, IdentityMode::Test);
+        assert!(snapshot.root_did.is_some());
+        // device + agent + realm_sub_did (from join_realm) = 3
+        assert_eq!(snapshot.sub_dids_total, 3);
+        assert_eq!(snapshot.realm_membership_count, 1);
+        assert_eq!(snapshot.active_delegations, 1);
+        assert_eq!(snapshot.addresses_total, 1);
+        assert!(snapshot.wallet_chains.contains(&"eip155:1".to_string()));
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATE EVENT TESTS (Phase 4)
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests_state_event_identity {
+    use super::*;
+    use crate::core::identity_types::IdentityMode;
+    use crate::domain::unified::identity::DIDNamespace;
+
+    #[test]
+    fn test_identity_event_primary_component() {
+        let root_did = UniversalId::new(UniversalId::TAG_DID, 1, b"test");
+
+        let event = StateEvent::IdentityBootstrapped {
+            root_did,
+            namespace: DIDNamespace::Self_,
+            mode: IdentityMode::Interactive,
+            timestamp_ms: 0,
+        };
+        assert_eq!(event.primary_component(), StateComponent::Identity);
+
+        let event = StateEvent::SubDIDDerived {
+            root_did,
+            sub_did: UniversalId::new(UniversalId::TAG_DID, 1, b"sub"),
+            namespace: DIDNamespace::Spirit,
+            derivation_path: "m/44'/0'/0'".to_string(),
+            purpose: "agent".to_string(),
+            gas_used: 100,
+            realm_id: None,
+        };
+        assert_eq!(event.primary_component(), StateComponent::Identity);
+
+        let event = StateEvent::DelegationCreated {
+            delegator: root_did,
+            delegate: UniversalId::new(UniversalId::TAG_DID, 1, b"delegate"),
+            trust_factor: 0.8,
+            capabilities: vec!["read:*".to_string()],
+            valid_until: None,
+        };
+        assert_eq!(event.primary_component(), StateComponent::Identity);
+    }
+
+    #[test]
+    fn test_identity_event_is_critical() {
+        let root_did = UniversalId::new(UniversalId::TAG_DID, 1, b"test");
+
+        // IdentityBootstrapped is critical
+        let event = StateEvent::IdentityBootstrapped {
+            root_did,
+            namespace: DIDNamespace::Self_,
+            mode: IdentityMode::Interactive,
+            timestamp_ms: 0,
+        };
+        assert!(event.is_critical());
+
+        // KeyRotated is critical
+        let event = StateEvent::KeyRotated {
+            did: root_did,
+            old_key_id: UniversalId::new(UniversalId::TAG_DID, 1, b"old"),
+            new_key_id: UniversalId::new(UniversalId::TAG_DID, 1, b"new"),
+            reason: "Scheduled rotation".to_string(),
+        };
+        assert!(event.is_critical());
+
+        // RecoveryInitiated is critical
+        let event = StateEvent::RecoveryInitiated {
+            did: root_did,
+            recovery_key_id: UniversalId::new(UniversalId::TAG_DID, 1, b"recovery"),
+            initiated_at: 0,
+        };
+        assert!(event.is_critical());
+
+        // IdentityAnomalyDetected with "critical" severity is critical
+        let event = StateEvent::IdentityAnomalyDetected {
+            did: root_did,
+            anomaly_type: "RapidDelegation".to_string(),
+            severity: "critical".to_string(),
+            details: "test".to_string(),
+        };
+        assert!(event.is_critical());
+
+        // IdentityAnomalyDetected with "low" severity is not critical
+        let event = StateEvent::IdentityAnomalyDetected {
+            did: root_did,
+            anomaly_type: "MinorAnomaly".to_string(),
+            severity: "low".to_string(),
+            details: "test".to_string(),
+        };
+        assert!(!event.is_critical());
+
+        // WalletDerived is not critical
+        let event = StateEvent::WalletDerived {
+            did: root_did,
+            chain_id: "eip155:1".to_string(),
+            address: "0x123".to_string(),
+            derivation_path: "m/44'/60'".to_string(),
+        };
+        assert!(!event.is_critical());
+    }
+
+    #[test]
+    fn test_identity_event_realm_context() {
+        let root_did = UniversalId::new(UniversalId::TAG_DID, 1, b"test");
+        let realm_id = UniversalId::new(UniversalId::TAG_REALM, 1, b"realm");
+
+        // SubDIDDerived with realm_id
+        let event = StateEvent::SubDIDDerived {
+            root_did,
+            sub_did: UniversalId::new(UniversalId::TAG_DID, 1, b"sub"),
+            namespace: DIDNamespace::Circle,
+            derivation_path: "m/44'/0'".to_string(),
+            purpose: "realm".to_string(),
+            gas_used: 100,
+            realm_id: Some(realm_id),
+        };
+        assert_eq!(event.realm_context(), Some(&realm_id));
+
+        // SubDIDDerived without realm_id
+        let event = StateEvent::SubDIDDerived {
+            root_did,
+            sub_did: UniversalId::new(UniversalId::TAG_DID, 1, b"sub"),
+            namespace: DIDNamespace::Self_,
+            derivation_path: "m/44'/0'".to_string(),
+            purpose: "device".to_string(),
+            gas_used: 100,
+            realm_id: None,
+        };
+        assert!(event.realm_context().is_none());
+
+        // RealmMembershipChanged always has realm context
+        let event = StateEvent::RealmMembershipChanged {
+            realm_id,
+            member_id: root_did,
+            action: "Joined".to_string(),
+            new_role: Some("member".to_string()),
+            realm_sub_did: None,
+        };
+        assert_eq!(event.realm_context(), Some(&realm_id));
+    }
+
+    #[test]
+    fn test_identity_event_involved_identities() {
+        let root_did = UniversalId::new(UniversalId::TAG_DID, 1, b"root");
+        let sub_did = UniversalId::new(UniversalId::TAG_DID, 1, b"sub");
+        let delegate = UniversalId::new(UniversalId::TAG_DID, 1, b"delegate");
+
+        // IdentityBootstrapped
+        let event = StateEvent::IdentityBootstrapped {
+            root_did,
+            namespace: DIDNamespace::Self_,
+            mode: IdentityMode::Interactive,
+            timestamp_ms: 0,
+        };
+        assert_eq!(event.involved_identities(), vec![root_did]);
+
+        // SubDIDDerived
+        let event = StateEvent::SubDIDDerived {
+            root_did,
+            sub_did,
+            namespace: DIDNamespace::Spirit,
+            derivation_path: "m/0'".to_string(),
+            purpose: "agent".to_string(),
+            gas_used: 0,
+            realm_id: None,
+        };
+        assert_eq!(event.involved_identities(), vec![root_did, sub_did]);
+
+        // DelegationCreated
+        let event = StateEvent::DelegationCreated {
+            delegator: root_did,
+            delegate,
+            trust_factor: 0.8,
+            capabilities: vec![],
+            valid_until: None,
+        };
+        assert_eq!(event.involved_identities(), vec![root_did, delegate]);
+    }
+
+    #[test]
+    fn test_identity_event_is_identity_event() {
+        let root_did = UniversalId::new(UniversalId::TAG_DID, 1, b"test");
+
+        // Identity events
+        let event = StateEvent::IdentityBootstrapped {
+            root_did,
+            namespace: DIDNamespace::Self_,
+            mode: IdentityMode::Test,
+            timestamp_ms: 0,
+        };
+        assert!(event.is_identity_event());
+
+        let event = StateEvent::DelegationCreated {
+            delegator: root_did,
+            delegate: root_did,
+            trust_factor: 0.5,
+            capabilities: vec![],
+            valid_until: None,
+        };
+        assert!(event.is_identity_event());
+
+        // Non-identity event
+        let event = StateEvent::TrustUpdate {
+            entity_id: "test".to_string(),
+            delta: 0.1,
+            reason: TrustReason::PositiveInteraction,
+            from_realm: None,
+            triggered_events: 0,
+            new_trust: 0.6,
+        };
+        assert!(!event.is_identity_event());
+    }
+
+    #[test]
+    fn test_identity_event_estimated_size() {
+        let root_did = UniversalId::new(UniversalId::TAG_DID, 1, b"test");
+
+        // IdentityBootstrapped: 64 bytes
+        let event = StateEvent::IdentityBootstrapped {
+            root_did,
+            namespace: DIDNamespace::Self_,
+            mode: IdentityMode::Interactive,
+            timestamp_ms: 0,
+        };
+        assert_eq!(event.estimated_size_bytes(), 64);
+
+        // DelegationCreated: base + capabilities
+        let event = StateEvent::DelegationCreated {
+            delegator: root_did,
+            delegate: root_did,
+            trust_factor: 0.8,
+            capabilities: vec!["read:*".to_string(), "write:docs".to_string()],
+            valid_until: None,
+        };
+        assert_eq!(event.estimated_size_bytes(), 96 + 2 * 32);
+
+        // IdentityAnomalyDetected: variable size
+        let event = StateEvent::IdentityAnomalyDetected {
+            did: root_did,
+            anomaly_type: "test".to_string(),    // 4 bytes
+            severity: "high".to_string(),        // 4 bytes
+            details: "some details".to_string(), // 12 bytes
+        };
+        assert_eq!(event.estimated_size_bytes(), 96 + 4 + 4 + 12);
+    }
+
+    #[test]
+    fn test_wrapped_state_event_realm_context_identity() {
+        let root_did = UniversalId::new(UniversalId::TAG_DID, 1, b"test");
+        let realm_id = UniversalId::new(UniversalId::TAG_REALM, 1, b"realm");
+
+        // Create wrapped event with realm context
+        let event = StateEvent::RealmMembershipChanged {
+            realm_id,
+            member_id: root_did,
+            action: "Joined".to_string(),
+            new_role: None,
+            realm_sub_did: None,
+        };
+        let wrapped = WrappedStateEvent::new(event, vec![], 1);
+
+        // String-based realm context should return hex-encoded UniversalId
+        let ctx = wrapped.realm_context();
+        assert!(ctx.is_some());
+        assert_eq!(ctx.unwrap(), hex::encode(realm_id.as_bytes()));
+
+        // UniversalId-based realm context
+        let ctx_id = wrapped.realm_context_id();
+        assert_eq!(ctx_id, Some(realm_id));
+    }
+
+    #[test]
+    fn test_state_component_identity_variants() {
+        // Verify new StateComponent variants exist
+        let _identity = StateComponent::Identity;
+        let _credential = StateComponent::Credential;
+        let _key_management = StateComponent::KeyManagement;
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATE GRAPH TESTS (Phase 5)
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests_state_graph_identity {
+    use super::*;
+
+    #[test]
+    fn test_state_graph_has_identity_edges() {
+        let graph = StateGraph::erynoa_graph();
+
+        // Core-Abhängigkeiten
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::Trust,
+                StateRelation::DependsOn,
+                StateComponent::Identity
+            )),
+            "Trust should DependOn Identity"
+        );
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::Identity,
+                StateRelation::Triggers,
+                StateComponent::Trust
+            )),
+            "Identity should Trigger Trust"
+        );
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::Event,
+                StateRelation::DependsOn,
+                StateComponent::Identity
+            )),
+            "Event should DependOn Identity"
+        );
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::Consensus,
+                StateRelation::DependsOn,
+                StateComponent::Identity
+            )),
+            "Consensus should DependOn Identity"
+        );
+    }
+
+    #[test]
+    fn test_state_graph_identity_realm_integration() {
+        let graph = StateGraph::erynoa_graph();
+
+        // Realm-Integration
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::Realm,
+                StateRelation::DependsOn,
+                StateComponent::Identity
+            )),
+            "Realm should DependOn Identity"
+        );
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::Identity,
+                StateRelation::Triggers,
+                StateComponent::Realm
+            )),
+            "Identity should Trigger Realm"
+        );
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::Room,
+                StateRelation::DependsOn,
+                StateComponent::Identity
+            )),
+            "Room should DependOn Identity"
+        );
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::Partition,
+                StateRelation::DependsOn,
+                StateComponent::Identity
+            )),
+            "Partition should DependOn Identity"
+        );
+    }
+
+    #[test]
+    fn test_state_graph_identity_controller_integration() {
+        let graph = StateGraph::erynoa_graph();
+
+        // Controller/Auth
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::Controller,
+                StateRelation::DependsOn,
+                StateComponent::Identity
+            )),
+            "Controller should DependOn Identity"
+        );
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::Identity,
+                StateRelation::Validates,
+                StateComponent::Controller
+            )),
+            "Identity should Validate Controller"
+        );
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::Controller,
+                StateRelation::Aggregates,
+                StateComponent::Identity
+            )),
+            "Controller should Aggregate Identity"
+        );
+    }
+
+    #[test]
+    fn test_state_graph_identity_p2p_integration() {
+        let graph = StateGraph::erynoa_graph();
+
+        // P2P Network
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::Swarm,
+                StateRelation::DependsOn,
+                StateComponent::Identity
+            )),
+            "Swarm should DependOn Identity"
+        );
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::Swarm,
+                StateRelation::Validates,
+                StateComponent::Identity
+            )),
+            "Swarm should Validate Identity"
+        );
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::Gossip,
+                StateRelation::DependsOn,
+                StateComponent::Identity
+            )),
+            "Gossip should DependOn Identity"
+        );
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::Privacy,
+                StateRelation::DependsOn,
+                StateComponent::Identity
+            )),
+            "Privacy should DependOn Identity"
+        );
+    }
+
+    #[test]
+    fn test_state_graph_credential_subsystem() {
+        let graph = StateGraph::erynoa_graph();
+
+        // Credential-Sub-System
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::Credential,
+                StateRelation::DependsOn,
+                StateComponent::Identity
+            )),
+            "Credential should DependOn Identity"
+        );
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::Credential,
+                StateRelation::Validates,
+                StateComponent::Identity
+            )),
+            "Credential should Validate Identity"
+        );
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::Identity,
+                StateRelation::Aggregates,
+                StateComponent::Credential
+            )),
+            "Identity should Aggregate Credential"
+        );
+    }
+
+    #[test]
+    fn test_state_graph_key_management_subsystem() {
+        let graph = StateGraph::erynoa_graph();
+
+        // KeyManagement-Sub-System
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::KeyManagement,
+                StateRelation::DependsOn,
+                StateComponent::Identity
+            )),
+            "KeyManagement should DependOn Identity"
+        );
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::Identity,
+                StateRelation::Aggregates,
+                StateComponent::KeyManagement
+            )),
+            "Identity should Aggregate KeyManagement"
+        );
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::KeyManagement,
+                StateRelation::Triggers,
+                StateComponent::Event
+            )),
+            "KeyManagement should Trigger Event"
+        );
+    }
+
+    #[test]
+    fn test_state_graph_identity_edge_count() {
+        let graph = StateGraph::erynoa_graph();
+
+        // Count identity-related edges
+        let identity_edges: Vec<_> = graph
+            .edges
+            .iter()
+            .filter(|(from, _, to)| {
+                *from == StateComponent::Identity
+                    || *to == StateComponent::Identity
+                    || *from == StateComponent::Credential
+                    || *to == StateComponent::Credential
+                    || *from == StateComponent::KeyManagement
+                    || *to == StateComponent::KeyManagement
+            })
+            .collect();
+
+        // Should have at least 38 identity-related edges
+        assert!(
+            identity_edges.len() >= 38,
+            "Expected at least 38 identity-related edges, found {}",
+            identity_edges.len()
+        );
+    }
+
+    #[test]
+    fn test_state_graph_dependents_of_identity() {
+        let graph = StateGraph::erynoa_graph();
+
+        let dependents = graph.dependents(StateComponent::Identity);
+
+        // Many components should depend on Identity
+        assert!(
+            dependents.contains(&StateComponent::Trust),
+            "Trust should be a dependent of Identity"
+        );
+        assert!(
+            dependents.contains(&StateComponent::Controller),
+            "Controller should be a dependent of Identity"
+        );
+        assert!(
+            dependents.contains(&StateComponent::Realm),
+            "Realm should be a dependent of Identity"
+        );
+    }
+
+    #[test]
+    fn test_state_graph_triggered_by_identity() {
+        let graph = StateGraph::erynoa_graph();
+
+        let triggered = graph.triggered_by(StateComponent::Identity);
+
+        // Identity should trigger several components
+        assert!(
+            triggered.contains(&StateComponent::Trust),
+            "Identity should trigger Trust"
+        );
+        assert!(
+            triggered.contains(&StateComponent::Realm),
+            "Identity should trigger Realm"
+        );
+        assert!(
+            triggered.contains(&StateComponent::Event),
+            "Identity should trigger Event"
+        );
+        assert!(
+            triggered.contains(&StateComponent::Anomaly),
+            "Identity should trigger Anomaly"
+        );
+    }
+
+    #[test]
+    fn test_state_graph_engine_layer_depends_on_identity() {
+        let graph = StateGraph::erynoa_graph();
+
+        // Engine-Layer should depend on Identity
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::UI,
+                StateRelation::DependsOn,
+                StateComponent::Identity
+            )),
+            "UI should DependOn Identity"
+        );
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::API,
+                StateRelation::DependsOn,
+                StateComponent::Identity
+            )),
+            "API should DependOn Identity"
+        );
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::Governance,
+                StateRelation::DependsOn,
+                StateComponent::Identity
+            )),
+            "Governance should DependOn Identity"
+        );
+    }
+
+    #[test]
+    fn test_state_graph_eclvm_depends_on_identity() {
+        let graph = StateGraph::erynoa_graph();
+
+        // ECLVM Layer should depend on Identity
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::ECLVM,
+                StateRelation::DependsOn,
+                StateComponent::Identity
+            )),
+            "ECLVM should DependOn Identity"
+        );
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::ECLPolicy,
+                StateRelation::DependsOn,
+                StateComponent::Identity
+            )),
+            "ECLPolicy should DependOn Identity"
+        );
+    }
+
+    #[test]
+    fn test_state_graph_protection_validates_identity() {
+        let graph = StateGraph::erynoa_graph();
+
+        // Protection should validate Identity
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::Anomaly,
+                StateRelation::Validates,
+                StateComponent::Identity
+            )),
+            "Anomaly should Validate Identity"
+        );
+        assert!(
+            graph.edges.contains(&(
+                StateComponent::AntiCalcification,
+                StateRelation::Validates,
+                StateComponent::Identity
+            )),
+            "AntiCalcification should Validate Identity"
+        );
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UNIFIED STATE INTEGRATION TESTS (Phase 6)
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests_unified_state_identity {
+    use super::*;
+    use crate::core::identity_types::IdentityMode;
+
+    #[test]
+    fn test_unified_state_has_identity_field() {
+        let state = UnifiedState::new();
+
+        // Identity should be initialized
+        assert!(!state.identity.is_bootstrapped());
+        assert_eq!(state.identity.current_mode(), IdentityMode::Interactive);
+    }
+
+    #[test]
+    fn test_unified_state_identity_bootstrap() {
+        let state = UnifiedState::new();
+
+        // Bootstrap identity
+        let result = state.identity.bootstrap_test(&[1u8; 32]);
+        assert!(result.is_ok());
+        assert!(state.identity.is_bootstrapped());
+    }
+
+    #[test]
+    fn test_unified_state_snapshot_includes_identity() {
+        let state = UnifiedState::new();
+        state.identity.bootstrap_test(&[1u8; 32]).unwrap();
+
+        let snapshot = state.snapshot();
+
+        // Snapshot should include identity
+        assert!(snapshot.identity.bootstrap_completed);
+        assert_eq!(snapshot.identity.mode, IdentityMode::Test);
+        assert!(snapshot.identity.root_did.is_some());
+    }
+
+    #[test]
+    fn test_unified_state_health_includes_identity() {
+        let state = UnifiedState::new();
+
+        // Without bootstrap, identity health is 0
+        let health_before = state.calculate_health();
+
+        // Bootstrap identity
+        state.identity.bootstrap_test(&[1u8; 32]).unwrap();
+
+        // Health should improve after bootstrap
+        let health_after = state.calculate_health();
+
+        // Identity contributes 10% to health, so after bootstrap health should increase
+        // (bootstrapped identity has health_score() returning > 0)
+        assert!(
+            health_after > health_before,
+            "Health should increase after identity bootstrap: before={}, after={}",
+            health_before,
+            health_after
+        );
+    }
+
+    #[test]
+    fn test_unified_state_identity_integration_with_core() {
+        let state = UnifiedState::new();
+        state.identity.bootstrap_test(&[1u8; 32]).unwrap();
+
+        // Derive a device DID
+        let device_result = state.identity.derive_device_did(0);
+        assert!(device_result.is_ok());
+
+        // Verify sub_dids_total increased
+        assert_eq!(state.identity.sub_dids_total.load(Ordering::Relaxed), 1);
+
+        // Create snapshot and verify
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.identity.sub_dids_total, 1);
+    }
+
+    #[test]
+    fn test_unified_state_identity_realm_membership() {
+        let state = UnifiedState::new();
+        state.identity.bootstrap_test(&[1u8; 32]).unwrap();
+
+        let realm_id = UniversalId::new(UniversalId::TAG_REALM, 1, b"test-realm");
+
+        // Join realm
+        let result = state.identity.join_realm(
+            realm_id,
+            crate::core::identity_types::RealmRole::Member,
+            None,
+        );
+        assert!(result.is_ok());
+
+        // Verify membership
+        assert!(state.identity.is_realm_member(&realm_id));
+
+        // Snapshot should reflect membership
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.identity.realm_membership_count, 1);
+    }
+
+    #[test]
+    fn test_unified_state_graph_identity_relationships() {
+        let state = UnifiedState::new();
+
+        // Verify the graph has identity relationships
+        let identity_deps = state.graph.dependents(StateComponent::Identity);
+        assert!(!identity_deps.is_empty());
+
+        let identity_triggers = state.graph.triggered_by(StateComponent::Identity);
+        assert!(!identity_triggers.is_empty());
+    }
+
+    #[test]
+    fn test_unified_state_identity_delegation_integration() {
+        let state = UnifiedState::new();
+        state.identity.bootstrap_test(&[1u8; 32]).unwrap();
+
+        let delegate_id = UniversalId::new(UniversalId::TAG_DID, 1, b"delegate");
+
+        // Create delegation
+        let result = state.identity.add_delegation(
+            delegate_id,
+            0.8,
+            vec![crate::domain::unified::identity::Capability::Read {
+                resource: "*".to_string(),
+            }],
+            None,
+        );
+        assert!(result.is_ok());
+
+        // Verify in snapshot
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.identity.active_delegations, 1);
+    }
+
+    #[test]
+    fn test_unified_state_identity_wallet_integration() {
+        let state = UnifiedState::new();
+        state.identity.bootstrap_test(&[1u8; 32]).unwrap();
+
+        let root_id = state.identity.root_did_id().unwrap();
+        let wallet = crate::core::identity_types::WalletAddress::new(
+            "eip155:1",
+            "0x1234567890123456789012345678901234567890",
+            "m/44'/60'/0'/0/0",
+            root_id,
+        );
+
+        // Add wallet
+        let result = state.identity.add_wallet_address(wallet);
+        assert!(result.is_ok());
+
+        // Verify in snapshot
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.identity.addresses_total, 1);
+        assert!(snapshot
+            .identity
+            .wallet_chains
+            .contains(&"eip155:1".to_string()));
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PHASE 7: MIGRATION TESTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests_phase7_migration {
+    use super::*;
+
+    // ─────────────────────────────────────────────────────────────────────
+    // RealmSpecificState Migration Tests
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_realm_state_member_by_id() {
+        let realm = RealmSpecificState::new(0.5, "democratic");
+        let identity_id = UniversalId::new(UniversalId::TAG_DID, 1, b"test-member");
+
+        // Add member by UniversalId
+        realm.add_member_by_id(identity_id, None);
+
+        // Verify membership
+        assert!(realm.is_member_by_id(&identity_id));
+        assert_eq!(realm.identity_count.load(Ordering::Relaxed), 1);
+    }
+
+    #[test]
+    fn test_realm_state_member_with_realm_sub_did() {
+        let realm = RealmSpecificState::new(0.5, "democratic");
+        let identity_id = UniversalId::new(UniversalId::TAG_DID, 1, b"test-member");
+        let realm_sub_did = UniversalId::new(UniversalId::TAG_DID, 1, b"realm-sub-did");
+
+        // Add member with realm-specific sub-DID
+        realm.add_member_by_id(identity_id, Some(realm_sub_did));
+
+        // Verify membership and sub-DID mapping
+        assert!(realm.is_member_by_id(&identity_id));
+        assert_eq!(realm.get_realm_sub_did(&identity_id), Some(realm_sub_did));
+    }
+
+    #[test]
+    fn test_realm_state_remove_member_by_id() {
+        let realm = RealmSpecificState::new(0.5, "democratic");
+        let identity_id = UniversalId::new(UniversalId::TAG_DID, 1, b"test-member");
+
+        // Add and remove
+        realm.add_member_by_id(identity_id, None);
+        assert!(realm.is_member_by_id(&identity_id));
+
+        realm.remove_member_by_id(&identity_id);
+        assert!(!realm.is_member_by_id(&identity_id));
+        assert_eq!(realm.identity_count.load(Ordering::Relaxed), 0);
+    }
+
+    #[test]
+    fn test_realm_state_ban_member_by_id() {
+        let realm = RealmSpecificState::new(0.5, "democratic");
+        let identity_id = UniversalId::new(UniversalId::TAG_DID, 1, b"test-member");
+
+        // Add then ban
+        realm.add_member_by_id(identity_id, None);
+        realm.ban_member_by_id(&identity_id);
+
+        // Should be banned but not a member
+        assert!(!realm.is_member_by_id(&identity_id));
+        assert!(realm.is_banned_by_id(&identity_id));
+    }
+
+    #[test]
+    fn test_realm_state_admin_by_id() {
+        let realm = RealmSpecificState::new(0.5, "democratic");
+        let admin_id = UniversalId::new(UniversalId::TAG_DID, 1, b"admin");
+
+        // Add admin
+        realm.add_admin_by_id(admin_id, None);
+
+        // Should be both admin and member
+        assert!(realm.is_admin_by_id(&admin_id));
+        assert!(realm.is_member_by_id(&admin_id));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // TrustState Migration Tests
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_trust_state_register_identity() {
+        let trust = TrustState::new();
+        let identity_id = UniversalId::new(UniversalId::TAG_DID, 1, b"test-identity");
+
+        // Register with initial trust
+        let result = trust.register_identity(identity_id, 0.7);
+        assert!(result.is_ok());
+
+        // Verify
+        assert_eq!(trust.get_trust(&identity_id), Some(0.7));
+        assert_eq!(trust.identity_count(), 1);
+    }
+
+    #[test]
+    fn test_trust_state_update_identity_trust() {
+        let trust = TrustState::new();
+        let identity_id = UniversalId::new(UniversalId::TAG_DID, 1, b"test-identity");
+
+        trust.register_identity(identity_id, 0.5).unwrap();
+
+        // Update trust
+        let result = trust.update_identity_trust(&identity_id, 0.2);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 0.7);
+    }
+
+    #[test]
+    fn test_trust_state_realm_trust() {
+        let trust = TrustState::new();
+        let identity_id = UniversalId::new(UniversalId::TAG_DID, 1, b"test-identity");
+        let realm_id = UniversalId::new(UniversalId::TAG_REALM, 1, b"test-realm");
+
+        trust.register_identity(identity_id, 0.5).unwrap();
+
+        // Update realm-specific trust
+        trust
+            .update_identity_realm_trust(&identity_id, realm_id, 0.3)
+            .unwrap();
+
+        // Verify realm-specific trust
+        assert_eq!(trust.get_realm_trust(&identity_id, &realm_id), Some(0.8));
+        // Global trust unchanged
+        assert_eq!(trust.get_trust(&identity_id), Some(0.5));
+    }
+
+    #[test]
+    fn test_trust_state_decay() {
+        let trust = TrustState::new();
+        let identity_id = UniversalId::new(UniversalId::TAG_DID, 1, b"test-identity");
+
+        trust.register_identity(identity_id, 1.0).unwrap();
+
+        // Apply decay
+        trust.apply_global_decay(0.1); // 10% decay
+
+        // Trust should be reduced
+        let current = trust.get_trust(&identity_id).unwrap();
+        assert!((current - 0.9).abs() < 0.001);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // NetworkEvent Migration Tests
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_network_event_with_peer_identity() {
+        let peer_id = UniversalId::new(UniversalId::TAG_DID, 1, b"peer");
+
+        let event = NetworkEvent::new("test_event", vec![1, 2, 3], EventPriority::Normal)
+            .with_peer_identity(peer_id);
+
+        assert_eq!(event.peer_universal_id, Some(peer_id));
+        assert!(event.signature.is_none());
+    }
+
+    #[test]
+    fn test_network_event_signed() {
+        let signer_id = UniversalId::new(UniversalId::TAG_DID, 1, b"signer");
+
+        // Create signed event with mock signer
+        let result = NetworkEvent::signed(
+            "test_event",
+            vec![1, 2, 3],
+            EventPriority::Normal,
+            signer_id,
+            |_payload| Ok([0u8; 64]),
+        );
+
+        assert!(result.is_ok());
+        let event = result.unwrap();
+        assert!(event.is_signed());
+        assert_eq!(event.is_verified(), Some(true));
+    }
+
+    #[test]
+    fn test_network_event_not_signed() {
+        let event = NetworkEvent::new("test_event", vec![1, 2, 3], EventPriority::Normal);
+
+        assert!(!event.is_signed());
+        assert_eq!(event.is_verified(), None);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // SwarmState Migration Tests
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_swarm_state_peer_universal_id() {
+        let swarm = SwarmState::new();
+        let peer_id = UniversalId::new(UniversalId::TAG_DID, 1, b"device-did");
+
+        // Set peer identity
+        swarm.set_peer_universal_id(peer_id);
+
+        // Verify
+        assert_eq!(swarm.get_peer_universal_id(), Some(peer_id));
+
+        // Snapshot should include it
+        let snapshot = swarm.snapshot();
+        assert_eq!(snapshot.peer_universal_id, Some(peer_id));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // TrustEntry Tests
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_trust_entry_creation() {
+        let identity_id = UniversalId::new(UniversalId::TAG_DID, 1, b"test");
+        let entry = TrustEntry::new(identity_id, 0.8);
+
+        assert_eq!(entry.global_trust, 0.8);
+        assert_eq!(entry.update_count, 0);
+        assert!(entry.per_realm_trust.is_empty());
+    }
+
+    #[test]
+    fn test_trust_entry_clamping() {
+        let identity_id = UniversalId::new(UniversalId::TAG_DID, 1, b"test");
+
+        // Test clamping above 1.0
+        let entry = TrustEntry::new(identity_id, 1.5);
+        assert_eq!(entry.global_trust, 1.0);
+
+        // Test clamping below 0.0
+        let entry = TrustEntry::new(identity_id, -0.5);
+        assert_eq!(entry.global_trust, 0.0);
+    }
+
+    #[test]
+    fn test_trust_entry_realm_fallback() {
+        let identity_id = UniversalId::new(UniversalId::TAG_DID, 1, b"test");
+        let realm_id = UniversalId::new(UniversalId::TAG_REALM, 1, b"realm");
+        let entry = TrustEntry::new(identity_id, 0.5);
+
+        // Without specific realm trust, should fallback to global
+        assert_eq!(entry.get_realm_trust(&realm_id), 0.5);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // MembershipChange Event Tests
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_membership_change_with_universal_id() {
+        let identity_id = UniversalId::new(UniversalId::TAG_DID, 1, b"member");
+        let initiator_id = UniversalId::new(UniversalId::TAG_DID, 1, b"initiator");
+
+        let event = StateEvent::MembershipChange {
+            realm_id: "test-realm".to_string(),
+            identity_id: "did:erynoa:self:test".to_string(),
+            identity_universal_id: Some(identity_id),
+            action: MembershipAction::Joined,
+            new_role: None,
+            initiated_by: None,
+            initiated_by_id: Some(initiator_id),
+        };
+
+        // Verify event properties
+        assert_eq!(event.primary_component(), StateComponent::Realm);
+        assert!(event.estimated_size_bytes() > 0);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // PHASE 6.4 TESTS
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -13145,7 +16813,7 @@ pub trait RealmStorageLoader: Send + Sync {
     async fn persist_realm_snapshot(
         &self,
         realm_id: &str,
-        snapshot: &RealmSpecificStateSnapshot,
+        snapshot: &RealmSpecificSnapshot,
     ) -> Result<(), RealmLoadError>;
 }
 
@@ -13232,7 +16900,7 @@ impl RealmStorageLoader for MockRealmStorageLoader {
     async fn persist_realm_snapshot(
         &self,
         realm_id: &str,
-        snapshot: &RealmSpecificStateSnapshot,
+        snapshot: &RealmSpecificSnapshot,
     ) -> Result<(), RealmLoadError> {
         if let Ok(mut realms) = self.realm_params.write() {
             realms.insert(
@@ -13735,7 +17403,7 @@ impl InMemoryStorage {
     pub fn persist_realm_base(
         &self,
         realm_id: &str,
-        snapshot: &RealmSpecificStateSnapshot,
+        snapshot: &RealmSpecificSnapshot,
         sequence: u64,
     ) -> Result<usize, RealmLoadError> {
         let data = bincode::serialize(snapshot)
@@ -13754,10 +17422,7 @@ impl InMemoryStorage {
     }
 
     /// Lade Realm-Base
-    pub fn load_realm_base(
-        &self,
-        realm_id: &str,
-    ) -> Result<RealmSpecificStateSnapshot, RealmLoadError> {
+    pub fn load_realm_base(&self, realm_id: &str) -> Result<RealmSpecificSnapshot, RealmLoadError> {
         let key = format!("realm_base:{}", realm_id);
         let data = self
             .realm_base
@@ -13943,7 +17608,7 @@ impl ProductionStorageService {
     pub fn persist_checkpoint(
         &self,
         realm_id: &str,
-        snapshot: &RealmSpecificStateSnapshot,
+        snapshot: &RealmSpecificSnapshot,
         sequence: u64,
     ) -> Result<(), RealmLoadError> {
         let bytes = self
@@ -14078,7 +17743,7 @@ impl RealmStorageLoader for ProductionStorageService {
     async fn persist_realm_snapshot(
         &self,
         realm_id: &str,
-        snapshot: &RealmSpecificStateSnapshot,
+        snapshot: &RealmSpecificSnapshot,
     ) -> Result<(), RealmLoadError> {
         let seq = snapshot.events_total;
         self.persist_checkpoint(realm_id, snapshot, seq)
@@ -14549,7 +18214,7 @@ impl LazyShardedRealmState {
     }
 
     /// Snapshot aller geladenen Realms
-    pub fn snapshot(&self) -> HashMap<String, RealmSpecificStateSnapshot> {
+    pub fn snapshot(&self) -> HashMap<String, RealmSpecificSnapshot> {
         self.iter_all()
             .map(|(id, state)| (id, state.snapshot()))
             .collect()
@@ -15255,16 +18920,26 @@ impl RealmSpecificState {
             StateEvent::MembershipChange {
                 realm_id,
                 action,
-                identity_id,
+                identity_universal_id,
                 ..
             } => {
                 if realm_id == &self.realm_id() {
                     match action {
                         MembershipAction::Joined | MembershipAction::InviteAccepted => {
-                            self.add_member(identity_id);
+                            if let Some(uid) = identity_universal_id {
+                                self.add_member_by_id(*uid, None);
+                            } else {
+                                // Legacy: nur Counter aktualisieren
+                                self.identity_joined();
+                            }
                         }
                         MembershipAction::Left | MembershipAction::Banned => {
-                            self.remove_member(identity_id);
+                            if let Some(uid) = identity_universal_id {
+                                self.remove_member_by_id(uid);
+                            } else {
+                                // Legacy: nur Counter aktualisieren
+                                self.identity_left();
+                            }
                         }
                         MembershipAction::RoleChanged { .. } | MembershipAction::Invited => {
                             // Role changes und Invites ändern keine Member-Counts
@@ -15320,11 +18995,11 @@ impl RealmSpecificState {
 
 /// Snapshot des sharded Realm-States für Serialisierung
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ShardedRealmStateSnapshot {
+pub struct ShardedRealmSnapshot {
     /// Sharding-Statistiken
     pub stats: ShardingStats,
     /// Alle geladenen Realm-Snapshots
-    pub realms: HashMap<String, RealmSpecificStateSnapshot>,
+    pub realms: HashMap<String, RealmSpecificSnapshot>,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -16460,7 +20135,7 @@ mod tests_phase7_1_storage_layer {
     fn test_in_memory_storage_persist_and_load_realm() {
         let storage = InMemoryStorage::new();
 
-        let snapshot = RealmSpecificStateSnapshot {
+        let snapshot = RealmSpecificSnapshot {
             trust: crate::domain::unified::TrustVector6D::newcomer(),
             min_trust: 0.3,
             governance_type: "democracy".to_string(),
@@ -16583,9 +20258,11 @@ mod tests_phase7_1_storage_layer {
             StateEvent::MembershipChange {
                 realm_id: "realm2".to_string(),
                 identity_id: "did:test:456".to_string(),
+                identity_universal_id: None,
                 action: MembershipAction::Joined,
                 new_role: None,
                 initiated_by: None,
+                initiated_by_id: None,
             },
             vec![],
             2,

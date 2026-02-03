@@ -2618,7 +2618,7 @@ impl TrustObserver for StateIntegrator {
         self.state
             .core
             .trust
-            .entities
+            .entities_count
             .fetch_add(1, Ordering::Relaxed);
     }
 
@@ -2626,7 +2626,7 @@ impl TrustObserver for StateIntegrator {
         self.state
             .core
             .trust
-            .relationships
+            .relationships_count
             .fetch_add(1, Ordering::Relaxed);
     }
 
@@ -2634,7 +2634,7 @@ impl TrustObserver for StateIntegrator {
         self.state
             .core
             .trust
-            .violations
+            .violations_count
             .fetch_add(1, Ordering::Relaxed);
         self.check_warnings();
     }
@@ -2722,7 +2722,7 @@ impl ExecutionObserver for StateIntegrator {
         self.state
             .execution
             .gas
-            .out_of_gas
+            .out_of_gas_count
             .fetch_add(1, Ordering::Relaxed);
     }
 
@@ -2738,7 +2738,7 @@ impl ExecutionObserver for StateIntegrator {
         self.state
             .execution
             .mana
-            .rate_limited
+            .rate_limited_count
             .fetch_add(1, Ordering::Relaxed);
     }
 }
@@ -2786,9 +2786,9 @@ impl ProtectionObserver for StateIntegrator {
         self.state
             .protection
             .calibration
-            .updates
+            .updates_total
             .fetch_add(1, Ordering::Relaxed);
-        if let Ok(mut params) = self.state.protection.calibration.params.write() {
+        if let Ok(mut params) = self.state.protection.calibration.params_map.write() {
             params.insert(param.to_string(), new_value);
         }
     }
@@ -5227,7 +5227,7 @@ mod tests {
         integrator.on_trust_update(&entity, &entity, 0.6, 0.5, false);
 
         let snapshot = state.snapshot();
-        assert_eq!(snapshot.core.trust.entities, 1);
+        assert_eq!(snapshot.core.trust.entities_count, 1);
         assert_eq!(snapshot.core.trust.updates_total, 2);
         assert_eq!(snapshot.core.trust.positive_updates, 1);
         assert_eq!(snapshot.core.trust.negative_updates, 1);
@@ -6238,11 +6238,8 @@ mod tests {
         assert_eq!(ui_b.renders.load(Ordering::Relaxed), 1);
         drop(ui_realm_b);
 
-        // API Realm States (RealmAPIState hat: endpoints, requests, rate_limited, auth_failed)
-        let api_realms = state.api.realm_api.read().unwrap();
-        let api_a = api_realms.get(realm_a).unwrap();
-        assert_eq!(api_a.endpoints.load(Ordering::Relaxed), 1);
-        drop(api_realms);
+        // API State - globale Endpoints prüfen (realm_api wurde entfernt)
+        assert!(state.api.endpoints_registered.load(Ordering::Relaxed) >= 2);
 
         // Governance Realm States (RealmGovernanceState hat: proposals, votes, delegations)
         let gov_realms = state.governance.realm_governance.read().unwrap();
