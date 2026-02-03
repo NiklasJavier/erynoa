@@ -92,6 +92,10 @@ impl Default for EventEngineConfig {
     }
 }
 
+/// Optionaler Observer für Diagnostics (thread-safe)
+#[cfg(feature = "p2p")]
+pub type EventObserver = std::sync::Arc<crate::peer::p2p::diagnostics::SystemState>;
+
 impl EventEngine {
     /// Erstelle neue EventEngine
     pub fn new(config: EventEngineConfig) -> Self {
@@ -192,6 +196,21 @@ impl EventEngine {
         self.events.insert(event_id.clone(), event);
 
         Ok(event_id)
+    }
+
+    /// Κ12: Füge Event zum DAG hinzu mit Diagnostics-Observer
+    #[cfg(feature = "p2p")]
+    pub fn add_event_observed(
+        &mut self,
+        event: Event,
+        observer: &EventObserver,
+    ) -> EventResult<EventId> {
+        let is_genesis = event.parents.is_empty();
+        let result = self.add_event(event);
+        if result.is_ok() {
+            observer.event_added(is_genesis);
+        }
+        result
     }
 
     /// Hole Event by ID

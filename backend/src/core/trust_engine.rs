@@ -88,6 +88,10 @@ impl Default for TrustEngineConfig {
     }
 }
 
+/// Optionaler Observer für Diagnostics (thread-safe)
+#[cfg(feature = "p2p")]
+pub type TrustObserver = std::sync::Arc<crate::peer::p2p::diagnostics::SystemState>;
+
 impl TrustEngine {
     /// Erstelle neue TrustEngine
     pub fn new(config: TrustEngineConfig) -> Self {
@@ -153,6 +157,21 @@ impl TrustEngine {
         }
 
         Ok(())
+    }
+
+    /// Κ4: Aktualisiere Trust mit Diagnostics-Observer
+    #[cfg(feature = "p2p")]
+    pub fn process_event_observed(
+        &mut self,
+        event: &Event,
+        observer: &TrustObserver,
+    ) -> TrustResult<()> {
+        let is_negative = event.is_negative_trust();
+        let result = self.process_event(event);
+        if result.is_ok() {
+            observer.trust_updated(!is_negative);
+        }
+        result
     }
 
     /// Setze direkten Trust-Wert (für Attestationen)

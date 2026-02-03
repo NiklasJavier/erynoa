@@ -185,6 +185,10 @@ fn calculate_regen_rate(reliability: f64, config: &ManaConfig) -> u64 {
     (config.base_regen_per_sec as f64 * multiplier) as u64
 }
 
+/// Optionaler Observer für Diagnostics (thread-safe)
+#[cfg(feature = "p2p")]
+pub type ManaObserver = std::sync::Arc<crate::peer::p2p::diagnostics::SystemState>;
+
 /// Mana-Manager für alle Nutzer
 pub struct ManaManager {
     /// Konfiguration
@@ -248,6 +252,24 @@ impl ManaManager {
             .or_insert_with(|| ManaAccount::new(trust, &self.config));
 
         account.consume(actual_gas)
+    }
+
+    /// Verbrauche Mana mit Diagnostics-Observer
+    #[cfg(feature = "p2p")]
+    pub fn deduct_observed(
+        &self,
+        did: &str,
+        trust: &TrustVector6D,
+        actual_gas: u64,
+        observer: &ManaObserver,
+    ) -> Result<()> {
+        let result = self.deduct(did, trust, actual_gas);
+        if result.is_ok() {
+            observer.mana_consumed(actual_gas);
+        } else {
+            observer.mana_rate_limited();
+        }
+        result
     }
 
     /// Hole Status für einen User (für API/Debugging)

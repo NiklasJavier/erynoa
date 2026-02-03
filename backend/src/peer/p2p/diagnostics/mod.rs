@@ -43,18 +43,24 @@
 
 mod dashboard;
 mod events;
+mod integration;
 mod layers;
 mod metrics;
 mod state;
 mod swarm_state;
+mod system_layers;
+mod system_state;
 mod types;
 
 pub use dashboard::*;
 pub use events::*;
+pub use integration::*;
 pub use layers::*;
 pub use metrics::*;
 pub use state::*;
 pub use swarm_state::*;
+pub use system_layers::*;
+pub use system_state::*;
 pub use types::*;
 
 // ============================================================================
@@ -64,6 +70,24 @@ pub use types::*;
 /// Erstellt einen vollständig konfigurierten DiagnosticState
 pub fn create_diagnostic_state(peer_id: String) -> std::sync::Arc<DiagnosticState> {
     std::sync::Arc::new(DiagnosticState::new(peer_id))
+}
+
+/// Erstellt einen vollständig konfigurierten SystemState für Core/ECLVM/Local/Protection
+pub fn create_system_state() -> std::sync::Arc<SystemState> {
+    std::sync::Arc::new(SystemState::new())
+}
+
+/// Erstellt DiagnosticState mit SwarmState und SystemState
+pub fn create_full_diagnostic_state(
+    peer_id: String,
+    swarm_state: std::sync::Arc<SwarmState>,
+    system_state: std::sync::Arc<SystemState>,
+) -> std::sync::Arc<DiagnosticState> {
+    std::sync::Arc::new(
+        DiagnosticState::new(peer_id)
+            .with_swarm_state(swarm_state)
+            .with_system_state(system_state),
+    )
 }
 
 /// Erstellt Axum-Router für alle Diagnostic-Endpoints
@@ -169,6 +193,23 @@ pub mod handlers {
 
         let state_clone = state.clone();
         let sse_stream = stream.map(move |_| {
+            // Hole SwarmSnapshot falls verfügbar
+            let swarm_snapshot = state_clone.swarm_state.as_ref().map(|s| s.snapshot());
+
+            // Hole Layers aus DiagnosticRunner
+            let layers = swarm_snapshot.as_ref().map(|_| {
+                let runner = DiagnosticRunner::from_state(&state_clone);
+                // Wir bauen P2P-Layers direkt hier
+                futures::executor::block_on(runner.run_all(Some(state_clone.peer_id.clone())))
+                    .layers
+            });
+
+            let summary = layers.as_ref().map(|l| DiagnosticSummary::from_layers(l));
+
+            // Hole System-State falls verfügbar
+            let system_snapshot = state_clone.system_state.as_ref().map(|s| s.snapshot());
+            let system_layers = system_snapshot.as_ref().map(|s| generate_system_layers(s));
+
             let snapshot = StreamSnapshot {
                 timestamp: chrono::Utc::now().to_rfc3339(),
                 metrics: state_clone.get_metrics(),
@@ -178,6 +219,11 @@ pub mod handlers {
                     .load(std::sync::atomic::Ordering::Relaxed),
                 recent_events: state_clone.get_recent_events(5),
                 health: state_clone.get_health_status(),
+                swarm: swarm_snapshot,
+                layers,
+                summary,
+                system_layers,
+                system: system_snapshot,
             };
 
             let json = serde_json::to_string(&snapshot).unwrap_or_default();

@@ -2,7 +2,7 @@
 
 use super::{
     ComponentStatus, DiagnosticEvent, EventBuffer, EventType, HealthStatus, MetricsCollector,
-    NetworkMetrics,
+    NetworkMetrics, SwarmState, SystemState,
 };
 use std::sync::Arc;
 
@@ -28,6 +28,12 @@ pub struct DiagnosticState {
 
     /// Start-Zeit für Uptime
     pub start_time: std::time::Instant,
+
+    /// Swarm State für P2P-Netzwerk-Daten
+    pub swarm_state: Option<Arc<SwarmState>>,
+
+    /// System State für Core, ECLVM, Local, Protection Metriken
+    pub system_state: Option<Arc<SystemState>>,
 }
 
 /// Information über einen verbundenen Peer
@@ -60,6 +66,8 @@ impl DiagnosticState {
             events: Arc::new(EventBuffer::new(1000)),
             connected_peers: std::sync::RwLock::new(Vec::new()),
             start_time: std::time::Instant::now(),
+            swarm_state: None,
+            system_state: None,
         };
 
         // Start-Event loggen
@@ -68,6 +76,28 @@ impl DiagnosticState {
             .push(EventType::SwarmStarted, "Diagnostic system initialized");
 
         state
+    }
+
+    /// SwarmState setzen für P2P-Netzwerk-Metriken
+    pub fn with_swarm_state(mut self, swarm_state: Arc<SwarmState>) -> Self {
+        self.swarm_state = Some(swarm_state);
+        self
+    }
+
+    /// SystemState setzen für Core/ECLVM/Local/Protection Metriken
+    pub fn with_system_state(mut self, system_state: Arc<SystemState>) -> Self {
+        self.system_state = Some(system_state);
+        self
+    }
+
+    /// SwarmState nachträglich setzen
+    pub fn set_swarm_state(&mut self, swarm_state: Arc<SwarmState>) {
+        self.swarm_state = Some(swarm_state);
+    }
+
+    /// SystemState nachträglich setzen
+    pub fn set_system_state(&mut self, system_state: Arc<SystemState>) {
+        self.system_state = Some(system_state);
     }
 
     // ========================================================================
@@ -187,8 +217,10 @@ impl DiagnosticState {
     /// Kademlia Query
     pub fn kademlia_query(&self, query_type: impl Into<String>) {
         self.metrics.record_kademlia_query();
-        self.events
-            .push(EventType::KademliaQuery, format!("DHT query: {}", query_type.into()));
+        self.events.push(
+            EventType::KademliaQuery,
+            format!("DHT query: {}", query_type.into()),
+        );
     }
 
     // ========================================================================
@@ -197,8 +229,10 @@ impl DiagnosticState {
 
     /// AutoNAT Status Update
     pub fn autonat_status(&self, status: impl Into<String>) {
-        self.events
-            .push(EventType::AutoNatStatus, format!("NAT status: {}", status.into()));
+        self.events.push(
+            EventType::AutoNatStatus,
+            format!("NAT status: {}", status.into()),
+        );
     }
 
     /// DCUTR Versuch
@@ -257,8 +291,10 @@ impl DiagnosticState {
     /// Onion Circuit gebaut
     pub fn onion_circuit_built(&self, hops: usize) {
         self.metrics.record_onion_circuit();
-        self.events
-            .push(EventType::OnionCircuitBuilt, format!("{}-hop circuit built", hops));
+        self.events.push(
+            EventType::OnionCircuitBuilt,
+            format!("{}-hop circuit built", hops),
+        );
     }
 
     /// Onion Circuit fehlgeschlagen
@@ -344,7 +380,10 @@ impl DiagnosticState {
         let metrics = self.get_metrics();
 
         let (status, message) = if peer_count >= 3 {
-            (ComponentStatus::Healthy, format!("Connected to {} peers", peer_count))
+            (
+                ComponentStatus::Healthy,
+                format!("Connected to {} peers", peer_count),
+            )
         } else if peer_count > 0 {
             (
                 ComponentStatus::Degraded,

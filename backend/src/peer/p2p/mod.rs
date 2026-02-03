@@ -107,11 +107,14 @@ pub use config::P2PConfig;
 pub use diagnostics::{
     // Helpers
     create_diagnostic_state,
+    create_system_state,
     diagnostic_routes,
     format_bytes,
     format_rate,
     // Dashboard
     generate_dashboard_html,
+    // System Layers
+    generate_system_layers,
     // Core types
     ComponentStatus,
     // State (für Real-Time)
@@ -140,6 +143,9 @@ pub use diagnostics::{
     SwarmSnapshot,
     // SwarmState für echte Laufzeit-Daten (V2.7)
     SwarmState,
+    // SystemState für Core/ECLVM/Local/Protection Metriken (V2.8)
+    SystemSnapshot,
+    SystemState,
 };
 #[cfg(feature = "p2p")]
 pub use identity::PeerIdentity;

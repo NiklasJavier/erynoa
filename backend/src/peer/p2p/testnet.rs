@@ -291,14 +291,32 @@ pub enum TestnetEvent {
         data: Vec<u8>,
         source: Option<PeerId>,
     },
+    /// Gossipsub: Peer ist dem Mesh beigetreten
+    GossipMeshPeerAdded { peer_id: PeerId, topic: TopicHash },
+    /// Gossipsub: Peer hat das Mesh verlassen
+    GossipMeshPeerRemoved { peer_id: PeerId, topic: TopicHash },
+    /// Gossipsub: Nachricht gesendet
+    GossipMessageSent { topic: TopicHash },
     /// Kademlia Bootstrap abgeschlossen
     KademliaBootstrapComplete,
     /// Kademlia Routing Table Update
     KademliaRoutingUpdate { peer_id: PeerId, bucket_size: usize },
     /// AutoNAT Status-Update
     AutoNatStatus { nat_status: String },
-    /// Relay-Reservation erfolgreich
+    /// Externe Adresse bestätigt
+    ExternalAddressConfirmed { address: Multiaddr },
+    /// Relay-Reservation erfolgreich (als Client)
     RelayReservation { relay_peer: PeerId },
+    /// Relay-Server: Circuit akzeptiert (wir servieren)
+    RelayCircuitOpened {
+        src_peer_id: PeerId,
+        dst_peer_id: PeerId,
+    },
+    /// Relay-Server: Circuit geschlossen
+    RelayCircuitClosed {
+        src_peer_id: PeerId,
+        dst_peer_id: PeerId,
+    },
     /// DCUTR Holepunching erfolgreich
     DirectConnectionEstablished { peer_id: PeerId },
     /// DCUTR Holepunching fehlgeschlagen
@@ -468,7 +486,10 @@ impl TestnetSwarm {
                         inbound = is_inbound,
                         "🔗 Connection established"
                     );
-                    let _ = self.event_tx.send(TestnetEvent::PeerConnected { peer_id, is_inbound });
+                    let _ = self.event_tx.send(TestnetEvent::PeerConnected {
+                        peer_id,
+                        is_inbound,
+                    });
                 }
                 SwarmEvent::ConnectionClosed { peer_id, cause, .. } => {
                     tracing::info!(peer_id = %peer_id, cause = ?cause, "🔌 Connection closed");
@@ -496,10 +517,15 @@ impl TestnetSwarm {
                         error = %error,
                         "❌ Outgoing connection error"
                     );
-                    let _ = self.event_tx.send(TestnetEvent::ConnectionError { peer_id });
+                    let _ = self
+                        .event_tx
+                        .send(TestnetEvent::ConnectionError { peer_id });
                 }
                 SwarmEvent::ExternalAddrConfirmed { address } => {
                     tracing::info!(addr = %address, "✅ External address confirmed");
+                    let _ = self.event_tx.send(TestnetEvent::ExternalAddressConfirmed {
+                        address: address.clone(),
+                    });
                 }
                 SwarmEvent::ExternalAddrExpired { address } => {
                     tracing::debug!(addr = %address, "⏰ External address expired");
@@ -572,7 +598,7 @@ impl TestnetSwarm {
                     topic = %message.topic,
                     source = ?message.source,
                     propagation = %propagation_source,
-                    "📨 Gossipsub message"
+                    "📨 Gossipsub message received"
                 );
                 let _ = self.event_tx.send(TestnetEvent::GossipMessage {
                     topic: message.topic,
@@ -581,10 +607,17 @@ impl TestnetSwarm {
                 });
             }
             gossipsub::Event::Subscribed { peer_id, topic } => {
-                tracing::info!(peer_id = %peer_id, topic = %topic, "📣 Peer subscribed");
+                tracing::info!(peer_id = %peer_id, topic = %topic, "📣 Peer joined mesh");
+                // Peer im Mesh = aktive Verbindung für dieses Topic
+                let _ = self
+                    .event_tx
+                    .send(TestnetEvent::GossipMeshPeerAdded { peer_id, topic });
             }
             gossipsub::Event::Unsubscribed { peer_id, topic } => {
-                tracing::debug!(peer_id = %peer_id, topic = %topic, "📣 Peer unsubscribed");
+                tracing::debug!(peer_id = %peer_id, topic = %topic, "📣 Peer left mesh");
+                let _ = self
+                    .event_tx
+                    .send(TestnetEvent::GossipMeshPeerRemoved { peer_id, topic });
             }
             gossipsub::Event::GossipsubNotSupported { peer_id } => {
                 tracing::debug!(peer_id = %peer_id, "Peer doesn't support gossipsub");
@@ -604,7 +637,12 @@ impl TestnetSwarm {
                     }
                 }
             }
-            kad::Event::RoutingUpdated { peer, is_new_peer, bucket_range, .. } => {
+            kad::Event::RoutingUpdated {
+                peer,
+                is_new_peer,
+                bucket_range,
+                ..
+            } => {
                 // bucket_range.1 ist Distance::MAX der Bucket, wir approximieren die Bucket-Größe
                 let bucket_idx = bucket_range.1.ilog2().unwrap_or(0) as usize;
                 tracing::debug!(peer_id = %peer, is_new = is_new_peer, bucket = bucket_idx, "Kademlia routing updated");
@@ -701,11 +739,9 @@ impl TestnetSwarm {
                     error = ?error,
                     "❌ DCUTR: Direct connection upgrade failed"
                 );
-                let _ = self
-                    .event_tx
-                    .send(TestnetEvent::DirectConnectionFailed {
-                        peer_id: remote_peer_id,
-                    });
+                let _ = self.event_tx.send(TestnetEvent::DirectConnectionFailed {
+                    peer_id: remote_peer_id,
+                });
             }
         }
     }
@@ -777,8 +813,13 @@ impl TestnetSwarm {
                 tracing::info!(
                     src = %src_peer_id,
                     dst = %dst_peer_id,
-                    "📡 Relay server: Circuit accepted"
+                    "📡 Relay server: Circuit accepted - NOW SERVING!"
                 );
+                // WICHTIG: Sende Event für Statistik
+                let _ = self.event_tx.send(TestnetEvent::RelayCircuitOpened {
+                    src_peer_id,
+                    dst_peer_id,
+                });
             }
             relay::Event::CircuitReqDenied {
                 src_peer_id,
@@ -801,6 +842,11 @@ impl TestnetSwarm {
                     error = ?error,
                     "📡 Relay server: Circuit closed"
                 );
+                // WICHTIG: Sende Event für Statistik
+                let _ = self.event_tx.send(TestnetEvent::RelayCircuitClosed {
+                    src_peer_id,
+                    dst_peer_id,
+                });
             }
             // Deprecated events - wir loggen sie, aber sie werden in Zukunft entfernt
             #[allow(deprecated)]

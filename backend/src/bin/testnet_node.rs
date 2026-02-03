@@ -246,6 +246,18 @@ async fn main() -> anyhow::Result<()> {
                         info!(topic = %topic, source = ?source, "📨 Gossip message received");
                         swarm_state_clone.gossip_message_received();
                     }
+                    TestnetEvent::GossipMeshPeerAdded { peer_id, topic } => {
+                        info!(peer_id = %peer_id, topic = %topic, "📣 Peer joined gossip mesh");
+                        swarm_state_clone.gossip_mesh_peer_added();
+                    }
+                    TestnetEvent::GossipMeshPeerRemoved { peer_id, topic } => {
+                        info!(peer_id = %peer_id, topic = %topic, "📣 Peer left gossip mesh");
+                        swarm_state_clone.gossip_mesh_peer_removed();
+                    }
+                    TestnetEvent::GossipMessageSent { topic } => {
+                        swarm_state_clone.gossip_message_sent();
+                        let _ = topic;
+                    }
                     // NAT-Traversal Events
                     TestnetEvent::AutoNatStatus { nat_status } => {
                         info!(status = %nat_status, "🌐 AutoNAT status changed");
@@ -259,9 +271,27 @@ async fn main() -> anyhow::Result<()> {
                         };
                         swarm_state_clone.set_nat_status(status);
                     }
+                    TestnetEvent::ExternalAddressConfirmed { address } => {
+                        info!(addr = %address, "🌐 External address confirmed");
+                        swarm_state_clone.add_external_address(address.to_string());
+                    }
                     TestnetEvent::RelayReservation { relay_peer } => {
-                        info!(relay = %relay_peer, "🔄 Relay reservation accepted");
+                        info!(relay = %relay_peer, "🔄 Relay reservation accepted (client)");
                         swarm_state_clone.relay_reservation_accepted(relay_peer.to_string());
+                    }
+                    TestnetEvent::RelayCircuitOpened {
+                        src_peer_id,
+                        dst_peer_id,
+                    } => {
+                        info!(src = %src_peer_id, dst = %dst_peer_id, "📡 Relay: Now serving circuit!");
+                        swarm_state_clone.relay_circuit_opened();
+                    }
+                    TestnetEvent::RelayCircuitClosed {
+                        src_peer_id,
+                        dst_peer_id,
+                    } => {
+                        info!(src = %src_peer_id, dst = %dst_peer_id, "📡 Relay: Circuit closed");
+                        swarm_state_clone.relay_circuit_closed();
                     }
                     TestnetEvent::DirectConnectionEstablished { peer_id } => {
                         info!(peer_id = %peer_id, "✅ DCUTR: Direct connection established via holepunching");
@@ -379,8 +409,9 @@ async fn start_api_server(
         Json, Router,
     };
     use erynoa_api::peer::p2p::{
-        create_diagnostic_state, generate_dashboard_html, ConnectionType, DiagnosticEvent,
-        DiagnosticRunner, DiagnosticState, HealthStatus, NetworkMetrics, SwarmSnapshot,
+        create_diagnostic_state, create_system_state, generate_dashboard_html,
+        generate_system_layers, DiagnosticEvent, DiagnosticRunner, HealthStatus, NetworkMetrics,
+        SwarmSnapshot, SystemSnapshot,
     };
     use futures::stream::Stream;
     use std::convert::Infallible;
@@ -393,7 +424,10 @@ async fn start_api_server(
     // Diagnostic State erstellen (Legacy - wird noch für Events gebraucht)
     let diagnostic_state = create_diagnostic_state(peer_id.clone());
 
-    // Snapshot-Typ für SSE - jetzt mit SwarmSnapshot
+    // System State für Core/ECLVM/Local/Protection Metriken
+    let system_state = create_system_state();
+
+    // Snapshot-Typ für SSE - jetzt mit SwarmSnapshot und SystemSnapshot
     #[derive(serde::Serialize)]
     struct StreamSnapshot {
         timestamp: String,
@@ -404,6 +438,9 @@ async fn start_api_server(
         /// Echte Swarm-Daten (optional für backwards compatibility)
         #[serde(skip_serializing_if = "Option::is_none")]
         swarm: Option<SwarmSnapshot>,
+        /// System-Module Daten (Core, ECLVM, Local, Protection)
+        #[serde(skip_serializing_if = "Option::is_none")]
+        system: Option<SystemSnapshot>,
     }
 
     let app = Router::new()
@@ -540,14 +577,16 @@ async fn start_api_server(
                 }
             }),
         )
-        // Server-Sent Events Stream (Real-Time!) - jetzt mit SwarmSnapshot
+        // Server-Sent Events Stream (Real-Time!) - jetzt mit SwarmSnapshot UND SystemSnapshot
         .route(
             "/diagnostics/stream",
             get({
                 let swarm_state = swarm_state.clone();
+                let system_state = system_state.clone();
                 let diagnostic_state = diagnostic_state.clone();
                 move || {
                     let swarm_state = swarm_state.clone();
+                    let system_state = system_state.clone();
                     let diagnostic_state = diagnostic_state.clone();
                     async move {
                         let interval = tokio::time::interval(Duration::from_millis(500));
@@ -556,6 +595,8 @@ async fn start_api_server(
                         let sse_stream = stream.map(move |_| {
                             // Echte Swarm-Daten
                             let swarm_snapshot = swarm_state.snapshot();
+                            // System-Module-Daten
+                            let system_snapshot = system_state.snapshot();
 
                             let snapshot = StreamSnapshot {
                                 timestamp: chrono::Utc::now().to_rfc3339(),
@@ -564,6 +605,7 @@ async fn start_api_server(
                                 recent_events: diagnostic_state.get_recent_events(5),
                                 health: diagnostic_state.get_health_status(),
                                 swarm: Some(swarm_snapshot),
+                                system: Some(system_snapshot),
                             };
 
                             let json = serde_json::to_string(&snapshot).unwrap_or_default();

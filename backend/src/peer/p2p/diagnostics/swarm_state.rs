@@ -406,6 +406,24 @@ impl SwarmState {
         self.gossip_topics_subscribed.fetch_add(1, Ordering::SeqCst);
     }
 
+    /// Peer ist dem Gossipsub Mesh beigetreten
+    pub fn gossip_mesh_peer_added(&self) {
+        self.gossip_mesh_size.fetch_add(1, Ordering::SeqCst);
+    }
+
+    /// Peer hat das Gossipsub Mesh verlassen
+    pub fn gossip_mesh_peer_removed(&self) {
+        let _ = self
+            .gossip_mesh_size
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |v| {
+                if v > 0 {
+                    Some(v - 1)
+                } else {
+                    Some(0)
+                }
+            });
+    }
+
     // ========================================================================
     // CONNECTION UPDATES
     // ========================================================================

@@ -243,6 +243,45 @@ pub struct DiagnosticSummary {
     pub health_percentage: f32,
 }
 
+impl DiagnosticSummary {
+    /// Erstelle Summary aus Layer-Diagnostics
+    pub fn from_layers(layers: &[LayerDiagnostic]) -> Self {
+        let mut total = 0;
+        let mut healthy = 0;
+        let mut degraded = 0;
+        let mut unavailable = 0;
+        let mut disabled = 0;
+
+        for layer in layers {
+            for check in &layer.checks {
+                total += 1;
+                match check.status {
+                    ComponentStatus::Healthy => healthy += 1,
+                    ComponentStatus::Degraded => degraded += 1,
+                    ComponentStatus::Unavailable => unavailable += 1,
+                    ComponentStatus::Disabled => disabled += 1,
+                    _ => {}
+                }
+            }
+        }
+
+        let health_percentage = if total > 0 {
+            (healthy as f32 / total as f32) * 100.0
+        } else {
+            100.0
+        };
+
+        Self {
+            total_checks: total,
+            healthy_count: healthy,
+            degraded_count: degraded,
+            unavailable_count: unavailable,
+            disabled_count: disabled,
+            health_percentage,
+        }
+    }
+}
+
 impl P2PDiagnostics {
     pub fn new() -> Self {
         Self {
@@ -429,7 +468,7 @@ impl Default for P2PDiagnostics {
 // STREAM SNAPSHOT
 // ============================================================================
 
-/// Snapshot für SSE-Stream
+/// Snapshot für SSE-Stream - enthält alle Echtzeit-Daten
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StreamSnapshot {
     pub timestamp: String,
@@ -437,6 +476,21 @@ pub struct StreamSnapshot {
     pub peer_count: usize,
     pub recent_events: Vec<super::DiagnosticEvent>,
     pub health: HealthStatus,
+    /// Swarm snapshot mit P2P-Netzwerk-Daten
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub swarm: Option<super::SwarmSnapshot>,
+    /// Layer diagnostics
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub layers: Option<Vec<LayerDiagnostic>>,
+    /// Summary der Layer-Checks
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub summary: Option<DiagnosticSummary>,
+    /// System-Layer für Core, ECLVM, Local, Protection
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub system_layers: Option<Vec<LayerDiagnostic>>,
+    /// System-Snapshot für Metriken aller Module
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub system: Option<super::SystemSnapshot>,
 }
 
 /// Vereinfachter Health-Status für Dashboard
