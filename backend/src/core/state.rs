@@ -143,6 +143,10 @@ pub enum StateComponent {
     IntentParser,
     /// Realm-Isolation und per-Realm State
     Realm,
+    /// Room: Sub-Realm-Isolation mit eigenem Controller-Scope (Κ22)
+    Room,
+    /// Partition: Trust-basierte Berechtigungspartition innerhalb eines Rooms
+    Partition,
     // P2P Network Layer
     Swarm,
     Gossip,
@@ -150,6 +154,21 @@ pub enum StateComponent {
     Relay,
     NatTraversal,
     Privacy,
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ENGINE-LAYER KOMPONENTEN (6 neue Engines für SOLL-Zustand)
+    // ═══════════════════════════════════════════════════════════════════════════
+    /// UI-Engine: Deklaratives, Trust-basiertes Interface-Rendering (Κ22)
+    UI,
+    /// DataLogic-Engine: Reaktive Event-Verarbeitung und Aggregation (Κ9-Κ12)
+    DataLogic,
+    /// API-Engine: Dynamische REST-API-Definition per ECL (Κ23)
+    API,
+    /// Governance-Engine: DAO-Prinzipien und Abstimmungsmechanismen (Κ19, Κ21)
+    Governance,
+    /// Controller-Engine: Berechtigungsverwaltung mit Delegation (Κ5)
+    Controller,
+    /// BlueprintComposer: Template-Komposition und Vererbung
+    BlueprintComposer,
 }
 
 /// Beziehungs-Graph zwischen State-Komponenten
@@ -239,6 +258,83 @@ impl StateGraph {
                 (NatTraversal, Triggers, Swarm), // NAT-Status beeinflusst Erreichbarkeit
                 (Privacy, DependsOn, Trust),     // Privacy-Level basiert auf Trust
                 (Privacy, Validates, Gossip),    // Privacy validiert Routing
+                // ═══════════════════════════════════════════════════════════════════════════
+                // ROOM & PARTITION BEZIEHUNGEN (Sub-Realm Isolation)
+                // ═══════════════════════════════════════════════════════════════════════════
+                (Room, DependsOn, Realm), // Room ist Sub-Einheit eines Realms
+                (Room, DependsOn, Trust), // Room-Access prüft Trust
+                (Room, Triggers, Event),  // Room-Aktionen erzeugen Events
+                (Room, Aggregates, Controller), // Room trackt Controller-Permissions
+                (Partition, DependsOn, Room), // Partition ist Sub-Einheit eines Rooms
+                (Partition, DependsOn, Trust), // Partition-Access prüft Trust
+                (Partition, Validates, Controller), // Partition validiert Controller-Scope
+                // ═══════════════════════════════════════════════════════════════════════════
+                // UI-ENGINE BEZIEHUNGEN
+                // ═══════════════════════════════════════════════════════════════════════════
+                (UI, DependsOn, Trust), // UI-Sichtbarkeit basiert auf Trust
+                (UI, DependsOn, Realm), // UI ist per-Realm isoliert
+                (UI, DependsOn, Room),  // UI-Scoping auf Room-Ebene
+                (UI, DependsOn, Controller), // UI nutzt Controller für Permissions
+                (UI, Triggers, Event),  // UI-Actions erzeugen Events
+                (UI, Aggregates, DataLogic), // UI nutzt DataLogic für Bindings
+                (UI, DependsOn, ECLVM), // UI-Logik läuft in ECLVM
+                (UI, DependsOn, Gas),   // UI-Rendering verbraucht Gas
+                (UI, DependsOn, Mana),  // UI-Events verbrauchen Mana
+                // ═══════════════════════════════════════════════════════════════════════════
+                // DATALOGIC-ENGINE BEZIEHUNGEN
+                // ═══════════════════════════════════════════════════════════════════════════
+                (DataLogic, DependsOn, Event), // DataLogic verarbeitet Events
+                (DataLogic, Aggregates, Event), // DataLogic aggregiert Event-Streams
+                (DataLogic, Triggers, Event),  // Aggregationen emittieren Events
+                (DataLogic, DependsOn, Trust), // DataAccess prüft Trust
+                (DataLogic, DependsOn, ECLVM), // DataLogic-Funktionen in ECLVM
+                (DataLogic, DependsOn, Gas),   // Compute verbraucht Gas
+                (DataLogic, Validates, UI),    // DataLogic validiert UI-Bindings
+                // ═══════════════════════════════════════════════════════════════════════════
+                // API-ENGINE BEZIEHUNGEN
+                // ═══════════════════════════════════════════════════════════════════════════
+                (API, DependsOn, Trust),      // API-Access basiert auf Trust
+                (API, DependsOn, Controller), // API nutzt Controller für AuthZ
+                (API, Validates, Gateway),    // API validiert External-Gateway
+                (API, Triggers, Event),       // API-Calls erzeugen Events
+                (API, DependsOn, ECLVM),      // API-Handler laufen in ECLVM
+                (API, DependsOn, Gas),        // API-Processing verbraucht Gas
+                (API, DependsOn, Mana),       // API-Responses verbrauchen Mana
+                (API, Aggregates, DataLogic), // API nutzt DataLogic für Queries
+                // ═══════════════════════════════════════════════════════════════════════════
+                // GOVERNANCE-ENGINE BEZIEHUNGEN
+                // ═══════════════════════════════════════════════════════════════════════════
+                (Governance, DependsOn, Trust), // Voting-Power basiert auf Trust
+                (Governance, DependsOn, Quadratic), // Governance nutzt Quadratic-Voting
+                (Governance, Validates, Controller), // Governance validiert Controller-Changes
+                (Governance, Triggers, Controller), // Governance-Votes ändern Controller
+                (Governance, Triggers, Event),  // Proposals/Votes erzeugen Events
+                (Governance, DependsOn, ECLVM), // Governance-Regeln in ECLVM
+                (Governance, DependsOn, Realm), // Governance ist per-Realm
+                (Governance, Validates, AntiCalcification), // Governance prüft Machtkonz.
+                // ═══════════════════════════════════════════════════════════════════════════
+                // CONTROLLER-ENGINE BEZIEHUNGEN
+                // ═══════════════════════════════════════════════════════════════════════════
+                (Controller, DependsOn, Trust), // Permissions basieren auf Trust
+                (Controller, Triggers, Event),  // Permission-Changes erzeugen Events
+                (Controller, Validates, Gateway), // Controller validiert Crossings
+                (Controller, Validates, API),   // Controller validiert API-Access
+                (Controller, Validates, UI),    // Controller validiert UI-Access
+                (Controller, DependsOn, Realm), // Controller-Scope ist per-Realm
+                (Controller, DependsOn, Room),  // Controller-Scope ist per-Room
+                (Controller, DependsOn, Partition), // Controller-Scope ist per-Partition
+                (Controller, Aggregates, Governance), // Controller trackt Gov-Delegations
+                (Controller, DependsOn, ECLVM), // Permission-Rules in ECLVM
+                // ═══════════════════════════════════════════════════════════════════════════
+                // BLUEPRINTCOMPOSER-ENGINE BEZIEHUNGEN
+                // ═══════════════════════════════════════════════════════════════════════════
+                (BlueprintComposer, DependsOn, Blueprint), // Composer nutzt Blueprint-Storage
+                (BlueprintComposer, Aggregates, ECLBlueprint), // Composer aggregiert Instanzen
+                (BlueprintComposer, Triggers, Event),      // Composition erzeugt Events
+                (BlueprintComposer, DependsOn, ECLVM),     // Composition läuft in ECLVM
+                (BlueprintComposer, DependsOn, Trust),     // Blueprint-Publish prüft Trust
+                (BlueprintComposer, Validates, Realm),     // Composer validiert Realm-Compat.
+                (BlueprintComposer, DependsOn, Gas),       // Composition verbraucht Gas
             ],
         }
     }
@@ -4002,6 +4098,1948 @@ pub struct P2PStateSnapshot {
 }
 
 // ============================================================================
+// ENGINE-LAYER STATE (6 neue Engines für SOLL-Zustand)
+// ============================================================================
+
+// ────────────────────────────────────────────────────────────────────────────
+// 2.1 UI-ENGINE STATE
+// ────────────────────────────────────────────────────────────────────────────
+
+/// UI-Engine State mit Component-Tree und Binding-Tracking
+///
+/// # Design
+///
+/// Die UI-Engine verwaltet deklarative, Trust-basierte Interfaces:
+/// - **Component-Tree**: Hierarchischer UI-Aufbau
+/// - **Bindings**: Reaktive Daten-Verbindungen
+/// - **Trust-Gates**: Sichtbarkeit basierend auf Trust
+/// - **Credential-Gates**: Zugriffskontrolle basierend auf Credentials
+/// - **Render-Cache**: Optimierte Re-Renders
+///
+/// # StateGraph-Verknüpfungen
+///
+/// ```text
+/// UI ──DependsOn──▶ Trust (Sichtbarkeit)
+/// UI ──DependsOn──▶ Realm (Isolation)
+/// UI ──DependsOn──▶ Room (Scoping)
+/// UI ──DependsOn──▶ Controller (Permissions)
+/// UI ──Triggers───▶ Event (UI-Actions)
+/// UI ──Aggregates─▶ DataLogic (Bindings)
+/// UI ──DependsOn──▶ ECLVM (UI-Logik)
+/// UI ──DependsOn──▶ Gas/Mana (Resources)
+/// ```
+#[derive(Debug)]
+pub struct UIState {
+    // ─────────────────────────────────────────────────────────────────────────
+    // Component-Tree Metriken
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Total registrierte UI-Components
+    pub components_registered: AtomicU64,
+    /// Aktuell aktive Components (mounted)
+    pub components_active: AtomicU64,
+    /// Component-Updates durchgeführt
+    pub component_updates: AtomicU64,
+    /// Component-Renders durchgeführt
+    pub renders: AtomicU64,
+    /// Cached Renders (keine Änderung)
+    pub cache_hits: AtomicU64,
+    /// Re-Renders (State-Änderung)
+    pub cache_misses: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Binding-Tracking
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Aktive Bindings
+    pub bindings_active: AtomicU64,
+    /// Binding-Updates propagiert
+    pub binding_updates: AtomicU64,
+    /// Binding-Fehler (z.B. Source nicht verfügbar)
+    pub binding_errors: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Trust-Gates (Sichtbarkeits-Kontrolle)
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Trust-Gate Evaluationen
+    pub trust_gate_evaluations: AtomicU64,
+    /// Trust-Gate Allowed
+    pub trust_gate_allowed: AtomicU64,
+    /// Trust-Gate Denied
+    pub trust_gate_denied: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Credential-Gates (Zugriffs-Kontrolle)
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Credential-Gate Evaluationen
+    pub credential_gate_evaluations: AtomicU64,
+    /// Credential-Gate Allowed
+    pub credential_gate_allowed: AtomicU64,
+    /// Credential-Gate Denied
+    pub credential_gate_denied: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Per-Realm UI-State
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Realm-spezifische UI-Metriken
+    pub realm_ui: RwLock<HashMap<String, RealmUIState>>,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Resource-Verbrauch
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Gas verbraucht für UI-Rendering
+    pub gas_consumed: AtomicU64,
+    /// Mana verbraucht für UI-Events
+    pub mana_consumed: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Relationship-Tracking (StateGraph)
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Trust-Dependency-Updates (UI ← Trust)
+    pub trust_dependency_updates: AtomicU64,
+    /// DataLogic-Aggregations (UI ⊃ DataLogic)
+    pub datalogic_aggregations: AtomicU64,
+    /// Controller-Validations (Controller ✓ UI)
+    pub controller_validations: AtomicU64,
+    /// Events getriggert (UI → Event)
+    pub events_triggered: AtomicU64,
+}
+
+/// Per-Realm UI-State für Isolation
+#[derive(Debug)]
+pub struct RealmUIState {
+    pub components: AtomicU64,
+    pub renders: AtomicU64,
+    pub bindings: AtomicU64,
+    pub trust_gate_denied: AtomicU64,
+}
+
+impl RealmUIState {
+    pub fn new() -> Self {
+        Self {
+            components: AtomicU64::new(0),
+            renders: AtomicU64::new(0),
+            bindings: AtomicU64::new(0),
+            trust_gate_denied: AtomicU64::new(0),
+        }
+    }
+}
+
+impl Default for RealmUIState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl UIState {
+    pub fn new() -> Self {
+        Self {
+            components_registered: AtomicU64::new(0),
+            components_active: AtomicU64::new(0),
+            component_updates: AtomicU64::new(0),
+            renders: AtomicU64::new(0),
+            cache_hits: AtomicU64::new(0),
+            cache_misses: AtomicU64::new(0),
+            bindings_active: AtomicU64::new(0),
+            binding_updates: AtomicU64::new(0),
+            binding_errors: AtomicU64::new(0),
+            trust_gate_evaluations: AtomicU64::new(0),
+            trust_gate_allowed: AtomicU64::new(0),
+            trust_gate_denied: AtomicU64::new(0),
+            credential_gate_evaluations: AtomicU64::new(0),
+            credential_gate_allowed: AtomicU64::new(0),
+            credential_gate_denied: AtomicU64::new(0),
+            realm_ui: RwLock::new(HashMap::new()),
+            gas_consumed: AtomicU64::new(0),
+            mana_consumed: AtomicU64::new(0),
+            trust_dependency_updates: AtomicU64::new(0),
+            datalogic_aggregations: AtomicU64::new(0),
+            controller_validations: AtomicU64::new(0),
+            events_triggered: AtomicU64::new(0),
+        }
+    }
+
+    /// Registriere neue Component
+    pub fn register_component(&self, realm_id: Option<&str>) {
+        self.components_registered.fetch_add(1, Ordering::Relaxed);
+        self.components_active.fetch_add(1, Ordering::Relaxed);
+
+        if let Some(realm) = realm_id {
+            self.get_or_create_realm(realm)
+                .components
+                .fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    /// Component unmounted
+    pub fn unregister_component(&self) {
+        self.components_active.fetch_sub(1, Ordering::Relaxed);
+    }
+
+    /// Render durchgeführt
+    pub fn render(&self, from_cache: bool, gas: u64, mana: u64, realm_id: Option<&str>) {
+        self.renders.fetch_add(1, Ordering::Relaxed);
+        if from_cache {
+            self.cache_hits.fetch_add(1, Ordering::Relaxed);
+        } else {
+            self.cache_misses.fetch_add(1, Ordering::Relaxed);
+        }
+        self.gas_consumed.fetch_add(gas, Ordering::Relaxed);
+        self.mana_consumed.fetch_add(mana, Ordering::Relaxed);
+
+        if let Some(realm) = realm_id {
+            self.get_or_create_realm(realm)
+                .renders
+                .fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    /// Trust-Gate evaluiert
+    pub fn trust_gate(&self, allowed: bool, realm_id: Option<&str>) {
+        self.trust_gate_evaluations.fetch_add(1, Ordering::Relaxed);
+        if allowed {
+            self.trust_gate_allowed.fetch_add(1, Ordering::Relaxed);
+        } else {
+            self.trust_gate_denied.fetch_add(1, Ordering::Relaxed);
+            if let Some(realm) = realm_id {
+                self.get_or_create_realm(realm)
+                    .trust_gate_denied
+                    .fetch_add(1, Ordering::Relaxed);
+            }
+        }
+    }
+
+    /// Credential-Gate evaluiert
+    pub fn credential_gate(&self, allowed: bool) {
+        self.credential_gate_evaluations
+            .fetch_add(1, Ordering::Relaxed);
+        if allowed {
+            self.credential_gate_allowed.fetch_add(1, Ordering::Relaxed);
+        } else {
+            self.credential_gate_denied.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    /// Binding update
+    pub fn binding_update(&self, success: bool, realm_id: Option<&str>) {
+        self.binding_updates.fetch_add(1, Ordering::Relaxed);
+        if !success {
+            self.binding_errors.fetch_add(1, Ordering::Relaxed);
+        }
+        if let Some(realm) = realm_id {
+            self.get_or_create_realm(realm)
+                .bindings
+                .fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    fn get_or_create_realm(&self, realm_id: &str) -> &RealmUIState {
+        if let Ok(mut realms) = self.realm_ui.write() {
+            realms
+                .entry(realm_id.to_string())
+                .or_insert_with(RealmUIState::new);
+        }
+        // Safe: Entry wurde gerade erstellt
+        unsafe {
+            self.realm_ui
+                .read()
+                .unwrap()
+                .get(realm_id)
+                .map(|r| &*(r as *const RealmUIState))
+                .unwrap_or_else(|| {
+                    static DEFAULT: std::sync::OnceLock<RealmUIState> = std::sync::OnceLock::new();
+                    DEFAULT.get_or_init(RealmUIState::new)
+                })
+        }
+    }
+
+    /// Cache-Hit-Rate berechnen
+    pub fn cache_hit_rate(&self) -> f64 {
+        let total =
+            self.cache_hits.load(Ordering::Relaxed) + self.cache_misses.load(Ordering::Relaxed);
+        if total > 0 {
+            self.cache_hits.load(Ordering::Relaxed) as f64 / total as f64
+        } else {
+            1.0
+        }
+    }
+
+    /// Trust-Gate-Allow-Rate berechnen
+    pub fn trust_gate_allow_rate(&self) -> f64 {
+        let total = self.trust_gate_evaluations.load(Ordering::Relaxed) as f64;
+        if total > 0.0 {
+            self.trust_gate_allowed.load(Ordering::Relaxed) as f64 / total
+        } else {
+            1.0
+        }
+    }
+
+    /// Credential-Gate-Allow-Rate berechnen
+    pub fn credential_gate_allow_rate(&self) -> f64 {
+        let total = self.credential_gate_evaluations.load(Ordering::Relaxed) as f64;
+        if total > 0.0 {
+            self.credential_gate_allowed.load(Ordering::Relaxed) as f64 / total
+        } else {
+            1.0
+        }
+    }
+
+    pub fn snapshot(&self) -> UIStateSnapshot {
+        UIStateSnapshot {
+            components_registered: self.components_registered.load(Ordering::Relaxed),
+            components_active: self.components_active.load(Ordering::Relaxed),
+            component_updates: self.component_updates.load(Ordering::Relaxed),
+            renders: self.renders.load(Ordering::Relaxed),
+            cache_hit_rate: self.cache_hit_rate(),
+            bindings_active: self.bindings_active.load(Ordering::Relaxed),
+            binding_updates: self.binding_updates.load(Ordering::Relaxed),
+            binding_errors: self.binding_errors.load(Ordering::Relaxed),
+            trust_gate_evaluations: self.trust_gate_evaluations.load(Ordering::Relaxed),
+            trust_gate_allow_rate: self.trust_gate_allow_rate(),
+            credential_gate_evaluations: self.credential_gate_evaluations.load(Ordering::Relaxed),
+            credential_gate_allow_rate: self.credential_gate_allow_rate(),
+            gas_consumed: self.gas_consumed.load(Ordering::Relaxed),
+            mana_consumed: self.mana_consumed.load(Ordering::Relaxed),
+            events_triggered: self.events_triggered.load(Ordering::Relaxed),
+        }
+    }
+}
+
+impl Default for UIState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UIStateSnapshot {
+    pub components_registered: u64,
+    pub components_active: u64,
+    pub component_updates: u64,
+    pub renders: u64,
+    pub cache_hit_rate: f64,
+    pub bindings_active: u64,
+    pub binding_updates: u64,
+    pub binding_errors: u64,
+    pub trust_gate_evaluations: u64,
+    pub trust_gate_allow_rate: f64,
+    pub credential_gate_evaluations: u64,
+    pub credential_gate_allow_rate: f64,
+    pub gas_consumed: u64,
+    pub mana_consumed: u64,
+    pub events_triggered: u64,
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// 2.2 API-ENGINE STATE
+// ────────────────────────────────────────────────────────────────────────────
+
+/// API-Engine State mit Endpoint-Registry und Rate-Limiting
+///
+/// # Design
+///
+/// Die API-Engine ermöglicht dynamische REST-API-Definition per ECL:
+/// - **Endpoint-Registry**: Routing-Tabelle per Realm
+/// - **Rate-Limits**: Trust-basierte Throttling
+/// - **Metrics**: Request/Response-Tracking mit Latenz-Percentiles
+///
+/// # StateGraph-Verknüpfungen
+///
+/// ```text
+/// API ──DependsOn──▶ Trust (Access-Control)
+/// API ──DependsOn──▶ Controller (AuthZ)
+/// API ──Validates──▶ Gateway (External)
+/// API ──Triggers───▶ Event (API-Calls)
+/// API ──Aggregates─▶ DataLogic (Queries)
+/// API ──DependsOn──▶ ECLVM (Handler)
+/// API ──DependsOn──▶ Gas/Mana (Resources)
+/// ```
+#[derive(Debug)]
+pub struct APIState {
+    // ─────────────────────────────────────────────────────────────────────────
+    // Endpoint-Registry
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Registrierte Endpoints total
+    pub endpoints_registered: AtomicU64,
+    /// Aktive Endpoints
+    pub endpoints_active: AtomicU64,
+    /// Endpoint-Updates (Hot-Reload)
+    pub endpoint_updates: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Request-Metriken
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Total Requests
+    pub requests_total: AtomicU64,
+    /// Erfolgreiche Requests (2xx)
+    pub requests_success: AtomicU64,
+    /// Client-Errors (4xx)
+    pub requests_client_error: AtomicU64,
+    /// Server-Errors (5xx)
+    pub requests_server_error: AtomicU64,
+    /// Rate-Limited Requests (429)
+    pub requests_rate_limited: AtomicU64,
+    /// Auth-Failed Requests (401/403)
+    pub requests_auth_failed: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Latenz-Tracking
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Durchschnittliche Latenz (µs)
+    pub avg_latency_us: RwLock<f64>,
+    /// P95 Latenz (µs)
+    pub p95_latency_us: RwLock<f64>,
+    /// P99 Latenz (µs)
+    pub p99_latency_us: RwLock<f64>,
+    /// Latenz-Historie (Rolling Window)
+    latency_history: RwLock<Vec<u64>>,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Rate-Limiting
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Aktive Rate-Limit-Buckets
+    pub rate_limit_buckets: AtomicU64,
+    /// Rate-Limit-Resets
+    pub rate_limit_resets: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Per-Realm API-State
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Realm-spezifische API-Metriken
+    pub realm_api: RwLock<HashMap<String, RealmAPIState>>,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Resource-Verbrauch
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Gas verbraucht für API-Processing
+    pub gas_consumed: AtomicU64,
+    /// Mana verbraucht für Responses
+    pub mana_consumed: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Relationship-Tracking (StateGraph)
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Trust-Dependency-Updates (API ← Trust)
+    pub trust_dependency_updates: AtomicU64,
+    /// Controller-Validations (Controller ✓ API)
+    pub controller_validations: AtomicU64,
+    /// Gateway-Validations (API ✓ Gateway)
+    pub gateway_validations: AtomicU64,
+    /// Events getriggert (API → Event)
+    pub events_triggered: AtomicU64,
+}
+
+/// Per-Realm API-State für Isolation
+#[derive(Debug)]
+pub struct RealmAPIState {
+    pub endpoints: AtomicU64,
+    pub requests: AtomicU64,
+    pub rate_limited: AtomicU64,
+    pub auth_failed: AtomicU64,
+}
+
+impl RealmAPIState {
+    pub fn new() -> Self {
+        Self {
+            endpoints: AtomicU64::new(0),
+            requests: AtomicU64::new(0),
+            rate_limited: AtomicU64::new(0),
+            auth_failed: AtomicU64::new(0),
+        }
+    }
+}
+
+impl Default for RealmAPIState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl APIState {
+    pub fn new() -> Self {
+        Self {
+            endpoints_registered: AtomicU64::new(0),
+            endpoints_active: AtomicU64::new(0),
+            endpoint_updates: AtomicU64::new(0),
+            requests_total: AtomicU64::new(0),
+            requests_success: AtomicU64::new(0),
+            requests_client_error: AtomicU64::new(0),
+            requests_server_error: AtomicU64::new(0),
+            requests_rate_limited: AtomicU64::new(0),
+            requests_auth_failed: AtomicU64::new(0),
+            avg_latency_us: RwLock::new(0.0),
+            p95_latency_us: RwLock::new(0.0),
+            p99_latency_us: RwLock::new(0.0),
+            latency_history: RwLock::new(Vec::with_capacity(1000)),
+            rate_limit_buckets: AtomicU64::new(0),
+            rate_limit_resets: AtomicU64::new(0),
+            realm_api: RwLock::new(HashMap::new()),
+            gas_consumed: AtomicU64::new(0),
+            mana_consumed: AtomicU64::new(0),
+            trust_dependency_updates: AtomicU64::new(0),
+            controller_validations: AtomicU64::new(0),
+            gateway_validations: AtomicU64::new(0),
+            events_triggered: AtomicU64::new(0),
+        }
+    }
+
+    /// Endpoint registrieren
+    pub fn register_endpoint(&self, realm_id: Option<&str>) {
+        self.endpoints_registered.fetch_add(1, Ordering::Relaxed);
+        self.endpoints_active.fetch_add(1, Ordering::Relaxed);
+
+        if let Some(realm) = realm_id {
+            self.get_or_create_realm(realm)
+                .endpoints
+                .fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    /// Request verarbeitet
+    pub fn record_request(
+        &self,
+        latency_us: u64,
+        status: u16,
+        gas: u64,
+        mana: u64,
+        realm_id: Option<&str>,
+    ) {
+        self.requests_total.fetch_add(1, Ordering::Relaxed);
+        self.gas_consumed.fetch_add(gas, Ordering::Relaxed);
+        self.mana_consumed.fetch_add(mana, Ordering::Relaxed);
+        self.events_triggered.fetch_add(1, Ordering::Relaxed);
+
+        // Status-Kategorie
+        match status {
+            200..=299 => {
+                self.requests_success.fetch_add(1, Ordering::Relaxed);
+            }
+            400..=499 => {
+                self.requests_client_error.fetch_add(1, Ordering::Relaxed);
+                if status == 429 {
+                    self.requests_rate_limited.fetch_add(1, Ordering::Relaxed);
+                    if let Some(realm) = realm_id {
+                        self.get_or_create_realm(realm)
+                            .rate_limited
+                            .fetch_add(1, Ordering::Relaxed);
+                    }
+                } else if status == 401 || status == 403 {
+                    self.requests_auth_failed.fetch_add(1, Ordering::Relaxed);
+                    if let Some(realm) = realm_id {
+                        self.get_or_create_realm(realm)
+                            .auth_failed
+                            .fetch_add(1, Ordering::Relaxed);
+                    }
+                }
+            }
+            500..=599 => {
+                self.requests_server_error.fetch_add(1, Ordering::Relaxed);
+            }
+            _ => {}
+        }
+
+        // Realm-Tracking
+        if let Some(realm) = realm_id {
+            self.get_or_create_realm(realm)
+                .requests
+                .fetch_add(1, Ordering::Relaxed);
+        }
+
+        // Latenz-Tracking
+        self.update_latency(latency_us);
+    }
+
+    fn update_latency(&self, latency_us: u64) {
+        if let Ok(mut history) = self.latency_history.write() {
+            history.push(latency_us);
+            if history.len() > 1000 {
+                history.remove(0);
+            }
+
+            // Durchschnitt
+            let avg = history.iter().sum::<u64>() as f64 / history.len() as f64;
+            if let Ok(mut a) = self.avg_latency_us.write() {
+                *a = avg;
+            }
+
+            // Percentiles
+            if history.len() >= 10 {
+                let mut sorted = history.clone();
+                sorted.sort_unstable();
+                let p95_idx = (sorted.len() as f64 * 0.95) as usize;
+                let p99_idx = (sorted.len() as f64 * 0.99) as usize;
+
+                if let Ok(mut p95) = self.p95_latency_us.write() {
+                    *p95 = sorted
+                        .get(p95_idx.min(sorted.len() - 1))
+                        .copied()
+                        .unwrap_or(0) as f64;
+                }
+                if let Ok(mut p99) = self.p99_latency_us.write() {
+                    *p99 = sorted
+                        .get(p99_idx.min(sorted.len() - 1))
+                        .copied()
+                        .unwrap_or(0) as f64;
+                }
+            }
+        }
+    }
+
+    fn get_or_create_realm(&self, realm_id: &str) -> &RealmAPIState {
+        if let Ok(mut realms) = self.realm_api.write() {
+            realms
+                .entry(realm_id.to_string())
+                .or_insert_with(RealmAPIState::new);
+        }
+        unsafe {
+            self.realm_api
+                .read()
+                .unwrap()
+                .get(realm_id)
+                .map(|r| &*(r as *const RealmAPIState))
+                .unwrap_or_else(|| {
+                    static DEFAULT: std::sync::OnceLock<RealmAPIState> = std::sync::OnceLock::new();
+                    DEFAULT.get_or_init(RealmAPIState::new)
+                })
+        }
+    }
+
+    /// Success-Rate berechnen
+    pub fn success_rate(&self) -> f64 {
+        let total = self.requests_total.load(Ordering::Relaxed) as f64;
+        if total > 0.0 {
+            self.requests_success.load(Ordering::Relaxed) as f64 / total
+        } else {
+            1.0
+        }
+    }
+
+    pub fn snapshot(&self) -> APIStateSnapshot {
+        APIStateSnapshot {
+            endpoints_registered: self.endpoints_registered.load(Ordering::Relaxed),
+            endpoints_active: self.endpoints_active.load(Ordering::Relaxed),
+            endpoint_updates: self.endpoint_updates.load(Ordering::Relaxed),
+            requests_total: self.requests_total.load(Ordering::Relaxed),
+            requests_success: self.requests_success.load(Ordering::Relaxed),
+            success_rate: self.success_rate(),
+            requests_client_error: self.requests_client_error.load(Ordering::Relaxed),
+            requests_server_error: self.requests_server_error.load(Ordering::Relaxed),
+            requests_rate_limited: self.requests_rate_limited.load(Ordering::Relaxed),
+            requests_auth_failed: self.requests_auth_failed.load(Ordering::Relaxed),
+            avg_latency_us: self.avg_latency_us.read().map(|v| *v).unwrap_or(0.0),
+            p95_latency_us: self.p95_latency_us.read().map(|v| *v).unwrap_or(0.0),
+            p99_latency_us: self.p99_latency_us.read().map(|v| *v).unwrap_or(0.0),
+            gas_consumed: self.gas_consumed.load(Ordering::Relaxed),
+            mana_consumed: self.mana_consumed.load(Ordering::Relaxed),
+            events_triggered: self.events_triggered.load(Ordering::Relaxed),
+        }
+    }
+}
+
+impl Default for APIState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct APIStateSnapshot {
+    pub endpoints_registered: u64,
+    pub endpoints_active: u64,
+    pub endpoint_updates: u64,
+    pub requests_total: u64,
+    pub requests_success: u64,
+    pub success_rate: f64,
+    pub requests_client_error: u64,
+    pub requests_server_error: u64,
+    pub requests_rate_limited: u64,
+    pub requests_auth_failed: u64,
+    pub avg_latency_us: f64,
+    pub p95_latency_us: f64,
+    pub p99_latency_us: f64,
+    pub gas_consumed: u64,
+    pub mana_consumed: u64,
+    pub events_triggered: u64,
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// 2.3 GOVERNANCE-ENGINE STATE
+// ────────────────────────────────────────────────────────────────────────────
+
+/// Governance-Engine State mit Proposal-Tracking und Delegation-Graph
+///
+/// # Design
+///
+/// Die Governance-Engine implementiert DAO-Prinzipien:
+/// - **Quadratic Voting**: √-basierte Stimmgewichtung (Κ21)
+/// - **Delegation**: Transitive Trust-Delegation (Liquid Democracy)
+/// - **Anti-Calcification**: Machtkonzentrations-Check (Κ19)
+/// - **Proposals**: Lifecycle-Management mit Quorum
+///
+/// # StateGraph-Verknüpfungen
+///
+/// ```text
+/// Governance ──DependsOn──▶ Trust (Voting-Power)
+/// Governance ──DependsOn──▶ Quadratic (Voting-Mechanik)
+/// Governance ──Validates──▶ Controller (Permission-Changes)
+/// Governance ──Triggers───▶ Controller (Vote-Results)
+/// Governance ──Triggers───▶ Event (Proposals/Votes)
+/// Governance ──Validates──▶ AntiCalcification (Power-Check)
+/// ```
+#[derive(Debug)]
+pub struct GovernanceState {
+    // ─────────────────────────────────────────────────────────────────────────
+    // Proposal-Tracking
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Total erstellte Proposals
+    pub proposals_created: AtomicU64,
+    /// Aktive Proposals (in Voting-Phase)
+    pub proposals_active: AtomicU64,
+    /// Abgeschlossene Proposals
+    pub proposals_completed: AtomicU64,
+    /// Angenommene Proposals
+    pub proposals_accepted: AtomicU64,
+    /// Abgelehnte Proposals
+    pub proposals_rejected: AtomicU64,
+    /// Abgebrochene Proposals (Quorum nicht erreicht)
+    pub proposals_expired: AtomicU64,
+    /// Vetoed Proposals
+    pub proposals_vetoed: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Voting-Metriken
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Total abgegebene Votes
+    pub votes_cast: AtomicU64,
+    /// Unique Voters (geschätzt)
+    pub unique_voters: AtomicU64,
+    /// Delegierte Votes
+    pub votes_delegated: AtomicU64,
+    /// Quadratische Reduktionen angewendet
+    pub quadratic_reductions: AtomicU64,
+    /// Durchschnittliche Voting-Power (vor Quadratic)
+    pub avg_voting_power: RwLock<f64>,
+    /// Durchschnittliche Participation-Rate
+    pub avg_participation_rate: RwLock<f64>,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Delegation-Graph
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Aktive Delegationen
+    pub delegations_active: AtomicU64,
+    /// Delegations-Ketten-Tiefe (max observed)
+    pub max_delegation_depth: AtomicU64,
+    /// Zirkuläre Delegationen verhindert
+    pub circular_delegations_prevented: AtomicU64,
+    /// Abgelaufene Delegationen
+    pub delegations_expired: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Anti-Calcification (Κ19)
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Power-Concentration-Checks
+    pub power_checks: AtomicU64,
+    /// Power-Concentration-Violations
+    pub power_violations: AtomicU64,
+    /// Gini-Koeffizient der Voting-Power
+    pub voting_power_gini: RwLock<f64>,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Per-Realm Governance-State
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Realm-spezifische Governance-Metriken
+    pub realm_governance: RwLock<HashMap<String, RealmGovernanceState>>,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Relationship-Tracking (StateGraph)
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Trust-Dependency-Updates (Governance ← Trust)
+    pub trust_dependency_updates: AtomicU64,
+    /// Quadratic-Validations (Governance ← Quadratic)
+    pub quadratic_validations: AtomicU64,
+    /// Controller-Triggers (Governance → Controller)
+    pub controller_triggers: AtomicU64,
+    /// AntiCalc-Validations (Governance ✓ AntiCalcification)
+    pub anticalc_validations: AtomicU64,
+    /// Events getriggert (Governance → Event)
+    pub events_triggered: AtomicU64,
+}
+
+/// Per-Realm Governance-State
+#[derive(Debug)]
+pub struct RealmGovernanceState {
+    pub proposals: AtomicU64,
+    pub votes: AtomicU64,
+    pub delegations: AtomicU64,
+    /// Governance-Typ: "council", "direct", "liquid", "quadratic"
+    pub governance_type: RwLock<String>,
+}
+
+impl RealmGovernanceState {
+    pub fn new() -> Self {
+        Self {
+            proposals: AtomicU64::new(0),
+            votes: AtomicU64::new(0),
+            delegations: AtomicU64::new(0),
+            governance_type: RwLock::new("quadratic".to_string()),
+        }
+    }
+}
+
+impl Default for RealmGovernanceState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl GovernanceState {
+    pub fn new() -> Self {
+        Self {
+            proposals_created: AtomicU64::new(0),
+            proposals_active: AtomicU64::new(0),
+            proposals_completed: AtomicU64::new(0),
+            proposals_accepted: AtomicU64::new(0),
+            proposals_rejected: AtomicU64::new(0),
+            proposals_expired: AtomicU64::new(0),
+            proposals_vetoed: AtomicU64::new(0),
+            votes_cast: AtomicU64::new(0),
+            unique_voters: AtomicU64::new(0),
+            votes_delegated: AtomicU64::new(0),
+            quadratic_reductions: AtomicU64::new(0),
+            avg_voting_power: RwLock::new(1.0),
+            avg_participation_rate: RwLock::new(0.0),
+            delegations_active: AtomicU64::new(0),
+            max_delegation_depth: AtomicU64::new(0),
+            circular_delegations_prevented: AtomicU64::new(0),
+            delegations_expired: AtomicU64::new(0),
+            power_checks: AtomicU64::new(0),
+            power_violations: AtomicU64::new(0),
+            voting_power_gini: RwLock::new(0.0),
+            realm_governance: RwLock::new(HashMap::new()),
+            trust_dependency_updates: AtomicU64::new(0),
+            quadratic_validations: AtomicU64::new(0),
+            controller_triggers: AtomicU64::new(0),
+            anticalc_validations: AtomicU64::new(0),
+            events_triggered: AtomicU64::new(0),
+        }
+    }
+
+    /// Proposal erstellt
+    pub fn proposal_created(&self, realm_id: Option<&str>) {
+        self.proposals_created.fetch_add(1, Ordering::Relaxed);
+        self.proposals_active.fetch_add(1, Ordering::Relaxed);
+        self.events_triggered.fetch_add(1, Ordering::Relaxed);
+
+        if let Some(realm) = realm_id {
+            self.get_or_create_realm(realm)
+                .proposals
+                .fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    /// Proposal abgeschlossen
+    pub fn proposal_completed(&self, result: &str) {
+        self.proposals_active.fetch_sub(1, Ordering::Relaxed);
+        self.proposals_completed.fetch_add(1, Ordering::Relaxed);
+        self.events_triggered.fetch_add(1, Ordering::Relaxed);
+
+        match result {
+            "accepted" => {
+                self.proposals_accepted.fetch_add(1, Ordering::Relaxed);
+                self.controller_triggers.fetch_add(1, Ordering::Relaxed);
+            }
+            "rejected" => {
+                self.proposals_rejected.fetch_add(1, Ordering::Relaxed);
+            }
+            "expired" => {
+                self.proposals_expired.fetch_add(1, Ordering::Relaxed);
+            }
+            "vetoed" => {
+                self.proposals_vetoed.fetch_add(1, Ordering::Relaxed);
+            }
+            _ => {}
+        }
+    }
+
+    /// Vote abgegeben
+    pub fn vote_cast(
+        &self,
+        voting_power: f64,
+        is_delegated: bool,
+        quadratic_reduced: bool,
+        realm_id: Option<&str>,
+    ) {
+        self.votes_cast.fetch_add(1, Ordering::Relaxed);
+        self.events_triggered.fetch_add(1, Ordering::Relaxed);
+
+        if is_delegated {
+            self.votes_delegated.fetch_add(1, Ordering::Relaxed);
+        }
+        if quadratic_reduced {
+            self.quadratic_reductions.fetch_add(1, Ordering::Relaxed);
+            self.quadratic_validations.fetch_add(1, Ordering::Relaxed);
+        }
+
+        // Update average voting power
+        if let Ok(mut avg) = self.avg_voting_power.write() {
+            let total = self.votes_cast.load(Ordering::Relaxed) as f64;
+            *avg = (*avg * (total - 1.0) + voting_power) / total;
+        }
+
+        if let Some(realm) = realm_id {
+            self.get_or_create_realm(realm)
+                .votes
+                .fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    /// Delegation erstellt
+    pub fn delegation_created(&self, depth: u64, realm_id: Option<&str>) {
+        self.delegations_active.fetch_add(1, Ordering::Relaxed);
+
+        // Update max depth
+        loop {
+            let current = self.max_delegation_depth.load(Ordering::Relaxed);
+            if depth <= current {
+                break;
+            }
+            if self
+                .max_delegation_depth
+                .compare_exchange(current, depth, Ordering::Relaxed, Ordering::Relaxed)
+                .is_ok()
+            {
+                break;
+            }
+        }
+
+        if let Some(realm) = realm_id {
+            self.get_or_create_realm(realm)
+                .delegations
+                .fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    /// Power-Check durchgeführt
+    pub fn power_check(&self, violated: bool, gini: f64) {
+        self.power_checks.fetch_add(1, Ordering::Relaxed);
+        self.anticalc_validations.fetch_add(1, Ordering::Relaxed);
+
+        if violated {
+            self.power_violations.fetch_add(1, Ordering::Relaxed);
+        }
+
+        if let Ok(mut g) = self.voting_power_gini.write() {
+            *g = gini;
+        }
+    }
+
+    fn get_or_create_realm(&self, realm_id: &str) -> &RealmGovernanceState {
+        if let Ok(mut realms) = self.realm_governance.write() {
+            realms
+                .entry(realm_id.to_string())
+                .or_insert_with(RealmGovernanceState::new);
+        }
+        unsafe {
+            self.realm_governance
+                .read()
+                .unwrap()
+                .get(realm_id)
+                .map(|r| &*(r as *const RealmGovernanceState))
+                .unwrap_or_else(|| {
+                    static DEFAULT: std::sync::OnceLock<RealmGovernanceState> =
+                        std::sync::OnceLock::new();
+                    DEFAULT.get_or_init(RealmGovernanceState::new)
+                })
+        }
+    }
+
+    /// Proposal-Success-Rate
+    pub fn proposal_success_rate(&self) -> f64 {
+        let completed = self.proposals_completed.load(Ordering::Relaxed) as f64;
+        if completed > 0.0 {
+            self.proposals_accepted.load(Ordering::Relaxed) as f64 / completed
+        } else {
+            0.0
+        }
+    }
+
+    /// Delegation-Rate (Anteil delegierter Votes)
+    pub fn delegation_rate(&self) -> f64 {
+        let total = self.votes_cast.load(Ordering::Relaxed) as f64;
+        if total > 0.0 {
+            self.votes_delegated.load(Ordering::Relaxed) as f64 / total
+        } else {
+            0.0
+        }
+    }
+
+    pub fn snapshot(&self) -> GovernanceStateSnapshot {
+        GovernanceStateSnapshot {
+            proposals_created: self.proposals_created.load(Ordering::Relaxed),
+            proposals_active: self.proposals_active.load(Ordering::Relaxed),
+            proposals_completed: self.proposals_completed.load(Ordering::Relaxed),
+            proposals_accepted: self.proposals_accepted.load(Ordering::Relaxed),
+            proposals_rejected: self.proposals_rejected.load(Ordering::Relaxed),
+            proposal_success_rate: self.proposal_success_rate(),
+            votes_cast: self.votes_cast.load(Ordering::Relaxed),
+            unique_voters: self.unique_voters.load(Ordering::Relaxed),
+            votes_delegated: self.votes_delegated.load(Ordering::Relaxed),
+            delegation_rate: self.delegation_rate(),
+            delegations_active: self.delegations_active.load(Ordering::Relaxed),
+            max_delegation_depth: self.max_delegation_depth.load(Ordering::Relaxed),
+            quadratic_reductions: self.quadratic_reductions.load(Ordering::Relaxed),
+            avg_voting_power: self.avg_voting_power.read().map(|v| *v).unwrap_or(1.0),
+            voting_power_gini: self.voting_power_gini.read().map(|v| *v).unwrap_or(0.0),
+            power_violations: self.power_violations.load(Ordering::Relaxed),
+            events_triggered: self.events_triggered.load(Ordering::Relaxed),
+        }
+    }
+}
+
+impl Default for GovernanceState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GovernanceStateSnapshot {
+    pub proposals_created: u64,
+    pub proposals_active: u64,
+    pub proposals_completed: u64,
+    pub proposals_accepted: u64,
+    pub proposals_rejected: u64,
+    pub proposal_success_rate: f64,
+    pub votes_cast: u64,
+    pub unique_voters: u64,
+    pub votes_delegated: u64,
+    pub delegation_rate: f64,
+    pub delegations_active: u64,
+    pub max_delegation_depth: u64,
+    pub quadratic_reductions: u64,
+    pub avg_voting_power: f64,
+    pub voting_power_gini: f64,
+    pub power_violations: u64,
+    pub events_triggered: u64,
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// 2.4 CONTROLLER-ENGINE STATE
+// ────────────────────────────────────────────────────────────────────────────
+
+/// Controller-Engine State mit Permission-Registry und Audit-Log
+///
+/// # Design
+///
+/// Die Controller-Engine verwaltet Berechtigungen:
+/// - **Scoped Permissions**: Realm > Room > Partition Hierarchie
+/// - **Delegation**: Transitive Permission-Vererbung mit Constraints
+/// - **Audit-Trail**: Vollständige Permission-History
+/// - **Automation**: Trigger-basierte Permission-Änderungen
+///
+/// # StateGraph-Verknüpfungen
+///
+/// ```text
+/// Controller ──DependsOn──▶ Trust (Permission-Basis)
+/// Controller ──Validates──▶ Gateway (Crossing-Auth)
+/// Controller ──Validates──▶ API (API-Auth)
+/// Controller ──Validates──▶ UI (UI-Auth)
+/// Controller ──Aggregates─▶ Governance (Delegation-Sync)
+/// Controller ──DependsOn──▶ Realm/Room/Partition (Scope)
+/// Controller ──DependsOn──▶ ECLVM (Permission-Rules)
+/// ```
+#[derive(Debug)]
+pub struct ControllerState {
+    // ─────────────────────────────────────────────────────────────────────────
+    // Permission-Registry
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Total registrierte Permissions
+    pub permissions_registered: AtomicU64,
+    /// Aktive Permissions
+    pub permissions_active: AtomicU64,
+    /// Permission-Grants
+    pub permission_grants: AtomicU64,
+    /// Permission-Revokes
+    pub permission_revokes: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Authorization-Checks
+    // ─────────────────────────────────────────────────────────────────────────
+    /// AuthZ-Checks total
+    pub authz_checks: AtomicU64,
+    /// AuthZ-Allowed
+    pub authz_allowed: AtomicU64,
+    /// AuthZ-Denied
+    pub authz_denied: AtomicU64,
+    /// Via-Delegation AuthZ
+    pub authz_via_delegation: AtomicU64,
+    /// Durchschnittliche Check-Latenz (µs)
+    pub avg_check_latency_us: RwLock<f64>,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Delegation
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Aktive Delegationen
+    pub delegations_active: AtomicU64,
+    /// Delegations-Ketten (max depth)
+    pub max_delegation_depth: AtomicU64,
+    /// Delegations-Nutzungen
+    pub delegations_used: AtomicU64,
+    /// Abgelaufene Delegationen
+    pub delegations_expired: AtomicU64,
+    /// Delegations-Konflikte (z.B. zirkulär)
+    pub delegation_conflicts: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Scope-Tracking (Realm > Room > Partition)
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Realm-Scope Checks
+    pub realm_scope_checks: AtomicU64,
+    /// Room-Scope Checks
+    pub room_scope_checks: AtomicU64,
+    /// Partition-Scope Checks
+    pub partition_scope_checks: AtomicU64,
+    /// Scope-Inheritance-Resolutions
+    pub scope_inheritance_resolutions: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Audit-Log
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Audit-Entries geschrieben
+    pub audit_entries: AtomicU64,
+    /// Audit-Log-Größe (Bytes, approximiert)
+    pub audit_log_bytes: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Automation
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Automation-Rules aktiv
+    pub automation_rules_active: AtomicU64,
+    /// Automation-Triggers ausgelöst
+    pub automation_triggers: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Per-Realm Controller-State
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Realm-spezifische Controller-Metriken
+    pub realm_controller: RwLock<HashMap<String, RealmControllerState>>,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Relationship-Tracking (StateGraph)
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Trust-Dependency-Updates (Controller ← Trust)
+    pub trust_dependency_updates: AtomicU64,
+    /// Gateway-Validations (Controller ✓ Gateway)
+    pub gateway_validations: AtomicU64,
+    /// API-Validations (Controller ✓ API)
+    pub api_validations: AtomicU64,
+    /// UI-Validations (Controller ✓ UI)
+    pub ui_validations: AtomicU64,
+    /// Governance-Aggregations (Controller ⊃ Governance)
+    pub governance_aggregations: AtomicU64,
+    /// Events getriggert (Controller → Event)
+    pub events_triggered: AtomicU64,
+}
+
+/// Per-Realm Controller-State
+#[derive(Debug)]
+pub struct RealmControllerState {
+    pub permissions: AtomicU64,
+    pub authz_checks: AtomicU64,
+    pub authz_denied: AtomicU64,
+    pub delegations: AtomicU64,
+    pub rooms: AtomicU64,
+    pub partitions: AtomicU64,
+}
+
+impl RealmControllerState {
+    pub fn new() -> Self {
+        Self {
+            permissions: AtomicU64::new(0),
+            authz_checks: AtomicU64::new(0),
+            authz_denied: AtomicU64::new(0),
+            delegations: AtomicU64::new(0),
+            rooms: AtomicU64::new(0),
+            partitions: AtomicU64::new(0),
+        }
+    }
+}
+
+impl Default for RealmControllerState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ControllerState {
+    pub fn new() -> Self {
+        Self {
+            permissions_registered: AtomicU64::new(0),
+            permissions_active: AtomicU64::new(0),
+            permission_grants: AtomicU64::new(0),
+            permission_revokes: AtomicU64::new(0),
+            authz_checks: AtomicU64::new(0),
+            authz_allowed: AtomicU64::new(0),
+            authz_denied: AtomicU64::new(0),
+            authz_via_delegation: AtomicU64::new(0),
+            avg_check_latency_us: RwLock::new(0.0),
+            delegations_active: AtomicU64::new(0),
+            max_delegation_depth: AtomicU64::new(0),
+            delegations_used: AtomicU64::new(0),
+            delegations_expired: AtomicU64::new(0),
+            delegation_conflicts: AtomicU64::new(0),
+            realm_scope_checks: AtomicU64::new(0),
+            room_scope_checks: AtomicU64::new(0),
+            partition_scope_checks: AtomicU64::new(0),
+            scope_inheritance_resolutions: AtomicU64::new(0),
+            audit_entries: AtomicU64::new(0),
+            audit_log_bytes: AtomicU64::new(0),
+            automation_rules_active: AtomicU64::new(0),
+            automation_triggers: AtomicU64::new(0),
+            realm_controller: RwLock::new(HashMap::new()),
+            trust_dependency_updates: AtomicU64::new(0),
+            gateway_validations: AtomicU64::new(0),
+            api_validations: AtomicU64::new(0),
+            ui_validations: AtomicU64::new(0),
+            governance_aggregations: AtomicU64::new(0),
+            events_triggered: AtomicU64::new(0),
+        }
+    }
+
+    /// Permission gewährt
+    pub fn grant_permission(&self, realm_id: Option<&str>) {
+        self.permission_grants.fetch_add(1, Ordering::Relaxed);
+        self.permissions_active.fetch_add(1, Ordering::Relaxed);
+        self.events_triggered.fetch_add(1, Ordering::Relaxed);
+        self.write_audit(128); // ~128 bytes per audit entry
+
+        if let Some(realm) = realm_id {
+            self.get_or_create_realm(realm)
+                .permissions
+                .fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    /// Permission widerrufen
+    pub fn revoke_permission(&self) {
+        self.permission_revokes.fetch_add(1, Ordering::Relaxed);
+        self.permissions_active.fetch_sub(1, Ordering::Relaxed);
+        self.events_triggered.fetch_add(1, Ordering::Relaxed);
+        self.write_audit(128);
+    }
+
+    /// AuthZ-Check durchgeführt
+    pub fn check_authorization(
+        &self,
+        allowed: bool,
+        via_delegation: bool,
+        latency_us: u64,
+        scope: &str,
+        realm_id: Option<&str>,
+    ) {
+        self.authz_checks.fetch_add(1, Ordering::Relaxed);
+
+        if allowed {
+            self.authz_allowed.fetch_add(1, Ordering::Relaxed);
+        } else {
+            self.authz_denied.fetch_add(1, Ordering::Relaxed);
+            if let Some(realm) = realm_id {
+                self.get_or_create_realm(realm)
+                    .authz_denied
+                    .fetch_add(1, Ordering::Relaxed);
+            }
+        }
+
+        if via_delegation {
+            self.authz_via_delegation.fetch_add(1, Ordering::Relaxed);
+            self.delegations_used.fetch_add(1, Ordering::Relaxed);
+        }
+
+        // Scope-Tracking
+        match scope {
+            "realm" => {
+                self.realm_scope_checks.fetch_add(1, Ordering::Relaxed);
+            }
+            "room" => {
+                self.room_scope_checks.fetch_add(1, Ordering::Relaxed);
+            }
+            "partition" => {
+                self.partition_scope_checks.fetch_add(1, Ordering::Relaxed);
+            }
+            _ => {}
+        }
+
+        // Latenz-Update
+        if let Ok(mut avg) = self.avg_check_latency_us.write() {
+            let total = self.authz_checks.load(Ordering::Relaxed) as f64;
+            *avg = (*avg * (total - 1.0) + latency_us as f64) / total;
+        }
+
+        // Realm-Tracking
+        if let Some(realm) = realm_id {
+            self.get_or_create_realm(realm)
+                .authz_checks
+                .fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    /// Delegation erstellt
+    pub fn create_delegation(&self, depth: u64, realm_id: Option<&str>) {
+        self.delegations_active.fetch_add(1, Ordering::Relaxed);
+        self.events_triggered.fetch_add(1, Ordering::Relaxed);
+        self.governance_aggregations.fetch_add(1, Ordering::Relaxed);
+        self.write_audit(256);
+
+        // Update max depth
+        loop {
+            let current = self.max_delegation_depth.load(Ordering::Relaxed);
+            if depth <= current {
+                break;
+            }
+            if self
+                .max_delegation_depth
+                .compare_exchange(current, depth, Ordering::Relaxed, Ordering::Relaxed)
+                .is_ok()
+            {
+                break;
+            }
+        }
+
+        if let Some(realm) = realm_id {
+            self.get_or_create_realm(realm)
+                .delegations
+                .fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    /// Audit-Entry schreiben
+    fn write_audit(&self, bytes: u64) {
+        self.audit_entries.fetch_add(1, Ordering::Relaxed);
+        self.audit_log_bytes.fetch_add(bytes, Ordering::Relaxed);
+    }
+
+    fn get_or_create_realm(&self, realm_id: &str) -> &RealmControllerState {
+        if let Ok(mut realms) = self.realm_controller.write() {
+            realms
+                .entry(realm_id.to_string())
+                .or_insert_with(RealmControllerState::new);
+        }
+        unsafe {
+            self.realm_controller
+                .read()
+                .unwrap()
+                .get(realm_id)
+                .map(|r| &*(r as *const RealmControllerState))
+                .unwrap_or_else(|| {
+                    static DEFAULT: std::sync::OnceLock<RealmControllerState> =
+                        std::sync::OnceLock::new();
+                    DEFAULT.get_or_init(RealmControllerState::new)
+                })
+        }
+    }
+
+    /// AuthZ-Success-Rate
+    pub fn authz_success_rate(&self) -> f64 {
+        let total = self.authz_checks.load(Ordering::Relaxed) as f64;
+        if total > 0.0 {
+            self.authz_allowed.load(Ordering::Relaxed) as f64 / total
+        } else {
+            1.0
+        }
+    }
+
+    /// Delegation-Usage-Rate
+    pub fn delegation_usage_rate(&self) -> f64 {
+        let checks = self.authz_checks.load(Ordering::Relaxed) as f64;
+        if checks > 0.0 {
+            self.authz_via_delegation.load(Ordering::Relaxed) as f64 / checks
+        } else {
+            0.0
+        }
+    }
+
+    pub fn snapshot(&self) -> ControllerStateSnapshot {
+        ControllerStateSnapshot {
+            permissions_registered: self.permissions_registered.load(Ordering::Relaxed),
+            permissions_active: self.permissions_active.load(Ordering::Relaxed),
+            permission_grants: self.permission_grants.load(Ordering::Relaxed),
+            permission_revokes: self.permission_revokes.load(Ordering::Relaxed),
+            authz_checks: self.authz_checks.load(Ordering::Relaxed),
+            authz_allowed: self.authz_allowed.load(Ordering::Relaxed),
+            authz_denied: self.authz_denied.load(Ordering::Relaxed),
+            authz_success_rate: self.authz_success_rate(),
+            avg_check_latency_us: self.avg_check_latency_us.read().map(|v| *v).unwrap_or(0.0),
+            delegations_active: self.delegations_active.load(Ordering::Relaxed),
+            max_delegation_depth: self.max_delegation_depth.load(Ordering::Relaxed),
+            delegation_usage_rate: self.delegation_usage_rate(),
+            realm_scope_checks: self.realm_scope_checks.load(Ordering::Relaxed),
+            room_scope_checks: self.room_scope_checks.load(Ordering::Relaxed),
+            partition_scope_checks: self.partition_scope_checks.load(Ordering::Relaxed),
+            audit_entries: self.audit_entries.load(Ordering::Relaxed),
+            audit_log_bytes: self.audit_log_bytes.load(Ordering::Relaxed),
+            automation_triggers: self.automation_triggers.load(Ordering::Relaxed),
+            events_triggered: self.events_triggered.load(Ordering::Relaxed),
+        }
+    }
+}
+
+impl Default for ControllerState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ControllerStateSnapshot {
+    pub permissions_registered: u64,
+    pub permissions_active: u64,
+    pub permission_grants: u64,
+    pub permission_revokes: u64,
+    pub authz_checks: u64,
+    pub authz_allowed: u64,
+    pub authz_denied: u64,
+    pub authz_success_rate: f64,
+    pub avg_check_latency_us: f64,
+    pub delegations_active: u64,
+    pub max_delegation_depth: u64,
+    pub delegation_usage_rate: f64,
+    pub realm_scope_checks: u64,
+    pub room_scope_checks: u64,
+    pub partition_scope_checks: u64,
+    pub audit_entries: u64,
+    pub audit_log_bytes: u64,
+    pub automation_triggers: u64,
+    pub events_triggered: u64,
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// 2.5 DATALOGIC-ENGINE STATE
+// ────────────────────────────────────────────────────────────────────────────
+
+/// DataLogic-Engine State mit Reactive Streams und Aggregations
+///
+/// # Design
+///
+/// Die DataLogic-Engine verarbeitet Events reaktiv:
+/// - **Streams**: Event-basierte Datenströme
+/// - **Aggregations**: count, sum, avg, window-basiert
+/// - **Bindings**: Reaktive UI-Verbindungen
+/// - **Filters**: Trust-basierte Filterung
+///
+/// # StateGraph-Verknüpfungen
+///
+/// ```text
+/// DataLogic ──DependsOn──▶ Event (Event-Processing)
+/// DataLogic ──Aggregates─▶ Event (Aggregation)
+/// DataLogic ──Triggers───▶ Event (Derived Events)
+/// DataLogic ──DependsOn──▶ Trust (Access-Control)
+/// DataLogic ──DependsOn──▶ ECLVM (Functions)
+/// DataLogic ──Validates──▶ UI (Binding-Validation)
+/// ```
+#[derive(Debug)]
+pub struct DataLogicState {
+    // ─────────────────────────────────────────────────────────────────────────
+    // Stream-Tracking
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Registrierte Streams
+    pub streams_registered: AtomicU64,
+    /// Aktive Streams
+    pub streams_active: AtomicU64,
+    /// Stream-Subscriptions
+    pub stream_subscriptions: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Event-Processing
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Events verarbeitet
+    pub events_processed: AtomicU64,
+    /// Events gefiltert (Trust/Access)
+    pub events_filtered: AtomicU64,
+    /// Events weitergeleitet (nach Filter)
+    pub events_forwarded: AtomicU64,
+    /// Processing-Fehler
+    pub processing_errors: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Aggregation
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Registrierte Aggregationen
+    pub aggregations_registered: AtomicU64,
+    /// Aggregationen berechnet
+    pub aggregations_computed: AtomicU64,
+    /// Aggregation-Results emittiert
+    pub aggregation_results: AtomicU64,
+    /// Durchschnittliche Aggregation-Latenz (µs)
+    pub avg_aggregation_latency_us: RwLock<f64>,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Binding-Propagation
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Binding-Updates propagiert
+    pub binding_propagations: AtomicU64,
+    /// Binding-Fehler
+    pub binding_errors: AtomicU64,
+    /// Durchschnittliche Propagation-Latenz (µs)
+    pub avg_propagation_latency_us: RwLock<f64>,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Resource-Verbrauch
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Gas verbraucht
+    pub gas_consumed: AtomicU64,
+    /// Mana verbraucht
+    pub mana_consumed: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Relationship-Tracking (StateGraph)
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Trust-Dependency-Updates (DataLogic ← Trust)
+    pub trust_dependency_updates: AtomicU64,
+    /// Event-Aggregations (DataLogic ⊃ Event)
+    pub event_aggregations: AtomicU64,
+    /// UI-Validations (DataLogic ✓ UI)
+    pub ui_validations: AtomicU64,
+    /// Events getriggert (DataLogic → Event)
+    pub events_triggered: AtomicU64,
+}
+
+impl DataLogicState {
+    pub fn new() -> Self {
+        Self {
+            streams_registered: AtomicU64::new(0),
+            streams_active: AtomicU64::new(0),
+            stream_subscriptions: AtomicU64::new(0),
+            events_processed: AtomicU64::new(0),
+            events_filtered: AtomicU64::new(0),
+            events_forwarded: AtomicU64::new(0),
+            processing_errors: AtomicU64::new(0),
+            aggregations_registered: AtomicU64::new(0),
+            aggregations_computed: AtomicU64::new(0),
+            aggregation_results: AtomicU64::new(0),
+            avg_aggregation_latency_us: RwLock::new(0.0),
+            binding_propagations: AtomicU64::new(0),
+            binding_errors: AtomicU64::new(0),
+            avg_propagation_latency_us: RwLock::new(0.0),
+            gas_consumed: AtomicU64::new(0),
+            mana_consumed: AtomicU64::new(0),
+            trust_dependency_updates: AtomicU64::new(0),
+            event_aggregations: AtomicU64::new(0),
+            ui_validations: AtomicU64::new(0),
+            events_triggered: AtomicU64::new(0),
+        }
+    }
+
+    /// Stream registrieren
+    pub fn register_stream(&self) {
+        self.streams_registered.fetch_add(1, Ordering::Relaxed);
+        self.streams_active.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Event verarbeiten
+    pub fn process_event(&self, filtered: bool, gas: u64) {
+        self.events_processed.fetch_add(1, Ordering::Relaxed);
+        self.gas_consumed.fetch_add(gas, Ordering::Relaxed);
+
+        if filtered {
+            self.events_filtered.fetch_add(1, Ordering::Relaxed);
+        } else {
+            self.events_forwarded.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    /// Aggregation berechnet
+    pub fn aggregation_computed(&self, latency_us: u64, gas: u64) {
+        self.aggregations_computed.fetch_add(1, Ordering::Relaxed);
+        self.aggregation_results.fetch_add(1, Ordering::Relaxed);
+        self.event_aggregations.fetch_add(1, Ordering::Relaxed);
+        self.events_triggered.fetch_add(1, Ordering::Relaxed);
+        self.gas_consumed.fetch_add(gas, Ordering::Relaxed);
+
+        // Update average latency
+        if let Ok(mut avg) = self.avg_aggregation_latency_us.write() {
+            let total = self.aggregations_computed.load(Ordering::Relaxed) as f64;
+            *avg = (*avg * (total - 1.0) + latency_us as f64) / total;
+        }
+    }
+
+    /// Binding propagiert
+    pub fn propagate_binding(&self, success: bool, latency_us: u64, mana: u64) {
+        self.binding_propagations.fetch_add(1, Ordering::Relaxed);
+        self.mana_consumed.fetch_add(mana, Ordering::Relaxed);
+        self.ui_validations.fetch_add(1, Ordering::Relaxed);
+
+        if !success {
+            self.binding_errors.fetch_add(1, Ordering::Relaxed);
+        }
+
+        // Update average latency
+        if let Ok(mut avg) = self.avg_propagation_latency_us.write() {
+            let total = self.binding_propagations.load(Ordering::Relaxed) as f64;
+            *avg = (*avg * (total - 1.0) + latency_us as f64) / total;
+        }
+    }
+
+    /// Success-Rate (Events die nicht gefiltert wurden)
+    pub fn success_rate(&self) -> f64 {
+        let total = self.events_processed.load(Ordering::Relaxed) as f64;
+        if total > 0.0 {
+            self.events_forwarded.load(Ordering::Relaxed) as f64 / total
+        } else {
+            1.0
+        }
+    }
+
+    /// Binding-Success-Rate
+    pub fn binding_success_rate(&self) -> f64 {
+        let total = self.binding_propagations.load(Ordering::Relaxed) as f64;
+        if total > 0.0 {
+            (total - self.binding_errors.load(Ordering::Relaxed) as f64) / total
+        } else {
+            1.0
+        }
+    }
+
+    pub fn snapshot(&self) -> DataLogicStateSnapshot {
+        DataLogicStateSnapshot {
+            streams_registered: self.streams_registered.load(Ordering::Relaxed),
+            streams_active: self.streams_active.load(Ordering::Relaxed),
+            stream_subscriptions: self.stream_subscriptions.load(Ordering::Relaxed),
+            events_processed: self.events_processed.load(Ordering::Relaxed),
+            events_filtered: self.events_filtered.load(Ordering::Relaxed),
+            events_forwarded: self.events_forwarded.load(Ordering::Relaxed),
+            success_rate: self.success_rate(),
+            aggregations_registered: self.aggregations_registered.load(Ordering::Relaxed),
+            aggregations_computed: self.aggregations_computed.load(Ordering::Relaxed),
+            avg_aggregation_latency_us: self
+                .avg_aggregation_latency_us
+                .read()
+                .map(|v| *v)
+                .unwrap_or(0.0),
+            binding_propagations: self.binding_propagations.load(Ordering::Relaxed),
+            binding_success_rate: self.binding_success_rate(),
+            avg_propagation_latency_us: self
+                .avg_propagation_latency_us
+                .read()
+                .map(|v| *v)
+                .unwrap_or(0.0),
+            gas_consumed: self.gas_consumed.load(Ordering::Relaxed),
+            mana_consumed: self.mana_consumed.load(Ordering::Relaxed),
+            events_triggered: self.events_triggered.load(Ordering::Relaxed),
+        }
+    }
+}
+
+impl Default for DataLogicState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DataLogicStateSnapshot {
+    pub streams_registered: u64,
+    pub streams_active: u64,
+    pub stream_subscriptions: u64,
+    pub events_processed: u64,
+    pub events_filtered: u64,
+    pub events_forwarded: u64,
+    pub success_rate: f64,
+    pub aggregations_registered: u64,
+    pub aggregations_computed: u64,
+    pub avg_aggregation_latency_us: f64,
+    pub binding_propagations: u64,
+    pub binding_success_rate: f64,
+    pub avg_propagation_latency_us: f64,
+    pub gas_consumed: u64,
+    pub mana_consumed: u64,
+    pub events_triggered: u64,
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// 2.6 BLUEPRINTCOMPOSER-ENGINE STATE
+// ────────────────────────────────────────────────────────────────────────────
+
+/// BlueprintComposer-Engine State mit Composition und Versioning
+///
+/// # Design
+///
+/// Der BlueprintComposer verwaltet Template-Komposition:
+/// - **Composition**: Blueprint-Vererbung und -Erweiterung
+/// - **Versioning**: Semantic Versioning mit Migrations
+/// - **Validation**: Realm-Compatibility-Checks
+/// - **Caching**: Compiled Blueprint Cache
+///
+/// # StateGraph-Verknüpfungen
+///
+/// ```text
+/// BlueprintComposer ──DependsOn──▶ Blueprint (Storage)
+/// BlueprintComposer ──Aggregates─▶ ECLBlueprint (Instances)
+/// BlueprintComposer ──Triggers───▶ Event (Composition)
+/// BlueprintComposer ──DependsOn──▶ ECLVM (Execution)
+/// BlueprintComposer ──DependsOn──▶ Trust (Publish-Auth)
+/// BlueprintComposer ──Validates──▶ Realm (Compatibility)
+/// ```
+#[derive(Debug)]
+pub struct BlueprintComposerState {
+    // ─────────────────────────────────────────────────────────────────────────
+    // Composition-Tracking
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Compositions erstellt
+    pub compositions_created: AtomicU64,
+    /// Compositions erfolgreich
+    pub compositions_successful: AtomicU64,
+    /// Compositions fehlgeschlagen
+    pub compositions_failed: AtomicU64,
+    /// Durchschnittliche Vererbungs-Tiefe
+    pub avg_inheritance_depth: RwLock<f64>,
+    /// Maximale Vererbungs-Tiefe
+    pub max_inheritance_depth: AtomicU64,
+    /// Konflikt-Resolutions bei Composition
+    pub conflict_resolutions: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Versioning
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Blueprint-Versionen publiziert
+    pub versions_published: AtomicU64,
+    /// Migrationen durchgeführt
+    pub migrations_executed: AtomicU64,
+    /// Migrations-Fehler
+    pub migration_errors: AtomicU64,
+    /// Deprecations markiert
+    pub deprecations: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Instantiation
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Instanziierungen aus Compositions
+    pub instantiations: AtomicU64,
+    /// Instanziierungs-Fehler
+    pub instantiation_errors: AtomicU64,
+    /// Instanzen aktiv
+    pub instances_active: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Validation
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Realm-Compatibility-Checks
+    pub realm_compatibility_checks: AtomicU64,
+    /// Compatibility-Failures
+    pub compatibility_failures: AtomicU64,
+    /// Dependency-Resolutions
+    pub dependency_resolutions: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Caching
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Cache-Hits
+    pub cache_hits: AtomicU64,
+    /// Cache-Misses
+    pub cache_misses: AtomicU64,
+    /// Cache-Evictions
+    pub cache_evictions: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Resource-Verbrauch
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Gas verbraucht für Composition
+    pub gas_consumed: AtomicU64,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Relationship-Tracking (StateGraph)
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Trust-Dependency-Updates (BlueprintComposer ← Trust)
+    pub trust_dependency_updates: AtomicU64,
+    /// ECLBlueprint-Aggregations (BlueprintComposer ⊃ ECLBlueprint)
+    pub ecl_blueprint_aggregations: AtomicU64,
+    /// Realm-Validations (BlueprintComposer ✓ Realm)
+    pub realm_validations: AtomicU64,
+    /// Events getriggert (BlueprintComposer → Event)
+    pub events_triggered: AtomicU64,
+}
+
+impl BlueprintComposerState {
+    pub fn new() -> Self {
+        Self {
+            compositions_created: AtomicU64::new(0),
+            compositions_successful: AtomicU64::new(0),
+            compositions_failed: AtomicU64::new(0),
+            avg_inheritance_depth: RwLock::new(0.0),
+            max_inheritance_depth: AtomicU64::new(0),
+            conflict_resolutions: AtomicU64::new(0),
+            versions_published: AtomicU64::new(0),
+            migrations_executed: AtomicU64::new(0),
+            migration_errors: AtomicU64::new(0),
+            deprecations: AtomicU64::new(0),
+            instantiations: AtomicU64::new(0),
+            instantiation_errors: AtomicU64::new(0),
+            instances_active: AtomicU64::new(0),
+            realm_compatibility_checks: AtomicU64::new(0),
+            compatibility_failures: AtomicU64::new(0),
+            dependency_resolutions: AtomicU64::new(0),
+            cache_hits: AtomicU64::new(0),
+            cache_misses: AtomicU64::new(0),
+            cache_evictions: AtomicU64::new(0),
+            gas_consumed: AtomicU64::new(0),
+            trust_dependency_updates: AtomicU64::new(0),
+            ecl_blueprint_aggregations: AtomicU64::new(0),
+            realm_validations: AtomicU64::new(0),
+            events_triggered: AtomicU64::new(0),
+        }
+    }
+
+    /// Composition erstellt
+    pub fn composition_created(
+        &self,
+        success: bool,
+        inheritance_depth: u64,
+        conflicts: u64,
+        gas: u64,
+    ) {
+        self.compositions_created.fetch_add(1, Ordering::Relaxed);
+        self.gas_consumed.fetch_add(gas, Ordering::Relaxed);
+        self.events_triggered.fetch_add(1, Ordering::Relaxed);
+
+        if success {
+            self.compositions_successful.fetch_add(1, Ordering::Relaxed);
+        } else {
+            self.compositions_failed.fetch_add(1, Ordering::Relaxed);
+        }
+
+        if conflicts > 0 {
+            self.conflict_resolutions
+                .fetch_add(conflicts, Ordering::Relaxed);
+        }
+
+        // Update max depth
+        loop {
+            let current = self.max_inheritance_depth.load(Ordering::Relaxed);
+            if inheritance_depth <= current {
+                break;
+            }
+            if self
+                .max_inheritance_depth
+                .compare_exchange(
+                    current,
+                    inheritance_depth,
+                    Ordering::Relaxed,
+                    Ordering::Relaxed,
+                )
+                .is_ok()
+            {
+                break;
+            }
+        }
+
+        // Update average depth
+        if let Ok(mut avg) = self.avg_inheritance_depth.write() {
+            let total = self.compositions_created.load(Ordering::Relaxed) as f64;
+            *avg = (*avg * (total - 1.0) + inheritance_depth as f64) / total;
+        }
+    }
+
+    /// Blueprint instanziiert
+    pub fn instantiate(&self, success: bool, gas: u64) {
+        self.instantiations.fetch_add(1, Ordering::Relaxed);
+        self.gas_consumed.fetch_add(gas, Ordering::Relaxed);
+        self.ecl_blueprint_aggregations
+            .fetch_add(1, Ordering::Relaxed);
+
+        if success {
+            self.instances_active.fetch_add(1, Ordering::Relaxed);
+        } else {
+            self.instantiation_errors.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    /// Realm-Compatibility-Check
+    pub fn realm_compatibility_check(&self, compatible: bool) {
+        self.realm_compatibility_checks
+            .fetch_add(1, Ordering::Relaxed);
+        self.realm_validations.fetch_add(1, Ordering::Relaxed);
+
+        if !compatible {
+            self.compatibility_failures.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    /// Cache-Zugriff
+    pub fn cache_access(&self, hit: bool) {
+        if hit {
+            self.cache_hits.fetch_add(1, Ordering::Relaxed);
+        } else {
+            self.cache_misses.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    /// Composition-Success-Rate
+    pub fn composition_success_rate(&self) -> f64 {
+        let total = self.compositions_created.load(Ordering::Relaxed) as f64;
+        if total > 0.0 {
+            self.compositions_successful.load(Ordering::Relaxed) as f64 / total
+        } else {
+            1.0
+        }
+    }
+
+    /// Cache-Hit-Rate
+    pub fn cache_hit_rate(&self) -> f64 {
+        let total =
+            self.cache_hits.load(Ordering::Relaxed) + self.cache_misses.load(Ordering::Relaxed);
+        if total > 0 {
+            self.cache_hits.load(Ordering::Relaxed) as f64 / total as f64
+        } else {
+            1.0
+        }
+    }
+
+    pub fn snapshot(&self) -> BlueprintComposerStateSnapshot {
+        BlueprintComposerStateSnapshot {
+            compositions_created: self.compositions_created.load(Ordering::Relaxed),
+            compositions_successful: self.compositions_successful.load(Ordering::Relaxed),
+            compositions_failed: self.compositions_failed.load(Ordering::Relaxed),
+            composition_success_rate: self.composition_success_rate(),
+            avg_inheritance_depth: self.avg_inheritance_depth.read().map(|v| *v).unwrap_or(0.0),
+            max_inheritance_depth: self.max_inheritance_depth.load(Ordering::Relaxed),
+            conflict_resolutions: self.conflict_resolutions.load(Ordering::Relaxed),
+            versions_published: self.versions_published.load(Ordering::Relaxed),
+            migrations_executed: self.migrations_executed.load(Ordering::Relaxed),
+            instantiations: self.instantiations.load(Ordering::Relaxed),
+            instances_active: self.instances_active.load(Ordering::Relaxed),
+            realm_compatibility_checks: self.realm_compatibility_checks.load(Ordering::Relaxed),
+            compatibility_failures: self.compatibility_failures.load(Ordering::Relaxed),
+            cache_hit_rate: self.cache_hit_rate(),
+            gas_consumed: self.gas_consumed.load(Ordering::Relaxed),
+            events_triggered: self.events_triggered.load(Ordering::Relaxed),
+        }
+    }
+}
+
+impl Default for BlueprintComposerState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BlueprintComposerStateSnapshot {
+    pub compositions_created: u64,
+    pub compositions_successful: u64,
+    pub compositions_failed: u64,
+    pub composition_success_rate: f64,
+    pub avg_inheritance_depth: f64,
+    pub max_inheritance_depth: u64,
+    pub conflict_resolutions: u64,
+    pub versions_published: u64,
+    pub migrations_executed: u64,
+    pub instantiations: u64,
+    pub instances_active: u64,
+    pub realm_compatibility_checks: u64,
+    pub compatibility_failures: u64,
+    pub cache_hit_rate: f64,
+    pub gas_consumed: u64,
+    pub events_triggered: u64,
+}
+
+// ============================================================================
 // UNIFIED STATE
 // ============================================================================
 
@@ -4016,6 +6054,12 @@ pub struct P2PStateSnapshot {
 /// - **StorageState**: KV, EventStore, Archive, Blueprints
 /// - **PeerState**: Gateway, SagaComposer, IntentParser
 /// - **P2PState**: Swarm, Gossip, Kademlia, Relay, Privacy
+/// - **UIState**: Component-Tree, Bindings, Trust-Gates
+/// - **APIState**: Endpoints, Rate-Limits, Request-Tracking
+/// - **GovernanceState**: Proposals, Voting, Delegation
+/// - **ControllerState**: Permissions, AuthZ, Audit
+/// - **DataLogicState**: Streams, Aggregations, Event-Processing
+/// - **BlueprintComposerState**: Composition, Versioning, Caching
 ///
 /// # Thread-Safety
 ///
@@ -4038,6 +6082,24 @@ pub struct P2PStateSnapshot {
 ///
 /// // P2P Peer Connected
 /// state.p2p.swarm.peer_connected(false);
+///
+/// // UI Render
+/// state.ui.render(false, 100, 50, Some("default"));
+///
+/// // API Request
+/// state.api.record_request(1500, 200, 50, 10, Some("default"));
+///
+/// // Governance Vote
+/// state.governance.vote_cast(1.5, false, true, Some("default"));
+///
+/// // Controller AuthZ
+/// state.controller.check_authorization(true, false, 50, "realm", Some("default"));
+///
+/// // DataLogic Event
+/// state.data_logic.process_event(false, 25);
+///
+/// // BlueprintComposer Composition
+/// state.blueprint_composer.composition_created(true, 2, 0, 100);
 ///
 /// // Snapshot für Diagnostics
 /// let snapshot = state.snapshot();
@@ -4068,6 +6130,27 @@ pub struct UnifiedState {
     /// P2P Network Layer
     pub p2p: P2PState,
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Engine-Layer (6 neue Engines für SOLL-Zustand)
+    // ─────────────────────────────────────────────────────────────────────────
+    /// UI-Engine Layer (Component-Tree, Bindings, Trust-Gates)
+    pub ui: UIState,
+
+    /// API-Engine Layer (Endpoints, Rate-Limits, Request-Tracking)
+    pub api: APIState,
+
+    /// Governance-Engine Layer (Proposals, Voting, Delegation)
+    pub governance: GovernanceState,
+
+    /// Controller-Engine Layer (Permissions, AuthZ, Audit)
+    pub controller: ControllerState,
+
+    /// DataLogic-Engine Layer (Streams, Aggregations, Event-Processing)
+    pub data_logic: DataLogicState,
+
+    /// BlueprintComposer-Engine Layer (Composition, Versioning, Caching)
+    pub blueprint_composer: BlueprintComposerState,
+
     /// State-Beziehungs-Graph
     pub graph: StateGraph,
 
@@ -4090,6 +6173,12 @@ impl UnifiedState {
             storage: StorageState::new(),
             peer: PeerState::new(),
             p2p: P2PState::new(),
+            ui: UIState::new(),
+            api: APIState::new(),
+            governance: GovernanceState::new(),
+            controller: ControllerState::new(),
+            data_logic: DataLogicState::new(),
+            blueprint_composer: BlueprintComposerState::new(),
             graph: StateGraph::erynoa_graph(),
             warnings: RwLock::new(Vec::new()),
             health_score: RwLock::new(100.0),
@@ -4105,37 +6194,74 @@ impl UnifiedState {
     pub fn calculate_health(&self) -> f64 {
         let mut score: f64 = 100.0;
 
-        // Protection Health (20% Gewicht)
-        score -= (100.0 - self.protection.health_score()) * 0.20;
+        // Protection Health (15% Gewicht)
+        score -= (100.0 - self.protection.health_score()) * 0.15;
 
-        // Consensus Success Rate (15% Gewicht)
-        score -= (1.0 - self.core.consensus.success_rate()) * 15.0;
+        // Consensus Success Rate (12% Gewicht)
+        score -= (1.0 - self.core.consensus.success_rate()) * 12.0;
 
-        // Execution Success Rate (10% Gewicht)
-        score -= (1.0 - self.execution.success_rate()) * 10.0;
+        // Execution Success Rate (8% Gewicht)
+        score -= (1.0 - self.execution.success_rate()) * 8.0;
 
-        // ECLVM Policy Success Rate (10% Gewicht)
-        score -= (1.0 - self.eclvm.policy_success_rate()) * 10.0;
+        // ECLVM Policy Success Rate (8% Gewicht)
+        score -= (1.0 - self.eclvm.policy_success_rate()) * 8.0;
 
-        // P2P Health (20% Gewicht)
-        score -= (100.0 - self.p2p.health_score()) * 0.20;
+        // P2P Health (15% Gewicht)
+        score -= (100.0 - self.p2p.health_score()) * 0.15;
 
-        // Peer Layer Health (10% Gewicht)
+        // Peer Layer Health (8% Gewicht)
         let gateway_rate = self.peer.gateway.success_rate();
         let saga_rate = self.peer.saga.composition_success_rate();
         let peer_health = (gateway_rate + saga_rate) / 2.0 * 100.0;
-        score -= (100.0 - peer_health) * 0.10;
+        score -= (100.0 - peer_health) * 0.08;
 
-        // Realm Crossing Success (5% Gewicht)
-        score -= (1.0 - self.eclvm.crossing_allow_rate()) * 5.0;
+        // Realm Crossing Success (4% Gewicht)
+        score -= (1.0 - self.eclvm.crossing_allow_rate()) * 4.0;
 
-        // Event Validation Errors (10% Gewicht)
+        // Event Validation Errors (5% Gewicht)
         let event_errors = self.core.events.validation_errors.load(Ordering::Relaxed);
         let event_total = self.core.events.total.load(Ordering::Relaxed);
         if event_total > 0 {
             let error_rate = event_errors as f64 / event_total as f64;
-            score -= error_rate * 10.0;
+            score -= error_rate * 5.0;
         }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Engine-Layer Health (25% Gewicht verteilt auf 6 Engines)
+        // ─────────────────────────────────────────────────────────────────────
+
+        // UI-Engine Health (4% Gewicht)
+        let ui_health = (self.ui.cache_hit_rate() + self.ui.trust_gate_allow_rate()) / 2.0 * 100.0;
+        score -= (100.0 - ui_health) * 0.04;
+
+        // API-Engine Health (5% Gewicht)
+        let api_health = self.api.success_rate() * 100.0;
+        score -= (100.0 - api_health) * 0.05;
+
+        // Governance-Engine Health (4% Gewicht)
+        // Hohe Participation = Gesundheit
+        let governance_health = if self.governance.proposals_completed.load(Ordering::Relaxed) > 0 {
+            self.governance.proposal_success_rate() * 100.0
+        } else {
+            100.0 // Noch keine Proposals = neutral
+        };
+        score -= (100.0 - governance_health) * 0.04;
+
+        // Controller-Engine Health (5% Gewicht)
+        let controller_health = self.controller.authz_success_rate() * 100.0;
+        score -= (100.0 - controller_health) * 0.05;
+
+        // DataLogic-Engine Health (4% Gewicht)
+        let datalogic_health =
+            (self.data_logic.success_rate() + self.data_logic.binding_success_rate()) / 2.0 * 100.0;
+        score -= (100.0 - datalogic_health) * 0.04;
+
+        // BlueprintComposer-Engine Health (3% Gewicht)
+        let blueprint_health = (self.blueprint_composer.composition_success_rate()
+            + self.blueprint_composer.cache_hit_rate())
+            / 2.0
+            * 100.0;
+        score -= (100.0 - blueprint_health) * 0.03;
 
         let final_score = score.max(0.0).min(100.0);
 
@@ -4181,6 +6307,12 @@ impl UnifiedState {
             storage: self.storage.snapshot(),
             peer: self.peer.snapshot(),
             p2p: self.p2p.snapshot(),
+            ui: self.ui.snapshot(),
+            api: self.api.snapshot(),
+            governance: self.governance.snapshot(),
+            controller: self.controller.snapshot(),
+            data_logic: self.data_logic.snapshot(),
+            blueprint_composer: self.blueprint_composer.snapshot(),
             health_score: self.calculate_health(),
             warnings: self.warnings.read().map(|w| w.clone()).unwrap_or_default(),
         }
@@ -4204,6 +6336,12 @@ pub struct UnifiedStateSnapshot {
     pub storage: StorageStateSnapshot,
     pub peer: PeerStateSnapshot,
     pub p2p: P2PStateSnapshot,
+    pub ui: UIStateSnapshot,
+    pub api: APIStateSnapshot,
+    pub governance: GovernanceStateSnapshot,
+    pub controller: ControllerStateSnapshot,
+    pub data_logic: DataLogicStateSnapshot,
+    pub blueprint_composer: BlueprintComposerStateSnapshot,
     pub health_score: f64,
     pub warnings: Vec<String>,
 }
@@ -4384,5 +6522,597 @@ mod tests {
 
         let gossip_deps = graph.dependents(StateComponent::Trust);
         assert!(!gossip_deps.is_empty());
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // PHASE 1 TESTS: Neue StateComponent-Varianten und StateGraph-Edges
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_new_state_components_exist() {
+        // Teste dass alle neuen StateComponent-Varianten existieren
+        let components = vec![
+            StateComponent::Room,
+            StateComponent::Partition,
+            StateComponent::UI,
+            StateComponent::DataLogic,
+            StateComponent::API,
+            StateComponent::Governance,
+            StateComponent::Controller,
+            StateComponent::BlueprintComposer,
+        ];
+
+        // Alle Komponenten sollten serialisierbar sein
+        for component in &components {
+            let serialized = serde_json::to_string(component).unwrap();
+            assert!(!serialized.is_empty());
+        }
+
+        // Prüfe dass es genau 8 neue Komponenten sind
+        assert_eq!(components.len(), 8);
+    }
+
+    #[test]
+    fn test_room_partition_graph_edges() {
+        let graph = StateGraph::erynoa_graph();
+
+        // Room ─ DependsOn ─▶ Realm
+        assert!(graph.has_relation(
+            StateComponent::Room,
+            StateRelation::DependsOn,
+            StateComponent::Realm
+        ));
+
+        // Room ─ DependsOn ─▶ Trust
+        assert!(graph.has_relation(
+            StateComponent::Room,
+            StateRelation::DependsOn,
+            StateComponent::Trust
+        ));
+
+        // Room ─ Triggers ─▶ Event
+        assert!(graph.has_relation(
+            StateComponent::Room,
+            StateRelation::Triggers,
+            StateComponent::Event
+        ));
+
+        // Room ─ Aggregates ─▶ Controller
+        assert!(graph.has_relation(
+            StateComponent::Room,
+            StateRelation::Aggregates,
+            StateComponent::Controller
+        ));
+
+        // Partition ─ DependsOn ─▶ Room
+        assert!(graph.has_relation(
+            StateComponent::Partition,
+            StateRelation::DependsOn,
+            StateComponent::Room
+        ));
+
+        // Partition ─ Validates ─▶ Controller
+        assert!(graph.has_relation(
+            StateComponent::Partition,
+            StateRelation::Validates,
+            StateComponent::Controller
+        ));
+    }
+
+    #[test]
+    fn test_ui_engine_graph_edges() {
+        let graph = StateGraph::erynoa_graph();
+
+        // UI hat viele Dependencies
+        let ui_deps = graph.dependencies_of(StateComponent::UI);
+        assert!(ui_deps.contains(&StateComponent::Trust));
+        assert!(ui_deps.contains(&StateComponent::Realm));
+        assert!(ui_deps.contains(&StateComponent::Room));
+        assert!(ui_deps.contains(&StateComponent::Controller));
+        assert!(ui_deps.contains(&StateComponent::ECLVM));
+        assert!(ui_deps.contains(&StateComponent::Gas));
+        assert!(ui_deps.contains(&StateComponent::Mana));
+
+        // UI triggert Events
+        let ui_triggers = graph.triggered_by(StateComponent::UI);
+        assert!(ui_triggers.contains(&StateComponent::Event));
+
+        // UI aggregiert DataLogic
+        let ui_aggregates = graph.aggregated_by(StateComponent::UI);
+        assert!(ui_aggregates.contains(&StateComponent::DataLogic));
+    }
+
+    #[test]
+    fn test_api_engine_graph_edges() {
+        let graph = StateGraph::erynoa_graph();
+
+        // API Dependencies
+        let api_deps = graph.dependencies_of(StateComponent::API);
+        assert!(api_deps.contains(&StateComponent::Trust));
+        assert!(api_deps.contains(&StateComponent::Controller));
+        assert!(api_deps.contains(&StateComponent::ECLVM));
+        assert!(api_deps.contains(&StateComponent::Gas));
+        assert!(api_deps.contains(&StateComponent::Mana));
+
+        // API validiert Gateway
+        let api_validates = graph.validated_by(StateComponent::API);
+        assert!(api_validates.contains(&StateComponent::Gateway));
+
+        // API triggert Events
+        let api_triggers = graph.triggered_by(StateComponent::API);
+        assert!(api_triggers.contains(&StateComponent::Event));
+    }
+
+    #[test]
+    fn test_governance_engine_graph_edges() {
+        let graph = StateGraph::erynoa_graph();
+
+        // Governance Dependencies
+        let gov_deps = graph.dependencies_of(StateComponent::Governance);
+        assert!(gov_deps.contains(&StateComponent::Trust));
+        assert!(gov_deps.contains(&StateComponent::Quadratic));
+        assert!(gov_deps.contains(&StateComponent::ECLVM));
+        assert!(gov_deps.contains(&StateComponent::Realm));
+
+        // Governance validiert Controller und AntiCalcification
+        let gov_validates = graph.validated_by(StateComponent::Governance);
+        assert!(gov_validates.contains(&StateComponent::Controller));
+        assert!(gov_validates.contains(&StateComponent::AntiCalcification));
+
+        // Governance triggert Controller und Event
+        let gov_triggers = graph.triggered_by(StateComponent::Governance);
+        assert!(gov_triggers.contains(&StateComponent::Controller));
+        assert!(gov_triggers.contains(&StateComponent::Event));
+    }
+
+    #[test]
+    fn test_controller_engine_graph_edges() {
+        let graph = StateGraph::erynoa_graph();
+
+        // Controller Dependencies
+        let ctrl_deps = graph.dependencies_of(StateComponent::Controller);
+        assert!(ctrl_deps.contains(&StateComponent::Trust));
+        assert!(ctrl_deps.contains(&StateComponent::Realm));
+        assert!(ctrl_deps.contains(&StateComponent::Room));
+        assert!(ctrl_deps.contains(&StateComponent::Partition));
+        assert!(ctrl_deps.contains(&StateComponent::ECLVM));
+
+        // Controller validiert Gateway, API, UI
+        let ctrl_validates = graph.validated_by(StateComponent::Controller);
+        assert!(ctrl_validates.contains(&StateComponent::Gateway));
+        assert!(ctrl_validates.contains(&StateComponent::API));
+        assert!(ctrl_validates.contains(&StateComponent::UI));
+
+        // Controller aggregiert Governance
+        let ctrl_aggregates = graph.aggregated_by(StateComponent::Controller);
+        assert!(ctrl_aggregates.contains(&StateComponent::Governance));
+    }
+
+    #[test]
+    fn test_datalogic_engine_graph_edges() {
+        let graph = StateGraph::erynoa_graph();
+
+        // DataLogic Dependencies
+        let dl_deps = graph.dependencies_of(StateComponent::DataLogic);
+        assert!(dl_deps.contains(&StateComponent::Event));
+        assert!(dl_deps.contains(&StateComponent::Trust));
+        assert!(dl_deps.contains(&StateComponent::ECLVM));
+        assert!(dl_deps.contains(&StateComponent::Gas));
+
+        // DataLogic aggregiert und triggert Events
+        let dl_aggregates = graph.aggregated_by(StateComponent::DataLogic);
+        assert!(dl_aggregates.contains(&StateComponent::Event));
+        let dl_triggers = graph.triggered_by(StateComponent::DataLogic);
+        assert!(dl_triggers.contains(&StateComponent::Event));
+
+        // DataLogic validiert UI
+        let dl_validates = graph.validated_by(StateComponent::DataLogic);
+        assert!(dl_validates.contains(&StateComponent::UI));
+    }
+
+    #[test]
+    fn test_blueprint_composer_graph_edges() {
+        let graph = StateGraph::erynoa_graph();
+
+        // BlueprintComposer Dependencies
+        let bc_deps = graph.dependencies_of(StateComponent::BlueprintComposer);
+        assert!(bc_deps.contains(&StateComponent::Blueprint));
+        assert!(bc_deps.contains(&StateComponent::ECLVM));
+        assert!(bc_deps.contains(&StateComponent::Trust));
+        assert!(bc_deps.contains(&StateComponent::Gas));
+
+        // BlueprintComposer aggregiert ECLBlueprint
+        let bc_aggregates = graph.aggregated_by(StateComponent::BlueprintComposer);
+        assert!(bc_aggregates.contains(&StateComponent::ECLBlueprint));
+
+        // BlueprintComposer validiert Realm
+        let bc_validates = graph.validated_by(StateComponent::BlueprintComposer);
+        assert!(bc_validates.contains(&StateComponent::Realm));
+    }
+
+    #[test]
+    fn test_new_components_criticality_scores() {
+        let graph = StateGraph::erynoa_graph();
+
+        // Trust sollte der kritischste sein (viele Dependencies)
+        let trust_score = graph.criticality_score(StateComponent::Trust);
+        assert!(
+            trust_score > 20,
+            "Trust criticality should be high: {}",
+            trust_score
+        );
+
+        // Controller sollte mittlere Kritikalität haben
+        let ctrl_score = graph.criticality_score(StateComponent::Controller);
+        assert!(
+            ctrl_score > 5,
+            "Controller criticality should be medium: {}",
+            ctrl_score
+        );
+
+        // ECLVM sollte hohe Kritikalität haben (viele Engines nutzen es)
+        let eclvm_score = graph.criticality_score(StateComponent::ECLVM);
+        assert!(
+            eclvm_score > 10,
+            "ECLVM criticality should be high: {}",
+            eclvm_score
+        );
+    }
+
+    #[test]
+    fn test_transitive_dependencies_new_components() {
+        let graph = StateGraph::erynoa_graph();
+
+        // UI sollte transitiv von Trust abhängen
+        let ui_trans_deps = graph.transitive_dependencies(StateComponent::UI);
+        assert!(ui_trans_deps.contains(&StateComponent::Trust));
+
+        // Controller sollte transitiv von Trust abhängen
+        let ctrl_trans_deps = graph.transitive_dependencies(StateComponent::Controller);
+        assert!(ctrl_trans_deps.contains(&StateComponent::Trust));
+
+        // Partition sollte transitiv von Realm abhängen (über Room)
+        let part_trans_deps = graph.transitive_dependencies(StateComponent::Partition);
+        assert!(part_trans_deps.contains(&StateComponent::Room));
+        assert!(part_trans_deps.contains(&StateComponent::Realm));
+    }
+
+    #[test]
+    fn test_state_graph_edge_count() {
+        let graph = StateGraph::erynoa_graph();
+
+        // Wir haben ~50 bestehende + ~42 neue = ~92 Edges
+        assert!(
+            graph.edges.len() >= 85,
+            "StateGraph should have at least 85 edges, got: {}",
+            graph.edges.len()
+        );
+    }
+
+    // ========================================================================
+    // 2.1-2.6 Engine-State Tests
+    // ========================================================================
+
+    #[test]
+    fn test_ui_state() {
+        let state = UIState::new();
+
+        // Component registrieren
+        state.register_component(Some("test-realm"));
+        state.register_component(None);
+
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.components_registered, 2);
+        assert_eq!(snapshot.components_active, 2);
+
+        // Render durchführen
+        state.render(false, 100, 50, Some("test-realm"));
+        state.render(true, 0, 0, None);
+
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.renders, 2);
+        assert!((snapshot.cache_hit_rate - 0.5).abs() < 0.01);
+
+        // Trust-Gate
+        state.trust_gate(true, None);
+        state.trust_gate(false, Some("test-realm"));
+
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.trust_gate_evaluations, 2);
+        assert!((snapshot.trust_gate_allow_rate - 0.5).abs() < 0.01);
+
+        // Credential-Gate
+        state.credential_gate(true);
+        state.credential_gate(true);
+        state.credential_gate(false);
+
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.credential_gate_evaluations, 3);
+        assert!((snapshot.credential_gate_allow_rate - 0.666).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_api_state() {
+        let state = APIState::new();
+
+        // Endpoints registrieren
+        state.register_endpoint(Some("test-realm"));
+        state.register_endpoint(None);
+
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.endpoints_registered, 2);
+        assert_eq!(snapshot.endpoints_active, 2);
+
+        // Requests verarbeiten
+        state.record_request(1000, 200, 50, 10, Some("test-realm")); // Success
+        state.record_request(500, 201, 30, 5, None); // Success
+        state.record_request(2000, 404, 10, 2, None); // Client error
+        state.record_request(5000, 429, 5, 1, Some("test-realm")); // Rate limited
+        state.record_request(3000, 500, 20, 5, None); // Server error
+
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.requests_total, 5);
+        assert_eq!(snapshot.requests_success, 2);
+        assert_eq!(snapshot.requests_client_error, 2);
+        assert_eq!(snapshot.requests_server_error, 1);
+        assert_eq!(snapshot.requests_rate_limited, 1);
+        assert!((snapshot.success_rate - 0.4).abs() < 0.01);
+        assert!(snapshot.avg_latency_us > 0.0);
+    }
+
+    #[test]
+    fn test_governance_state() {
+        let state = GovernanceState::new();
+
+        // Proposals erstellen
+        state.proposal_created(Some("test-realm"));
+        state.proposal_created(None);
+
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.proposals_created, 2);
+        assert_eq!(snapshot.proposals_active, 2);
+
+        // Votes abgeben
+        state.vote_cast(1.5, false, true, Some("test-realm"));
+        state.vote_cast(2.0, true, true, None);
+        state.vote_cast(1.0, false, false, None);
+
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.votes_cast, 3);
+        assert_eq!(snapshot.votes_delegated, 1);
+        assert_eq!(snapshot.quadratic_reductions, 2);
+        assert!(snapshot.avg_voting_power > 1.0);
+
+        // Proposals abschließen
+        state.proposal_completed("accepted");
+        state.proposal_completed("rejected");
+
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.proposals_completed, 2);
+        assert_eq!(snapshot.proposals_accepted, 1);
+        assert_eq!(snapshot.proposals_rejected, 1);
+        assert!((snapshot.proposal_success_rate - 0.5).abs() < 0.01);
+
+        // Delegationen
+        state.delegation_created(3, Some("test-realm"));
+
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.delegations_active, 1);
+        assert_eq!(snapshot.max_delegation_depth, 3);
+
+        // Power-Check
+        state.power_check(true, 0.35);
+
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.power_violations, 1);
+        assert!((snapshot.voting_power_gini - 0.35).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_controller_state() {
+        let state = ControllerState::new();
+
+        // Permissions gewähren
+        state.grant_permission(Some("test-realm"));
+        state.grant_permission(None);
+
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.permission_grants, 2);
+        assert_eq!(snapshot.permissions_active, 2);
+
+        // AuthZ-Checks
+        state.check_authorization(true, false, 50, "realm", Some("test-realm"));
+        state.check_authorization(true, true, 100, "room", None);
+        state.check_authorization(false, false, 25, "partition", Some("test-realm"));
+
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.authz_checks, 3);
+        assert_eq!(snapshot.authz_allowed, 2);
+        assert_eq!(snapshot.authz_denied, 1);
+        assert!((snapshot.authz_success_rate - 0.666).abs() < 0.01);
+        assert!(snapshot.avg_check_latency_us > 0.0);
+        assert_eq!(snapshot.realm_scope_checks, 1);
+        assert_eq!(snapshot.room_scope_checks, 1);
+        assert_eq!(snapshot.partition_scope_checks, 1);
+
+        // Delegation
+        state.create_delegation(2, Some("test-realm"));
+
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.delegations_active, 1);
+        assert_eq!(snapshot.max_delegation_depth, 2);
+
+        // Permission widerrufen
+        state.revoke_permission();
+
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.permission_revokes, 1);
+        assert_eq!(snapshot.permissions_active, 1);
+
+        // Audit-Entries sollten geschrieben worden sein
+        assert!(snapshot.audit_entries > 0);
+        assert!(snapshot.audit_log_bytes > 0);
+    }
+
+    #[test]
+    fn test_data_logic_state() {
+        let state = DataLogicState::new();
+
+        // Stream registrieren
+        state.register_stream();
+        state.register_stream();
+
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.streams_registered, 2);
+        assert_eq!(snapshot.streams_active, 2);
+
+        // Events verarbeiten
+        state.process_event(false, 50); // Forwarded
+        state.process_event(false, 30); // Forwarded
+        state.process_event(true, 10); // Filtered
+
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.events_processed, 3);
+        assert_eq!(snapshot.events_forwarded, 2);
+        assert_eq!(snapshot.events_filtered, 1);
+        assert!((snapshot.success_rate - 0.666).abs() < 0.01);
+
+        // Aggregation
+        state.aggregation_computed(500, 100);
+        state.aggregation_computed(300, 80);
+
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.aggregations_computed, 2);
+        assert!(snapshot.avg_aggregation_latency_us > 0.0);
+
+        // Binding Propagation
+        state.propagate_binding(true, 100, 20);
+        state.propagate_binding(true, 150, 25);
+        state.propagate_binding(false, 50, 10);
+
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.binding_propagations, 3);
+        assert!((snapshot.binding_success_rate - 0.666).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_blueprint_composer_state() {
+        let state = BlueprintComposerState::new();
+
+        // Compositions erstellen
+        state.composition_created(true, 2, 1, 100);
+        state.composition_created(true, 3, 0, 150);
+        state.composition_created(false, 0, 0, 50);
+
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.compositions_created, 3);
+        assert_eq!(snapshot.compositions_successful, 2);
+        assert_eq!(snapshot.compositions_failed, 1);
+        assert!((snapshot.composition_success_rate - 0.666).abs() < 0.01);
+        assert_eq!(snapshot.max_inheritance_depth, 3);
+        assert_eq!(snapshot.conflict_resolutions, 1);
+
+        // Instanziierung
+        state.instantiate(true, 80);
+        state.instantiate(true, 70);
+        state.instantiate(false, 30);
+
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.instantiations, 3);
+        assert_eq!(snapshot.instances_active, 2);
+
+        // Realm-Compatibility
+        state.realm_compatibility_check(true);
+        state.realm_compatibility_check(false);
+
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.realm_compatibility_checks, 2);
+        assert_eq!(snapshot.compatibility_failures, 1);
+
+        // Cache
+        state.cache_access(true);
+        state.cache_access(true);
+        state.cache_access(false);
+
+        let snapshot = state.snapshot();
+        assert!((snapshot.cache_hit_rate - 0.666).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_unified_state_with_engines() {
+        let state = UnifiedState::new();
+
+        // Alle neuen Engines sollten initialisiert sein
+        assert_eq!(state.ui.components_registered.load(Ordering::Relaxed), 0);
+        assert_eq!(state.api.endpoints_registered.load(Ordering::Relaxed), 0);
+        assert_eq!(
+            state.governance.proposals_created.load(Ordering::Relaxed),
+            0
+        );
+        assert_eq!(
+            state
+                .controller
+                .permissions_registered
+                .load(Ordering::Relaxed),
+            0
+        );
+        assert_eq!(
+            state.data_logic.streams_registered.load(Ordering::Relaxed),
+            0
+        );
+        assert_eq!(
+            state
+                .blueprint_composer
+                .compositions_created
+                .load(Ordering::Relaxed),
+            0
+        );
+
+        // Snapshot sollte alle Engines enthalten
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.ui.components_registered, 0);
+        assert_eq!(snapshot.api.endpoints_registered, 0);
+        assert_eq!(snapshot.governance.proposals_created, 0);
+        assert_eq!(snapshot.controller.permissions_registered, 0);
+        assert_eq!(snapshot.data_logic.streams_registered, 0);
+        assert_eq!(snapshot.blueprint_composer.compositions_created, 0);
+
+        // Health sollte hoch bei leerem State sein (einige Defaults sind nicht 100%)
+        // Andere Layer wie P2P können Health reduzieren auch ohne Engine-Aktivität
+        let health = state.calculate_health();
+        assert!(
+            health >= 80.0,
+            "Initial health should be >= 80%, got: {}",
+            health
+        );
+    }
+
+    #[test]
+    fn test_unified_state_health_with_engine_errors() {
+        let state = UnifiedState::new();
+
+        // Provoziere Fehler in den Engines
+        state.api.record_request(1000, 500, 50, 10, None); // Server Error
+        state.api.record_request(1000, 500, 50, 10, None);
+        state.api.record_request(1000, 500, 50, 10, None);
+        state
+            .controller
+            .check_authorization(false, false, 50, "realm", None);
+        state
+            .controller
+            .check_authorization(false, false, 50, "realm", None);
+
+        // Health sollte gesunken sein
+        let health = state.calculate_health();
+        assert!(
+            health < 99.0,
+            "Health should decrease with errors, got: {}",
+            health
+        );
+        assert!(
+            health > 80.0,
+            "Health should not drop too low, got: {}",
+            health
+        );
     }
 }

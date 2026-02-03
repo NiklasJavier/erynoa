@@ -39,13 +39,22 @@ pub use world_formula::WorldFormulaEngine;
 // Re-exports - Unified State Management
 pub use state::{
     create_unified_state,
+    // Engine-Layer State (Phase 2 Additions)
+    APIState,
+    APIStateSnapshot,
+    BlueprintComposerState,
+    BlueprintComposerStateSnapshot,
     // ECLVM State (Erynoa Core Language Virtual Machine)
     BlueprintStatus,
     // Core State
     ConsensusState,
     ConsensusStateSnapshot,
+    ControllerState,
+    ControllerStateSnapshot,
     CoreState,
     CoreStateSnapshot,
+    DataLogicState,
+    DataLogicStateSnapshot,
     ECLPolicyType,
     ECLVMState,
     ECLVMStateSnapshot,
@@ -59,6 +68,8 @@ pub use state::{
     GatewayStateSnapshot,
     GossipState,
     GossipStateSnapshot,
+    GovernanceState,
+    GovernanceStateSnapshot,
     IntentParserState,
     IntentParserStateSnapshot,
     KademliaState,
@@ -74,13 +85,18 @@ pub use state::{
     PrivacyStateSnapshot,
     ProtectionState,
     ProtectionStateSnapshot,
+    // Realm-specific Engine States
+    RealmAPIState,
+    RealmControllerState,
     RealmECLState,
     RealmECLStateSnapshot,
+    RealmGovernanceState,
     // Realm State (Κ22-Κ24) - Per-Realm Isolation
     RealmSpecificState,
     RealmSpecificStateSnapshot,
     RealmState,
     RealmStateSnapshot,
+    RealmUIState,
     RelayState,
     RelayStateSnapshot,
     SagaComposerState,
@@ -96,15 +112,22 @@ pub use state::{
     TrustDistribution,
     TrustState,
     TrustStateSnapshot,
+    UIState,
+    UIStateSnapshot,
     UnifiedState,
     UnifiedStateSnapshot,
 };
 
 // Re-exports - State Integration (Observer Pattern)
 pub use state_integration::{
+    // Engine-Layer Observers (Phase 4 Additions)
+    APIObserver,
+    BlueprintComposerObserver,
     CompositeObserver,
     // Core Observers
     ConsensusObserver,
+    ControllerObserver,
+    DataLogicObserver,
     // ECLVM Observer (ECL/ECLVM Integration)
     ECLVMObserver,
     EventObserver,
@@ -113,6 +136,7 @@ pub use state_integration::{
     // Peer Observers (Κ22-Κ24)
     GatewayObserver,
     GossipObserver,
+    GovernanceObserver,
     IntentObserver,
     KademliaObserver,
     ObservableEngine,
@@ -122,8 +146,13 @@ pub use state_integration::{
     RealmObserver,
     RelayObserver,
     SagaObserver,
+    // Engine-Layer Shared Observer Types
+    SharedAPIObserver,
+    SharedBlueprintComposerObserver,
     // Shared Types
     SharedConsensusObserver,
+    SharedControllerObserver,
+    SharedDataLogicObserver,
     // ECLVM Shared Observer
     SharedECLVMObserver,
     SharedEventObserver,
@@ -131,6 +160,7 @@ pub use state_integration::{
     SharedFormulaObserver,
     SharedGatewayObserver,
     SharedGossipObserver,
+    SharedGovernanceObserver,
     SharedIntentObserver,
     SharedKademliaObserver,
     SharedPrivacyObserver,
@@ -141,11 +171,13 @@ pub use state_integration::{
     SharedStorageObserver,
     SharedSwarmObserver,
     SharedTrustObserver,
+    SharedUIObserver,
     StateIntegrator,
     StorageObserver,
     // P2P Observers
     SwarmObserver,
     TrustObserver,
+    UIObserver,
 };
 
 // Re-exports - State Coordination
