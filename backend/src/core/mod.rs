@@ -48,8 +48,14 @@ pub use state::{
     BlueprintComposerStateSnapshot,
     // ECLVM State (Erynoa Core Language Virtual Machine)
     BlueprintStatus,
+    // ─────────────────────────────────────────────────────────────────────────
+    // Architektur-Verbesserungen Phase 6.4: Zustand-Abstraktion für ECLVM
+    // ─────────────────────────────────────────────────────────────────────────
+    // Budget für ECLVM-Ausführung
+    BudgetExhaustionReason,
     CircuitBreaker,
     CircuitBreakerSnapshot,
+    CommitResult,
     // Core State
     ConsensusState,
     ConsensusStateSnapshot,
@@ -61,7 +67,13 @@ pub use state::{
     DataLogicStateSnapshot,
     DeltaType,
     ECLPolicyType,
+    ECLVMBudget,
+    ECLVMBudgetLimits,
+    ECLVMBudgetSnapshot,
+    // State Context für ECLVM
+    ECLVMExecutionSummary,
     ECLVMState,
+    ECLVMStateContext,
     ECLVMStateSnapshot,
     // Architektur-Verbesserungen Phase 6.1
     // Event-Inversion (P2P/Core Entkopplung)
@@ -85,6 +97,7 @@ pub use state::{
     GovernanceStateSnapshot,
     // Differential State Snapshots (Merkle)
     Hashable,
+    IdentityViewData,
     IntentParserState,
     IntentParserStateSnapshot,
     KademliaState,
@@ -98,6 +111,7 @@ pub use state::{
     MerkleStateTrackerSnapshot,
     MultiGas,
     MultiGasSnapshot,
+    MutationResult,
     NatStatus,
     NetworkEvent,
     NetworkMetric,
@@ -127,10 +141,12 @@ pub use state::{
     RealmState,
     RealmStateSnapshot,
     RealmUIState,
+    RealmViewData,
     RelayState,
     RelayStateSnapshot,
     // Resource-Typen für Quotas
     ResourceType,
+    RollbackResult,
     SagaComposerState,
     SagaComposerStateSnapshot,
     SharedUnifiedState,
@@ -147,7 +163,11 @@ pub use state::{
     StateEventLog,
     StateEventLogSnapshot,
     StateGraph,
+    // State Handle (Write Access)
+    StateHandle,
     StateRelation,
+    // State View (Read-Only)
+    StateView,
     StorageBackend,
     // Storage als orthogonale Schicht
     StorageHandle,
@@ -158,6 +178,8 @@ pub use state::{
     SwarmStateSnapshot as CoreSwarmStateSnapshot,
     // Circuit Breaker Pattern
     SystemMode,
+    // Transaction Guard (RAII)
+    TransactionGuard,
     TrustDistribution,
     // Hilfs-Enums für Events
     TrustReason,

@@ -109,6 +109,13 @@ parking_lot = "0.12"
 url = "2"
 
 # ============================================================================
+# SHARDING & HIGH-PERFORMANCE CONCURRENT DATA STRUCTURES
+# ============================================================================
+dashmap = "6"    # Lock-free concurrent HashMap (sharded internally)
+lru = "0.12"     # LRU Cache for Eviction Policy
+rustc-hash = "2" # Fast non-cryptographic hashing (FxHash)
+
+# ============================================================================
 # CRYPTOGRAPHY (Event hashing, DID signatures)
 # ============================================================================
 sha2 = "0.10"

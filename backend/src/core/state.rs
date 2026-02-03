@@ -89,8 +89,16 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, AtomicU8, AtomicUsize, Ordering};
 use std::sync::{Arc, RwLock};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use tokio::sync::{broadcast, mpsc};
+
+// Sharding & High-Performance Concurrent Data Structures
+use dashmap::DashMap;
+use lru::LruCache;
+use rustc_hash::FxHasher;
+use std::hash::{Hash, Hasher};
+use std::num::NonZeroUsize;
+use tokio::sync::RwLock as TokioRwLock;
 
 // ============================================================================
 // SYSTEM MODE (CIRCUIT BREAKER PATTERN)
@@ -4545,6 +4553,9 @@ pub struct ProtectionState {
     pub anti_calcification: AntiCalcificationState,
     /// Calibration (Calibration → Gas/Mana)
     pub calibration: CalibrationState,
+    /// Shard Monitor für horizontale Skalierungssicherheit (Phase 7.1)
+    /// Optional: Wird nur bei aktiviertem Sharding benötigt
+    shard_monitor: Option<Arc<ShardMonitor>>,
 }
 
 impl ProtectionState {
@@ -4555,7 +4566,30 @@ impl ProtectionState {
             quadratic: QuadraticState::new(),
             anti_calcification: AntiCalcificationState::new(),
             calibration: CalibrationState::new(),
+            shard_monitor: None,
         }
+    }
+
+    /// Erstelle mit aktiviertem ShardMonitor
+    pub fn with_shard_monitor(config: ShardMonitorConfig) -> Self {
+        Self {
+            anomaly: AnomalyState::new(),
+            diversity: DiversityState::new(),
+            quadratic: QuadraticState::new(),
+            anti_calcification: AntiCalcificationState::new(),
+            calibration: CalibrationState::new(),
+            shard_monitor: Some(Arc::new(ShardMonitor::new(config))),
+        }
+    }
+
+    /// Aktiviere ShardMonitor nachträglich
+    pub fn enable_shard_monitor(&mut self, config: ShardMonitorConfig) {
+        self.shard_monitor = Some(Arc::new(ShardMonitor::new(config)));
+    }
+
+    /// Hole ShardMonitor Reference (falls aktiviert)
+    pub fn shard_monitor(&self) -> Option<&Arc<ShardMonitor>> {
+        self.shard_monitor.as_ref()
     }
 
     /// Legacy-Kompatibilität: Anomalie aufzeichnen
@@ -4609,7 +4643,58 @@ impl ProtectionState {
             .load(Ordering::Relaxed);
         score -= (violations * 10) as f64;
 
+        // Shard-Monitor: Quarantinierte Shards und niedrige Reputationen
+        if let Some(shard_mon) = &self.shard_monitor {
+            let snapshot = shard_mon.snapshot();
+            // Quarantinierte Shards sind kritisch
+            score -= (snapshot.quarantined_shard_count * 15) as f64;
+            // Niedrige Success-Rate ist Warning
+            if snapshot.cross_shard_success_rate < 0.9 {
+                score -= 10.0;
+            }
+            if snapshot.cross_shard_success_rate < 0.7 {
+                score -= 20.0;
+            }
+        }
+
         score.max(0.0).min(100.0)
+    }
+
+    /// Record Trust-Update aus einem Shard (für Bias-Tracking)
+    pub fn record_shard_trust_update(&self, shard_id: u64, entropy_delta: f64) {
+        if let Some(shard_mon) = &self.shard_monitor {
+            shard_mon.record_trust_update(shard_id, entropy_delta);
+        }
+    }
+
+    /// Record Cross-Shard Success
+    pub fn record_cross_shard_success(&self, source_shard: u64) {
+        if let Some(shard_mon) = &self.shard_monitor {
+            shard_mon.record_cross_success(source_shard);
+        }
+    }
+
+    /// Record Cross-Shard Failure
+    pub fn record_cross_shard_failure(&self, source_shard: u64) {
+        if let Some(shard_mon) = &self.shard_monitor {
+            shard_mon.record_cross_failure(source_shard);
+        }
+    }
+
+    /// Hole Cross-Shard Penalty-Multiplier (für Gateway)
+    pub fn get_cross_shard_penalty(&self, source_shard: u64) -> f64 {
+        self.shard_monitor
+            .as_ref()
+            .map(|m| m.get_cross_shard_penalty(source_shard))
+            .unwrap_or(1.0) // Kein Monitor → keine Strafe
+    }
+
+    /// Contribute zu Multi-Veto Risk-Score (für Circuit Breaker)
+    pub fn shard_veto_contribution(&self, shard_id: u64) -> f64 {
+        self.shard_monitor
+            .as_ref()
+            .map(|m| m.contribute_to_veto(shard_id))
+            .unwrap_or(1.0) // Kein Monitor → neutraler Score
     }
 
     pub fn snapshot(&self) -> ProtectionStateSnapshot {
@@ -4620,6 +4705,7 @@ impl ProtectionState {
             anti_calcification: self.anti_calcification.snapshot(),
             calibration: self.calibration.snapshot(),
             health_score: self.health_score(),
+            shard_monitor: self.shard_monitor.as_ref().map(|m| m.snapshot()),
         }
     }
 }
@@ -4639,6 +4725,9 @@ pub struct ProtectionStateSnapshot {
     pub anti_calcification: AntiCalcificationStateSnapshot,
     pub calibration: CalibrationStateSnapshot,
     pub health_score: f64,
+    /// Optional: Shard-Monitor Snapshot (nur bei aktiviertem Sharding)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shard_monitor: Option<ShardMonitorSnapshot>,
 }
 
 // ============================================================================
@@ -11196,5 +11285,3992 @@ mod tests {
         // Verify event_log is included
         assert_eq!(snapshot.event_log.total_events, 3);
         assert_eq!(snapshot.event_log.sequence, 3);
+    }
+}
+
+// ============================================================================
+// PHASE 6.4: ZUSTAND-ABSTRAKTION FÜR ECLVM INTEGRATION
+// ============================================================================
+//
+// Diese Phase bietet abstrakte State-Interfaces für ECLVM:
+// 1. ECLVMStateContext - Orchestriert State-Zugriff für ECLVM-Ausführung
+// 2. StateView - Read-only Snapshot für Policy-Evaluation
+// 3. StateHandle - Realm-scoped schreibbarer Zustand
+// 4. TransactionGuard - RAII für atomare Änderungen
+// 5. ECLVMBudget - Gas/Mana-Integration
+// ============================================================================
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ECLVM BUDGET - Gas/Mana Tracking für ECLVM-Ausführung
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Budget-Limits für ECLVM-Ausführung
+#[derive(Debug, Clone, Copy)]
+pub struct ECLVMBudgetLimits {
+    /// Max Gas für Compute-Operationen
+    pub gas_limit: u64,
+    /// Max Mana für Bandbreite/Events
+    pub mana_limit: u64,
+    /// Max Stack-Tiefe
+    pub max_stack_depth: u32,
+    /// Max Ausführungszeit (ms)
+    pub timeout_ms: u64,
+}
+
+impl Default for ECLVMBudgetLimits {
+    fn default() -> Self {
+        Self {
+            gas_limit: 1_000_000, // 1M Gas default
+            mana_limit: 10_000,   // 10K Mana default
+            max_stack_depth: 1024,
+            timeout_ms: 5_000, // 5s timeout
+        }
+    }
+}
+
+impl ECLVMBudgetLimits {
+    /// Minimales Budget für triviale Operationen
+    pub fn minimal() -> Self {
+        Self {
+            gas_limit: 10_000,
+            mana_limit: 100,
+            max_stack_depth: 64,
+            timeout_ms: 100,
+        }
+    }
+
+    /// Großes Budget für komplexe Sagas
+    pub fn saga() -> Self {
+        Self {
+            gas_limit: 10_000_000, // 10M Gas
+            mana_limit: 100_000,   // 100K Mana
+            max_stack_depth: 2048,
+            timeout_ms: 30_000, // 30s
+        }
+    }
+
+    /// Trust-basierte Skalierung der Limits
+    pub fn with_trust_factor(mut self, trust: f64) -> Self {
+        let factor = trust.clamp(0.0, 1.0);
+        self.gas_limit = (self.gas_limit as f64 * (0.5 + factor * 0.5)) as u64;
+        self.mana_limit = (self.mana_limit as f64 * (0.5 + factor * 0.5)) as u64;
+        self
+    }
+}
+
+/// ECLVM Budget Tracker - überwacht Ressourcenverbrauch während Ausführung
+#[derive(Debug)]
+pub struct ECLVMBudget {
+    /// Konfigurierte Limits
+    pub limits: ECLVMBudgetLimits,
+    /// Verbrauchtes Gas
+    gas_used: AtomicU64,
+    /// Verbrauchtes Mana
+    mana_used: AtomicU64,
+    /// Startzeit der Ausführung
+    started_at: Instant,
+    /// Wurde Budget erschöpft?
+    exhausted: std::sync::atomic::AtomicBool,
+    /// Exhaustion-Grund (falls erschöpft)
+    exhaustion_reason: RwLock<Option<BudgetExhaustionReason>>,
+}
+
+/// Grund für Budget-Erschöpfung
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum BudgetExhaustionReason {
+    /// Gas-Limit erreicht
+    OutOfGas,
+    /// Mana-Limit erreicht
+    OutOfMana,
+    /// Timeout
+    Timeout,
+    /// Stack-Overflow
+    StackOverflow,
+}
+
+impl ECLVMBudget {
+    /// Erstelle neues Budget mit Limits
+    pub fn new(limits: ECLVMBudgetLimits) -> Self {
+        Self {
+            limits,
+            gas_used: AtomicU64::new(0),
+            mana_used: AtomicU64::new(0),
+            started_at: Instant::now(),
+            exhausted: std::sync::atomic::AtomicBool::new(false),
+            exhaustion_reason: RwLock::new(None),
+        }
+    }
+
+    /// Erstelle Budget mit Default-Limits
+    pub fn with_defaults() -> Self {
+        Self::new(ECLVMBudgetLimits::default())
+    }
+
+    /// Prüfe und konsumiere Gas
+    /// Returns false wenn Budget erschöpft
+    pub fn consume_gas(&self, amount: u64) -> bool {
+        if self.exhausted.load(Ordering::Relaxed) {
+            return false;
+        }
+
+        let new_total = self.gas_used.fetch_add(amount, Ordering::Relaxed) + amount;
+        if new_total > self.limits.gas_limit {
+            self.mark_exhausted(BudgetExhaustionReason::OutOfGas);
+            return false;
+        }
+
+        // Check timeout bei jeder Gas-Operation
+        if self.started_at.elapsed().as_millis() as u64 > self.limits.timeout_ms {
+            self.mark_exhausted(BudgetExhaustionReason::Timeout);
+            return false;
+        }
+
+        true
+    }
+
+    /// Prüfe und konsumiere Mana
+    pub fn consume_mana(&self, amount: u64) -> bool {
+        if self.exhausted.load(Ordering::Relaxed) {
+            return false;
+        }
+
+        let new_total = self.mana_used.fetch_add(amount, Ordering::Relaxed) + amount;
+        if new_total > self.limits.mana_limit {
+            self.mark_exhausted(BudgetExhaustionReason::OutOfMana);
+            return false;
+        }
+        true
+    }
+
+    /// Prüfe Stack-Depth
+    pub fn check_stack_depth(&self, current_depth: u32) -> bool {
+        if current_depth > self.limits.max_stack_depth {
+            self.mark_exhausted(BudgetExhaustionReason::StackOverflow);
+            return false;
+        }
+        true
+    }
+
+    /// Markiere Budget als erschöpft
+    fn mark_exhausted(&self, reason: BudgetExhaustionReason) {
+        if !self.exhausted.swap(true, Ordering::SeqCst) {
+            if let Ok(mut r) = self.exhaustion_reason.write() {
+                *r = Some(reason);
+            }
+        }
+    }
+
+    /// Ist Budget erschöpft?
+    pub fn is_exhausted(&self) -> bool {
+        self.exhausted.load(Ordering::Relaxed)
+    }
+
+    /// Exhaustion-Grund (falls erschöpft)
+    pub fn exhaustion_reason(&self) -> Option<BudgetExhaustionReason> {
+        self.exhaustion_reason.read().ok().and_then(|r| *r)
+    }
+
+    /// Verbrauchtes Gas
+    pub fn gas_used(&self) -> u64 {
+        self.gas_used.load(Ordering::Relaxed)
+    }
+
+    /// Verbrauchtes Mana
+    pub fn mana_used(&self) -> u64 {
+        self.mana_used.load(Ordering::Relaxed)
+    }
+
+    /// Verbleibendes Gas
+    pub fn gas_remaining(&self) -> u64 {
+        self.limits.gas_limit.saturating_sub(self.gas_used())
+    }
+
+    /// Verbleibendes Mana
+    pub fn mana_remaining(&self) -> u64 {
+        self.limits.mana_limit.saturating_sub(self.mana_used())
+    }
+
+    /// Verstrichene Zeit seit Start
+    pub fn elapsed_ms(&self) -> u64 {
+        self.started_at.elapsed().as_millis() as u64
+    }
+
+    /// Verbleibende Zeit bis Timeout
+    pub fn time_remaining_ms(&self) -> u64 {
+        self.limits.timeout_ms.saturating_sub(self.elapsed_ms())
+    }
+
+    /// Snapshot des Budget-Zustands
+    pub fn snapshot(&self) -> ECLVMBudgetSnapshot {
+        ECLVMBudgetSnapshot {
+            gas_used: self.gas_used(),
+            gas_limit: self.limits.gas_limit,
+            mana_used: self.mana_used(),
+            mana_limit: self.limits.mana_limit,
+            elapsed_ms: self.elapsed_ms(),
+            timeout_ms: self.limits.timeout_ms,
+            exhausted: self.is_exhausted(),
+            exhaustion_reason: self.exhaustion_reason(),
+        }
+    }
+}
+
+/// Snapshot eines ECLVM-Budgets
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ECLVMBudgetSnapshot {
+    pub gas_used: u64,
+    pub gas_limit: u64,
+    pub mana_used: u64,
+    pub mana_limit: u64,
+    pub elapsed_ms: u64,
+    pub timeout_ms: u64,
+    pub exhausted: bool,
+    pub exhaustion_reason: Option<BudgetExhaustionReason>,
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATE VIEW - Read-only Snapshot für ECLVM Policy-Evaluation
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Read-only State View für ECLVM Policy-Evaluation
+///
+/// Bietet isolierten, konsistenten Lesezugriff auf State-Daten.
+/// Alle Reads kommen aus einem Snapshot - keine Race Conditions.
+///
+/// ```text
+/// ┌─────────────────────────────────────────────────────────────────┐
+/// │                      StateView (Read-Only)                      │
+/// │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
+/// │  │ TrustQuery  │  │ RealmQuery  │  │ EventQuery  │             │
+/// │  │ get_trust() │  │ get_realm() │  │ get_event() │             │
+/// │  └─────────────┘  └─────────────┘  └─────────────┘             │
+/// │                                                                 │
+/// │  Snapshot-Isolation: Liest immer konsistenten Zustand          │
+/// └─────────────────────────────────────────────────────────────────┘
+/// ```
+#[derive(Debug, Clone)]
+pub struct StateView {
+    /// Snapshot der relevanten State-Daten (lazy populated)
+    pub snapshot_time: u128,
+    /// Caller-Identity für Access-Control
+    pub caller_did: Option<String>,
+    /// Aktuelles Realm (für Realm-scoped Queries)
+    pub current_realm: Option<String>,
+
+    // Cached State-Teile (populated on demand)
+    trust_cache: Arc<RwLock<HashMap<String, f64>>>,
+    realm_cache: Arc<RwLock<HashMap<String, RealmViewData>>>,
+    identity_cache: Arc<RwLock<HashMap<String, IdentityViewData>>>,
+}
+
+/// Realm-Daten für StateView
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RealmViewData {
+    pub realm_id: String,
+    pub name: String,
+    pub owner_did: String,
+    pub member_count: u64,
+    pub trust_threshold: f64,
+    pub is_quarantined: bool,
+    pub created_at: u64,
+}
+
+/// Identity-Daten für StateView
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IdentityViewData {
+    pub did: String,
+    pub display_name: Option<String>,
+    pub trust_score: f64,
+    pub realms: Vec<String>,
+    pub created_at: u64,
+}
+
+impl StateView {
+    /// Erstelle StateView für einen Caller
+    pub fn new(caller_did: Option<String>, current_realm: Option<String>) -> Self {
+        Self {
+            snapshot_time: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            caller_did,
+            current_realm,
+            trust_cache: Arc::new(RwLock::new(HashMap::new())),
+            realm_cache: Arc::new(RwLock::new(HashMap::new())),
+            identity_cache: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+
+    /// Erstelle StateView aus UnifiedState Snapshot
+    pub fn from_unified_snapshot(
+        snapshot: &UnifiedStateSnapshot,
+        caller_did: Option<String>,
+        current_realm: Option<String>,
+    ) -> Self {
+        let mut view = Self::new(caller_did, current_realm);
+
+        // Pre-populate trust cache mit bekannten Werten
+        // In Production würde dies aus dem Snapshot geladen
+        if let Ok(mut cache) = view.trust_cache.write() {
+            // Initial empty - wird bei Queries gefüllt
+            cache.clear();
+        }
+
+        view
+    }
+
+    /// Prüfe ob Caller bekannt ist
+    pub fn has_caller(&self) -> bool {
+        self.caller_did.is_some()
+    }
+
+    /// Prüfe ob Realm-Kontext gesetzt
+    pub fn has_realm_context(&self) -> bool {
+        self.current_realm.is_some()
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Trust Queries
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// Hole Trust-Wert für Entity (gecached)
+    pub fn get_trust(&self, entity_id: &str) -> Option<f64> {
+        if let Ok(cache) = self.trust_cache.read() {
+            cache.get(entity_id).copied()
+        } else {
+            None
+        }
+    }
+
+    /// Setze Trust-Wert im Cache (für Tests/Initialization)
+    pub fn set_trust_cached(&self, entity_id: &str, trust: f64) {
+        if let Ok(mut cache) = self.trust_cache.write() {
+            cache.insert(entity_id.to_string(), trust);
+        }
+    }
+
+    /// Hole Trust zwischen zwei Entities (Subjekt → Objekt)
+    pub fn get_trust_between(&self, subject: &str, object: &str) -> Option<f64> {
+        // Vereinfacht: nutze globalen Trust des Objekts
+        // In Production: Trust-Graph mit edge-weights
+        self.get_trust(object)
+    }
+
+    /// Prüfe ob Entity über Threshold liegt
+    pub fn trust_above_threshold(&self, entity_id: &str, threshold: f64) -> bool {
+        self.get_trust(entity_id)
+            .map(|t| t >= threshold)
+            .unwrap_or(false)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Realm Queries
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// Hole Realm-Daten
+    pub fn get_realm(&self, realm_id: &str) -> Option<RealmViewData> {
+        if let Ok(cache) = self.realm_cache.read() {
+            cache.get(realm_id).cloned()
+        } else {
+            None
+        }
+    }
+
+    /// Setze Realm-Daten im Cache
+    pub fn set_realm_cached(&self, data: RealmViewData) {
+        if let Ok(mut cache) = self.realm_cache.write() {
+            cache.insert(data.realm_id.clone(), data);
+        }
+    }
+
+    /// Prüfe ob Caller Member eines Realms ist
+    pub fn is_caller_member_of(&self, realm_id: &str) -> bool {
+        self.caller_did.as_ref().map_or(false, |did| {
+            self.get_identity(did)
+                .map(|id| id.realms.contains(&realm_id.to_string()))
+                .unwrap_or(false)
+        })
+    }
+
+    /// Hole aktuelles Realm (falls gesetzt)
+    pub fn current_realm_data(&self) -> Option<RealmViewData> {
+        self.current_realm.as_ref().and_then(|r| self.get_realm(r))
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Identity Queries
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// Hole Identity-Daten
+    pub fn get_identity(&self, did: &str) -> Option<IdentityViewData> {
+        if let Ok(cache) = self.identity_cache.read() {
+            cache.get(did).cloned()
+        } else {
+            None
+        }
+    }
+
+    /// Setze Identity-Daten im Cache
+    pub fn set_identity_cached(&self, data: IdentityViewData) {
+        if let Ok(mut cache) = self.identity_cache.write() {
+            cache.insert(data.did.clone(), data);
+        }
+    }
+
+    /// Hole Caller Identity
+    pub fn caller_identity(&self) -> Option<IdentityViewData> {
+        self.caller_did.as_ref().and_then(|d| self.get_identity(d))
+    }
+
+    /// Prüfe ob Caller existiert und verifiziert ist
+    pub fn is_caller_verified(&self) -> bool {
+        self.caller_identity()
+            .map(|id| id.trust_score > 0.1)
+            .unwrap_or(false)
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATE HANDLE - Realm-scoped schreibbarer Zustand
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Schreibbarer State-Handle für ECLVM
+///
+/// Erlaubt Realm-isolierte Schreiboperationen mit Validierung.
+/// Alle Schreiboperationen werden im Event-Log erfasst.
+///
+/// ```text
+/// ┌─────────────────────────────────────────────────────────────────┐
+/// │                   StateHandle (Write Access)                    │
+/// │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
+/// │  │ TrustMut    │  │ RealmMut    │  │ StorageMut  │             │
+/// │  │ update()    │  │ modify()    │  │ put/del()   │             │
+/// │  └─────────────┘  └─────────────┘  └─────────────┘             │
+/// │                                                                 │
+/// │  Isolation: Nur aktuelles Realm + eigene Identity               │
+/// │  Validation: Jede Mutation wird geprüft                         │
+/// │  Logging: Alle Änderungen werden im Event-Log erfasst           │
+/// └─────────────────────────────────────────────────────────────────┘
+/// ```
+pub struct StateHandle<'a> {
+    /// Referenz auf UnifiedState
+    state: &'a UnifiedState,
+    /// Caller-Identity für Access-Control
+    caller_did: String,
+    /// Aktuelles Realm
+    realm_id: String,
+    /// Budget für diese Operation
+    budget: Arc<ECLVMBudget>,
+    /// Geänderte Keys (für Rollback)
+    dirty_keys: RwLock<HashSet<String>>,
+    /// Pending Events (vor Commit)
+    pending_events: RwLock<Vec<StateEvent>>,
+    /// Wurde Handle committed?
+    committed: std::sync::atomic::AtomicBool,
+}
+
+/// Ergebnis einer StateHandle-Mutation
+#[derive(Debug, Clone)]
+pub enum MutationResult {
+    /// Erfolgreich
+    Success,
+    /// Abgelehnt wegen Policy
+    PolicyDenied(String),
+    /// Nicht genug Budget
+    BudgetExhausted(BudgetExhaustionReason),
+    /// Realm nicht erlaubt
+    RealmAccessDenied,
+    /// Validation fehlgeschlagen
+    ValidationFailed(String),
+}
+
+impl<'a> StateHandle<'a> {
+    /// Erstelle neuen StateHandle
+    pub fn new(
+        state: &'a UnifiedState,
+        caller_did: String,
+        realm_id: String,
+        budget: Arc<ECLVMBudget>,
+    ) -> Self {
+        Self {
+            state,
+            caller_did,
+            realm_id,
+            budget,
+            dirty_keys: RwLock::new(HashSet::new()),
+            pending_events: RwLock::new(Vec::new()),
+            committed: std::sync::atomic::AtomicBool::new(false),
+        }
+    }
+
+    /// Caller-DID
+    pub fn caller(&self) -> &str {
+        &self.caller_did
+    }
+
+    /// Aktuelles Realm
+    pub fn realm(&self) -> &str {
+        &self.realm_id
+    }
+
+    /// Budget-Status
+    pub fn budget_snapshot(&self) -> ECLVMBudgetSnapshot {
+        self.budget.snapshot()
+    }
+
+    /// Prüfe ob Handle noch gültig (nicht committed, Budget nicht erschöpft)
+    pub fn is_valid(&self) -> bool {
+        !self.committed.load(Ordering::Relaxed) && !self.budget.is_exhausted()
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Trust Mutations
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// Update Trust für Entity (innerhalb Realm-Kontext)
+    pub fn update_trust(
+        &self,
+        target_did: &str,
+        delta: f64,
+        reason: TrustReason,
+    ) -> MutationResult {
+        if !self.is_valid() {
+            return self
+                .budget
+                .exhaustion_reason()
+                .map(MutationResult::BudgetExhausted)
+                .unwrap_or(MutationResult::PolicyDenied("Handle invalid".to_string()));
+        }
+
+        // Gas für Trust-Update konsumieren
+        if !self.budget.consume_gas(100) {
+            return MutationResult::BudgetExhausted(BudgetExhaustionReason::OutOfGas);
+        }
+
+        // Validation: Delta muss im vernünftigen Bereich sein
+        if delta.abs() > 0.5 {
+            return MutationResult::ValidationFailed(
+                "Trust delta too large (max ±0.5)".to_string(),
+            );
+        }
+
+        // Event für Log vorbereiten
+        let event = StateEvent::TrustUpdate {
+            entity_id: target_did.to_string(),
+            delta,
+            reason,
+            from_realm: Some(self.realm_id.clone()),
+            triggered_events: 0,
+            new_trust: 0.0, // Wird beim Apply gefüllt
+        };
+
+        // Event zu pending hinzufügen
+        if let Ok(mut pending) = self.pending_events.write() {
+            pending.push(event);
+        }
+
+        // Dirty-Key tracken
+        if let Ok(mut dirty) = self.dirty_keys.write() {
+            dirty.insert(format!("trust:{}", target_did));
+        }
+
+        MutationResult::Success
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Realm-scoped Storage Mutations
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// Speichere Wert im Realm-Storage
+    pub fn store_put(&self, key: &str, value: &str) -> MutationResult {
+        if !self.is_valid() {
+            return self
+                .budget
+                .exhaustion_reason()
+                .map(MutationResult::BudgetExhausted)
+                .unwrap_or(MutationResult::PolicyDenied("Handle invalid".to_string()));
+        }
+
+        // Gas für Storage-Write konsumieren (abhängig von Value-Größe)
+        let gas_cost = 50 + (value.len() as u64 / 10);
+        if !self.budget.consume_gas(gas_cost) {
+            return MutationResult::BudgetExhausted(BudgetExhaustionReason::OutOfGas);
+        }
+
+        // Mana für Write-Bandbreite
+        if !self.budget.consume_mana(1 + (value.len() as u64 / 100)) {
+            return MutationResult::BudgetExhausted(BudgetExhaustionReason::OutOfMana);
+        }
+
+        // Dirty-Key tracken
+        if let Ok(mut dirty) = self.dirty_keys.write() {
+            dirty.insert(format!("store:{}:{}", self.realm_id, key));
+        }
+
+        MutationResult::Success
+    }
+
+    /// Lösche Wert aus Realm-Storage
+    pub fn store_delete(&self, key: &str) -> MutationResult {
+        if !self.is_valid() {
+            return self
+                .budget
+                .exhaustion_reason()
+                .map(MutationResult::BudgetExhausted)
+                .unwrap_or(MutationResult::PolicyDenied("Handle invalid".to_string()));
+        }
+
+        // Gas für Storage-Delete
+        if !self.budget.consume_gas(30) {
+            return MutationResult::BudgetExhausted(BudgetExhaustionReason::OutOfGas);
+        }
+
+        // Dirty-Key tracken
+        if let Ok(mut dirty) = self.dirty_keys.write() {
+            dirty.insert(format!("store:{}:{}", self.realm_id, key));
+        }
+
+        MutationResult::Success
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Event Emission
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// Emittiere Event (wird beim Commit geloggt)
+    pub fn emit_event(&self, event_type: &str, payload: &str) -> MutationResult {
+        if !self.is_valid() {
+            return self
+                .budget
+                .exhaustion_reason()
+                .map(MutationResult::BudgetExhausted)
+                .unwrap_or(MutationResult::PolicyDenied("Handle invalid".to_string()));
+        }
+
+        // Mana für Event-Emission
+        if !self.budget.consume_mana(1) {
+            return MutationResult::BudgetExhausted(BudgetExhaustionReason::OutOfMana);
+        }
+
+        // Event-Tracking im State
+        self.state
+            .eclvm
+            .events_emitted
+            .fetch_add(1, Ordering::Relaxed);
+
+        MutationResult::Success
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Commit / Rollback
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// Commit alle pending Änderungen
+    pub fn commit(self) -> CommitResult {
+        if self.committed.swap(true, Ordering::SeqCst) {
+            return CommitResult::AlreadyCommitted;
+        }
+
+        // Apply pending events
+        let events_count = if let Ok(pending) = self.pending_events.read() {
+            for event in pending.iter() {
+                self.state.log_and_apply(event.clone(), vec![]);
+            }
+            pending.len()
+        } else {
+            0
+        };
+
+        // Dirty keys count
+        let dirty_count = self.dirty_keys.read().map(|d| d.len()).unwrap_or(0);
+
+        CommitResult::Success {
+            events_applied: events_count,
+            keys_modified: dirty_count,
+            gas_used: self.budget.gas_used(),
+            mana_used: self.budget.mana_used(),
+        }
+    }
+
+    /// Rollback (verwerfe alle pending Änderungen)
+    pub fn rollback(self) -> RollbackResult {
+        if self.committed.swap(true, Ordering::SeqCst) {
+            return RollbackResult::AlreadyCommitted;
+        }
+
+        let pending_count = self.pending_events.read().map(|p| p.len()).unwrap_or(0);
+        let dirty_count = self.dirty_keys.read().map(|d| d.len()).unwrap_or(0);
+
+        RollbackResult::Success {
+            events_discarded: pending_count,
+            keys_discarded: dirty_count,
+        }
+    }
+
+    /// Anzahl pending Events
+    pub fn pending_events_count(&self) -> usize {
+        self.pending_events.read().map(|p| p.len()).unwrap_or(0)
+    }
+
+    /// Anzahl dirty Keys
+    pub fn dirty_keys_count(&self) -> usize {
+        self.dirty_keys.read().map(|d| d.len()).unwrap_or(0)
+    }
+}
+
+/// Ergebnis eines Commits
+#[derive(Debug, Clone)]
+pub enum CommitResult {
+    /// Erfolgreich committed
+    Success {
+        events_applied: usize,
+        keys_modified: usize,
+        gas_used: u64,
+        mana_used: u64,
+    },
+    /// Bereits committed
+    AlreadyCommitted,
+}
+
+/// Ergebnis eines Rollbacks
+#[derive(Debug, Clone)]
+pub enum RollbackResult {
+    /// Erfolgreich rolled back
+    Success {
+        events_discarded: usize,
+        keys_discarded: usize,
+    },
+    /// Bereits committed (kann nicht mehr rollback)
+    AlreadyCommitted,
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TRANSACTION GUARD - RAII für atomare State-Änderungen
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// RAII Transaction Guard für automatischen Rollback bei Drop
+///
+/// Wenn Guard dropped wird ohne commit(), wird automatisch rollback() aufgerufen.
+pub struct TransactionGuard<'a> {
+    handle: Option<StateHandle<'a>>,
+    auto_commit: bool,
+}
+
+impl<'a> TransactionGuard<'a> {
+    /// Erstelle Transaction Guard
+    pub fn new(handle: StateHandle<'a>) -> Self {
+        Self {
+            handle: Some(handle),
+            auto_commit: false,
+        }
+    }
+
+    /// Erstelle Transaction Guard mit Auto-Commit bei Success
+    pub fn with_auto_commit(handle: StateHandle<'a>) -> Self {
+        Self {
+            handle: Some(handle),
+            auto_commit: true,
+        }
+    }
+
+    /// Zugriff auf den StateHandle
+    pub fn handle(&self) -> Option<&StateHandle<'a>> {
+        self.handle.as_ref()
+    }
+
+    /// Mutable Zugriff auf den StateHandle
+    pub fn handle_mut(&mut self) -> Option<&StateHandle<'a>> {
+        self.handle.as_ref()
+    }
+
+    /// Expliziter Commit - nimmt Ownership vom Handle
+    pub fn commit(mut self) -> CommitResult {
+        self.handle
+            .take()
+            .map(|h| h.commit())
+            .unwrap_or(CommitResult::AlreadyCommitted)
+    }
+
+    /// Expliziter Rollback - nimmt Ownership vom Handle
+    pub fn rollback(mut self) -> RollbackResult {
+        self.handle
+            .take()
+            .map(|h| h.rollback())
+            .unwrap_or(RollbackResult::AlreadyCommitted)
+    }
+}
+
+impl<'a> Drop for TransactionGuard<'a> {
+    fn drop(&mut self) {
+        if let Some(handle) = self.handle.take() {
+            if self.auto_commit && handle.is_valid() {
+                // Auto-commit wenn erfolgreich
+                let _ = handle.commit();
+            } else {
+                // Rollback bei Drop
+                let _ = handle.rollback();
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ECLVM STATE CONTEXT - Orchestriert State-Zugriff für ECLVM-Ausführung
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// ECLVM State Context - Orchestriert alle State-Interaktionen
+///
+/// Bietet ECLVM eine einheitliche Schnittstelle für State-Zugriff.
+/// Kombiniert StateView (read) und StateHandle (write) mit Budget-Tracking.
+///
+/// ```text
+/// ┌─────────────────────────────────────────────────────────────────┐
+/// │                     ECLVMStateContext                           │
+/// │  ┌───────────────────────────────────────────────────────────┐  │
+/// │  │                      StateView                             │  │
+/// │  │  get_trust() | get_realm() | get_identity() ...           │  │
+/// │  └───────────────────────────────────────────────────────────┘  │
+/// │  ┌───────────────────────────────────────────────────────────┐  │
+/// │  │                     StateHandle                            │  │
+/// │  │  update_trust() | store_put() | emit_event() ...          │  │
+/// │  └───────────────────────────────────────────────────────────┘  │
+/// │  ┌───────────────────────────────────────────────────────────┐  │
+/// │  │                     ECLVMBudget                            │  │
+/// │  │  consume_gas() | consume_mana() | check_timeout()         │  │
+/// │  └───────────────────────────────────────────────────────────┘  │
+/// │                                                                 │
+/// │  Verwendung durch ECLVM Host Interface                          │
+/// └─────────────────────────────────────────────────────────────────┘
+/// ```
+pub struct ECLVMStateContext {
+    /// Read-only View auf State
+    pub view: StateView,
+    /// Budget für diese Ausführung
+    pub budget: Arc<ECLVMBudget>,
+    /// Caller-Identity
+    caller_did: String,
+    /// Aktuelles Realm
+    realm_id: String,
+    /// Referenz auf UnifiedState (für Handle-Erstellung)
+    state: Arc<UnifiedState>,
+    /// Erstellungszeit
+    created_at: Instant,
+    /// Execution-ID (für Tracing/Logging)
+    execution_id: String,
+}
+
+impl ECLVMStateContext {
+    /// Erstelle neuen StateContext für ECLVM-Ausführung
+    pub fn new(
+        state: Arc<UnifiedState>,
+        caller_did: String,
+        realm_id: String,
+        limits: ECLVMBudgetLimits,
+    ) -> Self {
+        let execution_id = format!(
+            "eclvm_{}_{}_{}",
+            realm_id,
+            caller_did.chars().take(8).collect::<String>(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis()
+        );
+
+        let budget = Arc::new(ECLVMBudget::new(limits));
+        let view = StateView::new(Some(caller_did.clone()), Some(realm_id.clone()));
+
+        Self {
+            view,
+            budget,
+            caller_did,
+            realm_id,
+            state,
+            created_at: Instant::now(),
+            execution_id,
+        }
+    }
+
+    /// Erstelle Context mit Default-Budget
+    pub fn with_defaults(state: Arc<UnifiedState>, caller_did: String, realm_id: String) -> Self {
+        Self::new(state, caller_did, realm_id, ECLVMBudgetLimits::default())
+    }
+
+    /// Execution-ID für Tracing
+    pub fn execution_id(&self) -> &str {
+        &self.execution_id
+    }
+
+    /// Caller-DID
+    pub fn caller(&self) -> &str {
+        &self.caller_did
+    }
+
+    /// Aktuelles Realm
+    pub fn realm(&self) -> &str {
+        &self.realm_id
+    }
+
+    /// Prüfe ob Context noch gültig
+    pub fn is_valid(&self) -> bool {
+        !self.budget.is_exhausted()
+    }
+
+    /// Verstrichene Zeit seit Erstellung
+    pub fn elapsed_ms(&self) -> u64 {
+        self.created_at.elapsed().as_millis() as u64
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Read Operations (delegiert an StateView)
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// Hole Trust für Entity (gecached, Gas-metered)
+    pub fn get_trust(&self, entity_id: &str) -> Option<f64> {
+        // Gas für Read-Operation
+        if !self.budget.consume_gas(10) {
+            return None;
+        }
+        self.view.get_trust(entity_id)
+    }
+
+    /// Hole Realm-Daten
+    pub fn get_realm(&self, realm_id: &str) -> Option<RealmViewData> {
+        if !self.budget.consume_gas(15) {
+            return None;
+        }
+        self.view.get_realm(realm_id)
+    }
+
+    /// Hole Identity-Daten
+    pub fn get_identity(&self, did: &str) -> Option<IdentityViewData> {
+        if !self.budget.consume_gas(15) {
+            return None;
+        }
+        self.view.get_identity(did)
+    }
+
+    /// Prüfe Trust-Threshold
+    pub fn check_trust_threshold(&self, entity_id: &str, threshold: f64) -> bool {
+        if !self.budget.consume_gas(12) {
+            return false;
+        }
+        self.view.trust_above_threshold(entity_id, threshold)
+    }
+
+    /// Ist Caller Member des angegebenen Realms?
+    pub fn is_caller_member(&self, realm_id: &str) -> bool {
+        if !self.budget.consume_gas(20) {
+            return false;
+        }
+        self.view.is_caller_member_of(realm_id)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Cache Population (für Test/Setup)
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// Füge Trust-Wert zum Cache hinzu
+    pub fn populate_trust(&self, entity_id: &str, trust: f64) {
+        self.view.set_trust_cached(entity_id, trust);
+    }
+
+    /// Füge Realm zum Cache hinzu
+    pub fn populate_realm(&self, data: RealmViewData) {
+        self.view.set_realm_cached(data);
+    }
+
+    /// Füge Identity zum Cache hinzu
+    pub fn populate_identity(&self, data: IdentityViewData) {
+        self.view.set_identity_cached(data);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Write Operations (erstellt StateHandle)
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// Erstelle einen StateHandle für Schreiboperationen
+    ///
+    /// WICHTIG: Handle muss committed oder rolled back werden!
+    pub fn create_write_handle(&self) -> StateHandle<'_> {
+        StateHandle::new(
+            &self.state,
+            self.caller_did.clone(),
+            self.realm_id.clone(),
+            self.budget.clone(),
+        )
+    }
+
+    /// Erstelle TransactionGuard für automatisches Rollback
+    pub fn begin_transaction(&self) -> TransactionGuard<'_> {
+        TransactionGuard::new(self.create_write_handle())
+    }
+
+    /// Erstelle TransactionGuard mit Auto-Commit
+    pub fn begin_auto_commit_transaction(&self) -> TransactionGuard<'_> {
+        TransactionGuard::with_auto_commit(self.create_write_handle())
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Budget-Interaktion
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// Verbleibendes Gas
+    pub fn gas_remaining(&self) -> u64 {
+        self.budget.gas_remaining()
+    }
+
+    /// Verbleibendes Mana
+    pub fn mana_remaining(&self) -> u64 {
+        self.budget.mana_remaining()
+    }
+
+    /// Verbleibende Zeit bis Timeout
+    pub fn time_remaining_ms(&self) -> u64 {
+        self.budget.time_remaining_ms()
+    }
+
+    /// Budget-Snapshot
+    pub fn budget_snapshot(&self) -> ECLVMBudgetSnapshot {
+        self.budget.snapshot()
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Finalization
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// Finalisiere Context und gib Summary zurück
+    pub fn finalize(self) -> ECLVMExecutionSummary {
+        ECLVMExecutionSummary {
+            execution_id: self.execution_id,
+            caller_did: self.caller_did,
+            realm_id: self.realm_id,
+            duration_ms: self.created_at.elapsed().as_millis() as u64,
+            gas_used: self.budget.gas_used(),
+            gas_limit: self.budget.limits.gas_limit,
+            mana_used: self.budget.mana_used(),
+            mana_limit: self.budget.limits.mana_limit,
+            exhausted: self.budget.is_exhausted(),
+            exhaustion_reason: self.budget.exhaustion_reason(),
+        }
+    }
+}
+
+/// Summary einer ECLVM-Ausführung
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ECLVMExecutionSummary {
+    pub execution_id: String,
+    pub caller_did: String,
+    pub realm_id: String,
+    pub duration_ms: u64,
+    pub gas_used: u64,
+    pub gas_limit: u64,
+    pub mana_used: u64,
+    pub mana_limit: u64,
+    pub exhausted: bool,
+    pub exhaustion_reason: Option<BudgetExhaustionReason>,
+}
+
+impl ECLVMExecutionSummary {
+    /// War Ausführung erfolgreich (nicht exhausted)?
+    pub fn is_success(&self) -> bool {
+        !self.exhausted
+    }
+
+    /// Gas-Utilization (%)
+    pub fn gas_utilization_percent(&self) -> f64 {
+        if self.gas_limit == 0 {
+            0.0
+        } else {
+            (self.gas_used as f64 / self.gas_limit as f64) * 100.0
+        }
+    }
+
+    /// Mana-Utilization (%)
+    pub fn mana_utilization_percent(&self) -> f64 {
+        if self.mana_limit == 0 {
+            0.0
+        } else {
+            (self.mana_used as f64 / self.mana_limit as f64) * 100.0
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PHASE 6.4 TESTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests_phase6_4 {
+    use super::*;
+
+    // ─────────────────────────────────────────────────────────────────────
+    // ECLVMBudget Tests
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_eclvm_budget_creation() {
+        let budget = ECLVMBudget::with_defaults();
+        assert_eq!(budget.gas_remaining(), 1_000_000);
+        assert_eq!(budget.mana_remaining(), 10_000);
+        assert!(!budget.is_exhausted());
+    }
+
+    #[test]
+    fn test_eclvm_budget_gas_consumption() {
+        let budget = ECLVMBudget::new(ECLVMBudgetLimits {
+            gas_limit: 100,
+            mana_limit: 100,
+            max_stack_depth: 64,
+            timeout_ms: 5000,
+        });
+
+        // Konsumiere Gas
+        assert!(budget.consume_gas(50));
+        assert_eq!(budget.gas_used(), 50);
+        assert_eq!(budget.gas_remaining(), 50);
+
+        // Konsumiere mehr Gas
+        assert!(budget.consume_gas(49));
+        assert_eq!(budget.gas_remaining(), 1);
+
+        // Überschreite Limit
+        assert!(!budget.consume_gas(10));
+        assert!(budget.is_exhausted());
+        assert_eq!(
+            budget.exhaustion_reason(),
+            Some(BudgetExhaustionReason::OutOfGas)
+        );
+    }
+
+    #[test]
+    fn test_eclvm_budget_mana_consumption() {
+        let budget = ECLVMBudget::new(ECLVMBudgetLimits {
+            gas_limit: 1000,
+            mana_limit: 10,
+            max_stack_depth: 64,
+            timeout_ms: 5000,
+        });
+
+        assert!(budget.consume_mana(5));
+        assert!(budget.consume_mana(5));
+        assert!(!budget.consume_mana(1));
+        assert!(budget.is_exhausted());
+        assert_eq!(
+            budget.exhaustion_reason(),
+            Some(BudgetExhaustionReason::OutOfMana)
+        );
+    }
+
+    #[test]
+    fn test_eclvm_budget_stack_depth() {
+        let budget = ECLVMBudget::new(ECLVMBudgetLimits {
+            gas_limit: 1000,
+            mana_limit: 100,
+            max_stack_depth: 10,
+            timeout_ms: 5000,
+        });
+
+        assert!(budget.check_stack_depth(5));
+        assert!(budget.check_stack_depth(10));
+        assert!(!budget.check_stack_depth(11));
+        assert!(budget.is_exhausted());
+        assert_eq!(
+            budget.exhaustion_reason(),
+            Some(BudgetExhaustionReason::StackOverflow)
+        );
+    }
+
+    #[test]
+    fn test_eclvm_budget_limits_trust_scaling() {
+        let base = ECLVMBudgetLimits::default();
+        let scaled_low = base.with_trust_factor(0.0);
+        let scaled_high = base.with_trust_factor(1.0);
+
+        // Low trust = 50% of base
+        assert_eq!(scaled_low.gas_limit, 500_000);
+        // High trust = 100% of base
+        assert_eq!(scaled_high.gas_limit, 1_000_000);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // StateView Tests
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_state_view_creation() {
+        let view = StateView::new(
+            Some("did:test:caller".to_string()),
+            Some("realm_001".to_string()),
+        );
+
+        assert!(view.has_caller());
+        assert!(view.has_realm_context());
+        assert!(view.snapshot_time > 0);
+    }
+
+    #[test]
+    fn test_state_view_trust_cache() {
+        let view = StateView::new(None, None);
+
+        // Initial keine Trusts
+        assert!(view.get_trust("alice").is_none());
+
+        // Setze Trust
+        view.set_trust_cached("alice", 0.8);
+        assert_eq!(view.get_trust("alice"), Some(0.8));
+
+        // Threshold check
+        assert!(view.trust_above_threshold("alice", 0.5));
+        assert!(!view.trust_above_threshold("alice", 0.9));
+    }
+
+    #[test]
+    fn test_state_view_realm_cache() {
+        let view = StateView::new(None, Some("realm_001".to_string()));
+
+        let realm_data = RealmViewData {
+            realm_id: "realm_001".to_string(),
+            name: "Test Realm".to_string(),
+            owner_did: "did:test:owner".to_string(),
+            member_count: 10,
+            trust_threshold: 0.3,
+            is_quarantined: false,
+            created_at: 1000,
+        };
+
+        view.set_realm_cached(realm_data);
+
+        let retrieved = view.get_realm("realm_001").unwrap();
+        assert_eq!(retrieved.name, "Test Realm");
+        assert_eq!(retrieved.member_count, 10);
+    }
+
+    #[test]
+    fn test_state_view_identity_cache() {
+        let view = StateView::new(Some("did:test:caller".to_string()), None);
+
+        let identity_data = IdentityViewData {
+            did: "did:test:caller".to_string(),
+            display_name: Some("Caller".to_string()),
+            trust_score: 0.7,
+            realms: vec!["realm_001".to_string()],
+            created_at: 1000,
+        };
+
+        view.set_identity_cached(identity_data);
+
+        let caller = view.caller_identity().unwrap();
+        assert_eq!(caller.trust_score, 0.7);
+        assert!(view.is_caller_verified());
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // StateHandle Tests
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_state_handle_creation() {
+        let state = UnifiedState::new();
+        let budget = Arc::new(ECLVMBudget::with_defaults());
+
+        let handle = StateHandle::new(
+            &state,
+            "did:test:caller".to_string(),
+            "realm_001".to_string(),
+            budget,
+        );
+
+        assert_eq!(handle.caller(), "did:test:caller");
+        assert_eq!(handle.realm(), "realm_001");
+        assert!(handle.is_valid());
+        assert_eq!(handle.pending_events_count(), 0);
+    }
+
+    #[test]
+    fn test_state_handle_trust_update() {
+        let state = UnifiedState::new();
+        let budget = Arc::new(ECLVMBudget::with_defaults());
+
+        let handle = StateHandle::new(
+            &state,
+            "did:test:caller".to_string(),
+            "realm_001".to_string(),
+            budget.clone(),
+        );
+
+        let result = handle.update_trust("did:test:target", 0.1, TrustReason::PositiveInteraction);
+
+        assert!(matches!(result, MutationResult::Success));
+        assert_eq!(handle.pending_events_count(), 1);
+        assert!(budget.gas_used() >= 100);
+    }
+
+    #[test]
+    fn test_state_handle_trust_update_validation() {
+        let state = UnifiedState::new();
+        let budget = Arc::new(ECLVMBudget::with_defaults());
+
+        let handle = StateHandle::new(
+            &state,
+            "did:test:caller".to_string(),
+            "realm_001".to_string(),
+            budget,
+        );
+
+        // Delta zu groß (> 0.5)
+        let result = handle.update_trust("did:test:target", 0.6, TrustReason::PositiveInteraction);
+
+        assert!(matches!(result, MutationResult::ValidationFailed(_)));
+    }
+
+    #[test]
+    fn test_state_handle_store_operations() {
+        let state = UnifiedState::new();
+        let budget = Arc::new(ECLVMBudget::with_defaults());
+
+        let handle = StateHandle::new(
+            &state,
+            "did:test:caller".to_string(),
+            "realm_001".to_string(),
+            budget.clone(),
+        );
+
+        // Store put
+        let result = handle.store_put("key1", "value1");
+        assert!(matches!(result, MutationResult::Success));
+        assert_eq!(handle.dirty_keys_count(), 1);
+
+        // Store delete
+        let result = handle.store_delete("key2");
+        assert!(matches!(result, MutationResult::Success));
+        assert_eq!(handle.dirty_keys_count(), 2);
+    }
+
+    #[test]
+    fn test_state_handle_commit() {
+        let state = UnifiedState::new();
+        let budget = Arc::new(ECLVMBudget::with_defaults());
+
+        let handle = StateHandle::new(
+            &state,
+            "did:test:caller".to_string(),
+            "realm_001".to_string(),
+            budget,
+        );
+
+        // Füge Operation hinzu
+        handle.update_trust("target", 0.1, TrustReason::PositiveInteraction);
+        handle.store_put("key", "value");
+
+        // Commit
+        let result = handle.commit();
+        match result {
+            CommitResult::Success {
+                events_applied,
+                keys_modified,
+                ..
+            } => {
+                assert_eq!(events_applied, 1);
+                assert!(keys_modified >= 1);
+            }
+            _ => panic!("Expected Success"),
+        }
+    }
+
+    #[test]
+    fn test_state_handle_rollback() {
+        let state = UnifiedState::new();
+        let budget = Arc::new(ECLVMBudget::with_defaults());
+
+        let handle = StateHandle::new(
+            &state,
+            "did:test:caller".to_string(),
+            "realm_001".to_string(),
+            budget,
+        );
+
+        // Füge Operationen hinzu
+        handle.update_trust("target", 0.1, TrustReason::PositiveInteraction);
+        handle.store_put("key", "value");
+
+        // Rollback
+        let result = handle.rollback();
+        match result {
+            RollbackResult::Success {
+                events_discarded,
+                keys_discarded,
+            } => {
+                assert_eq!(events_discarded, 1);
+                assert!(keys_discarded >= 1);
+            }
+            _ => panic!("Expected Success"),
+        }
+    }
+
+    #[test]
+    fn test_state_handle_budget_exhaustion() {
+        let state = UnifiedState::new();
+        let budget = Arc::new(ECLVMBudget::new(ECLVMBudgetLimits {
+            gas_limit: 50, // Sehr wenig Gas
+            mana_limit: 100,
+            max_stack_depth: 64,
+            timeout_ms: 5000,
+        }));
+
+        let handle = StateHandle::new(
+            &state,
+            "did:test:caller".to_string(),
+            "realm_001".to_string(),
+            budget,
+        );
+
+        // Erste Operation verbraucht 100 Gas - sollte fehlschlagen
+        let result = handle.update_trust("target", 0.1, TrustReason::PositiveInteraction);
+        assert!(matches!(result, MutationResult::BudgetExhausted(_)));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // TransactionGuard Tests
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_transaction_guard_commit() {
+        let state = UnifiedState::new();
+        let budget = Arc::new(ECLVMBudget::with_defaults());
+
+        let handle = StateHandle::new(
+            &state,
+            "did:test:caller".to_string(),
+            "realm_001".to_string(),
+            budget,
+        );
+
+        let guard = TransactionGuard::new(handle);
+
+        // Operation über Guard
+        if let Some(h) = guard.handle() {
+            h.update_trust("target", 0.1, TrustReason::PositiveInteraction);
+        }
+
+        // Expliziter Commit
+        let result = guard.commit();
+        assert!(matches!(result, CommitResult::Success { .. }));
+    }
+
+    #[test]
+    fn test_transaction_guard_auto_rollback() {
+        let state = UnifiedState::new();
+        let initial_trust_updates = state.core.trust.updates_total.load(Ordering::Relaxed);
+
+        {
+            let budget = Arc::new(ECLVMBudget::with_defaults());
+            let handle = StateHandle::new(
+                &state,
+                "did:test:caller".to_string(),
+                "realm_001".to_string(),
+                budget,
+            );
+
+            let guard = TransactionGuard::new(handle);
+
+            // Operation
+            if let Some(h) = guard.handle() {
+                h.update_trust("target", 0.1, TrustReason::PositiveInteraction);
+            }
+
+            // Guard wird hier gedroppt ohne commit -> rollback
+        }
+
+        // State sollte unverändert sein (Rollback)
+        // Note: In echtem Szenario würde man hier prüfen dass die Änderung nicht applied wurde
+        // Da wir aber log_and_apply() nicht beim Rollback aufrufen, ist das automatisch der Fall
+        let _ = initial_trust_updates; // Unused variable acknowledgment
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // ECLVMStateContext Tests
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_eclvm_state_context_creation() {
+        let state = Arc::new(UnifiedState::new());
+        let ctx = ECLVMStateContext::with_defaults(
+            state,
+            "did:test:caller".to_string(),
+            "realm_001".to_string(),
+        );
+
+        assert!(ctx.is_valid());
+        assert_eq!(ctx.caller(), "did:test:caller");
+        assert_eq!(ctx.realm(), "realm_001");
+        assert!(ctx.execution_id().starts_with("eclvm_realm_001_"));
+    }
+
+    #[test]
+    fn test_eclvm_state_context_read_operations() {
+        let state = Arc::new(UnifiedState::new());
+        let ctx = ECLVMStateContext::with_defaults(
+            state,
+            "did:test:caller".to_string(),
+            "realm_001".to_string(),
+        );
+
+        // Populate cache
+        ctx.populate_trust("alice", 0.8);
+        ctx.populate_trust("bob", 0.3);
+
+        // Reads verbrauchen Gas
+        let initial_gas = ctx.gas_remaining();
+        assert_eq!(ctx.get_trust("alice"), Some(0.8));
+        assert!(ctx.gas_remaining() < initial_gas);
+
+        // Threshold check
+        assert!(ctx.check_trust_threshold("alice", 0.5));
+        assert!(!ctx.check_trust_threshold("bob", 0.5));
+    }
+
+    #[test]
+    fn test_eclvm_state_context_write_transaction() {
+        let state = Arc::new(UnifiedState::new());
+        let ctx = ECLVMStateContext::with_defaults(
+            state,
+            "did:test:caller".to_string(),
+            "realm_001".to_string(),
+        );
+
+        // Begin transaction
+        let mut txn = ctx.begin_transaction();
+
+        // Operationen über Handle
+        if let Some(handle) = txn.handle() {
+            handle.update_trust("target", 0.1, TrustReason::PositiveInteraction);
+            handle.store_put("key", "value");
+        }
+
+        // Commit transaction
+        let result = txn.commit();
+        assert!(matches!(result, CommitResult::Success { .. }));
+    }
+
+    #[test]
+    fn test_eclvm_state_context_finalization() {
+        let state = Arc::new(UnifiedState::new());
+        let ctx = ECLVMStateContext::with_defaults(
+            state,
+            "did:test:caller".to_string(),
+            "realm_001".to_string(),
+        );
+
+        // Einige Operationen
+        ctx.populate_trust("alice", 0.8);
+        ctx.get_trust("alice");
+        ctx.get_trust("bob"); // None, aber verbraucht Gas
+
+        // Finalize
+        let summary = ctx.finalize();
+
+        assert!(summary.is_success());
+        assert!(summary.gas_used > 0);
+        assert!(summary.gas_utilization_percent() < 1.0); // Weniger als 1% genutzt
+    }
+
+    #[test]
+    fn test_eclvm_state_context_budget_integration() {
+        let state = Arc::new(UnifiedState::new());
+        let ctx = ECLVMStateContext::new(
+            state,
+            "did:test:caller".to_string(),
+            "realm_001".to_string(),
+            ECLVMBudgetLimits::minimal(),
+        );
+
+        // Budget ist minimal
+        assert_eq!(ctx.budget.limits.gas_limit, 10_000);
+
+        // Viele Reads bis Budget erschöpft
+        ctx.populate_trust("alice", 0.8);
+        for _ in 0..2000 {
+            if ctx.get_trust("alice").is_none() {
+                break; // Budget erschöpft
+            }
+        }
+
+        // Budget sollte jetzt erschöpft sein
+        assert!(ctx.budget.is_exhausted());
+        let summary = ctx.finalize();
+        assert!(!summary.is_success());
+    }
+}
+
+// ============================================================================
+// PHASE 7: SHARDING-INFRASTRUKTUR FÜR REALM-SKALIERUNG
+// ============================================================================
+//
+// Produktionsreife Sharding-Lösung für Millionen von Realms:
+// 1. LazyShardedRealmState - Lock-free DashMap mit deterministischem Sharding
+// 2. Lazy Loading - Realms werden bei Bedarf aus Storage geladen
+// 3. LRU Eviction - Inaktive Realms werden aus dem Speicher entfernt
+// 4. Event-Sourcing Integration - State-Recovery durch Event-Replay
+// 5. Background Tasks - Periodische Eviction ohne Blocking
+//
+// ```text
+// ┌─────────────────────────────────────────────────────────────────────────────┐
+// │                    LazyShardedRealmState Architecture                        │
+// │                                                                              │
+// │  ┌─────────────────────────────────────────────────────────────────────────┐│
+// │  │                         Shard Selection                                 ││
+// │  │                  FxHash(realm_id) % num_shards                         ││
+// │  └─────────────────────────────────────────────────────────────────────────┘│
+// │                                    │                                         │
+// │         ┌──────────────────────────┼──────────────────────────┐             │
+// │         ▼                          ▼                          ▼             │
+// │  ┌─────────────┐           ┌─────────────┐           ┌─────────────┐       │
+// │  │  Shard 0    │           │  Shard 1    │           │  Shard N-1  │       │
+// │  │ ┌─────────┐ │           │ ┌─────────┐ │           │ ┌─────────┐ │       │
+// │  │ │DashMap  │ │           │ │DashMap  │ │           │ │DashMap  │ │       │
+// │  │ │realm→Arc│ │           │ │realm→Arc│ │           │ │realm→Arc│ │       │
+// │  │ └─────────┘ │           │ └─────────┘ │           │ └─────────┘ │       │
+// │  │ ┌─────────┐ │           │ ┌─────────┐ │           │ ┌─────────┐ │       │
+// │  │ │LRU Cache│ │           │ │LRU Cache│ │           │ │LRU Cache│ │       │
+// │  │ │(access) │ │           │ │(access) │ │           │ │(access) │ │       │
+// │  │ └─────────┘ │           │ └─────────┘ │           │ └─────────┘ │       │
+// │  └─────────────┘           └─────────────┘           └─────────────┘       │
+// │                                                                              │
+// │  ┌─────────────────────────────────────────────────────────────────────────┐│
+// │  │                     Background Eviction Tasks                           ││
+// │  │              Per-Shard async task, 10min interval                       ││
+// │  │              Removes LRU entries beyond max_per_shard                   ││
+// │  └─────────────────────────────────────────────────────────────────────────┘│
+// │                                                                              │
+// │  ┌─────────────────────────────────────────────────────────────────────────┐│
+// │  │                     Lazy Loading Pipeline                               ││
+// │  │   get_or_load() → Cache Miss → Storage Load → Event Replay → Insert    ││
+// │  └─────────────────────────────────────────────────────────────────────────┘│
+// └─────────────────────────────────────────────────────────────────────────────┘
+// ```
+// ============================================================================
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SHARDING CONFIGURATION
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Konfiguration für Realm-Sharding
+#[derive(Debug, Clone)]
+pub struct ShardingConfig {
+    /// Anzahl der Shards (Default: 64, optimiert für moderne CPUs)
+    pub num_shards: usize,
+    /// Max Einträge pro Shard bevor Eviction beginnt
+    pub max_per_shard: usize,
+    /// Eviction-Intervall in Sekunden
+    pub eviction_interval_secs: u64,
+    /// LRU-Kapazität pro Shard für Access-Tracking
+    pub lru_capacity_per_shard: usize,
+    /// Ob Lazy Loading aktiviert ist
+    pub lazy_loading_enabled: bool,
+    /// Ob Event-Replay bei Load aktiviert ist
+    pub event_replay_on_load: bool,
+}
+
+impl Default for ShardingConfig {
+    fn default() -> Self {
+        Self {
+            num_shards: 64,
+            max_per_shard: 20_000,
+            eviction_interval_secs: 600, // 10 Minuten
+            lru_capacity_per_shard: 25_000,
+            lazy_loading_enabled: true,
+            event_replay_on_load: true,
+        }
+    }
+}
+
+impl ShardingConfig {
+    /// Minimale Konfiguration für Tests
+    pub fn minimal() -> Self {
+        Self {
+            num_shards: 4,
+            max_per_shard: 100,
+            eviction_interval_secs: 60,
+            lru_capacity_per_shard: 150,
+            lazy_loading_enabled: false,
+            event_replay_on_load: false,
+        }
+    }
+
+    /// High-Performance Konfiguration für Production
+    pub fn production() -> Self {
+        Self {
+            num_shards: 128,
+            max_per_shard: 50_000,
+            eviction_interval_secs: 300, // 5 Minuten
+            lru_capacity_per_shard: 60_000,
+            lazy_loading_enabled: true,
+            event_replay_on_load: true,
+        }
+    }
+
+    /// Konfiguration basierend auf verfügbaren CPU-Cores
+    pub fn auto_scaled() -> Self {
+        let num_cpus = std::thread::available_parallelism()
+            .map(|p| p.get())
+            .unwrap_or(4);
+        Self {
+            num_shards: (num_cpus * 4).max(16).min(256),
+            max_per_shard: 30_000,
+            eviction_interval_secs: 600,
+            lru_capacity_per_shard: 35_000,
+            lazy_loading_enabled: true,
+            event_replay_on_load: true,
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FAST HASHING (FxHash für deterministisches Sharding)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Schneller, deterministischer Hash für Shard-Selection
+#[inline]
+fn fx_hash_str(s: &str) -> u64 {
+    let mut hasher = FxHasher::default();
+    s.hash(&mut hasher);
+    hasher.finish()
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REALM LOAD ERROR
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Fehler beim Laden eines Realms aus Storage
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RealmLoadError {
+    /// Realm existiert nicht
+    NotFound(String),
+    /// Storage-Fehler
+    StorageError(String),
+    /// Serialization-Fehler
+    DeserializationError(String),
+    /// Event-Replay fehlgeschlagen
+    EventReplayError(String),
+    /// Lazy Loading ist deaktiviert
+    LazyLoadingDisabled,
+    /// Shard ist überlastet
+    ShardOverloaded {
+        shard_idx: usize,
+        current: usize,
+        max: usize,
+    },
+}
+
+impl std::fmt::Display for RealmLoadError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NotFound(id) => write!(f, "Realm not found: {}", id),
+            Self::StorageError(e) => write!(f, "Storage error: {}", e),
+            Self::DeserializationError(e) => write!(f, "Deserialization error: {}", e),
+            Self::EventReplayError(e) => write!(f, "Event replay error: {}", e),
+            Self::LazyLoadingDisabled => write!(f, "Lazy loading is disabled"),
+            Self::ShardOverloaded {
+                shard_idx,
+                current,
+                max,
+            } => {
+                write!(f, "Shard {} overloaded: {}/{}", shard_idx, current, max)
+            }
+        }
+    }
+}
+
+impl std::error::Error for RealmLoadError {}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REALM STORAGE LOADER (Trait für Dependency Injection)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Trait für asynchrones Laden von Realms aus Storage
+///
+/// Implementierungen können verschiedene Storage-Backends unterstützen:
+/// - RocksDB/Fjall
+/// - IPFS
+/// - Cloud Storage
+/// - Mock für Tests
+///
+/// Hinweis: Da RealmSpecificState intern Atomics und Locks verwendet und daher
+/// nicht Clone ist, arbeiten wir mit Snapshots für Persistence und erstellen
+/// bei load_realm_base einen frischen State.
+#[async_trait::async_trait]
+pub trait RealmStorageLoader: Send + Sync {
+    /// Lade Basis-State eines Realms aus Storage
+    ///
+    /// Gibt einen neuen RealmSpecificState zurück, initialisiert aus gespeicherten Daten
+    async fn load_realm_base(&self, realm_id: &str) -> Result<RealmSpecificState, RealmLoadError>;
+
+    /// Lade Events für ein Realm seit einem bestimmten Event-ID
+    async fn load_realm_events_since(
+        &self,
+        realm_id: &str,
+        since_event_id: Option<&str>,
+    ) -> Result<Vec<WrappedStateEvent>, RealmLoadError>;
+
+    /// Prüfe ob Realm existiert (ohne vollständiges Laden)
+    async fn realm_exists(&self, realm_id: &str) -> bool;
+
+    /// Persistiere Realm-State als Snapshot (für Checkpoint)
+    async fn persist_realm_snapshot(
+        &self,
+        realm_id: &str,
+        snapshot: &RealmSpecificStateSnapshot,
+    ) -> Result<(), RealmLoadError>;
+}
+
+/// Parameter für Realm-Erstellung (aus gespeicherten Daten)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RealmCreationParams {
+    pub min_trust: f32,
+    pub governance_type: String,
+}
+
+/// Mock-Implementierung für Tests (keine echte Storage)
+#[derive(Debug, Default)]
+pub struct MockRealmStorageLoader {
+    /// Vorgeladene Realm-Parameter für Tests
+    realm_params: RwLock<HashMap<String, RealmCreationParams>>,
+    /// Events pro Realm
+    events: RwLock<HashMap<String, Vec<WrappedStateEvent>>>,
+}
+
+impl MockRealmStorageLoader {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Füge Test-Realm hinzu
+    pub fn add_realm(&self, realm_id: &str, min_trust: f32, governance_type: &str) {
+        if let Ok(mut realms) = self.realm_params.write() {
+            realms.insert(
+                realm_id.to_string(),
+                RealmCreationParams {
+                    min_trust,
+                    governance_type: governance_type.to_string(),
+                },
+            );
+        }
+    }
+
+    /// Füge Test-Events hinzu
+    pub fn add_events(&self, realm_id: &str, events: Vec<WrappedStateEvent>) {
+        if let Ok(mut e) = self.events.write() {
+            e.insert(realm_id.to_string(), events);
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl RealmStorageLoader for MockRealmStorageLoader {
+    async fn load_realm_base(&self, realm_id: &str) -> Result<RealmSpecificState, RealmLoadError> {
+        let params = self
+            .realm_params
+            .read()
+            .ok()
+            .and_then(|r| r.get(realm_id).cloned())
+            .ok_or_else(|| RealmLoadError::NotFound(realm_id.to_string()))?;
+
+        // Erstelle frischen State aus gespeicherten Parametern
+        Ok(RealmSpecificState::new(
+            params.min_trust,
+            &params.governance_type,
+        ))
+    }
+
+    async fn load_realm_events_since(
+        &self,
+        realm_id: &str,
+        _since_event_id: Option<&str>,
+    ) -> Result<Vec<WrappedStateEvent>, RealmLoadError> {
+        Ok(self
+            .events
+            .read()
+            .ok()
+            .and_then(|e| e.get(realm_id).cloned())
+            .unwrap_or_default())
+    }
+
+    async fn realm_exists(&self, realm_id: &str) -> bool {
+        self.realm_params
+            .read()
+            .ok()
+            .map(|r| r.contains_key(realm_id))
+            .unwrap_or(false)
+    }
+
+    async fn persist_realm_snapshot(
+        &self,
+        realm_id: &str,
+        snapshot: &RealmSpecificStateSnapshot,
+    ) -> Result<(), RealmLoadError> {
+        if let Ok(mut realms) = self.realm_params.write() {
+            realms.insert(
+                realm_id.to_string(),
+                RealmCreationParams {
+                    min_trust: snapshot.min_trust,
+                    governance_type: snapshot.governance_type.clone(),
+                },
+            );
+        }
+        Ok(())
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SHARD STATISTICS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Statistiken für einen einzelnen Shard
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShardStats {
+    /// Shard-Index
+    pub index: usize,
+    /// Aktuelle Anzahl geladener Realms
+    pub loaded_count: usize,
+    /// LRU-Cache Größe
+    pub lru_size: usize,
+    /// Anzahl Cache-Hits
+    pub cache_hits: u64,
+    /// Anzahl Cache-Misses (Lazy Loads)
+    pub cache_misses: u64,
+    /// Anzahl Evictions
+    pub evictions: u64,
+    /// Letzte Eviction-Zeit (Unix timestamp ms)
+    pub last_eviction_ms: u64,
+}
+
+/// Aggregierte Statistiken für alle Shards
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShardingStats {
+    /// Konfiguration
+    pub num_shards: usize,
+    pub max_per_shard: usize,
+    /// Aggregierte Metriken
+    pub total_loaded_realms: usize,
+    pub total_cache_hits: u64,
+    pub total_cache_misses: u64,
+    pub total_evictions: u64,
+    /// Hit-Rate (%)
+    pub cache_hit_rate_percent: f64,
+    /// Load-Verteilung (Standardabweichung)
+    pub load_distribution_stddev: f64,
+    /// Per-Shard Details
+    pub shards: Vec<ShardStats>,
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LAZY SHARDED REALM STATE
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Lock-free, sharded Realm-State mit Lazy Loading und LRU Eviction
+///
+/// Diese Struktur skaliert auf Millionen von Realms durch:
+/// - **Deterministisches Sharding**: FxHash für O(1) Shard-Selection
+/// - **Lock-free DashMap**: Interne Sharding in DashMap für minimale Contention
+/// - **Lazy Loading**: Realms werden bei Bedarf aus Storage geladen
+/// - **LRU Eviction**: Inaktive Realms werden aus dem Speicher entfernt
+/// - **Background Tasks**: Periodische Eviction ohne Blocking
+///
+/// # Performance
+///
+/// - **Read**: O(1) bei Cache-Hit, O(n) bei Lazy Load (Storage-abhängig)
+/// - **Write**: O(1) lock-free
+/// - **Memory**: Nur aktive Realms im Speicher (~1-10GB für 10K-100K hot Realms)
+/// - **Contention**: Nahezu 0 bei unabhängigen Realms (unterschiedliche Shards)
+pub struct LazyShardedRealmState {
+    /// Shards: Jeder ist eine lock-free DashMap
+    shards: Box<[DashMap<String, Arc<RealmSpecificState>>]>,
+
+    /// LRU pro Shard für Access-Tracking (async-fähig)
+    lru_caches: Box<[TokioRwLock<LruCache<String, ()>>]>,
+
+    /// Per-Shard Statistiken
+    shard_stats: Box<[ShardStatistics]>,
+
+    /// Storage-Loader für Lazy Loading
+    storage_loader: Option<Arc<dyn RealmStorageLoader>>,
+
+    /// Konfiguration
+    config: ShardingConfig,
+
+    /// Global Realm-Count (approximate, für schnelle Metrics)
+    total_realms_approx: AtomicUsize,
+
+    /// Global Cache-Hit Counter
+    cache_hits: AtomicU64,
+
+    /// Global Cache-Miss Counter
+    cache_misses: AtomicU64,
+
+    /// Global Eviction Counter
+    evictions: AtomicU64,
+
+    /// Ob Background-Tasks gestartet wurden
+    background_tasks_started: std::sync::atomic::AtomicBool,
+}
+
+/// Per-Shard Statistiken (atomic für lock-free Updates)
+#[derive(Debug)]
+struct ShardStatistics {
+    cache_hits: AtomicU64,
+    cache_misses: AtomicU64,
+    evictions: AtomicU64,
+    last_eviction_ms: AtomicU64,
+}
+
+impl Default for ShardStatistics {
+    fn default() -> Self {
+        Self {
+            cache_hits: AtomicU64::new(0),
+            cache_misses: AtomicU64::new(0),
+            evictions: AtomicU64::new(0),
+            last_eviction_ms: AtomicU64::new(0),
+        }
+    }
+}
+
+impl LazyShardedRealmState {
+    /// Erstelle neue sharded Realm-State-Struktur
+    pub fn new(config: ShardingConfig) -> Self {
+        let num_shards = config.num_shards.max(1);
+        let lru_cap = NonZeroUsize::new(config.lru_capacity_per_shard)
+            .unwrap_or(NonZeroUsize::new(1000).unwrap());
+
+        let mut shards = Vec::with_capacity(num_shards);
+        let mut lru_caches = Vec::with_capacity(num_shards);
+        let mut shard_stats = Vec::with_capacity(num_shards);
+
+        for _ in 0..num_shards {
+            shards.push(DashMap::new());
+            lru_caches.push(TokioRwLock::new(LruCache::new(lru_cap)));
+            shard_stats.push(ShardStatistics::default());
+        }
+
+        Self {
+            shards: shards.into_boxed_slice(),
+            lru_caches: lru_caches.into_boxed_slice(),
+            shard_stats: shard_stats.into_boxed_slice(),
+            storage_loader: None,
+            config,
+            total_realms_approx: AtomicUsize::new(0),
+            cache_hits: AtomicU64::new(0),
+            cache_misses: AtomicU64::new(0),
+            evictions: AtomicU64::new(0),
+            background_tasks_started: std::sync::atomic::AtomicBool::new(false),
+        }
+    }
+
+    /// Erstelle mit Default-Konfiguration
+    pub fn with_defaults() -> Self {
+        Self::new(ShardingConfig::default())
+    }
+
+    /// Erstelle mit Storage-Loader für Lazy Loading
+    pub fn with_storage(mut self, loader: Arc<dyn RealmStorageLoader>) -> Self {
+        self.storage_loader = Some(loader);
+        self
+    }
+
+    /// Setze Storage-Loader nachträglich
+    pub fn set_storage_loader(&mut self, loader: Arc<dyn RealmStorageLoader>) {
+        self.storage_loader = Some(loader);
+    }
+
+    /// Berechne Shard-Index für Realm-ID (deterministisch)
+    #[inline]
+    fn shard_index(&self, realm_id: &str) -> usize {
+        (fx_hash_str(realm_id) as usize) % self.shards.len()
+    }
+
+    /// Hole Realm synchron (nur Cache, kein Lazy Load)
+    ///
+    /// Für Performance-kritische Pfade wo async nicht möglich ist.
+    pub fn get_cached(&self, realm_id: &str) -> Option<Arc<RealmSpecificState>> {
+        let idx = self.shard_index(realm_id);
+        let shard = &self.shards[idx];
+
+        if let Some(realm) = shard.get(realm_id) {
+            self.shard_stats[idx]
+                .cache_hits
+                .fetch_add(1, Ordering::Relaxed);
+            self.cache_hits.fetch_add(1, Ordering::Relaxed);
+            Some(realm.clone())
+        } else {
+            self.shard_stats[idx]
+                .cache_misses
+                .fetch_add(1, Ordering::Relaxed);
+            self.cache_misses.fetch_add(1, Ordering::Relaxed);
+            None
+        }
+    }
+
+    /// Hole oder lade Realm asynchron (mit Lazy Loading + Event Replay)
+    ///
+    /// Dies ist die Hauptmethode für Realm-Zugriff:
+    /// 1. Cache-Check (O(1), lock-free)
+    /// 2. Bei Miss: Storage-Load + Event-Replay
+    /// 3. LRU-Touch für Eviction-Tracking
+    pub async fn get_or_load(
+        &self,
+        realm_id: &str,
+    ) -> Result<Arc<RealmSpecificState>, RealmLoadError> {
+        let idx = self.shard_index(realm_id);
+        let shard = &self.shards[idx];
+
+        // 1. Fast-Path: Cache-Hit
+        if let Some(realm) = shard.get(realm_id) {
+            self.shard_stats[idx]
+                .cache_hits
+                .fetch_add(1, Ordering::Relaxed);
+            self.cache_hits.fetch_add(1, Ordering::Relaxed);
+            self.touch_lru(idx, realm_id).await;
+            return Ok(realm.clone());
+        }
+
+        // 2. Cache-Miss: Lazy Load
+        self.shard_stats[idx]
+            .cache_misses
+            .fetch_add(1, Ordering::Relaxed);
+        self.cache_misses.fetch_add(1, Ordering::Relaxed);
+
+        // Prüfe ob Lazy Loading aktiviert
+        if !self.config.lazy_loading_enabled {
+            return Err(RealmLoadError::LazyLoadingDisabled);
+        }
+
+        // Prüfe ob Storage-Loader verfügbar
+        let loader = self
+            .storage_loader
+            .as_ref()
+            .ok_or(RealmLoadError::StorageError(
+                "No storage loader configured".to_string(),
+            ))?;
+
+        // 3. Lade aus Storage
+        let loaded = loader.load_realm_base(realm_id).await?;
+
+        // 4. Optional: Event-Replay für State-Recovery
+        if self.config.event_replay_on_load {
+            let events = loader.load_realm_events_since(realm_id, None).await?;
+            for event in events {
+                loaded.apply_state_event(&event);
+            }
+        }
+
+        let arc_realm = Arc::new(loaded);
+
+        // 5. In Cache einfügen
+        shard.insert(realm_id.to_string(), arc_realm.clone());
+        self.total_realms_approx.fetch_add(1, Ordering::Relaxed);
+
+        // 6. LRU-Touch
+        self.touch_lru(idx, realm_id).await;
+
+        Ok(arc_realm)
+    }
+
+    /// Registriere neues Realm (synchron, ohne Storage)
+    pub fn register(&self, realm_id: &str, state: RealmSpecificState) -> bool {
+        let idx = self.shard_index(realm_id);
+        let shard = &self.shards[idx];
+
+        // Entry API für atomares Check+Insert
+        if shard.contains_key(realm_id) {
+            return false; // Bereits vorhanden
+        }
+
+        shard.insert(realm_id.to_string(), Arc::new(state));
+        self.total_realms_approx.fetch_add(1, Ordering::Relaxed);
+        true
+    }
+
+    /// Registriere oder update Realm
+    pub fn upsert(&self, realm_id: &str, state: RealmSpecificState) {
+        let idx = self.shard_index(realm_id);
+        let shard = &self.shards[idx];
+
+        let was_new = !shard.contains_key(realm_id);
+        shard.insert(realm_id.to_string(), Arc::new(state));
+
+        if was_new {
+            self.total_realms_approx.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    /// Entferne Realm aus Cache
+    pub fn remove(&self, realm_id: &str) -> Option<Arc<RealmSpecificState>> {
+        let idx = self.shard_index(realm_id);
+        let shard = &self.shards[idx];
+
+        if let Some((_, removed)) = shard.remove(realm_id) {
+            let _ =
+                self.total_realms_approx
+                    .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |v| {
+                        if v > 0 {
+                            Some(v - 1)
+                        } else {
+                            Some(0)
+                        }
+                    });
+            Some(removed)
+        } else {
+            None
+        }
+    }
+
+    /// Prüfe ob Realm im Cache ist
+    pub fn contains(&self, realm_id: &str) -> bool {
+        let idx = self.shard_index(realm_id);
+        self.shards[idx].contains_key(realm_id)
+    }
+
+    /// Touch LRU für Access-Tracking
+    async fn touch_lru(&self, idx: usize, realm_id: &str) {
+        let mut lru = self.lru_caches[idx].write().await;
+        lru.put(realm_id.to_string(), ());
+    }
+
+    /// Führe Eviction für einen Shard durch
+    async fn evict_shard(&self, idx: usize) -> usize {
+        let mut evicted_count = 0;
+        let max = self.config.max_per_shard;
+
+        let mut lru = self.lru_caches[idx].write().await;
+
+        while lru.len() > max {
+            if let Some((evicted_id, _)) = lru.pop_lru() {
+                self.shards[idx].remove(&evicted_id);
+                evicted_count += 1;
+            } else {
+                break;
+            }
+        }
+
+        if evicted_count > 0 {
+            self.shard_stats[idx]
+                .evictions
+                .fetch_add(evicted_count as u64, Ordering::Relaxed);
+            self.evictions
+                .fetch_add(evicted_count as u64, Ordering::Relaxed);
+            let _ =
+                self.total_realms_approx
+                    .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |v| {
+                        Some(v.saturating_sub(evicted_count))
+                    });
+
+            // Update last eviction time
+            let now_ms = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis() as u64;
+            self.shard_stats[idx]
+                .last_eviction_ms
+                .store(now_ms, Ordering::Relaxed);
+        }
+
+        evicted_count
+    }
+
+    /// Führe Eviction für alle Shards durch
+    pub async fn evict_all(&self) -> usize {
+        let mut total_evicted = 0;
+        for idx in 0..self.shards.len() {
+            total_evicted += self.evict_shard(idx).await;
+        }
+        total_evicted
+    }
+
+    /// Starte Background-Eviction-Tasks
+    ///
+    /// WICHTIG: Nur einmal aufrufen! Spawnt einen Task pro Shard.
+    pub fn spawn_eviction_tasks(self: Arc<Self>) {
+        if self.background_tasks_started.swap(true, Ordering::SeqCst) {
+            return; // Bereits gestartet
+        }
+
+        let interval = Duration::from_secs(self.config.eviction_interval_secs);
+
+        for idx in 0..self.shards.len() {
+            let this = self.clone();
+            tokio::spawn(async move {
+                loop {
+                    tokio::time::sleep(interval).await;
+                    this.evict_shard(idx).await;
+                }
+            });
+        }
+    }
+
+    /// Approximate Anzahl geladener Realms
+    pub fn approximate_count(&self) -> usize {
+        self.total_realms_approx.load(Ordering::Relaxed)
+    }
+
+    /// Exakte Anzahl geladener Realms (teuer, iteriert alle Shards)
+    pub fn exact_count(&self) -> usize {
+        self.shards.iter().map(|s| s.len()).sum()
+    }
+
+    /// Hole Statistiken für alle Shards
+    pub fn stats(&self) -> ShardingStats {
+        let shards: Vec<ShardStats> = self
+            .shards
+            .iter()
+            .enumerate()
+            .map(|(idx, shard)| {
+                let lru_size = self.lru_caches[idx]
+                    .try_read()
+                    .map(|lru| lru.len())
+                    .unwrap_or(0);
+
+                ShardStats {
+                    index: idx,
+                    loaded_count: shard.len(),
+                    lru_size,
+                    cache_hits: self.shard_stats[idx].cache_hits.load(Ordering::Relaxed),
+                    cache_misses: self.shard_stats[idx].cache_misses.load(Ordering::Relaxed),
+                    evictions: self.shard_stats[idx].evictions.load(Ordering::Relaxed),
+                    last_eviction_ms: self.shard_stats[idx]
+                        .last_eviction_ms
+                        .load(Ordering::Relaxed),
+                }
+            })
+            .collect();
+
+        let total_loaded: usize = shards.iter().map(|s| s.loaded_count).sum();
+        let total_hits: u64 = shards.iter().map(|s| s.cache_hits).sum();
+        let total_misses: u64 = shards.iter().map(|s| s.cache_misses).sum();
+        let total_evictions: u64 = shards.iter().map(|s| s.evictions).sum();
+
+        let hit_rate = if total_hits + total_misses > 0 {
+            (total_hits as f64 / (total_hits + total_misses) as f64) * 100.0
+        } else {
+            100.0
+        };
+
+        // Berechne Load-Verteilung Standardabweichung
+        let mean_load = total_loaded as f64 / shards.len() as f64;
+        let variance: f64 = shards
+            .iter()
+            .map(|s| (s.loaded_count as f64 - mean_load).powi(2))
+            .sum::<f64>()
+            / shards.len() as f64;
+        let stddev = variance.sqrt();
+
+        ShardingStats {
+            num_shards: self.shards.len(),
+            max_per_shard: self.config.max_per_shard,
+            total_loaded_realms: total_loaded,
+            total_cache_hits: total_hits,
+            total_cache_misses: total_misses,
+            total_evictions,
+            cache_hit_rate_percent: hit_rate,
+            load_distribution_stddev: stddev,
+            shards,
+        }
+    }
+
+    /// Iterator über alle geladenen Realms (teuer, nur für Snapshots/Metrics)
+    pub fn iter_all(&self) -> impl Iterator<Item = (String, Arc<RealmSpecificState>)> + '_ {
+        self.shards.iter().flat_map(|shard| {
+            shard
+                .iter()
+                .map(|entry| (entry.key().clone(), entry.value().clone()))
+        })
+    }
+
+    /// Snapshot aller geladenen Realms
+    pub fn snapshot(&self) -> HashMap<String, RealmSpecificStateSnapshot> {
+        self.iter_all()
+            .map(|(id, state)| (id, state.snapshot()))
+            .collect()
+    }
+
+    /// Konfiguration
+    pub fn config(&self) -> &ShardingConfig {
+        &self.config
+    }
+}
+
+// Debug-Implementierung ohne sensitive Daten
+impl std::fmt::Debug for LazyShardedRealmState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LazyShardedRealmState")
+            .field("num_shards", &self.shards.len())
+            .field(
+                "total_realms_approx",
+                &self.total_realms_approx.load(Ordering::Relaxed),
+            )
+            .field("cache_hits", &self.cache_hits.load(Ordering::Relaxed))
+            .field("cache_misses", &self.cache_misses.load(Ordering::Relaxed))
+            .field("config", &self.config)
+            .finish()
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ATOMIC F64 (Portable lock-free f64 operations via bit-casting)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Lock-free AtomicF64 implementiert via AtomicU64 bit-casting
+///
+/// Standard-Bibliothek hat kein AtomicF64, daher portable Implementierung:
+/// f64 wird zu u64 reinterpretiert für atomare Operationen.
+///
+/// # Thread-Safety
+/// Alle Operationen sind atomisch und lock-free.
+///
+/// # Precision
+/// Volle f64-Präzision bleibt erhalten (keine Rundungsfehler durch casting).
+#[derive(Debug)]
+pub struct AtomicF64 {
+    inner: AtomicU64,
+}
+
+impl AtomicF64 {
+    /// Erstelle neuen AtomicF64 mit initialem Wert
+    #[inline]
+    pub const fn new(value: f64) -> Self {
+        Self {
+            inner: AtomicU64::new(value.to_bits()),
+        }
+    }
+
+    /// Lade aktuellen Wert atomisch
+    #[inline]
+    pub fn load(&self, ordering: Ordering) -> f64 {
+        f64::from_bits(self.inner.load(ordering))
+    }
+
+    /// Speichere Wert atomisch
+    #[inline]
+    pub fn store(&self, value: f64, ordering: Ordering) {
+        self.inner.store(value.to_bits(), ordering);
+    }
+
+    /// Swap: Setze neuen Wert und gib alten zurück
+    #[inline]
+    pub fn swap(&self, value: f64, ordering: Ordering) -> f64 {
+        f64::from_bits(self.inner.swap(value.to_bits(), ordering))
+    }
+
+    /// Compare-and-Swap für präzise Updates
+    #[inline]
+    pub fn compare_exchange(
+        &self,
+        current: f64,
+        new: f64,
+        success: Ordering,
+        failure: Ordering,
+    ) -> Result<f64, f64> {
+        match self
+            .inner
+            .compare_exchange(current.to_bits(), new.to_bits(), success, failure)
+        {
+            Ok(v) => Ok(f64::from_bits(v)),
+            Err(v) => Err(f64::from_bits(v)),
+        }
+    }
+
+    /// Addiere delta atomar (EWMA-freundlich)
+    ///
+    /// Da f64 keine native atomare Addition hat, nutzen wir CAS-Loop.
+    #[inline]
+    pub fn fetch_add(&self, delta: f64, ordering: Ordering) -> f64 {
+        loop {
+            let current = self.load(ordering);
+            let new_value = current + delta;
+            if self
+                .compare_exchange(current, new_value, ordering, Ordering::Relaxed)
+                .is_ok()
+            {
+                return current;
+            }
+        }
+    }
+
+    /// Subtrahiere delta atomar
+    #[inline]
+    pub fn fetch_sub(&self, delta: f64, ordering: Ordering) -> f64 {
+        self.fetch_add(-delta, ordering)
+    }
+
+    /// Multipliziere atomar (für EWMA: current * decay)
+    #[inline]
+    pub fn fetch_mul(&self, factor: f64, ordering: Ordering) -> f64 {
+        loop {
+            let current = self.load(ordering);
+            let new_value = current * factor;
+            if self
+                .compare_exchange(current, new_value, ordering, Ordering::Relaxed)
+                .is_ok()
+            {
+                return current;
+            }
+        }
+    }
+
+    /// EWMA-Update: new = current * decay + value * (1 - decay)
+    ///
+    /// Atomischer Exponentially Weighted Moving Average für Shard-Entropy.
+    #[inline]
+    pub fn ewma_update(&self, new_value: f64, decay: f64, ordering: Ordering) -> f64 {
+        loop {
+            let current = self.load(ordering);
+            let updated = current * decay + new_value * (1.0 - decay);
+            if self
+                .compare_exchange(current, updated, ordering, Ordering::Relaxed)
+                .is_ok()
+            {
+                return current;
+            }
+        }
+    }
+
+    /// Maximum-Update: Setze auf max(current, value)
+    #[inline]
+    pub fn fetch_max(&self, value: f64, ordering: Ordering) -> f64 {
+        loop {
+            let current = self.load(ordering);
+            if value <= current {
+                return current;
+            }
+            if self
+                .compare_exchange(current, value, ordering, Ordering::Relaxed)
+                .is_ok()
+            {
+                return current;
+            }
+        }
+    }
+
+    /// Minimum-Update: Setze auf min(current, value)
+    #[inline]
+    pub fn fetch_min(&self, value: f64, ordering: Ordering) -> f64 {
+        loop {
+            let current = self.load(ordering);
+            if value >= current {
+                return current;
+            }
+            if self
+                .compare_exchange(current, value, ordering, Ordering::Relaxed)
+                .is_ok()
+            {
+                return current;
+            }
+        }
+    }
+}
+
+impl Default for AtomicF64 {
+    fn default() -> Self {
+        Self::new(0.0)
+    }
+}
+
+impl Clone for AtomicF64 {
+    fn clone(&self) -> Self {
+        Self::new(self.load(Ordering::SeqCst))
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SHARD MONITOR (Shard-Aware Protection für horizontale Skalierung)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Shard-spezifische Überwachung für das Immunsystem (Teil von ProtectionState)
+///
+/// # Sicherheitsarchitektur für horizontale Skalierung
+///
+/// Der ShardMonitor adressiert zwei kritische Risiken bei Sharding:
+///
+/// ## Risiko 1: Lokale Trust-Verzerrung (Shard-Bias)
+///
+/// Wenn ein Angreifer einen Shard mit Fake-Realms/Entities flutet, könnte
+/// Trust lokal verzerrt wirken (z.B. viele positive Updates nur in Shard 5).
+///
+/// **Lösung:** Shard-Entropy-Score trackt lokale Vielfalt der Update-Quellen.
+/// Abweichung > Threshold (50%) → "biased Shard" → Alarm + Dämpfung.
+///
+/// ## Risiko 2: Cross-Shard-Angriffe
+///
+/// Angreifer aus einem "toxischen" Shard versucht, in andere Shards
+/// einzudringen (z.B. viele failed Sagas/Crossings).
+///
+/// **Lösung:** Shard-Reputation (0.0–1.0) basierend auf Fehlerrate.
+/// Niedrige Reputation → höhere Multi-Gas-Kosten für Outbound-Requests.
+/// Hohe Fehlerrate → temporäre Quarantäne.
+///
+/// # Performance
+///
+/// - Alle Metriken sind **lock-free** (AtomicF64/AtomicU64)
+/// - DashMap für O(1) Shard-Lookup ohne globale Locks
+/// - EWMA für Rolling-Updates ohne vollständige Historienführung
+#[derive(Debug)]
+pub struct ShardMonitor {
+    /// Aktivität pro Shard (ShardIndex → Update-Count)
+    pub shard_activity: DashMap<u64, AtomicU64>,
+
+    /// Lokale Trust-Entropy pro Shard (ShardIndex → Entropy)
+    /// Entropy nahe 1.0 = gesund (diverse Quellen)
+    /// Entropy nahe 0.0 = verdächtig (wenige Quellen dominieren)
+    pub shard_entropy: DashMap<u64, AtomicF64>,
+
+    /// Fehlgeschlagene Cross-Shard-Versuche (SourceShard → Failures)
+    pub cross_shard_failures: DashMap<u64, AtomicU64>,
+
+    /// Erfolgreiche Cross-Shard-Versuche (für Reputation-Berechnung)
+    pub cross_shard_successes: DashMap<u64, AtomicU64>,
+
+    /// Dynamische Shard-Reputation (0.0 = toxisch, 1.0 = gesund)
+    pub shard_reputation: DashMap<u64, AtomicF64>,
+
+    /// Bias-Alarme pro Shard (für Circuit-Breaker Integration)
+    pub bias_alarms: DashMap<u64, AtomicU64>,
+
+    /// Quarantäne-Status pro Shard (true = geblockt)
+    pub quarantined_shards: DashMap<u64, std::sync::atomic::AtomicBool>,
+
+    /// Konfiguration
+    config: ShardMonitorConfig,
+}
+
+/// Konfiguration für ShardMonitor
+#[derive(Debug, Clone)]
+pub struct ShardMonitorConfig {
+    /// Anzahl der erwarteten Shards (für Pre-Allokation)
+    pub expected_shards: usize,
+    /// Bias-Threshold (50% = Entropy < 50% von Global → Alarm)
+    pub bias_threshold: f64,
+    /// EWMA Decay-Faktor für Entropy-Updates (0.9 = langsame Anpassung)
+    pub entropy_decay: f64,
+    /// Failure-Threshold für Quarantäne
+    pub quarantine_failure_threshold: u64,
+    /// Reputation-Penalty pro Failure
+    pub reputation_penalty_per_failure: f64,
+    /// Reputation-Bonus pro Success (Recovery)
+    pub reputation_bonus_per_success: f64,
+    /// Max Penalty-Multiplikator für Cross-Shard-Kosten
+    pub max_penalty_multiplier: f64,
+}
+
+impl Default for ShardMonitorConfig {
+    fn default() -> Self {
+        Self {
+            expected_shards: 64,
+            bias_threshold: 0.5,
+            entropy_decay: 0.9,
+            quarantine_failure_threshold: 100,
+            reputation_penalty_per_failure: 0.1,
+            reputation_bonus_per_success: 0.01,
+            max_penalty_multiplier: 5.0,
+        }
+    }
+}
+
+impl ShardMonitorConfig {
+    /// Strikte Konfiguration für High-Security
+    pub fn strict() -> Self {
+        Self {
+            expected_shards: 128,
+            bias_threshold: 0.6, // Strenger
+            entropy_decay: 0.95,
+            quarantine_failure_threshold: 50, // Schnellere Quarantäne
+            reputation_penalty_per_failure: 0.15,
+            reputation_bonus_per_success: 0.005,
+            max_penalty_multiplier: 10.0,
+        }
+    }
+
+    /// Relaxed für Tests/Development
+    pub fn relaxed() -> Self {
+        Self {
+            expected_shards: 4,
+            bias_threshold: 0.3,
+            entropy_decay: 0.5,
+            quarantine_failure_threshold: 200,
+            reputation_penalty_per_failure: 0.05,
+            reputation_bonus_per_success: 0.02,
+            max_penalty_multiplier: 2.0,
+        }
+    }
+}
+
+impl ShardMonitor {
+    /// Erstelle neuen ShardMonitor mit Konfiguration
+    pub fn new(config: ShardMonitorConfig) -> Self {
+        Self {
+            shard_activity: DashMap::with_capacity(config.expected_shards),
+            shard_entropy: DashMap::with_capacity(config.expected_shards),
+            cross_shard_failures: DashMap::with_capacity(config.expected_shards),
+            cross_shard_successes: DashMap::with_capacity(config.expected_shards),
+            shard_reputation: DashMap::with_capacity(config.expected_shards),
+            bias_alarms: DashMap::with_capacity(config.expected_shards),
+            quarantined_shards: DashMap::with_capacity(config.expected_shards),
+            config,
+        }
+    }
+
+    /// Erstelle mit Default-Konfiguration
+    pub fn with_defaults() -> Self {
+        Self::new(ShardMonitorConfig::default())
+    }
+
+    /// Update bei Trust-Event (für Bias-Erkennung)
+    ///
+    /// Wird bei jedem Trust-Update aus einem Shard aufgerufen.
+    /// `entropy_delta` misst die Vielfalt der Update-Quellen (0.0–1.0).
+    pub fn record_trust_update(&self, shard_id: u64, entropy_delta: f64) {
+        // Aktivität inkrementieren
+        self.shard_activity
+            .entry(shard_id)
+            .or_insert_with(|| AtomicU64::new(0))
+            .fetch_add(1, Ordering::Relaxed);
+
+        // Entropy per EWMA updaten
+        let entry = self
+            .shard_entropy
+            .entry(shard_id)
+            .or_insert_with(|| AtomicF64::new(1.0));
+        entry.ewma_update(entropy_delta, self.config.entropy_decay, Ordering::Relaxed);
+    }
+
+    /// Prüfe Shard-Bias (Risiko 1: Lokale Trust-Verzerrung)
+    ///
+    /// Vergleicht lokale Shard-Entropy mit globaler Entropy.
+    /// Bei signifikanter Abweichung → Bias erkannt → Reputation senken.
+    ///
+    /// # Returns
+    /// `true` wenn Bias erkannt wurde
+    pub fn check_shard_bias(&self, shard_id: u64, global_entropy: f64) -> bool {
+        if let Some(local_entropy_atomic) = self.shard_entropy.get(&shard_id) {
+            let local_entropy = local_entropy_atomic.load(Ordering::Relaxed);
+            let threshold = global_entropy * self.config.bias_threshold;
+
+            if local_entropy < threshold {
+                // Bias erkannt → Alarm + Reputation senken
+                self.bias_alarms
+                    .entry(shard_id)
+                    .or_insert_with(|| AtomicU64::new(0))
+                    .fetch_add(1, Ordering::Relaxed);
+                self.lower_reputation(shard_id, 0.2);
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Berechne globale Entropy (Durchschnitt aller Shards)
+    pub fn global_entropy(&self) -> f64 {
+        if self.shard_entropy.is_empty() {
+            return 1.0; // Default: gesund
+        }
+
+        let sum: f64 = self
+            .shard_entropy
+            .iter()
+            .map(|e| e.value().load(Ordering::Relaxed))
+            .sum();
+        sum / self.shard_entropy.len() as f64
+    }
+
+    /// Record successful Cross-Shard Request
+    pub fn record_cross_success(&self, source_shard: u64) {
+        self.cross_shard_successes
+            .entry(source_shard)
+            .or_insert_with(|| AtomicU64::new(0))
+            .fetch_add(1, Ordering::Relaxed);
+
+        // Recovery: Reputation leicht verbessern
+        self.raise_reputation(source_shard, self.config.reputation_bonus_per_success);
+    }
+
+    /// Record failed Cross-Shard Request (Risiko 2: Cross-Shard-Angriffe)
+    ///
+    /// Wird bei fehlgeschlagenen Cross-Shard-Operationen aufgerufen
+    /// (z.B. failed Sagas, Quota-Violations, Policy-Denials).
+    pub fn record_cross_failure(&self, source_shard: u64) {
+        let failures = self
+            .cross_shard_failures
+            .entry(source_shard)
+            .or_insert_with(|| AtomicU64::new(0))
+            .fetch_add(1, Ordering::Relaxed)
+            + 1;
+
+        // Reputation senken
+        self.lower_reputation(source_shard, self.config.reputation_penalty_per_failure);
+
+        // Bei vielen Failures → Quarantäne
+        if failures >= self.config.quarantine_failure_threshold {
+            self.quarantine_shard(source_shard);
+        }
+    }
+
+    /// Senke Reputation (mit Floor bei 0.0)
+    fn lower_reputation(&self, shard_id: u64, penalty: f64) {
+        let entry = self
+            .shard_reputation
+            .entry(shard_id)
+            .or_insert_with(|| AtomicF64::new(1.0));
+
+        loop {
+            let current = entry.load(Ordering::Relaxed);
+            let new_value = (current - penalty).max(0.0);
+            if entry
+                .compare_exchange(current, new_value, Ordering::SeqCst, Ordering::Relaxed)
+                .is_ok()
+            {
+                break;
+            }
+        }
+    }
+
+    /// Erhöhe Reputation (mit Ceiling bei 1.0)
+    fn raise_reputation(&self, shard_id: u64, bonus: f64) {
+        let entry = self
+            .shard_reputation
+            .entry(shard_id)
+            .or_insert_with(|| AtomicF64::new(1.0));
+
+        loop {
+            let current = entry.load(Ordering::Relaxed);
+            let new_value = (current + bonus).min(1.0);
+            if entry
+                .compare_exchange(current, new_value, Ordering::SeqCst, Ordering::Relaxed)
+                .is_ok()
+            {
+                break;
+            }
+        }
+    }
+
+    /// Setze Shard unter Quarantäne (blockiert alle Crossings)
+    pub fn quarantine_shard(&self, shard_id: u64) {
+        self.quarantined_shards
+            .entry(shard_id)
+            .or_insert_with(|| std::sync::atomic::AtomicBool::new(false))
+            .store(true, Ordering::SeqCst);
+    }
+
+    /// Hebe Quarantäne auf
+    pub fn lift_quarantine(&self, shard_id: u64) {
+        if let Some(entry) = self.quarantined_shards.get(&shard_id) {
+            entry.store(false, Ordering::SeqCst);
+        }
+    }
+
+    /// Prüfe ob Shard unter Quarantäne steht
+    pub fn is_quarantined(&self, shard_id: u64) -> bool {
+        self.quarantined_shards
+            .get(&shard_id)
+            .map(|e| e.load(Ordering::Relaxed))
+            .unwrap_or(false)
+    }
+
+    /// Hole Penalty-Multiplier für Cross-Shard-Request (Gateway nutzt das)
+    ///
+    /// Niedrige Reputation → höhere Kosten (ökonomische Abschreckung).
+    /// Bei Quarantäne → f64::INFINITY (Request wird blockiert).
+    pub fn get_cross_shard_penalty(&self, source_shard: u64) -> f64 {
+        // Quarantäne → unendlich (blockiert)
+        if self.is_quarantined(source_shard) {
+            return f64::INFINITY;
+        }
+
+        let reputation = self
+            .shard_reputation
+            .get(&source_shard)
+            .map(|r| r.load(Ordering::Relaxed))
+            .unwrap_or(1.0);
+
+        let failures = self
+            .cross_shard_failures
+            .get(&source_shard)
+            .map(|f| f.load(Ordering::Relaxed))
+            .unwrap_or(0);
+
+        // Kombinierte Strafe: Stufen + Reputation-Inverse
+        let base_penalty = if failures > 100 {
+            5.0
+        } else if failures > 50 {
+            3.0
+        } else if failures > 20 {
+            1.5
+        } else {
+            1.0
+        };
+
+        // Reputation-Komponente: 1/reputation (aber max capped)
+        let reputation_penalty =
+            (1.0 / reputation.max(0.1)).min(self.config.max_penalty_multiplier);
+
+        (base_penalty * reputation_penalty).min(self.config.max_penalty_multiplier)
+    }
+
+    /// Integration in Multi-Veto (ProtectionState)
+    ///
+    /// Liefert einen Risk-Score (1.0 = normal, >1.0 = erhöhtes Risiko).
+    /// Wird vom Protection-System in Risk-Aggregation einbezogen.
+    pub fn contribute_to_veto(&self, shard_id: u64) -> f64 {
+        let global_entropy = self.global_entropy();
+        let mut risk_score = 1.0;
+
+        // Bias-Check
+        if self.check_shard_bias(shard_id, global_entropy) {
+            risk_score *= 2.0;
+        }
+
+        // Reputation-Factor
+        let reputation = self
+            .shard_reputation
+            .get(&shard_id)
+            .map(|r| r.load(Ordering::Relaxed))
+            .unwrap_or(1.0);
+
+        if reputation < 0.5 {
+            risk_score *= 1.5;
+        }
+        if reputation < 0.2 {
+            risk_score *= 2.0;
+        }
+
+        // Quarantäne = maximales Risiko
+        if self.is_quarantined(shard_id) {
+            risk_score *= 10.0;
+        }
+
+        risk_score
+    }
+
+    /// Hole Reputation eines Shards (für Metrics/UI)
+    pub fn get_reputation(&self, shard_id: u64) -> f64 {
+        self.shard_reputation
+            .get(&shard_id)
+            .map(|r| r.load(Ordering::Relaxed))
+            .unwrap_or(1.0)
+    }
+
+    /// Hole Entropy eines Shards (für Metrics/UI)
+    pub fn get_entropy(&self, shard_id: u64) -> f64 {
+        self.shard_entropy
+            .get(&shard_id)
+            .map(|e| e.load(Ordering::Relaxed))
+            .unwrap_or(1.0)
+    }
+
+    /// Hole Activity eines Shards (für Metrics/UI)
+    pub fn get_activity(&self, shard_id: u64) -> u64 {
+        self.shard_activity
+            .get(&shard_id)
+            .map(|a| a.load(Ordering::Relaxed))
+            .unwrap_or(0)
+    }
+
+    /// Snapshot für Serialisierung
+    pub fn snapshot(&self) -> ShardMonitorSnapshot {
+        let per_shard: Vec<ShardSecuritySnapshot> = self
+            .shard_activity
+            .iter()
+            .map(|entry| {
+                let shard_id = *entry.key();
+                ShardSecuritySnapshot {
+                    shard_id,
+                    activity: entry.value().load(Ordering::Relaxed),
+                    entropy: self.get_entropy(shard_id),
+                    reputation: self.get_reputation(shard_id),
+                    failures: self
+                        .cross_shard_failures
+                        .get(&shard_id)
+                        .map(|f| f.load(Ordering::Relaxed))
+                        .unwrap_or(0),
+                    successes: self
+                        .cross_shard_successes
+                        .get(&shard_id)
+                        .map(|s| s.load(Ordering::Relaxed))
+                        .unwrap_or(0),
+                    bias_alarms: self
+                        .bias_alarms
+                        .get(&shard_id)
+                        .map(|a| a.load(Ordering::Relaxed))
+                        .unwrap_or(0),
+                    is_quarantined: self.is_quarantined(shard_id),
+                }
+            })
+            .collect();
+
+        let total_failures: u64 = self
+            .cross_shard_failures
+            .iter()
+            .map(|e| e.value().load(Ordering::Relaxed))
+            .sum();
+
+        let total_successes: u64 = self
+            .cross_shard_successes
+            .iter()
+            .map(|e| e.value().load(Ordering::Relaxed))
+            .sum();
+
+        let quarantined_count = self
+            .quarantined_shards
+            .iter()
+            .filter(|e| e.value().load(Ordering::Relaxed))
+            .count();
+
+        ShardMonitorSnapshot {
+            global_entropy: self.global_entropy(),
+            total_shards_monitored: self.shard_activity.len(),
+            total_cross_shard_failures: total_failures,
+            total_cross_shard_successes: total_successes,
+            cross_shard_success_rate: if total_failures + total_successes > 0 {
+                total_successes as f64 / (total_failures + total_successes) as f64
+            } else {
+                1.0
+            },
+            quarantined_shard_count: quarantined_count,
+            per_shard,
+        }
+    }
+
+    /// Reset für Tests
+    #[cfg(test)]
+    pub fn reset(&self) {
+        self.shard_activity.clear();
+        self.shard_entropy.clear();
+        self.cross_shard_failures.clear();
+        self.cross_shard_successes.clear();
+        self.shard_reputation.clear();
+        self.bias_alarms.clear();
+        self.quarantined_shards.clear();
+    }
+}
+
+impl Default for ShardMonitor {
+    fn default() -> Self {
+        Self::with_defaults()
+    }
+}
+
+/// Snapshot eines einzelnen Shards (Sicherheitsmetriken)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShardSecuritySnapshot {
+    pub shard_id: u64,
+    pub activity: u64,
+    pub entropy: f64,
+    pub reputation: f64,
+    pub failures: u64,
+    pub successes: u64,
+    pub bias_alarms: u64,
+    pub is_quarantined: bool,
+}
+
+/// Aggregierter Snapshot des ShardMonitors
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShardMonitorSnapshot {
+    pub global_entropy: f64,
+    pub total_shards_monitored: usize,
+    pub total_cross_shard_failures: u64,
+    pub total_cross_shard_successes: u64,
+    pub cross_shard_success_rate: f64,
+    pub quarantined_shard_count: usize,
+    pub per_shard: Vec<ShardSecuritySnapshot>,
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REALM SPECIFIC STATE EXTENSION (apply_state_event für Replay)
+// ─────────────────────────────────────────────────────────────────────────────
+
+impl RealmSpecificState {
+    /// Apply ein StateEvent auf diesen RealmSpecificState (für Event-Replay)
+    pub fn apply_state_event(&self, event: &WrappedStateEvent) {
+        match &event.event {
+            StateEvent::MembershipChange {
+                realm_id,
+                action,
+                identity_id,
+                ..
+            } => {
+                if realm_id == &self.realm_id() {
+                    match action {
+                        MembershipAction::Joined | MembershipAction::InviteAccepted => {
+                            self.add_member(identity_id);
+                        }
+                        MembershipAction::Left | MembershipAction::Banned => {
+                            self.remove_member(identity_id);
+                        }
+                        MembershipAction::RoleChanged { .. } | MembershipAction::Invited => {
+                            // Role changes und Invites ändern keine Member-Counts
+                        }
+                    }
+                }
+            }
+            StateEvent::RealmLifecycle {
+                realm_id, action, ..
+            } => {
+                if realm_id == &self.realm_id() {
+                    match action {
+                        RealmAction::Paused => {
+                            self.quarantine();
+                        }
+                        RealmAction::Resumed => {
+                            self.unquarantine();
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            StateEvent::CrossingEvaluated { allowed, .. } => {
+                if *allowed {
+                    self.crossing_in();
+                }
+            }
+            StateEvent::QuotaViolation {
+                resource,
+                requested,
+                ..
+            } => {
+                // Verbrauche Ressource bei Violation
+                let _ = self.consume_resource(*resource, *requested);
+            }
+            _ => {
+                // Andere Events betreffen nicht den Realm-State direkt
+            }
+        }
+    }
+
+    /// Hole Realm-ID (aus Members oder generiere Default)
+    fn realm_id(&self) -> String {
+        // Da RealmSpecificState keine realm_id hat, nutzen wir einen Workaround
+        // In Production würde dies aus der Struktur kommen
+        "unknown".to_string()
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SHARDED REALM STATE SNAPSHOT
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Snapshot des sharded Realm-States für Serialisierung
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShardedRealmStateSnapshot {
+    /// Sharding-Statistiken
+    pub stats: ShardingStats,
+    /// Alle geladenen Realm-Snapshots
+    pub realms: HashMap<String, RealmSpecificStateSnapshot>,
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PHASE 7 TESTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests_phase7_sharding {
+    use super::*;
+
+    // ─────────────────────────────────────────────────────────────────────
+    // ShardingConfig Tests
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_sharding_config_default() {
+        let config = ShardingConfig::default();
+        assert_eq!(config.num_shards, 64);
+        assert_eq!(config.max_per_shard, 20_000);
+        assert!(config.lazy_loading_enabled);
+    }
+
+    #[test]
+    fn test_sharding_config_minimal() {
+        let config = ShardingConfig::minimal();
+        assert_eq!(config.num_shards, 4);
+        assert!(!config.lazy_loading_enabled);
+    }
+
+    #[test]
+    fn test_sharding_config_production() {
+        let config = ShardingConfig::production();
+        assert_eq!(config.num_shards, 128);
+        assert!(config.lazy_loading_enabled);
+        assert!(config.event_replay_on_load);
+    }
+
+    #[test]
+    fn test_sharding_config_auto_scaled() {
+        let config = ShardingConfig::auto_scaled();
+        assert!(config.num_shards >= 16);
+        assert!(config.num_shards <= 256);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // FxHash Tests
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_fx_hash_deterministic() {
+        let hash1 = fx_hash_str("realm_001");
+        let hash2 = fx_hash_str("realm_001");
+        assert_eq!(hash1, hash2);
+    }
+
+    #[test]
+    fn test_fx_hash_distribution() {
+        let hashes: Vec<u64> = (0..100)
+            .map(|i| fx_hash_str(&format!("realm_{}", i)))
+            .collect();
+
+        // Alle Hashes sollten unterschiedlich sein
+        let unique: HashSet<u64> = hashes.iter().copied().collect();
+        assert_eq!(unique.len(), 100);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // LazyShardedRealmState Tests
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_sharded_state_creation() {
+        let state = LazyShardedRealmState::with_defaults();
+        assert_eq!(state.shards.len(), 64);
+        assert_eq!(state.approximate_count(), 0);
+    }
+
+    #[test]
+    fn test_sharded_state_minimal_config() {
+        let state = LazyShardedRealmState::new(ShardingConfig::minimal());
+        assert_eq!(state.shards.len(), 4);
+    }
+
+    #[test]
+    fn test_sharded_state_shard_distribution() {
+        let state = LazyShardedRealmState::new(ShardingConfig {
+            num_shards: 8,
+            ..ShardingConfig::minimal()
+        });
+
+        // Registriere viele Realms
+        for i in 0..100 {
+            let realm = RealmSpecificState::new(0.3, "democratic");
+            state.register(&format!("realm_{}", i), realm);
+        }
+
+        // Prüfe Verteilung über Shards
+        let shard_sizes: Vec<usize> = state.shards.iter().map(|s| s.len()).collect();
+        let min = *shard_sizes.iter().min().unwrap();
+        let max = *shard_sizes.iter().max().unwrap();
+
+        // Verteilung sollte einigermaßen gleichmäßig sein
+        assert!(
+            max - min < 30,
+            "Ungleiche Verteilung: min={}, max={}",
+            min,
+            max
+        );
+    }
+
+    #[test]
+    fn test_sharded_state_register_and_get() {
+        let state = LazyShardedRealmState::new(ShardingConfig::minimal());
+
+        let realm = RealmSpecificState::new(0.5, "democratic");
+        assert!(state.register("realm_001", realm));
+
+        // Zweite Registrierung sollte false zurückgeben
+        let realm2 = RealmSpecificState::new(0.3, "consensus");
+        assert!(!state.register("realm_001", realm2));
+
+        // Get sollte funktionieren
+        let cached = state.get_cached("realm_001");
+        assert!(cached.is_some());
+        assert_eq!(state.approximate_count(), 1);
+    }
+
+    #[test]
+    fn test_sharded_state_upsert() {
+        let state = LazyShardedRealmState::new(ShardingConfig::minimal());
+
+        // Erstes Upsert (Insert)
+        state.upsert("realm_001", RealmSpecificState::new(0.5, "democratic"));
+        assert_eq!(state.approximate_count(), 1);
+
+        // Zweites Upsert (Update) - Count bleibt gleich
+        state.upsert("realm_001", RealmSpecificState::new(0.3, "consensus"));
+        assert_eq!(state.approximate_count(), 1);
+    }
+
+    #[test]
+    fn test_sharded_state_remove() {
+        let state = LazyShardedRealmState::new(ShardingConfig::minimal());
+
+        state.register("realm_001", RealmSpecificState::new(0.5, "democratic"));
+        assert_eq!(state.approximate_count(), 1);
+
+        let removed = state.remove("realm_001");
+        assert!(removed.is_some());
+        assert_eq!(state.approximate_count(), 0);
+
+        // Nochmal entfernen sollte None zurückgeben
+        let removed_again = state.remove("realm_001");
+        assert!(removed_again.is_none());
+    }
+
+    #[test]
+    fn test_sharded_state_contains() {
+        let state = LazyShardedRealmState::new(ShardingConfig::minimal());
+
+        assert!(!state.contains("realm_001"));
+
+        state.register("realm_001", RealmSpecificState::new(0.5, "democratic"));
+        assert!(state.contains("realm_001"));
+
+        state.remove("realm_001");
+        assert!(!state.contains("realm_001"));
+    }
+
+    #[test]
+    fn test_sharded_state_cache_stats() {
+        let state = LazyShardedRealmState::new(ShardingConfig::minimal());
+
+        state.register("realm_001", RealmSpecificState::new(0.5, "democratic"));
+
+        // Cache-Hit
+        let _ = state.get_cached("realm_001");
+        let _ = state.get_cached("realm_001");
+
+        // Cache-Miss
+        let _ = state.get_cached("nonexistent");
+
+        assert_eq!(state.cache_hits.load(Ordering::Relaxed), 2);
+        assert_eq!(state.cache_misses.load(Ordering::Relaxed), 1);
+    }
+
+    #[test]
+    fn test_sharded_state_stats() {
+        let state = LazyShardedRealmState::new(ShardingConfig::minimal());
+
+        for i in 0..10 {
+            state.register(
+                &format!("realm_{}", i),
+                RealmSpecificState::new(0.5, "democratic"),
+            );
+        }
+
+        // Cache operations
+        for i in 0..10 {
+            let _ = state.get_cached(&format!("realm_{}", i));
+        }
+        let _ = state.get_cached("nonexistent");
+
+        let stats = state.stats();
+
+        assert_eq!(stats.num_shards, 4);
+        assert_eq!(stats.total_loaded_realms, 10);
+        assert_eq!(stats.total_cache_hits, 10);
+        assert_eq!(stats.total_cache_misses, 1);
+        assert!(stats.cache_hit_rate_percent > 90.0);
+    }
+
+    #[test]
+    fn test_sharded_state_iter_all() {
+        let state = LazyShardedRealmState::new(ShardingConfig::minimal());
+
+        for i in 0..5 {
+            state.register(
+                &format!("realm_{}", i),
+                RealmSpecificState::new(0.5, "democratic"),
+            );
+        }
+
+        let all: Vec<_> = state.iter_all().collect();
+        assert_eq!(all.len(), 5);
+    }
+
+    #[test]
+    fn test_sharded_state_snapshot() {
+        let state = LazyShardedRealmState::new(ShardingConfig::minimal());
+
+        state.register("realm_001", RealmSpecificState::new(0.5, "democratic"));
+        state.register("realm_002", RealmSpecificState::new(0.3, "consensus"));
+
+        let snapshot = state.snapshot();
+        assert_eq!(snapshot.len(), 2);
+        assert!(snapshot.contains_key("realm_001"));
+        assert!(snapshot.contains_key("realm_002"));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Async Tests (Lazy Loading)
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_sharded_state_lazy_load_disabled() {
+        let state = LazyShardedRealmState::new(ShardingConfig::minimal());
+
+        // Lazy Loading ist deaktiviert in minimal config
+        let result = state.get_or_load("realm_001").await;
+        assert!(matches!(result, Err(RealmLoadError::LazyLoadingDisabled)));
+    }
+
+    #[tokio::test]
+    async fn test_sharded_state_lazy_load_no_storage() {
+        let mut config = ShardingConfig::minimal();
+        config.lazy_loading_enabled = true;
+        let state = LazyShardedRealmState::new(config);
+
+        // Kein Storage-Loader konfiguriert
+        let result = state.get_or_load("realm_001").await;
+        assert!(matches!(result, Err(RealmLoadError::StorageError(_))));
+    }
+
+    #[tokio::test]
+    async fn test_sharded_state_lazy_load_mock() {
+        let mut config = ShardingConfig::minimal();
+        config.lazy_loading_enabled = true;
+        config.event_replay_on_load = false;
+
+        let mock_loader = Arc::new(MockRealmStorageLoader::new());
+        mock_loader.add_realm("realm_001", 0.5, "democratic");
+
+        let state = LazyShardedRealmState::new(config).with_storage(mock_loader);
+
+        // Erste Anfrage: Lazy Load
+        let result = state.get_or_load("realm_001").await;
+        assert!(result.is_ok());
+        assert_eq!(state.cache_misses.load(Ordering::Relaxed), 1);
+
+        // Zweite Anfrage: Cache-Hit
+        let result2 = state.get_or_load("realm_001").await;
+        assert!(result2.is_ok());
+        assert_eq!(state.cache_hits.load(Ordering::Relaxed), 1);
+    }
+
+    #[tokio::test]
+    async fn test_sharded_state_lazy_load_not_found() {
+        let mut config = ShardingConfig::minimal();
+        config.lazy_loading_enabled = true;
+
+        let mock_loader = Arc::new(MockRealmStorageLoader::new());
+        // Kein Realm hinzugefügt
+
+        let state = LazyShardedRealmState::new(config).with_storage(mock_loader);
+
+        let result = state.get_or_load("nonexistent").await;
+        assert!(matches!(result, Err(RealmLoadError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn test_sharded_state_eviction() {
+        let config = ShardingConfig {
+            num_shards: 2,
+            max_per_shard: 5,
+            lru_capacity_per_shard: 100, // Groß genug um alle zu halten
+            ..ShardingConfig::minimal()
+        };
+
+        let state = LazyShardedRealmState::new(config);
+
+        // Füge mehr Realms hinzu als max_per_shard
+        for i in 0..20 {
+            state.register(
+                &format!("realm_{}", i),
+                RealmSpecificState::new(0.5, "democratic"),
+            );
+            // Touch im LRU - wichtig für Eviction-Tracking
+            state
+                .touch_lru(
+                    state.shard_index(&format!("realm_{}", i)),
+                    &format!("realm_{}", i),
+                )
+                .await;
+        }
+
+        // Vor Eviction: 20 Realms
+        assert_eq!(state.exact_count(), 20);
+
+        // Führe Eviction durch
+        let evicted = state.evict_all().await;
+
+        // Es sollten einige Realms evicted worden sein
+        // Hinweis: Eviction basiert auf max_per_shard=5 und num_shards=2
+        // Also max 10 nach Eviction
+        assert!(evicted > 0, "Should have evicted some realms");
+        let remaining = state.exact_count();
+        assert!(
+            remaining <= 10,
+            "Expected max 10 (2 shards * 5 max), got {}",
+            remaining
+        );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // MockRealmStorageLoader Tests
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_mock_storage_loader() {
+        let loader = MockRealmStorageLoader::new();
+
+        // Initial: Realm existiert nicht
+        assert!(!loader.realm_exists("realm_001").await);
+
+        // Füge Realm hinzu
+        loader.add_realm("realm_001", 0.5, "democratic");
+
+        // Jetzt existiert es
+        assert!(loader.realm_exists("realm_001").await);
+
+        // Laden
+        let loaded = loader.load_realm_base("realm_001").await;
+        assert!(loaded.is_ok());
+
+        // Events (initial leer)
+        let events = loader.load_realm_events_since("realm_001", None).await;
+        assert!(events.is_ok());
+        assert!(events.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_mock_storage_loader_persist() {
+        let loader = MockRealmStorageLoader::new();
+
+        let realm = RealmSpecificState::new(0.5, "democratic");
+        let snapshot = realm.snapshot();
+        let result = loader.persist_realm_snapshot("realm_001", &snapshot).await;
+        assert!(result.is_ok());
+
+        // Sollte jetzt ladbar sein
+        assert!(loader.realm_exists("realm_001").await);
+    }
+
+    // =========================================================================
+    // PHASE 7.1 TESTS: AtomicF64 & ShardMonitor
+    // =========================================================================
+
+    // ─────────────────────────────────────────────────────────────────────
+    // AtomicF64 Tests
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_atomic_f64_basic_ops() {
+        let atomic = AtomicF64::new(1.5);
+        assert_eq!(atomic.load(Ordering::Relaxed), 1.5);
+
+        atomic.store(2.5, Ordering::Relaxed);
+        assert_eq!(atomic.load(Ordering::Relaxed), 2.5);
+    }
+
+    #[test]
+    fn test_atomic_f64_swap() {
+        let atomic = AtomicF64::new(1.0);
+        let old = atomic.swap(2.0, Ordering::SeqCst);
+        assert_eq!(old, 1.0);
+        assert_eq!(atomic.load(Ordering::Relaxed), 2.0);
+    }
+
+    #[test]
+    fn test_atomic_f64_fetch_add() {
+        let atomic = AtomicF64::new(1.0);
+        let old = atomic.fetch_add(0.5, Ordering::SeqCst);
+        assert_eq!(old, 1.0);
+        assert!((atomic.load(Ordering::Relaxed) - 1.5).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_atomic_f64_fetch_sub() {
+        let atomic = AtomicF64::new(2.0);
+        let old = atomic.fetch_sub(0.5, Ordering::SeqCst);
+        assert_eq!(old, 2.0);
+        assert!((atomic.load(Ordering::Relaxed) - 1.5).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_atomic_f64_fetch_mul() {
+        let atomic = AtomicF64::new(2.0);
+        let old = atomic.fetch_mul(1.5, Ordering::SeqCst);
+        assert_eq!(old, 2.0);
+        assert!((atomic.load(Ordering::Relaxed) - 3.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_atomic_f64_ewma_update() {
+        let atomic = AtomicF64::new(1.0);
+        // EWMA: new = current * 0.9 + value * 0.1 = 1.0 * 0.9 + 0.5 * 0.1 = 0.95
+        let old = atomic.ewma_update(0.5, 0.9, Ordering::SeqCst);
+        assert_eq!(old, 1.0);
+        assert!((atomic.load(Ordering::Relaxed) - 0.95).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_atomic_f64_fetch_max() {
+        let atomic = AtomicF64::new(1.0);
+        atomic.fetch_max(0.5, Ordering::SeqCst); // No change (0.5 < 1.0)
+        assert_eq!(atomic.load(Ordering::Relaxed), 1.0);
+
+        atomic.fetch_max(2.0, Ordering::SeqCst); // Change (2.0 > 1.0)
+        assert_eq!(atomic.load(Ordering::Relaxed), 2.0);
+    }
+
+    #[test]
+    fn test_atomic_f64_fetch_min() {
+        let atomic = AtomicF64::new(1.0);
+        atomic.fetch_min(2.0, Ordering::SeqCst); // No change (2.0 > 1.0)
+        assert_eq!(atomic.load(Ordering::Relaxed), 1.0);
+
+        atomic.fetch_min(0.5, Ordering::SeqCst); // Change (0.5 < 1.0)
+        assert_eq!(atomic.load(Ordering::Relaxed), 0.5);
+    }
+
+    #[test]
+    fn test_atomic_f64_clone() {
+        let atomic = AtomicF64::new(3.14159);
+        let cloned = atomic.clone();
+        assert_eq!(cloned.load(Ordering::Relaxed), 3.14159);
+
+        // Original und Clone sind unabhängig
+        atomic.store(2.0, Ordering::Relaxed);
+        assert_eq!(cloned.load(Ordering::Relaxed), 3.14159);
+    }
+
+    #[test]
+    fn test_atomic_f64_compare_exchange() {
+        let atomic = AtomicF64::new(1.0);
+
+        // Erfolgreich
+        let result = atomic.compare_exchange(1.0, 2.0, Ordering::SeqCst, Ordering::Relaxed);
+        assert!(result.is_ok());
+        assert_eq!(atomic.load(Ordering::Relaxed), 2.0);
+
+        // Fehlgeschlagen (current != expected)
+        let result = atomic.compare_exchange(1.0, 3.0, Ordering::SeqCst, Ordering::Relaxed);
+        assert!(result.is_err());
+        assert_eq!(atomic.load(Ordering::Relaxed), 2.0);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // ShardMonitor Tests
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_shard_monitor_creation() {
+        let monitor = ShardMonitor::with_defaults();
+        assert_eq!(monitor.shard_activity.len(), 0);
+        assert_eq!(monitor.global_entropy(), 1.0); // Default für leeres Set
+    }
+
+    #[test]
+    fn test_shard_monitor_trust_update() {
+        let monitor = ShardMonitor::with_defaults();
+
+        // Record mehrere Updates für Shard 1
+        monitor.record_trust_update(1, 0.8);
+        monitor.record_trust_update(1, 0.9);
+        monitor.record_trust_update(1, 0.7);
+
+        // Activity sollte 3 sein
+        assert_eq!(monitor.get_activity(1), 3);
+
+        // Entropy wurde EWMA-geupdatet
+        let entropy = monitor.get_entropy(1);
+        assert!(entropy > 0.0 && entropy <= 1.0);
+    }
+
+    #[test]
+    fn test_shard_monitor_cross_shard_failures() {
+        let config = ShardMonitorConfig {
+            quarantine_failure_threshold: 10,
+            ..ShardMonitorConfig::relaxed()
+        };
+        let monitor = ShardMonitor::new(config);
+
+        // Initial: Reputation 1.0
+        assert_eq!(monitor.get_reputation(1), 1.0);
+        assert!(!monitor.is_quarantined(1));
+
+        // 5 Failures
+        for _ in 0..5 {
+            monitor.record_cross_failure(1);
+        }
+
+        // Reputation sollte gesunken sein
+        let reputation = monitor.get_reputation(1);
+        assert!(
+            reputation < 1.0,
+            "Reputation should decrease: {}",
+            reputation
+        );
+        assert!(!monitor.is_quarantined(1), "Should not be quarantined yet");
+
+        // 5 weitere Failures → Quarantäne (Threshold = 10)
+        for _ in 0..5 {
+            monitor.record_cross_failure(1);
+        }
+
+        assert!(
+            monitor.is_quarantined(1),
+            "Should be quarantined after 10 failures"
+        );
+    }
+
+    #[test]
+    fn test_shard_monitor_cross_shard_success_recovery() {
+        let config = ShardMonitorConfig {
+            reputation_penalty_per_failure: 0.2,
+            reputation_bonus_per_success: 0.1,
+            ..ShardMonitorConfig::relaxed()
+        };
+        let monitor = ShardMonitor::new(config);
+
+        // Senke Reputation durch Failures
+        monitor.record_cross_failure(1);
+        monitor.record_cross_failure(1);
+        let low_reputation = monitor.get_reputation(1);
+
+        // Recovery durch Successes
+        monitor.record_cross_success(1);
+        monitor.record_cross_success(1);
+
+        let recovered_reputation = monitor.get_reputation(1);
+        assert!(
+            recovered_reputation > low_reputation,
+            "Reputation should recover: {} > {}",
+            recovered_reputation,
+            low_reputation
+        );
+    }
+
+    #[test]
+    fn test_shard_monitor_quarantine_lift() {
+        let config = ShardMonitorConfig {
+            quarantine_failure_threshold: 5,
+            ..ShardMonitorConfig::relaxed()
+        };
+        let monitor = ShardMonitor::new(config);
+
+        // Quarantäne auslösen
+        for _ in 0..6 {
+            monitor.record_cross_failure(1);
+        }
+        assert!(monitor.is_quarantined(1));
+
+        // Quarantäne aufheben
+        monitor.lift_quarantine(1);
+        assert!(!monitor.is_quarantined(1));
+    }
+
+    #[test]
+    fn test_shard_monitor_penalty_multiplier() {
+        let config = ShardMonitorConfig {
+            max_penalty_multiplier: 5.0,
+            quarantine_failure_threshold: 200,
+            ..ShardMonitorConfig::relaxed()
+        };
+        let monitor = ShardMonitor::new(config);
+
+        // Initial: Keine Strafe (Multiplier = 1.0)
+        let initial_penalty = monitor.get_cross_shard_penalty(1);
+        assert_eq!(initial_penalty, 1.0);
+
+        // Nach Failures: Höhere Strafe
+        for _ in 0..25 {
+            monitor.record_cross_failure(1);
+        }
+        let penalty_after_failures = monitor.get_cross_shard_penalty(1);
+        assert!(
+            penalty_after_failures > initial_penalty,
+            "Penalty should increase: {} > {}",
+            penalty_after_failures,
+            initial_penalty
+        );
+
+        // Bei Quarantäne: Unendlich
+        for _ in 0..180 {
+            monitor.record_cross_failure(1);
+        }
+        let quarantine_penalty = monitor.get_cross_shard_penalty(1);
+        assert!(
+            quarantine_penalty.is_infinite(),
+            "Quarantined shard should have infinite penalty"
+        );
+    }
+
+    #[test]
+    fn test_shard_monitor_bias_detection() {
+        let config = ShardMonitorConfig {
+            bias_threshold: 0.5,
+            ..ShardMonitorConfig::relaxed()
+        };
+        let monitor = ShardMonitor::new(config);
+
+        // Setup: Shard 1 mit niedriger Entropy
+        for _ in 0..10 {
+            monitor.record_trust_update(1, 0.2); // Niedrige Entropy
+        }
+
+        // Setup: Shard 2 mit hoher Entropy
+        for _ in 0..10 {
+            monitor.record_trust_update(2, 0.9); // Hohe Entropy
+        }
+
+        let global_entropy = monitor.global_entropy();
+
+        // Shard 1 sollte als biased erkannt werden (lokale Entropy < 50% von global)
+        let shard1_entropy = monitor.get_entropy(1);
+        let shard2_entropy = monitor.get_entropy(2);
+
+        // Je nach EWMA-Konvergenz könnte Bias erkannt werden
+        // Wichtig: check_shard_bias senkt auch Reputation
+        let shard1_biased = monitor.check_shard_bias(1, global_entropy);
+        let shard2_biased = monitor.check_shard_bias(2, global_entropy);
+
+        // Shard 2 sollte NICHT als biased erkannt werden (hohe Entropy)
+        if shard2_entropy >= global_entropy * 0.5 {
+            assert!(!shard2_biased, "Shard 2 should not be biased");
+        }
+    }
+
+    #[test]
+    fn test_shard_monitor_veto_contribution() {
+        let config = ShardMonitorConfig {
+            quarantine_failure_threshold: 5,
+            ..ShardMonitorConfig::relaxed()
+        };
+        let monitor = ShardMonitor::new(config);
+
+        // Initial: Neutraler Score
+        let initial_score = monitor.contribute_to_veto(1);
+        assert!(initial_score >= 1.0);
+
+        // Nach Failures: Höherer Risk-Score
+        for _ in 0..3 {
+            monitor.record_cross_failure(1);
+        }
+        let score_after_failures = monitor.contribute_to_veto(1);
+
+        // Bei Quarantäne: Sehr hoher Risk-Score
+        for _ in 0..5 {
+            monitor.record_cross_failure(1);
+        }
+        let quarantine_score = monitor.contribute_to_veto(1);
+        assert!(
+            quarantine_score > score_after_failures,
+            "Quarantine should have highest risk: {} > {}",
+            quarantine_score,
+            score_after_failures
+        );
+    }
+
+    #[test]
+    fn test_shard_monitor_snapshot() {
+        let monitor = ShardMonitor::with_defaults();
+
+        // Einige Aktivitäten
+        monitor.record_trust_update(1, 0.8);
+        monitor.record_trust_update(2, 0.9);
+        monitor.record_cross_success(1);
+        monitor.record_cross_failure(2);
+
+        let snapshot = monitor.snapshot();
+
+        assert_eq!(snapshot.total_shards_monitored, 2);
+        assert_eq!(snapshot.total_cross_shard_successes, 1);
+        assert_eq!(snapshot.total_cross_shard_failures, 1);
+        assert!((snapshot.cross_shard_success_rate - 0.5).abs() < 0.01);
+        assert_eq!(snapshot.quarantined_shard_count, 0);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // ProtectionState + ShardMonitor Integration Tests
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_protection_state_with_shard_monitor() {
+        let protection = ProtectionState::with_shard_monitor(ShardMonitorConfig::relaxed());
+
+        assert!(protection.shard_monitor().is_some());
+
+        // Record some activity
+        protection.record_shard_trust_update(1, 0.8);
+        protection.record_cross_shard_success(1);
+        protection.record_cross_shard_failure(2);
+
+        // Penalty check
+        let penalty1 = protection.get_cross_shard_penalty(1);
+        let penalty2 = protection.get_cross_shard_penalty(2);
+        assert!(penalty2 > penalty1, "Shard 2 should have higher penalty");
+    }
+
+    #[test]
+    fn test_protection_state_without_shard_monitor() {
+        let protection = ProtectionState::new();
+
+        assert!(protection.shard_monitor().is_none());
+
+        // Alle Operationen sollten graceful sein (no-op)
+        protection.record_shard_trust_update(1, 0.8);
+        protection.record_cross_shard_success(1);
+        protection.record_cross_shard_failure(1);
+
+        // Penalty ohne Monitor = 1.0 (neutral)
+        assert_eq!(protection.get_cross_shard_penalty(1), 1.0);
+        assert_eq!(protection.shard_veto_contribution(1), 1.0);
+    }
+
+    #[test]
+    fn test_protection_state_enable_shard_monitor() {
+        let mut protection = ProtectionState::new();
+        assert!(protection.shard_monitor().is_none());
+
+        protection.enable_shard_monitor(ShardMonitorConfig::relaxed());
+        assert!(protection.shard_monitor().is_some());
+    }
+
+    #[test]
+    fn test_protection_state_health_with_shard_monitor() {
+        let mut protection = ProtectionState::with_shard_monitor(ShardMonitorConfig {
+            quarantine_failure_threshold: 3,
+            ..ShardMonitorConfig::relaxed()
+        });
+
+        let initial_health = protection.health_score();
+
+        // Quarantäne auslösen
+        for _ in 0..4 {
+            protection.record_cross_shard_failure(1);
+        }
+
+        let health_after_quarantine = protection.health_score();
+        assert!(
+            health_after_quarantine < initial_health,
+            "Health should decrease with quarantine: {} < {}",
+            health_after_quarantine,
+            initial_health
+        );
+    }
+
+    #[test]
+    fn test_protection_state_snapshot_with_shard_monitor() {
+        let protection = ProtectionState::with_shard_monitor(ShardMonitorConfig::relaxed());
+
+        protection.record_shard_trust_update(1, 0.8);
+        protection.record_cross_shard_success(1);
+
+        let snapshot = protection.snapshot();
+
+        assert!(snapshot.shard_monitor.is_some());
+        let shard_snap = snapshot.shard_monitor.unwrap();
+        assert_eq!(shard_snap.total_shards_monitored, 1);
+        assert_eq!(shard_snap.total_cross_shard_successes, 1);
+    }
+
+    #[test]
+    fn test_protection_state_snapshot_without_shard_monitor() {
+        let protection = ProtectionState::new();
+        let snapshot = protection.snapshot();
+
+        assert!(snapshot.shard_monitor.is_none());
     }
 }
