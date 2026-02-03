@@ -42,6 +42,8 @@ pub use state::{
     // Engine-Layer State (Phase 2 Additions)
     APIState,
     APIStateSnapshot,
+    AnomalySeverity,
+    BlueprintActionType,
     BlueprintComposerState,
     BlueprintComposerStateSnapshot,
     // ECLVM State (Erynoa Core Language Virtual Machine)
@@ -87,6 +89,8 @@ pub use state::{
     IntentParserStateSnapshot,
     KademliaState,
     KademliaStateSnapshot,
+    MemberRole,
+    MembershipAction,
     MerkleDelta,
     MerkleHash,
     MerkleNode,
@@ -96,6 +100,7 @@ pub use state::{
     MultiGasSnapshot,
     NatStatus,
     NetworkEvent,
+    NetworkMetric,
     // P2P State
     P2PState,
     P2PStateSnapshot,
@@ -108,6 +113,7 @@ pub use state::{
     ProtectionStateSnapshot,
     // Realm-specific Engine States
     RealmAPIState,
+    RealmAction,
     RealmControllerState,
     RealmECLState,
     RealmECLStateSnapshot,
@@ -133,6 +139,13 @@ pub use state::{
     StateComponent,
     // CQRS Light (State Delta Broadcasting)
     StateDelta,
+    // ─────────────────────────────────────────────────────────────────────────
+    // Architektur-Verbesserungen Phase 6.3: Event-Sourcing
+    // ─────────────────────────────────────────────────────────────────────────
+    // Event-Typen
+    StateEvent,
+    StateEventLog,
+    StateEventLogSnapshot,
     StateGraph,
     StateRelation,
     StorageBackend,
@@ -146,12 +159,15 @@ pub use state::{
     // Circuit Breaker Pattern
     SystemMode,
     TrustDistribution,
+    // Hilfs-Enums für Events
+    TrustReason,
     TrustState,
     TrustStateSnapshot,
     UIState,
     UIStateSnapshot,
     UnifiedState,
     UnifiedStateSnapshot,
+    WrappedStateEvent,
 };
 
 // Re-exports - State Integration (Observer Pattern)
