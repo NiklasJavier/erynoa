@@ -437,7 +437,7 @@ mod tests {
 
         // State sollte aktualisiert sein
         let snapshot = state.snapshot();
-        assert!(snapshot.execution.gas_consumed >= 800);
+        assert!(snapshot.execution.gas.consumed >= 800);
     }
 
     #[test]
