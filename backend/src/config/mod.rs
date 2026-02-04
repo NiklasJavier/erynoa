@@ -27,6 +27,9 @@ pub struct Settings {
     /// Feature Flags für die Anwendung
     #[serde(default)]
     pub features: FeatureFlags,
+    /// P2P-Netzwerk-Konfiguration
+    #[serde(default)]
+    pub p2p: P2PSettings,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -81,6 +84,12 @@ pub struct FeatureFlags {
     /// Social Login aktiviert
     #[serde(default = "default_false")]
     pub social_login: bool,
+    /// P2P-Netzwerk aktivieren
+    #[serde(default = "default_false")]
+    pub p2p_enabled: bool,
+    /// Privacy-Layer aktivieren (Onion-Routing)
+    #[serde(default = "default_false")]
+    pub privacy_enabled: bool,
 }
 
 impl Default for FeatureFlags {
@@ -88,8 +97,85 @@ impl Default for FeatureFlags {
         Self {
             registration: true,
             social_login: false,
+            p2p_enabled: false,
+            privacy_enabled: false,
         }
     }
+}
+
+/// P2P-Netzwerk-Konfiguration
+#[derive(Debug, Clone, Deserialize)]
+pub struct P2PSettings {
+    /// P2P-Port (Default: 4001)
+    #[serde(default = "default_p2p_port")]
+    pub port: u16,
+
+    /// Listen-Adressen (Default: 0.0.0.0)
+    #[serde(default = "default_p2p_listen")]
+    pub listen_addresses: Vec<String>,
+
+    /// Bootstrap-Peers (Multiaddrs)
+    #[serde(default)]
+    pub bootstrap_peers: Vec<String>,
+
+    /// mDNS für LAN-Discovery aktivieren
+    #[serde(default = "default_true")]
+    pub enable_mdns: bool,
+
+    /// Als Relay-Server fungieren
+    #[serde(default = "default_false")]
+    pub enable_relay_server: bool,
+
+    /// AutoNAT aktivieren
+    #[serde(default = "default_true")]
+    pub enable_autonat: bool,
+
+    /// UPnP Port-Mapping aktivieren
+    #[serde(default = "default_true")]
+    pub enable_upnp: bool,
+
+    /// Minimum Trust für eingehende Verbindungen
+    #[serde(default = "default_min_trust")]
+    pub min_incoming_trust: f64,
+
+    /// Node-Name für Logging
+    #[serde(default = "default_node_name")]
+    pub node_name: String,
+}
+
+impl Default for P2PSettings {
+    fn default() -> Self {
+        Self {
+            port: default_p2p_port(),
+            listen_addresses: default_p2p_listen(),
+            bootstrap_peers: vec![],
+            enable_mdns: true,
+            enable_relay_server: false,
+            enable_autonat: true,
+            enable_upnp: true,
+            min_incoming_trust: default_min_trust(),
+            node_name: default_node_name(),
+        }
+    }
+}
+
+fn default_p2p_port() -> u16 {
+    4001
+}
+
+fn default_p2p_listen() -> Vec<String> {
+    vec![
+        "/ip4/0.0.0.0/tcp/0".to_string(),
+        "/ip6/::/tcp/0".to_string(),
+    ]
+}
+
+fn default_min_trust() -> f64 {
+    0.1
+}
+
+fn default_node_name() -> String {
+    "erynoa-node".to_string()
 }
 
 fn default_true() -> bool {

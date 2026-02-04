@@ -31,3 +31,36 @@ max_content_size = 104857600
 # Feature Flags für die Anwendung
 registration = true  # Benutzer-Registrierung aktiviert
 social_login = false # Social Login (DID-basiert, später)
+p2p_enabled = false  # P2P-Netzwerk aktivieren (erfordert --features p2p)
+privacy_enabled = false # Privacy-Layer (Onion-Routing, erfordert --features privacy)
+
+# ============================================================================
+# P2P-Netzwerk-Konfiguration (nur relevant wenn p2p_enabled = true)
+# ============================================================================
+[p2p]
+# P2P-Port (0 = random)
+port = 4001
+
+# Node-Name für Logging und Identifikation
+node_name = "erynoa-node"
+
+# Listen-Adressen (überschreibt port wenn gesetzt)
+# listen_addresses = ["/ip4/0.0.0.0/tcp/4001", "/ip6/::/tcp/4001"]
+
+# Bootstrap-Peers für initiale Verbindung (Multiaddrs)
+# bootstrap_peers = ["/ip4/51.159.23.74/tcp/4001/p2p/12D3KooW..."]
+
+# mDNS für lokale Peer-Discovery (LAN)
+enable_mdns = true
+
+# Als Relay-Server für andere Peers fungieren
+enable_relay_server = false
+
+# AutoNAT für NAT-Typ-Erkennung
+enable_autonat = true
+
+# UPnP für automatisches Port-Mapping
+enable_upnp = true
+
+# Minimum Trust für eingehende Verbindungen (0.0 - 1.0)
+min_incoming_trust = 0.1

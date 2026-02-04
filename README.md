@@ -83,9 +83,72 @@ Erynoa ist ein **dezentrales kybernetisches Protokoll** für vertrauensbasierte 
 
 ---
 
-## Schnellstart
+### Schnellstart
 
 **Voraussetzungen:** [Nix](https://nixos.org/) (optional für Dev-Shell), [Docker](https://www.docker.com/) für den vollen Stack.
+
+#### Einheitliche Initialisierung (NEU)
+
+Mit der integrierten P2P-Unterstützung startet **alles über `main.rs`**:
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                  ERYNOA UNIFIED STARTUP (mit P2P)                                │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  ┌────────────────────────────────────────────────────────────────────────┐     │
+│  │                    erynoa (main.rs)                                    │     │
+│  │              Vollständiger Node: API + P2P + Storage                    │     │
+│  ├────────────────────────────────────────────────────────────────────────┤     │
+│  │ ✓ Telemetry                     → Logging/Tracing                      │     │
+│  │ ✓ Settings                      → Config laden (inkl. p2p section)     │     │
+│  │ ✓ DecentralizedStorage (Fjall)  → Local Storage                        │     │
+│  │ ✓ UnifiedState (alle Layer)     → Core, Execution, Protection, Peer... │     │
+│  │ ✓ StateCoordinator              → Health + Invarianten                 │     │
+│  │ ✓ P2P Network (optional)        → libp2p Swarm, Gossip, Kademlia...   │     │
+│  │ ✓ HTTP Router (Axum)            → Vollständige API                     │     │
+│  └────────────────────────────────────────────────────────────────────────┘     │
+│                                                                                  │
+│  Verwendung OHNE P2P:                                                           │
+│  cargo run                                                                      │
+│                                                                                  │
+│  Verwendung MIT P2P:                                                            │
+│  cargo run --features p2p                                                       │
+│  + Config: features.p2p_enabled = true                                          │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### P2P über Konfiguration aktivieren
+
+**Option 1: Config-Datei (`config/base.toml`)**
+
+```toml
+[features]
+p2p_enabled = true
+privacy_enabled = false  # Optional: Onion-Routing
+
+[p2p]
+port = 4001
+node_name = "my-erynoa-node"
+enable_mdns = true
+enable_relay_server = false
+enable_autonat = true
+enable_upnp = true
+min_incoming_trust = 0.1
+bootstrap_peers = [
+    # "/ip4/51.159.23.74/tcp/4001/p2p/12D3KooW..."
+]
+```
+
+**Option 2: Environment-Variablen**
+
+```bash
+APP_FEATURES__P2P_ENABLED=true \
+APP_P2P__PORT=4001 \
+APP_P2P__NODE_NAME=my-node \
+cargo run --features p2p
+```
 
 ```bash
 # Repository klonen

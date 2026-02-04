@@ -97,15 +97,11 @@ use tokio::sync::{broadcast, mpsc};
 
 // Privacy-Layer Imports (Feature-gated)
 #[cfg(feature = "privacy")]
-use crate::peer::p2p::privacy::{
-    PrivacyService, PrivacyServiceConfig, SensitivityLevel,
-};
+use crate::peer::p2p::privacy::{PrivacyService, PrivacyServiceConfig, SensitivityLevel};
 
 // Performance Imports (Feature-gated)
 #[cfg(feature = "privacy")]
-use crate::peer::p2p::performance::{
-    BatchCryptoConfig, CircuitCache, CircuitCacheConfig,
-};
+use crate::peer::p2p::performance::{BatchCryptoConfig, CircuitCache, CircuitCacheConfig};
 
 // Multi-Circuit Imports (Feature-gated)
 #[cfg(feature = "privacy")]
@@ -113,7 +109,7 @@ use crate::peer::p2p::multi_circuit::{ConfluxConfig, ConfluxManager};
 
 // Censorship-Resistance Imports (Feature-gated)
 #[cfg(feature = "privacy")]
-use crate::peer::p2p::censorship::{BootstrapHelper, BootstrapConfig};
+use crate::peer::p2p::censorship::{BootstrapConfig, BootstrapHelper};
 
 // ============================================================================
 // TESTNET CONFIGURATION (V2.6)
@@ -124,28 +120,28 @@ use crate::peer::p2p::censorship::{BootstrapHelper, BootstrapConfig};
 pub struct TestnetConfig {
     /// Basis P2P-Konfiguration
     pub p2p: P2PConfig,
-    
+
     /// Node-Rolle im Testnet
     pub role: TestnetRole,
-    
+
     /// Privacy-Layer aktivieren (V2.6)
     pub enable_privacy: bool,
-    
+
     /// QUIC Transport aktivieren
     pub enable_quic: bool,
-    
+
     /// Multi-Circuit aktivieren (Conflux-Style)
     pub enable_multi_circuit: bool,
-    
+
     /// Staggered Start Delay (für geordneten Boot)
     pub start_delay: Duration,
-    
+
     /// Gossipsub-Topics zum Auto-Subscribe
     pub auto_subscribe_topics: Vec<String>,
-    
+
     /// Metric-Export aktivieren
     pub enable_metrics: bool,
-    
+
     /// Debug-Logging für NAT-Events
     pub verbose_nat_logging: bool,
 }
@@ -177,7 +173,9 @@ impl TestnetConfig {
         config.p2p.nat.enable_relay_server = true;
         config.enable_privacy = true;
         config.start_delay = Duration::from_secs(index as u64 * 8);
-        config.auto_subscribe_topics.push("/erynoa/relay/v1".to_string());
+        config
+            .auto_subscribe_topics
+            .push("/erynoa/relay/v1".to_string());
         config
     }
 
@@ -479,7 +477,7 @@ pub enum TestnetEvent {
     },
     /// Peer getrennt
     PeerDisconnected { peer_id: PeerId },
-    
+
     // ========================================================================
     // Discovery Events
     // ========================================================================
@@ -494,7 +492,7 @@ pub enum TestnetEvent {
     KademliaBootstrapComplete,
     /// Kademlia Routing Table Update
     KademliaRoutingUpdate { peer_id: PeerId, bucket_size: usize },
-    
+
     // ========================================================================
     // Gossipsub Events
     // ========================================================================
@@ -512,7 +510,7 @@ pub enum TestnetEvent {
     GossipMeshPeerRemoved { peer_id: PeerId, topic: TopicHash },
     /// Gossipsub: Nachricht gesendet
     GossipMessageSent { topic: TopicHash },
-    
+
     // ========================================================================
     // NAT-Traversal Events
     // ========================================================================
@@ -540,7 +538,7 @@ pub enum TestnetEvent {
     UpnpMapped { protocol: String, addr: Multiaddr },
     /// UPnP nicht verfügbar
     UpnpUnavailable,
-    
+
     // ========================================================================
     // Privacy-Layer Events (V2.6)
     // ========================================================================
@@ -569,7 +567,7 @@ pub enum TestnetEvent {
         count: usize,
         compliance_status: String,
     },
-    
+
     // ========================================================================
     // Multi-Circuit Events (RL28)
     // ========================================================================
@@ -585,20 +583,15 @@ pub enum TestnetEvent {
         share_index: usize,
         threshold: String,
     },
-    
+
     // ========================================================================
     // Performance Events (Phase 5)
     // ========================================================================
     /// Batch-Crypto Operation (RL20)
-    BatchCryptoCompleted {
-        operations: usize,
-        duration_ms: u64,
-    },
+    BatchCryptoCompleted { operations: usize, duration_ms: u64 },
     /// Circuit aus Cache verwendet (RL23)
-    CircuitCacheHit {
-        sensitivity: String,
-    },
-    
+    CircuitCacheHit { sensitivity: String },
+
     // ========================================================================
     // Health & Metrics Events
     // ========================================================================
@@ -783,15 +776,16 @@ impl TestnetSwarm {
 
         // Privacy-Service initialisieren (V2.6)
         #[cfg(feature = "privacy")]
-        let privacy_service = if testnet_config.enable_privacy && testnet_config.p2p.privacy.enabled {
+        let privacy_service = if testnet_config.enable_privacy && testnet_config.p2p.privacy.enabled
+        {
             let privacy_config = if testnet_config.role.is_relay() {
                 PrivacyServiceConfig::for_relay()
             } else {
                 PrivacyServiceConfig::default()
             };
-            Some(Arc::new(tokio::sync::RwLock::new(
-                PrivacyService::new(privacy_config)
-            )))
+            Some(Arc::new(tokio::sync::RwLock::new(PrivacyService::new(
+                privacy_config,
+            ))))
         } else {
             None
         };
@@ -800,9 +794,9 @@ impl TestnetSwarm {
         #[cfg(feature = "privacy")]
         let multi_circuit = if testnet_config.enable_multi_circuit {
             let conflux_config = ConfluxConfig::default();
-            Some(Arc::new(tokio::sync::RwLock::new(
-                ConfluxManager::new(conflux_config)
-            )))
+            Some(Arc::new(tokio::sync::RwLock::new(ConfluxManager::new(
+                conflux_config,
+            ))))
         } else {
             None
         };
@@ -858,7 +852,7 @@ impl TestnetSwarm {
     /// Swarm starten und Event-Loop ausführen (V2.6 Extended)
     pub async fn run(&mut self) -> Result<()> {
         let config = &self.config.p2p;
-        
+
         // Staggered Start für geordneten Boot
         if !self.config.start_delay.is_zero() {
             tracing::info!(
@@ -936,7 +930,7 @@ impl TestnetSwarm {
 
         // Stats-Timer für periodische Statistiken
         let mut stats_interval = tokio::time::interval(Duration::from_secs(30));
-        
+
         // Privacy-Layer Background Tasks starten (V2.6)
         #[cfg(feature = "privacy")]
         if let Some(ref privacy_service) = self.privacy_service {
@@ -973,7 +967,7 @@ impl TestnetSwarm {
             } => {
                 let is_inbound = endpoint.is_listener();
                 let transport = self.detect_transport_type(&endpoint);
-                
+
                 tracing::info!(
                     peer_id = %peer_id,
                     endpoint = ?endpoint,
@@ -1036,7 +1030,7 @@ impl TestnetSwarm {
             libp2p::core::ConnectedPoint::Dialer { address, .. } => address,
             libp2p::core::ConnectedPoint::Listener { local_addr, .. } => local_addr,
         };
-        
+
         let addr_str = addr.to_string();
         if addr_str.contains("/p2p-circuit/") {
             TransportType::Relay
@@ -1056,7 +1050,7 @@ impl TestnetSwarm {
             active_relay_circuits: self.stats.relay_circuits.load(Ordering::Relaxed) as usize,
             relay_reservations: self.stats.relay_reservations.load(Ordering::Relaxed) as usize,
             mesh_peers: HashMap::new(), // TODO: Fill from gossipsub
-            routing_table_size: 0, // TODO: Get from kademlia
+            routing_table_size: 0,      // TODO: Get from kademlia
             messages_sent: self.stats.messages_sent.load(Ordering::Relaxed),
             messages_received: self.stats.messages_received.load(Ordering::Relaxed),
             #[cfg(feature = "privacy")]
@@ -1093,7 +1087,7 @@ impl TestnetSwarm {
     }
 
     #[cfg(not(feature = "privacy"))]
-    fn get_privacy_stats(&self) -> Option<PrivacyStats> {
+    fn get_privacy_stats(&self) -> Option<()> {
         None
     }
 
@@ -1157,11 +1151,11 @@ impl TestnetSwarm {
                 ..
             } => {
                 self.stats.messages_received.fetch_add(1, Ordering::Relaxed);
-                
+
                 // Erkenne Privacy-Layer-Nachrichten
-                let is_private = message.topic.to_string().contains("/private/") 
+                let is_private = message.topic.to_string().contains("/private/")
                     || message.data.starts_with(b"ONION:");
-                
+
                 tracing::debug!(
                     topic = %message.topic,
                     source = ?message.source,
@@ -1280,18 +1274,18 @@ impl TestnetSwarm {
                     new_status = ?new,
                     "🌐 AutoNAT status changed"
                 );
-                
+
                 let nat_type = match &new {
                     autonat::NatStatus::Public(_) => NatType::Public,
                     autonat::NatStatus::Private => NatType::Symmetric,
                     autonat::NatStatus::Unknown => NatType::Unknown,
                 };
-                
+
                 let external_addr = match &new {
                     autonat::NatStatus::Public(addr) => Some(addr.clone()),
                     _ => None,
                 };
-                
+
                 let _ = self.event_tx.send(TestnetEvent::AutoNatStatus {
                     nat_status: NatStatus {
                         nat_type,
@@ -1552,11 +1546,6 @@ impl TestnetSwarm {
     /// Verbundene Peer-IDs
     pub fn connected_peers(&self) -> Vec<PeerId> {
         self.swarm.connected_peers().cloned().collect()
-    }
-
-    /// Peer ID
-    pub fn peer_id(&self) -> PeerId {
-        self.peer_id
     }
 
     /// Testnet-Rolle
@@ -1891,8 +1880,11 @@ mod tests {
             .with_privacy(true)
             .with_multi_circuit(true)
             .start_delay(Duration::from_secs(16));
-        
-        assert!(matches!(builder.config.role, TestnetRole::Relay { index: 2 }));
+
+        assert!(matches!(
+            builder.config.role,
+            TestnetRole::Relay { index: 2 }
+        ));
         assert!(builder.config.enable_privacy);
         assert!(builder.config.enable_multi_circuit);
         assert_eq!(builder.config.start_delay, Duration::from_secs(16));
@@ -1919,55 +1911,5 @@ mod tests {
 // EXAMPLE USAGE (Documentation)
 // ============================================================================
 
-/// # Example: Start a Relay Node
-///
-/// ```rust,ignore
-/// use erynoa_api::peer::p2p::testnet::{TestnetSwarmBuilder, TestnetRole};
-///
-/// #[tokio::main]
-/// async fn main() -> anyhow::Result<()> {
-///     let (mut swarm, events) = TestnetSwarmBuilder::new()
-///         .as_relay(0) // First relay
-///         .with_privacy(true)
-///         .listen_addresses(vec!["/ip4/0.0.0.0/tcp/4001".to_string()])
-///         .build()?;
-///
-///     // Handle events in separate task
-///     tokio::spawn(async move {
-///         let mut rx = events;
-///         while let Ok(event) = rx.recv().await {
-///             println!("Event: {:?}", event);
-///         }
-///     });
-///
-///     // Run the swarm
-///     swarm.run().await
-/// }
-/// ```
-///
-/// # Example: Start a Privacy-Enabled Client
-///
-/// ```rust,ignore
-/// use erynoa_api::peer::p2p::testnet::{TestnetSwarmBuilder};
-///
-/// #[tokio::main]
-/// async fn main() -> anyhow::Result<()> {
-///     let (mut swarm, _events) = TestnetSwarmBuilder::new()
-///         .as_client()
-///         .with_privacy(true)
-///         .with_multi_circuit(true)
-///         .relay_servers(vec![
-///             "/ip4/172.28.0.10/tcp/4001/p2p/12D3KooW...".to_string(),
-///         ])
-///         .build()?;
-///
-///     // Send a private message
-///     #[cfg(feature = "privacy")]
-///     {
-///         let dest = "12D3KooW...".parse()?;
-///         swarm.send_private(dest, b"Hello via Onion".to_vec()).await?;
-///     }
-///
-///     swarm.run().await
-/// }
-/// ```
+// Example usage documentation is in the module-level docs at the top of the file
+// and in TESTNET-DEVELOPMENT-PLAN.md
