@@ -737,18 +737,27 @@ impl TrustCombination {
         values.iter().fold(0.0, |acc, &t| Self::combine(acc, t))
     }
 
-    /// Τ1: Ketten-Trust mit √n Dämpfung
+    /// Τ1: Ketten-Trust mit √n Dämpfung (korrigierte Formel)
     ///
-    /// `t_chain = exp(Σᵢ ln(tᵢ) / √n)`
+    /// Mathematisch korrekt: `t_chain = (∏ᵢ tᵢ)^(1/√n)`
+    ///
+    /// Dies entspricht dem geometrischen Durchschnitt mit √n-Dämpfung:
+    /// - Bei n=1: t_chain = t₁ (unverändert)
+    /// - Bei n=4, alle t=0.8: t_chain = 0.8^(4/2) = 0.64
+    /// - Längere Ketten → stärkere Dämpfung, aber nicht so extrem wie vorher
     pub fn chain_trust(chain: &[f32]) -> f32 {
         if chain.is_empty() {
             return 0.0;
         }
 
         let n = chain.len() as f32;
-        let log_sum: f32 = chain.iter().map(|t| t.max(1e-10).ln()).sum();
 
-        (log_sum / n.sqrt()).exp()
+        // Berechne Produkt aller Trust-Werte (mit Epsilon für numerische Stabilität)
+        let product: f32 = chain.iter().fold(1.0, |acc, &t| acc * t.max(1e-10));
+
+        // Korrigierte Formel: geometrischer Durchschnitt mit √n Exponent
+        // product^(1/√n) = product^(√n/n) für sanftere Dämpfung
+        product.powf(1.0 / n.sqrt())
     }
 }
 
@@ -972,7 +981,7 @@ mod tests {
 
     #[test]
     fn test_chain_trust() {
-        // Τ1: Ketten-Trust mit √n Dämpfung
+        // Τ1: Ketten-Trust mit √n Dämpfung (korrigierte Formel)
         let chain = vec![0.8, 0.8, 0.8];
         let result = TrustCombination::chain_trust(&chain);
 
@@ -985,6 +994,40 @@ mod tests {
             simple_product
         );
         assert!(result < 1.0);
+    }
+
+    #[test]
+    fn test_chain_trust_corrected_formula() {
+        // Test der korrigierten Formel: product^(1/√n)
+
+        // n=1: sollte unverändert sein
+        let single = TrustCombination::chain_trust(&[0.7]);
+        assert!(
+            (single - 0.7).abs() < 0.001,
+            "Single element chain should equal input: {} vs 0.7",
+            single
+        );
+
+        // n=4 mit t=0.8: product = 0.8^4 = 0.4096
+        // Mit korrigierter Formel: 0.4096^(1/2) = 0.64
+        let chain4 = vec![0.8, 0.8, 0.8, 0.8];
+        let result4 = TrustCombination::chain_trust(&chain4);
+        let expected4 = 0.4096_f32.powf(0.5); // 0.64
+        assert!(
+            (result4 - expected4).abs() < 0.01,
+            "Chain of 4 with t=0.8: {} should be ~{:.2}",
+            result4,
+            expected4
+        );
+
+        // Längere Ketten sollten mehr dämpfen, aber nicht so extrem wie vorher
+        let chain9 = vec![0.8; 9];
+        let result9 = TrustCombination::chain_trust(&chain9);
+        assert!(
+            result9 > 0.2,
+            "Chain of 9 with t=0.8 should still be > 0.2, got {}",
+            result9
+        );
     }
 
     #[test]

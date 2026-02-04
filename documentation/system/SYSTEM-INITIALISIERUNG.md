@@ -14,7 +14,7 @@ Mit der integrierten P2P-Unterstützung startet **alles über `main.rs`**:
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                  │
 │  ┌────────────────────────────────────────────────────────────────────────┐     │
-│  │                    erynoa-api (main.rs)                                 │     │
+│  │                    erynoa (main.rs)                                    │     │
 │  │              Vollständiger Node: API + P2P + Storage                    │     │
 │  ├────────────────────────────────────────────────────────────────────────┤     │
 │  │ ✓ Telemetry                     → Logging/Tracing                      │     │
