@@ -166,5 +166,6 @@
 		"**/.direnv": true,
 		"**/pnpm-lock.yaml": true,
 		"**/Cargo.lock": true
-	}
+	},
+	"java.debug.settings.hotCodeReplace": "auto"
 }

@@ -1,0 +1,534 @@
+{
+  "$schema": "https://erynoa.io/schemas/pluto/entities.v1.json",
+  "version": "1.0.0",
+  "generated_at": "2026-02-04T19:15:00Z",
+  "source": "Projekt Pluto Dokumentation (15 Dokumente, 504 KB)",
+
+  "entities": {
+
+    "E_core": {
+      "description": "Kernentitäten - Die fundamentalen Objekte des Systems",
+      "entities": [
+        {
+          "symbol": "ι",
+          "name": "Identity",
+          "full_name": "Dezentrale Identität",
+          "aliases": ["DID", "Root-DID", "Self", "Spirit", "Guild"],
+          "typedef": {
+            "did": "H256",
+            "type": "Self | Spirit | Guild | Thing | Vessel | Source | Craft | Vault | Pact | Circle",
+            "trust_vector": "τ⃗[6]",
+            "age": "u64",
+            "mode": "Interactive | AgentManaged | Ephemeral | Test",
+            "wallets": "Map<ChainId, WalletAddress[]>",
+            "delegations": "Delegation[]",
+            "realm_memberships": "RealmMembership[]"
+          },
+          "axioms": ["Κ6 (Existenz-Eindeutigkeit)", "Κ7 (Permanenz)", "Κ8 (Delegations-Decay)"],
+          "source_docs": [
+            "10-IDENTITY-MULTI-DID-ARCHITEKTUR.md",
+            "08-STATE-KERNGEDANKEN.md"
+          ]
+        },
+        {
+          "symbol": "ρ",
+          "name": "Realm",
+          "full_name": "Souveräne Realm-Welt",
+          "aliases": ["Circle", "Partition", "Virtual Realm"],
+          "typedef": {
+            "id": "H256",
+            "type": "Root | Virtual(ρ) | Partition(ρ)",
+            "parent": "ρ?",
+            "rules": "Set<Rule>",
+            "members": "Set<ι>",
+            "τ_min": "[0,1]",
+            "isolation_level": "PUBLIC(0) | MEMBERS(1) | STRICT(2)",
+            "governance_type": "Quadratic | Token | Reputation"
+          },
+          "axioms": ["Κ1 (Monotone Rule Inheritance)", "Κ22 (Realm-Hierarchy)", "Κ23 (Crossing-Damping)", "Κ24 (Local-Trust)"],
+          "source_docs": [
+            "13-REALM-ARCHITEKTUR-ISOLATION.md",
+            "08-STATE-KERNGEDANKEN.md"
+          ]
+        },
+        {
+          "symbol": "τ",
+          "name": "Trust",
+          "full_name": "TrustVector6D",
+          "aliases": ["TrustEntry", "TrustScore", "Reputation"],
+          "typedef": {
+            "dimensions": {
+              "R": "Reliability (Verhaltens-Historie)",
+              "I": "Integrity (Aussage-Konsistenz)",
+              "C": "Competence (Fähigkeits-Nachweis)",
+              "S": "Social (Prestige, externe Attestation)",
+              "Σ": "Stake (Vigilance, Skin-in-the-Game)",
+              "Ω": "Omega/Wisdom (Axiom-Treue, ∫past)"
+            },
+            "range": "[0,1]^6",
+            "decay_factor": "[0,1]",
+            "context_weights": "Map<Context, [6]f32>"
+          },
+          "axioms": ["Κ2 (Trust ∈ [0,1])", "Κ3 (Delta-Limit ≤0.1)", "Κ4 (Asymmetrie)", "Κ5 (Trust-Decay)"],
+          "source_docs": [
+            "09-TRUST-GAS-MANA-DREIEINIGKEIT.md",
+            "08-STATE-KERNGEDANKEN.md"
+          ]
+        }
+      ]
+    },
+
+    "E_resource": {
+      "description": "Ressourcen-Entitäten - Die Lebensenergie des Systems",
+      "entities": [
+        {
+          "symbol": "γ",
+          "name": "Gas",
+          "full_name": "Compute-Energie",
+          "aliases": ["GasMeter", "GasBudget"],
+          "typedef": {
+            "consumed": "u64",
+            "limit": "u64",
+            "remaining": "u64",
+            "price": "f64"
+          },
+          "properties": [
+            "Monoton erschöpfend (Κ11)",
+            "Trust-skaliert: γ_eff = γ_base × (2 - τ_R)",
+            "Granular pro OpCode"
+          ],
+          "axioms": ["Κ8 (Trust→Gas)", "Κ11 (Monotone Exhaustion)"],
+          "source_docs": [
+            "09-TRUST-GAS-MANA-DREIEINIGKEIT.md"
+          ]
+        },
+        {
+          "symbol": "μ",
+          "name": "Mana",
+          "full_name": "Bandwidth-Ausdauer",
+          "aliases": ["ManaAccount", "Bandwidth"],
+          "typedef": {
+            "current": "u64",
+            "max": "u64",
+            "regen_rate": "u64",
+            "last_update": "Instant",
+            "trust_snapshot": "f32"
+          },
+          "properties": [
+            "Regenerierend (Κ13)",
+            "Trust-skaliert: max_mana = base × (1 + τ × 100)",
+            "Sybil-resistent"
+          ],
+          "axioms": ["Κ9 (Trust→Mana)", "Κ13 (Positive Regeneration)"],
+          "source_docs": [
+            "09-TRUST-GAS-MANA-DREIEINIGKEIT.md"
+          ]
+        },
+        {
+          "symbol": "π",
+          "name": "Package",
+          "full_name": "Dezentrales Software-Paket",
+          "aliases": ["Blueprint", "App"],
+          "typedef": {
+            "id": "String",
+            "version": "SemVer",
+            "publisher": "ι (DID)",
+            "trust_min": "[0,1]",
+            "content_hash": "H256",
+            "manifest": "ECL",
+            "dependencies": "PackageRef[]",
+            "tier": "free | basic | premium | enterprise"
+          },
+          "properties": [
+            "Publisher-DID signiert",
+            "Trust-Weighted Discovery",
+            "Realm-scoped Installation"
+          ],
+          "source_docs": [
+            "11-PACKAGEMANAGER-BLUEPRINT-TRANSFORMATION.md",
+            "12-PACKAGEMANAGER-SYNERGIEN-FEATURES.md"
+          ]
+        }
+      ]
+    },
+
+    "E_infra": {
+      "description": "Infrastruktur-Entitäten - Das Nervensystem",
+      "entities": [
+        {
+          "symbol": "σ",
+          "name": "Shard",
+          "full_name": "Realm-Partition für Skalierung",
+          "aliases": ["LazyShardedRealmState", "ShardMonitor"],
+          "typedef": {
+            "idx": "u32",
+            "realms": "Map<id, Arc<ρ>>",
+            "lru_cache": "LruCache<String, ()>",
+            "reputation": "[0,1]",
+            "entropy": "[0,1]",
+            "is_quarantined": "bool"
+          },
+          "properties": [
+            "FxHash für deterministische Zuordnung",
+            "Lock-free DashMap",
+            "LRU-Eviction",
+            "Bias-Detection via Entropy"
+          ],
+          "axioms": ["Κ25 (Deterministic Shard)", "Κ26 (Bias-Detection)", "Κ27 (Auto-Quarantine)", "Κ28 (Shard-Penalty)"],
+          "source_docs": [
+            "14-SHARDING-ARCHITEKTUR.md"
+          ]
+        },
+        {
+          "symbol": "ε",
+          "name": "Event",
+          "full_name": "StateEvent für Event-Sourcing",
+          "aliases": ["StateEvent", "WrappedStateEvent"],
+          "typedef": {
+            "id": "String (Blake3)",
+            "timestamp_ms": "u128",
+            "parent_ids": "String[]",
+            "component": "StateComponent",
+            "sequence": "u64",
+            "event": "StateEventVariant",
+            "signature": "Option<[u8]>"
+          },
+          "variants": [
+            "TrustUpdate", "MembershipChange", "RealmCrossing",
+            "ExecutionCompleted", "PolicyEvaluated",
+            "AnomalyDetected", "SystemModeChanged",
+            "IdentityBootstrapped", "DelegationCreated"
+          ],
+          "axioms": ["Κ9 (Kausalität)", "Κ10 (Merkle-Hash)"],
+          "source_docs": [
+            "08-STATE-KERNGEDANKEN.md"
+          ]
+        },
+        {
+          "symbol": "P",
+          "name": "P2P",
+          "full_name": "Peer-to-Peer Netzwerk",
+          "aliases": ["Swarm", "Gossip", "Kademlia", "Privacy"],
+          "typedef": {
+            "peer_id": "PeerId (libp2p)",
+            "connected_peers": "u64",
+            "gossip_topics": "Set<Topic>",
+            "dht": "Kademlia",
+            "relay": "RelayConfig",
+            "privacy_layer": "MixNet"
+          },
+          "properties": [
+            "libp2p-basiert",
+            "Trust-weighted Gossip-Scoring",
+            "Shard-aware Topics"
+          ],
+          "source_docs": [
+            "08-STATE-KERNGEDANKEN.md",
+            "14-SHARDING-ARCHITEKTUR.md"
+          ]
+        }
+      ]
+    },
+
+    "E_execution": {
+      "description": "Ausführungs-Entitäten - Die Engines",
+      "entities": [
+        {
+          "symbol": "Λ",
+          "name": "ECLVM",
+          "full_name": "Erynoa Computation Language Virtual Machine",
+          "aliases": ["ECL", "VM", "Runtime"],
+          "typedef": {
+            "bytecode": "[u8]",
+            "gas_meter": "γ",
+            "mana_budget": "μ",
+            "stack": "Vec<Value>",
+            "memory": "Vec<u8>",
+            "host_functions": "Map<String, HostFn>"
+          },
+          "properties": [
+            "WASM-Target (zukünftig)",
+            "Deterministische Ausführung",
+            "Gas-Metering pro OpCode"
+          ],
+          "source_docs": [
+            "06-ECLVM-WASM-MIGRATION.md",
+            "08-STATE-KERNGEDANKEN.md"
+          ]
+        },
+        {
+          "symbol": "Ψ",
+          "name": "Policy",
+          "full_name": "ECL Policy für Regeln",
+          "aliases": ["ECLPolicy", "Rule", "Guard"],
+          "typedef": {
+            "id": "String",
+            "name": "String",
+            "condition": "ECL Expression",
+            "action": "ECL Expression",
+            "priority": "u32"
+          },
+          "properties": [
+            "Deklarativ in ECL",
+            "Evaluiert am Gateway",
+            "Realm-spezifisch"
+          ],
+          "source_docs": [
+            "08-STATE-KERNGEDANKEN.md"
+          ]
+        },
+        {
+          "symbol": "Σ",
+          "name": "Saga",
+          "full_name": "Cross-Realm Saga-Orchestrierung",
+          "aliases": ["SagaComposer", "Compensation"],
+          "typedef": {
+            "id": "String",
+            "steps": "SagaStep[]",
+            "status": "Pending | InProgress | Completed | Failed | Compensating",
+            "compensation_log": "CompensationStep[]"
+          },
+          "properties": [
+            "Atomicity über Realms (Κ22)",
+            "Automatische Compensation",
+            "ECLVM-orchestriert"
+          ],
+          "axioms": ["Κ22 (Saga-Pattern)", "Κ24 (Saga-Atomicity)"],
+          "source_docs": [
+            "13-REALM-ARCHITEKTUR-ISOLATION.md",
+            "08-STATE-KERNGEDANKEN.md"
+          ]
+        }
+      ]
+    },
+
+    "E_protection": {
+      "description": "Schutz-Entitäten - Das Immunsystem",
+      "entities": [
+        {
+          "symbol": "Φ",
+          "name": "CircuitBreaker",
+          "full_name": "Automatische Degradation",
+          "aliases": ["Protection", "SystemMode"],
+          "typedef": {
+            "mode": "Normal | Degraded | EmergencyShutdown",
+            "critical_window": "Vec<u64>",
+            "degraded_threshold": "u64",
+            "emergency_threshold": "u64",
+            "gini_threshold": "f64"
+          },
+          "properties": [
+            "Anti-Calcification (Κ19)",
+            "Automatische Modus-Wechsel",
+            "Multi-Veto System"
+          ],
+          "axioms": ["Κ19 (Anti-Calcification)", "Κ20 (Diversity)"],
+          "source_docs": [
+            "09-TRUST-GAS-MANA-DREIEINIGKEIT.md",
+            "08-STATE-KERNGEDANKEN.md"
+          ]
+        },
+        {
+          "symbol": "Δ",
+          "name": "Anomaly",
+          "full_name": "Anomalie-Erkennung",
+          "aliases": ["AnomalyState", "Detector"],
+          "typedef": {
+            "critical": "u64",
+            "high": "u64",
+            "medium": "u64",
+            "low": "u64",
+            "baseline": "f64",
+            "threshold": "f64"
+          },
+          "properties": [
+            "Severity-basiert",
+            "Triggert CircuitBreaker"
+          ],
+          "source_docs": [
+            "08-STATE-KERNGEDANKEN.md"
+          ]
+        },
+        {
+          "symbol": "Ξ",
+          "name": "Calibration",
+          "full_name": "Self-Healing Kalibrierung",
+          "aliases": ["CalibrationState"],
+          "typedef": {
+            "updates_total": "u64",
+            "last_calibration": "u64",
+            "gas_price_adjustment": "f64",
+            "mana_regen_adjustment": "f64"
+          },
+          "properties": [
+            "Passt Gas/Mana an",
+            "Reagiert auf Anomalien"
+          ],
+          "source_docs": [
+            "09-TRUST-GAS-MANA-DREIEINIGKEIT.md"
+          ]
+        }
+      ]
+    },
+
+    "E_governance": {
+      "description": "Governance-Entitäten - Demokratische Strukturen",
+      "entities": [
+        {
+          "symbol": "V",
+          "name": "Vote",
+          "full_name": "Quadratic Voting",
+          "aliases": ["Proposal", "Ballot"],
+          "typedef": {
+            "voter": "ι",
+            "proposal": "ProposalId",
+            "weight": "√tokens",
+            "direction": "For | Against | Abstain"
+          },
+          "properties": [
+            "Quadratic Vote (Κ21): √tokens",
+            "Sybil-resistent",
+            "Realm-scoped"
+          ],
+          "axioms": ["Κ21 (Quadratic Voting)"],
+          "source_docs": [
+            "08-STATE-KERNGEDANKEN.md"
+          ]
+        },
+        {
+          "symbol": "D",
+          "name": "Delegation",
+          "full_name": "Trust-Delegation",
+          "aliases": ["DelegationInfo", "Capability"],
+          "typedef": {
+            "id": "UniversalId",
+            "delegator": "ι",
+            "delegate": "ι",
+            "trust_factor": "[0,1]",
+            "capabilities": "Capability[]",
+            "valid_until": "Timestamp?",
+            "revoked": "bool"
+          },
+          "properties": [
+            "Trust-Decay (Κ8)",
+            "Capability-basiert",
+            "Kettenbar (max depth)"
+          ],
+          "axioms": ["Κ8 (Delegation Trust-Decay)"],
+          "source_docs": [
+            "10-IDENTITY-MULTI-DID-ARCHITEKTUR.md"
+          ]
+        },
+        {
+          "symbol": "C",
+          "name": "Credential",
+          "full_name": "Verifiable Credential",
+          "aliases": ["VC", "Attestation", "Claim"],
+          "typedef": {
+            "id": "UniversalId",
+            "issuer": "ι",
+            "subject": "ι",
+            "claim_type": "String",
+            "claim_value": "JSON",
+            "issued_at": "Timestamp",
+            "expires_at": "Timestamp?",
+            "signature": "[u8]"
+          },
+          "properties": [
+            "W3C VC-kompatibel",
+            "Publisher-DID signiert",
+            "Trust-weighted"
+          ],
+          "source_docs": [
+            "10-IDENTITY-MULTI-DID-ARCHITEKTUR.md",
+            "12-PACKAGEMANAGER-SYNERGIEN-FEATURES.md"
+          ]
+        }
+      ]
+    },
+
+    "E_storage": {
+      "description": "Speicher-Entitäten - Persistenz",
+      "entities": [
+        {
+          "symbol": "Κ",
+          "name": "KVStore",
+          "full_name": "Key-Value Storage (Fjall)",
+          "aliases": ["Storage", "Archive"],
+          "typedef": {
+            "keyspace": "String",
+            "data": "Map<Key, Value>"
+          },
+          "properties": [
+            "Fjall-basiert",
+            "LSM-Tree",
+            "Content-Addressed (CAS)"
+          ],
+          "source_docs": [
+            "08-STATE-KERNGEDANKEN.md"
+          ]
+        },
+        {
+          "symbol": "M",
+          "name": "Merkle",
+          "full_name": "MerkleStateTracker",
+          "aliases": ["MerkleHash", "MerkleDelta"],
+          "typedef": {
+            "root_hash": "H256",
+            "component_hashes": "Map<Component, H256>",
+            "delta_history": "MerkleDelta[]"
+          },
+          "properties": [
+            "Konsistenz-Tracking",
+            "Proof-of-State",
+            "Delta-basiert"
+          ],
+          "source_docs": [
+            "08-STATE-KERNGEDANKEN.md"
+          ]
+        },
+        {
+          "symbol": "L",
+          "name": "Log",
+          "full_name": "StateEventLog (Ring-Buffer)",
+          "aliases": ["EventLog", "Checkpoint"],
+          "typedef": {
+            "sequence": "u64",
+            "buffer": "WrappedStateEvent[10000]",
+            "last_checkpoint_id": "String?",
+            "checkpoint_interval": "u64"
+          },
+          "properties": [
+            "Ring-Buffer (10K Events)",
+            "Checkpoint alle 5K Events",
+            "Replay-fähig"
+          ],
+          "source_docs": [
+            "08-STATE-KERNGEDANKEN.md"
+          ]
+        }
+      ]
+    }
+  },
+
+  "summary": {
+    "total_entities": 21,
+    "categories": {
+      "E_core": 3,
+      "E_resource": 3,
+      "E_infra": 3,
+      "E_execution": 3,
+      "E_protection": 3,
+      "E_governance": 3,
+      "E_storage": 3
+    },
+    "symbols": {
+      "greek": ["ι", "ρ", "τ", "γ", "μ", "π", "σ", "ε", "Λ", "Ψ", "Σ", "Φ", "Δ", "Ξ", "Κ"],
+      "latin": ["P", "V", "D", "C", "M", "L"]
+    },
+    "axioms_referenced": [
+      "Κ1", "Κ2", "Κ3", "Κ4", "Κ5", "Κ6", "Κ7", "Κ8", "Κ9", "Κ10", "Κ11",
+      "Κ13", "Κ19", "Κ20", "Κ21", "Κ22", "Κ23", "Κ24", "Κ25", "Κ26", "Κ27", "Κ28"
+    ]
+  }
+}

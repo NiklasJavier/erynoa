@@ -1,78 +1,3 @@
-//! # Unified State Management
-//!
-//! Hierarchisches, thread-safe State-Management für alle Erynoa-Module.
-//!
-//! ## Architektur
-//!
-//! ```text
-//! ┌─────────────────────────────────────────────────────────────────────────────────┐
-//! │                              UNIFIED STATE                                       │
-//! │                                                                                  │
-//! │  ┌─────────────────────────────────────────────────────────────────────────┐   │
-//! │  │                          CoreState (Κ2-Κ18)                              │   │
-//! │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌────────────┐  │   │
-//! │  │  │ TrustState   │──│ EventState   │──│ FormulaState │──│ Consensus  │  │   │
-//! │  │  │  (Κ2-Κ5)     │  │  (Κ9-Κ12)    │  │  (Κ15b-d)    │  │   (Κ18)    │  │   │
-//! │  │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └─────┬──────┘  │   │
-//! │  │         │                 │                 │                │         │   │
-//! │  │         └─────────────────┴─────────────────┴────────────────┘         │   │
-//! │  │                                    │                                    │   │
-//! │  │                         Trust-Event-Kausalität                          │   │
-//! │  └─────────────────────────────────────────────────────────────────────────┘   │
-//! │                                      │                                          │
-//! │  ┌───────────────────────────────────┼───────────────────────────────────┐     │
-//! │  │                        ExecutionState (IPS ℳ)                         │     │
-//! │  │  ┌────────────────┐   ┌────────────────┐   ┌────────────────┐        │     │
-//! │  │  │  GasTracker    │───│  ManaTracker   │───│  EventEmitter  │        │     │
-//! │  │  └────────┬───────┘   └────────┬───────┘   └────────┬───────┘        │     │
-//! │  │           │                    │                    │                 │     │
-//! │  │           └────────────────────┴────────────────────┘                 │     │
-//! │  │                               Cost Aggregation                        │     │
-//! │  └───────────────────────────────────────────────────────────────────────┘     │
-//! │                                      │                                          │
-//! │  ┌───────────────────────────────────┼───────────────────────────────────┐     │
-//! │  │                       ProtectionState (Κ19-Κ21)                        │     │
-//! │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────┐  │     │
-//! │  │  │  Anomaly     │  │  Diversity   │  │  Quadratic   │  │AntiCalc  │  │     │
-//! │  │  │  Detection   │──│  Monitor     │──│  Governance  │──│  (Κ19)   │  │     │
-//! │  │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └────┬─────┘  │     │
-//! │  │         │                 │                 │               │         │     │
-//! │  │         └─────────────────┴─────────────────┴───────────────┘         │     │
-//! │  │                         Protection Signals                            │     │
-//! │  └───────────────────────────────────────────────────────────────────────┘     │
-//! │                                      │                                          │
-//! │  ┌───────────────────────────────────┼───────────────────────────────────┐     │
-//! │  │                        StorageState (Local)                           │     │
-//! │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────┐  │     │
-//! │  │  │  KV Store    │  │  Event Store │  │   Archive    │  │Blueprint │  │     │
-//! │  │  │              │──│   (DAG)      │──│  (ψ_archive) │──│Marketpl. │  │     │
-//! │  │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └────┬─────┘  │     │
-//! │  │         │                 │                 │               │         │     │
-//! │  │         └─────────────────┴─────────────────┴───────────────┘         │     │
-//! │  │                         Persistence Layer                             │     │
-//! │  └───────────────────────────────────────────────────────────────────────┘     │
-//! │                                      │                                          │
-//! │  ┌───────────────────────────────────┼───────────────────────────────────┐     │
-//! │  │                         PeerState (Κ22-Κ24)                            │     │
-//! │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────┐  │     │
-//! │  │  │   Gateway    │  │ SagaComposer │  │ IntentParser │  │ Realm    │  │     │
-//! │  │  │   (Κ23)      │──│  (Κ22/Κ24)   │──│              │──│  State   │  │     │
-//! │  │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └────┬─────┘  │     │
-//! │  │         │                 │                 │               │         │     │
-//! │  │         │           ┌─────┴─────┐           │               │         │     │
-//! │  │         │           │ Per-Realm │           │               │         │     │
-//! │  │         │           │ Isolation │           │               │         │     │
-//! │  │         └───────────┤ TrustVec  ├───────────┘               │         │     │
-//! │  │                     │ Rules     │                           │         │     │
-//! │  │                     │ Identity  │                           │         │     │
-//! │  │                     │ Metrics   │                           │         │     │
-//! │  │                     └───────────┘                           │         │     │
-//! │  │                     Cross-Realm Orchestration                         │     │
-//! │  └───────────────────────────────────────────────────────────────────────┘     │
-//! │                                                                                  │
-//! └─────────────────────────────────────────────────────────────────────────────────┘
-//! ```
-//!
 //! ## Design-Prinzipien
 //!
 //! 1. **Hierarchische Komposition**: State-Layer bauen aufeinander auf
@@ -84,7 +9,6 @@
 //! 7. **Event-Inversion**: P2P/Core Entkopplung durch Ingress/Egress-Queues
 //! 8. **Circuit Breaker**: Automatische Degradation bei kritischen Anomalien
 //! 9. **CQRS light**: Broadcast-Channels für State-Deltas an Subscriber
-
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicU8, AtomicUsize, Ordering};
@@ -96,9 +20,6 @@ use tokio::sync::{broadcast, mpsc};
 use crate::domain::unified::primitives::UniversalId;
 pub use crate::domain::MemberRole;
 
-// ============================================================================
-// Re-exports from domain/unified (Phase 6: Typ-Migration)
-// ============================================================================
 // Diese Typen sind jetzt in domain/unified definiert und werden hier re-exportiert
 // für Rückwärtskompatibilität. Neue Nutzung sollte direkt aus domain importieren.
 pub use crate::domain::unified::action::{
@@ -120,13 +41,11 @@ use tokio::sync::RwLock as TokioRwLock;
 // ============================================================================
 // NOTE: SystemMode ist jetzt in domain/unified/system.rs definiert und wird
 // oben via `pub use` re-exportiert für Rückwärtskompatibilität.
-
 // ============================================================================
 // EVENT BUS (P2P/CORE ENTKOPPLUNG)
 // ============================================================================
 // NOTE: EventPriority ist jetzt in domain/unified/system.rs definiert und wird
 // oben via `pub use` re-exportiert für Rückwärtskompatibilität.
-
 /// Typisiertes Network-Event für Ingress/Egress-Queues
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetworkEvent {
@@ -144,7 +63,6 @@ pub struct NetworkEvent {
     pub realm_id: Option<String>,
     /// Timestamp (Unix-Epoch Millis)
     pub timestamp_ms: u64,
-
     // ─────────────────────────────────────────────────────────────────────────
     // Identity-Integration (Phase 7)
     // ─────────────────────────────────────────────────────────────────────────
@@ -157,7 +75,6 @@ pub struct NetworkEvent {
     #[serde(skip)]
     pub signature_verified: Option<bool>,
 }
-
 /// Serde helper für Option<[u8; 64]> als hex string
 mod serde_signature_option {
     use serde::{Deserialize, Deserializer, Serializer};
@@ -351,17 +268,14 @@ pub struct EventBus {
     pub ingress_tx: mpsc::Sender<NetworkEvent>,
     /// Ingress-Receiver für Core-Processor
     pub ingress_rx: RwLock<Option<mpsc::Receiver<NetworkEvent>>>,
-
     /// Egress-Queue: Core → P2P (zu sendende Events)
     pub egress_tx: mpsc::Sender<NetworkEvent>,
     /// Egress-Receiver für P2P-Sender
     pub egress_rx: RwLock<Option<mpsc::Receiver<NetworkEvent>>>,
-
     /// High-Priority Ingress (Consensus, Trust-Critical)
     pub priority_ingress_tx: mpsc::Sender<NetworkEvent>,
     /// High-Priority Receiver
     pub priority_ingress_rx: RwLock<Option<mpsc::Receiver<NetworkEvent>>>,
-
     // ─────────────────────────────────────────────────────────────────────────
     // Metriken
     // ─────────────────────────────────────────────────────────────────────────
@@ -376,7 +290,6 @@ pub struct EventBus {
     /// Priority-Events verarbeitet
     pub priority_processed: AtomicU64,
 }
-
 impl EventBus {
     /// Queue-Kapazität (bounded channel)
     pub const DEFAULT_QUEUE_SIZE: usize = 10_000;
@@ -386,7 +299,6 @@ impl EventBus {
         let (ingress_tx, ingress_rx) = mpsc::channel(Self::DEFAULT_QUEUE_SIZE);
         let (egress_tx, egress_rx) = mpsc::channel(Self::DEFAULT_QUEUE_SIZE);
         let (priority_tx, priority_rx) = mpsc::channel(Self::PRIORITY_QUEUE_SIZE);
-
         Self {
             ingress_tx,
             ingress_rx: RwLock::new(Some(ingress_rx)),
@@ -401,7 +313,6 @@ impl EventBus {
             priority_processed: AtomicU64::new(0),
         }
     }
-
     /// Event in Ingress-Queue einreihen (non-blocking try)
     pub fn try_send_ingress(&self, event: NetworkEvent) -> Result<(), NetworkEvent> {
         let tx = if event.priority == EventPriority::Critical {
@@ -548,7 +459,6 @@ impl StateDelta {
         self
     }
 }
-
 /// Broadcast-Sender für State-Deltas
 #[derive(Debug)]
 pub struct StateBroadcaster {
@@ -609,7 +519,6 @@ impl Default for StateBroadcaster {
         Self::new()
     }
 }
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BroadcasterSnapshot {
     pub sequence: u64,
@@ -620,9 +529,7 @@ pub struct BroadcasterSnapshot {
 // ============================================================================
 // STORAGE HANDLE (ORTHOGONALE SCHICHT)
 // ============================================================================
-
 /// StorageHandle für orthogonalen Storage-Zugriff (Verbesserung 2)
-///
 /// Alle Layer erhalten einen shared StorageHandle statt direkter Storage-Abhängigkeit.
 /// Ermöglicht pluggable Storage (RocksDB, IPFS, Cloud) und einheitliche Recovery.
 #[derive(Debug, Clone)]
@@ -2521,7 +2428,10 @@ impl MerkleStateTracker {
     }
 
     /// State-Proof für eine Komponente: (Komponenten-Hash, Proof-Path = andere Komponenten-Hashes sortiert)
-    pub fn component_proof(&self, component: StateComponent) -> Option<(MerkleHash, Vec<MerkleHash>)> {
+    pub fn component_proof(
+        &self,
+        component: StateComponent,
+    ) -> Option<(MerkleHash, Vec<MerkleHash>)> {
         let hashes = self.component_hashes.read().ok()?;
         let hash = *hashes.get(&component)?;
         let mut proof_path: Vec<MerkleHash> = hashes
@@ -14486,12 +14396,16 @@ impl<'a> StateHandle<'a> {
 
         // Gas für Proposal-Submission
         if !self.budget.consume_gas(200) {
-            return Err(MutationResult::BudgetExhausted(BudgetExhaustionReason::OutOfGas));
+            return Err(MutationResult::BudgetExhausted(
+                BudgetExhaustionReason::OutOfGas,
+            ));
         }
 
         // Mana für Proposal
         if !self.budget.consume_mana(10) {
-            return Err(MutationResult::BudgetExhausted(BudgetExhaustionReason::OutOfMana));
+            return Err(MutationResult::BudgetExhausted(
+                BudgetExhaustionReason::OutOfMana,
+            ));
         }
 
         // Generate proposal ID
@@ -17271,7 +17185,11 @@ mod tests_phase6_4 {
             initial_exec_total + 1
         );
         assert_eq!(
-            state.execution.executions.successful.load(Ordering::Relaxed),
+            state
+                .execution
+                .executions
+                .successful
+                .load(Ordering::Relaxed),
             1
         );
         assert_eq!(
@@ -17311,12 +17229,13 @@ mod tests_phase6_4 {
         assert_eq!(state.eclvm.policies_passed.load(Ordering::Relaxed), 0);
 
         // ExecutionState: failed
+        assert_eq!(state.execution.executions.failed.load(Ordering::Relaxed), 1);
         assert_eq!(
-            state.execution.executions.failed.load(Ordering::Relaxed),
-            1
-        );
-        assert_eq!(
-            state.execution.executions.successful.load(Ordering::Relaxed),
+            state
+                .execution
+                .executions
+                .successful
+                .load(Ordering::Relaxed),
             0
         );
     }
@@ -17350,13 +17269,14 @@ mod tests_phase6_4 {
         // ExecutionState (E1.2)
         assert_eq!(state.execution.executions.total.load(Ordering::Relaxed), 3);
         assert_eq!(
-            state.execution.executions.successful.load(Ordering::Relaxed),
+            state
+                .execution
+                .executions
+                .successful
+                .load(Ordering::Relaxed),
             2
         );
-        assert_eq!(
-            state.execution.executions.failed.load(Ordering::Relaxed),
-            1
-        );
+        assert_eq!(state.execution.executions.failed.load(Ordering::Relaxed), 1);
         assert_eq!(state.execution.gas.consumed.load(Ordering::Relaxed), 600);
         assert_eq!(state.execution.mana.consumed.load(Ordering::Relaxed), 30);
 
@@ -17371,11 +17291,11 @@ mod tests_phase6_4 {
 
         // Führe Policy aus
         executions.record_eclvm_policy_execution(
-            true,   // success
-            1000,   // gas
-            50,     // mana
-            1,      // events
-            5000,   // duration_us (5ms)
+            true, // success
+            1000, // gas
+            50,   // mana
+            1,    // events
+            5000, // duration_us (5ms)
         );
 
         assert_eq!(executions.total.load(Ordering::Relaxed), 1);
@@ -17385,11 +17305,8 @@ mod tests_phase6_4 {
 
         // Noch eine ohne Mana
         executions.record_eclvm_policy_execution(
-            true,
-            500,
-            0, // kein Mana
-            1,
-            2000,
+            true, 500, 0, // kein Mana
+            1, 2000,
         );
 
         assert_eq!(executions.total.load(Ordering::Relaxed), 2);
@@ -17798,12 +17715,17 @@ mod tests_phase6_4 {
         let wrapped = state.log_and_apply(event, vec![]);
 
         // Event sollte im Buffer sein
-        let events_since = state.event_log.events_since(wrapped.sequence.saturating_sub(1));
+        let events_since = state
+            .event_log
+            .events_since(wrapped.sequence.saturating_sub(1));
         assert!(!events_since.is_empty());
 
         // Das letzte Event sollte unser PolicyEvaluated sein
         let last_event = events_since.last().unwrap();
-        assert!(matches!(last_event.event, StateEvent::PolicyEvaluated { .. }));
+        assert!(matches!(
+            last_event.event,
+            StateEvent::PolicyEvaluated { .. }
+        ));
     }
 
     #[test]
