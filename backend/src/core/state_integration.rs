@@ -327,6 +327,7 @@ pub trait ECLVMObserver: Send + Sync {
         passed: bool,
         gas_used: u64,
         mana_used: u64,
+        duration_us: u64,
         realm_id: Option<&str>,
     );
 
@@ -3484,13 +3485,17 @@ impl ECLVMObserver for StateIntegrator {
     // ─────────────────────────────────────────────────────────────────────────
 
     fn on_policy_compiled(&self, _policy_id: &str, policy_type: &str, bytecode_size: usize) {
-        // Parse policy type from string
+        // Parse policy type from string (Gap 3: Api, Ui, DataLogic, Controller)
         let ptype = match policy_type {
             "crossing" => super::state::ECLPolicyType::Crossing,
             "membership" => super::state::ECLPolicyType::Membership,
             "transaction" => super::state::ECLPolicyType::Transaction,
             "governance" => super::state::ECLPolicyType::Governance,
             "privacy" => super::state::ECLPolicyType::Privacy,
+            "api" => super::state::ECLPolicyType::Api,
+            "ui" => super::state::ECLPolicyType::Ui,
+            "datalogic" => super::state::ECLPolicyType::DataLogic,
+            "controller" => super::state::ECLPolicyType::Controller,
             _ => super::state::ECLPolicyType::Custom,
         };
         self.state.eclvm.policy_compiled(true, ptype);
@@ -3517,6 +3522,7 @@ impl ECLVMObserver for StateIntegrator {
         passed: bool,
         gas_used: u64,
         mana_used: u64,
+        duration_us: u64,
         realm_id: Option<&str>,
     ) {
         let ptype = match policy_type {
@@ -3525,19 +3531,33 @@ impl ECLVMObserver for StateIntegrator {
             "transaction" => super::state::ECLPolicyType::Transaction,
             "governance" => super::state::ECLPolicyType::Governance,
             "privacy" => super::state::ECLPolicyType::Privacy,
+            "api" => super::state::ECLPolicyType::Api,
+            "ui" => super::state::ECLPolicyType::Ui,
+            "datalogic" => super::state::ECLPolicyType::DataLogic,
+            "controller" => super::state::ECLPolicyType::Controller,
             _ => super::state::ECLPolicyType::Custom,
         };
-        // Use 0 for duration_us as we don't have it in this context
-        self.state
-            .eclvm
-            .policy_executed(passed, ptype, gas_used, mana_used, 0, realm_id);
+        // Gap 6: ECL-Pfad emittiert StateEvent::PolicyEvaluated → apply_state_event → eclvm.policy_executed
+        let event = super::state::StateEvent::PolicyEvaluated {
+            policy_id: policy_id.to_string(),
+            realm_id: realm_id.map(|s| s.to_string()),
+            passed,
+            policy_type: ptype,
+            gas_used,
+            mana_used,
+            duration_us,
+        };
+        let _ = self
+            .state
+            .log_and_apply(event, vec!["ecl_policy".to_string()]);
         self.propagate_update(super::state::StateComponent::ECLPolicy);
         tracing::trace!(
-            "ECL Policy executed: {} (passed: {}, gas: {}, mana: {}, realm: {:?})",
+            "ECL Policy executed: {} (passed: {}, gas: {}, mana: {}, duration_us: {}, realm: {:?})",
             policy_id,
             passed,
             gas_used,
             mana_used,
+            duration_us,
             realm_id
         );
     }
@@ -3901,6 +3921,67 @@ impl ECLVMObserver for StateIntegrator {
             gas_consumed,
             mana_consumed,
             active_policies
+        );
+    }
+}
+
+// ============================================================================
+// ECLVM OBSERVER ADAPTER (Phase 1.1 – ProgrammableGateway → ECLVMState)
+// ============================================================================
+//
+// Verbindet ProgrammableGateway mit StateIntegrator: eclvm::PolicyExecutionObserver
+// wird auf ECLVMObserver (on_policy_executed, on_crossing_policy_evaluated) gemappt.
+
+/// Adapter: StateIntegrator als eclvm::PolicyExecutionObserver
+pub struct ECLVMObserverAdapter {
+    integrator: StateIntegrator,
+}
+
+impl ECLVMObserverAdapter {
+    pub fn new(integrator: StateIntegrator) -> Self {
+        Self { integrator }
+    }
+}
+
+impl crate::eclvm::PolicyExecutionObserver for ECLVMObserverAdapter {
+    fn on_policy_executed(
+        &self,
+        policy_id: &str,
+        policy_type: &str,
+        passed: bool,
+        gas_used: u64,
+        mana_used: u64,
+        duration_us: u64,
+        realm_id: Option<&str>,
+    ) {
+        self.integrator.on_policy_executed(
+            policy_id,
+            policy_type,
+            passed,
+            gas_used,
+            mana_used,
+            duration_us,
+            realm_id,
+        );
+    }
+
+    fn on_crossing_policy_evaluated(
+        &self,
+        from_realm: &str,
+        to_realm: &str,
+        entity_id: &str,
+        allowed: bool,
+        trust_score: f64,
+        policy_id: Option<&str>,
+    ) {
+        let entity = UniversalId::new(UniversalId::TAG_DID, 1, entity_id.as_bytes());
+        self.integrator.on_crossing_policy_evaluated(
+            from_realm,
+            to_realm,
+            &entity,
+            allowed,
+            trust_score,
+            policy_id,
         );
     }
 }

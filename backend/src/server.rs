@@ -16,8 +16,9 @@
 
 use crate::api::{create_router, create_static_router, StaticConfig};
 use crate::config::Settings;
-use crate::core::{create_unified_state, SharedUnifiedState, StateCoordinator, StateIntegrator};
+use crate::core::{create_unified_state, SharedUnifiedState, StateCoordinator};
 use crate::local::DecentralizedStorage;
+use crate::peer::gateway::GatewayGuard;
 use anyhow::Result;
 use axum::Router;
 use std::net::SocketAddr;
@@ -29,19 +30,15 @@ use tokio::net::TcpListener;
 ///
 /// Enthält hierarchisches State-Management:
 /// - `unified_state`: Atomar Counter für alle Module
-/// - `coordinator`: Invarianten-Checks und Health-Aggregation
-/// - `integrator`: Observer-Pattern für Engine-Updates
+/// - `coordinator`: Invarianten-Checks, Health-Aggregation, enthält StateIntegrator
 /// - `storage`: Fjall-basierter dezentraler Storage
 #[derive(Clone)]
 pub struct AppState {
     /// Unified State für alle Module (Thread-safe)
     pub unified_state: SharedUnifiedState,
 
-    /// State Coordinator für Health und Invarianten
+    /// State Coordinator (Health, Invarianten; Integrator via coordinator.integrator())
     pub coordinator: Arc<StateCoordinator>,
-
-    /// State Integrator für Observer-Pattern
-    pub integrator: StateIntegrator,
 
     /// Dezentraler Storage (Fjall)
     pub storage: DecentralizedStorage,
@@ -51,6 +48,9 @@ pub struct AppState {
 
     /// Startzeitpunkt für Uptime
     pub started_at: Option<Instant>,
+
+    /// Optional: GatewayGuard für Crossing-Validierung (Phase 2)
+    pub gateway: Option<Arc<GatewayGuard>>,
 }
 
 impl AppState {
@@ -59,19 +59,16 @@ impl AppState {
         // Unified State erstellen
         let unified_state = create_unified_state();
 
-        // Coordinator für Health-Checks
+        // Coordinator (enthält einen StateIntegrator für Observer-Pattern)
         let coordinator = Arc::new(StateCoordinator::new(unified_state.clone()));
-
-        // Integrator für Observer-Pattern
-        let integrator = StateIntegrator::new(unified_state.clone());
 
         Self {
             unified_state,
             coordinator,
-            integrator,
             storage,
             config: Arc::new(config),
             started_at: Some(Instant::now()),
+            gateway: None,
         }
     }
 
@@ -88,6 +85,11 @@ impl AppState {
     /// Get unified state snapshot
     pub fn state_snapshot(&self) -> crate::core::UnifiedSnapshot {
         self.unified_state.snapshot()
+    }
+
+    /// State Integrator (Observer-Pattern). Clone ist günstig (Arc).
+    pub fn integrator(&self) -> crate::core::StateIntegrator {
+        self.coordinator.integrator().clone()
     }
 
     /// Get uptime in seconds

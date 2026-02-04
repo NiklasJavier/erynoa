@@ -273,6 +273,15 @@ pub trait HostInterface: Send + Sync {
     /// Log-Nachricht (für Debugging)
     fn log(&self, message: &str);
 
+    /// Laufzeit-Metrik aus State/Snapshot (Phase 2.2 – optional).
+    ///
+    /// Wenn der Host mit UnifiedState versorgt ist, können ECL-Policies
+    /// z. B. `get_metric("trust.avg")`, `get_metric("eclvm.policies_executed")` lesen.
+    /// Default: None (nur Storage, keine State-Metriken).
+    fn get_metric(&self, _name: &str) -> Option<f64> {
+        None
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // Realm Storage Operationen (Optional - Default: NotSupported)
     // ═══════════════════════════════════════════════════════════════════════

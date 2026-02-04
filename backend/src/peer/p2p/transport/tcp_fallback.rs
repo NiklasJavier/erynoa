@@ -20,6 +20,7 @@
 //!
 //! - **RL24**: TCP als Fallback wenn QUIC blockiert
 
+use crate::domain::UniversalId;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -119,6 +120,7 @@ pub struct TcpFallbackTransport {
 
 /// TCP Connection State
 #[derive(Debug, Clone)]
+/// TCP-Connection-State (v0.4.0: Mit UniversalId)
 pub struct TcpConnectionState {
     /// Remote-Adresse
     pub remote_addr: SocketAddr,
@@ -132,6 +134,10 @@ pub struct TcpConnectionState {
     pub bytes_received: u64,
     /// Ist TLS aktiv
     pub is_tls: bool,
+    /// UniversalId des Peers (v0.4.0)
+    pub universal_id: Option<UniversalId>,
+    /// Identität verifiziert (v0.4.0)
+    pub identity_verified: bool,
 }
 
 /// TCP-Transport-Metriken
@@ -177,11 +183,14 @@ impl TcpFallbackTransport {
     }
 
     /// Registriere neue Connection
+    ///
+    /// Tracking für Statistiken und Idle-Detection.
     pub fn register_connection(
         &self,
         peer_id: &str,
         remote_addr: SocketAddr,
         is_tls: bool,
+        universal_id: Option<UniversalId>,
     ) -> TcpConnectionState {
         let now = Instant::now();
         let state = TcpConnectionState {
@@ -191,6 +200,8 @@ impl TcpFallbackTransport {
             bytes_sent: 0,
             bytes_received: 0,
             is_tls,
+            universal_id,
+            identity_verified: false,
         };
 
         // Update Metrics
@@ -217,6 +228,28 @@ impl TcpFallbackTransport {
                 metrics.active_connections -= 1;
             }
         }
+    }
+
+    /// Setze UniversalId für Connection nach Verifikation (v0.4.0)
+    pub fn set_connection_identity(
+        &self,
+        peer_id: &str,
+        universal_id: UniversalId,
+        verified: bool,
+    ) {
+        if let Some(conn) = self.connections.write().get_mut(peer_id) {
+            conn.universal_id = Some(universal_id);
+            conn.identity_verified = verified;
+        }
+    }
+
+    /// Finde Connection nach UniversalId (v0.4.0)
+    pub fn find_connection_by_universal_id(&self, universal_id: &UniversalId) -> Option<(String, TcpConnectionState)> {
+        self.connections
+            .read()
+            .iter()
+            .find(|(_, conn)| conn.universal_id.as_ref() == Some(universal_id))
+            .map(|(peer_id, conn)| (peer_id.clone(), conn.clone()))
     }
 
     /// Prüfe ob Connection für Peer existiert
@@ -317,7 +350,7 @@ mod tests {
         let transport = TcpFallbackTransport::new(TcpFallbackConfig::default());
 
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)), 4434);
-        transport.register_connection("peer-1", addr, true);
+        transport.register_connection("peer-1", addr, true, None);
 
         assert!(transport.has_connection("peer-1"));
         assert_eq!(transport.active_connections(), 1);
@@ -332,7 +365,7 @@ mod tests {
         let transport = TcpFallbackTransport::new(TcpFallbackConfig::default());
 
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)), 4434);
-        transport.register_connection("peer-1", addr, false);
+        transport.register_connection("peer-1", addr, false, None);
 
         transport.update_stats("peer-1", 500, 1000);
 

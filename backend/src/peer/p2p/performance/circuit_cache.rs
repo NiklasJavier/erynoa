@@ -46,6 +46,7 @@
 //! └─────────────────────────────────────────────────────────────────────────────┘
 //! ```
 
+use crate::domain::UniversalId;
 use crate::peer::p2p::privacy::relay_selection::{RelayCandidate, RelaySelector, SensitivityLevel};
 use parking_lot::RwLock;
 use std::collections::VecDeque;
@@ -133,8 +134,13 @@ pub struct PreBuiltCircuit {
 pub struct CircuitHop {
     /// Public Key des Relays
     pub public_key: x25519_dalek::PublicKey,
-    /// Peer-ID
+    /// Peer-ID (libp2p-Identifier)
     pub peer_id: libp2p::PeerId,
+    /// UniversalId des Relays (Content-Addressed Identifier)
+    ///
+    /// Ermöglicht persistente Identifikation über PeerId-Änderungen hinweg
+    /// und Integration mit TrustGate, StateEvents und IdentityState.
+    pub universal_id: Option<UniversalId>,
     /// Region (für Diversity)
     pub region: String,
     /// Hop-Index
@@ -269,7 +275,7 @@ impl CircuitCache {
 
         let route_pks = selector.select_route().ok()?;
 
-        // Baue CircuitHops
+        // Baue CircuitHops mit UniversalId aus RelayCandidate
         let route: Vec<CircuitHop> = route_pks
             .iter()
             .enumerate()
@@ -280,6 +286,7 @@ impl CircuitCache {
                     .map(|c| CircuitHop {
                         public_key: *pk,
                         peer_id: c.peer_id,
+                        universal_id: c.universal_id,
                         region: c.region.clone(),
                         hop_index: i as u8,
                     })
@@ -503,6 +510,7 @@ mod tests {
                 RelayCandidate::from_peer_info(
                     libp2p::PeerId::random(),
                     PeerTrustInfo {
+                        universal_id: None,
                         did: None,
                         trust_r: 0.85,
                         trust_omega: 0.75,

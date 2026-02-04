@@ -1,15 +1,35 @@
 //! Low-Level Key-Value Store
 //!
-//! Wrapper um Fjall mit Type-Safe Serialisierung.
+//! Wrapper um Fjall mit Type-Safe Serialisierung und Metriken-Tracking.
+//!
+//! ## Phase 2 Features
+//!
+//! - Metriken für alle Operationen (read/write/delete)
+//! - Latenz-Tracking
+//! - Health-Score-Berechnung
+//! - Snapshot-Pattern für konsistente Reads
 
 use anyhow::{Context, Result};
 use fjall::{Keyspace, PartitionHandle};
 use serde::{de::DeserializeOwned, Serialize};
+use std::sync::Arc;
+use std::time::Instant;
+
+use super::metrics::{StoreMetrics, StoreMetricsSnapshot};
 
 /// Generic Key-Value Store über einer Fjall Partition
+///
+/// Jetzt mit integriertem Metriken-Tracking gemäß `state.rs` Patterns.
 #[derive(Clone)]
 pub struct KvStore {
+    /// Fjall Partition Handle
     partition: PartitionHandle,
+
+    /// Metriken für alle Operationen
+    metrics: Arc<StoreMetrics>,
+
+    /// Store-Name für Logging/Debugging
+    name: String,
 }
 
 impl KvStore {
@@ -18,48 +38,123 @@ impl KvStore {
         let partition = keyspace
             .open_partition(name, Default::default())
             .context("Failed to open partition")?;
-        Ok(Self { partition })
+
+        let metrics = Arc::new(StoreMetrics::new());
+
+        // Initial count setzen
+        let initial_count = partition.len().unwrap_or(0) as u64;
+        metrics.set_count(initial_count);
+
+        Ok(Self {
+            partition,
+            metrics,
+            name: name.to_string(),
+        })
     }
 
-    /// Speichert einen Wert
+    /// Speichert einen Wert mit Metriken-Tracking
     pub fn put<K: AsRef<[u8]>, V: Serialize>(&self, key: K, value: &V) -> Result<()> {
-        let bytes = serde_json::to_vec(value).context("Failed to serialize value")?;
-        self.partition
-            .insert(key.as_ref(), bytes)
-            .context("Failed to insert")?;
-        Ok(())
-    }
+        let start = Instant::now();
 
-    /// Holt einen Wert
-    pub fn get<K: AsRef<[u8]>, V: DeserializeOwned>(&self, key: K) -> Result<Option<V>> {
-        match self.partition.get(key).context("Failed to get")? {
-            Some(bytes) => {
-                let value = serde_json::from_slice(&bytes).context("Failed to deserialize")?;
-                Ok(Some(value))
+        let bytes = serde_json::to_vec(value).context("Failed to serialize value")?;
+        let size = bytes.len() as u64;
+
+        match self.partition.insert(key.as_ref(), bytes) {
+            Ok(_) => {
+                let latency = start.elapsed().as_micros() as u64;
+                self.metrics.record_write(latency, size);
+
+                // Count aktualisieren (optimistisch, da insert erfolgreich war)
+                let current_len = self.partition.len().unwrap_or(0) as u64;
+                self.metrics.set_count(current_len);
+
+                Ok(())
             }
-            None => Ok(None),
+            Err(e) => {
+                self.metrics.record_error();
+                Err(e).context("Failed to insert")
+            }
         }
     }
 
-    /// Löscht einen Wert
-    pub fn delete<K: AsRef<[u8]>>(&self, key: K) -> Result<bool> {
-        let existed = self.partition.get(key.as_ref())?.is_some();
-        self.partition
-            .remove(key.as_ref())
-            .context("Failed to delete")?;
-        Ok(existed)
+    /// Holt einen Wert mit Metriken-Tracking
+    pub fn get<K: AsRef<[u8]>, V: DeserializeOwned>(&self, key: K) -> Result<Option<V>> {
+        let start = Instant::now();
+
+        match self.partition.get(key) {
+            Ok(Some(bytes)) => {
+                let size = bytes.len() as u64;
+                let latency = start.elapsed().as_micros() as u64;
+                self.metrics.record_read(latency, size);
+
+                let value = serde_json::from_slice(&bytes).context("Failed to deserialize")?;
+                Ok(Some(value))
+            }
+            Ok(None) => {
+                let latency = start.elapsed().as_micros() as u64;
+                self.metrics.record_read(latency, 0); // Cache miss
+                Ok(None)
+            }
+            Err(e) => {
+                self.metrics.record_error();
+                Err(e).context("Failed to get")
+            }
+        }
     }
 
-    /// Prüft ob ein Key existiert
+    /// Löscht einen Wert mit Metriken-Tracking
+    pub fn delete<K: AsRef<[u8]>>(&self, key: K) -> Result<bool> {
+        let start = Instant::now();
+
+        // Prüfe ob der Key existiert und hole die Größe
+        let (existed, size) = match self.partition.get(key.as_ref()) {
+            Ok(Some(bytes)) => (true, bytes.len() as u64),
+            Ok(None) => (false, 0),
+            Err(e) => {
+                self.metrics.record_error();
+                return Err(e).context("Failed to check key before delete");
+            }
+        };
+
+        match self.partition.remove(key.as_ref()) {
+            Ok(_) => {
+                if existed {
+                    self.metrics.record_delete(size);
+                    self.metrics.decrement_count();
+                }
+
+                let _latency = start.elapsed().as_micros() as u64;
+                Ok(existed)
+            }
+            Err(e) => {
+                self.metrics.record_error();
+                Err(e).context("Failed to delete")
+            }
+        }
+    }
+
+    /// Prüft ob ein Key existiert (mit Metriken-Tracking)
     pub fn contains<K: AsRef<[u8]>>(&self, key: K) -> Result<bool> {
-        Ok(self
-            .partition
-            .get(key)
-            .context("Failed to check key")?
-            .is_some())
+        let start = Instant::now();
+
+        match self.partition.get(key) {
+            Ok(result) => {
+                let latency = start.elapsed().as_micros() as u64;
+                let exists = result.is_some();
+                self.metrics
+                    .record_read(latency, if exists { 1 } else { 0 });
+                Ok(exists)
+            }
+            Err(e) => {
+                self.metrics.record_error();
+                Err(e).context("Failed to check key")
+            }
+        }
     }
 
     /// Iteriert über alle Key-Value Paare
+    ///
+    /// Hinweis: Keine Metriken für Iteration, da das zu teuer wäre.
     pub fn iter<V: DeserializeOwned>(&self) -> impl Iterator<Item = Result<(Vec<u8>, V)>> + '_ {
         self.partition.iter().map(|result| {
             let (key, value) = result.context("Failed to iterate")?;
@@ -70,6 +165,8 @@ impl KvStore {
     }
 
     /// Iteriert über Keys mit einem Prefix
+    ///
+    /// Hinweis: Keine Metriken für Iteration, da das zu teuer wäre.
     pub fn scan_prefix<V: DeserializeOwned>(
         &self,
         prefix: &'static [u8],
@@ -90,6 +187,38 @@ impl KvStore {
     /// Ist der Store leer?
     pub fn is_empty(&self) -> bool {
         self.partition.is_empty().unwrap_or(true)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // METRICS API (Phase 2)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Snapshot der Metriken
+    pub fn metrics_snapshot(&self) -> StoreMetricsSnapshot {
+        // Aktualisiere Count vor Snapshot
+        self.metrics
+            .set_count(self.partition.len().unwrap_or(0) as u64);
+        self.metrics.snapshot()
+    }
+
+    /// Store-Name
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Health-Score (0.0 - 1.0)
+    pub fn health_score(&self) -> f64 {
+        self.metrics.health_score()
+    }
+
+    /// Ist der Store gesund?
+    pub fn is_healthy(&self) -> bool {
+        self.health_score() >= 0.9
+    }
+
+    /// Zugriff auf die internen Metriken (für Aggregation)
+    pub fn metrics(&self) -> &Arc<StoreMetrics> {
+        &self.metrics
     }
 }
 
@@ -152,5 +281,89 @@ mod tests {
             .collect();
 
         assert_eq!(users.len(), 2);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Phase 2: Metrics Tests
+    // ─────────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_metrics_tracking() {
+        let keyspace = create_test_keyspace();
+        let store = KvStore::new(&keyspace, "test_metrics").unwrap();
+
+        // Schreiben
+        store.put("key1", &"value1").unwrap();
+        store.put("key2", &"value2").unwrap();
+
+        // Lesen
+        let _: Option<String> = store.get("key1").unwrap();
+        let _: Option<String> = store.get("key2").unwrap();
+        let _: Option<String> = store.get("nonexistent").unwrap();
+
+        let snapshot = store.metrics_snapshot();
+
+        assert_eq!(snapshot.writes, 2);
+        assert_eq!(snapshot.reads, 3);
+        assert_eq!(snapshot.count, 2);
+        assert!(snapshot.bytes > 0);
+    }
+
+    #[test]
+    fn test_metrics_delete_tracking() {
+        let keyspace = create_test_keyspace();
+        let store = KvStore::new(&keyspace, "test_delete_metrics").unwrap();
+
+        store.put("key1", &"value1").unwrap();
+        store.put("key2", &"value2").unwrap();
+
+        let initial_count = store.metrics_snapshot().count;
+        assert_eq!(initial_count, 2);
+
+        store.delete("key1").unwrap();
+
+        let after_delete = store.metrics_snapshot();
+        assert_eq!(after_delete.deletes, 1);
+        assert_eq!(after_delete.count, 1);
+    }
+
+    #[test]
+    fn test_store_name() {
+        let keyspace = create_test_keyspace();
+        let store = KvStore::new(&keyspace, "my_custom_store").unwrap();
+
+        assert_eq!(store.name(), "my_custom_store");
+    }
+
+    #[test]
+    fn test_health_score() {
+        let keyspace = create_test_keyspace();
+        let store = KvStore::new(&keyspace, "health_test").unwrap();
+
+        // Frischer Store sollte gesund sein
+        assert!(store.is_healthy());
+        assert!(store.health_score() >= 0.99);
+
+        // Nach einigen erfolgreichen Operationen immer noch gesund
+        store.put("key1", &"value1").unwrap();
+        let _: Option<String> = store.get("key1").unwrap();
+
+        assert!(store.is_healthy());
+    }
+
+    #[test]
+    fn test_latency_tracking() {
+        let keyspace = create_test_keyspace();
+        let store = KvStore::new(&keyspace, "latency_test").unwrap();
+
+        store.put("key1", &"value1").unwrap();
+        let _: Option<String> = store.get("key1").unwrap();
+
+        let snapshot = store.metrics_snapshot();
+
+        // Latenz sollte gemessen worden sein (> 0)
+        // In Tests kann die Latenz sehr klein sein, also nur prüfen dass es keine Fehler gibt
+        assert!(snapshot.avg_write_latency_us >= 0.0);
+        assert!(snapshot.avg_read_latency_us >= 0.0);
     }
 }

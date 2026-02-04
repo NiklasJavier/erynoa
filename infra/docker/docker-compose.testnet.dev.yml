@@ -1,228 +1,336 @@
 # ============================================================================
-# Erynoa P2P Testnet - Development Mode mit Hot-Reloading
+# Erynoa P2P Testnet - Development Mode mit Hot-Reloading + NAT-Simulation
 # ============================================================================
 #
-# HOT-RELOADING AKTIVIERT!
-# Änderungen am Source-Code werden automatisch erkannt und der Service
-# wird neu kompiliert und gestartet.
+# FEATURES:
+#   - Hot-Reloading via cargo-watch
+#   - QUIC + TCP Transport
+#   - NAT-Simulation für Client
+#   - 3 Relay-Server + 1 Client
+#   - Privacy-Layer Support (optional)
 #
-# Verwendung:
-#   docker compose -f infra/docker/docker-compose.testnet.dev.yml up
-#   # Oder nur einen Node starten:
-#   docker compose -f infra/docker/docker-compose.testnet.dev.yml up relay1
-#
-# Vorteile:
-#   - Kein docker build bei Code-Änderungen nötig
-#   - Automatisches Neukompilieren bei Dateiänderungen
-#   - Schnellere Entwicklungszyklen
-#   - Shared Cargo Registry für schnellere Builds
-#
-# Features aktiviert:
-#   - p2p: Core P2P Stack (libp2p, Kademlia, Gossipsub, NAT-Traversal)
-#   - privacy-full: Alle Privacy-Layer (Onion, Mixing, ZK, HW-Accel)
+# VERWENDUNG:
+#   just testnet-dev run     # Starten
+#   just testnet-dev logs    # Logs folgen
+#   just testnet-dev status  # Status prüfen
+#   just testnet-dev down    # Stoppen
 #
 # ============================================================================
 
 name: erynoa-testnet-dev
 
+# ============================================================================
+# SHARED CONFIGURATIONS
+# ============================================================================
+
+x-common-env: &common-env
+  RUST_LOG: "erynoa=debug,libp2p_gossipsub=info,libp2p_kad=info,libp2p_relay=debug,libp2p_dcutr=debug,libp2p_autonat=debug,libp2p_quic=info,info"
+  RUST_BACKTRACE: "1"
+  DEV_MODE: "true"
+  # Features: p2p ist Minimum, privacy-full für Onion-Routing
+  CARGO_FEATURES: "${CARGO_FEATURES:-p2p}"
+  # Sicherheit
+  P2P_NOISE_ENABLED: "true"
+
+x-common-build: &common-build
+  context: ../..
+  dockerfile: infra/docker/Dockerfile.testnet
+
+x-healthcheck: &common-healthcheck
+  test: ["CMD", "curl", "-sf", "http://localhost:9000/health"]
+  interval: 30s
+  timeout: 10s
+  retries: 5
+  start_period: 180s
+
+# ============================================================================
+# SERVICES
+# ============================================================================
+
 services:
+  # ==========================================================================
+  # RELAY 1 - Genesis Node
+  # ==========================================================================
   relay1:
-    image: erynoa/testnet-node:latest
+    build: *common-build
     container_name: erynoa-relay1-dev
     hostname: relay1
     networks:
       testnet:
         ipv4_address: 172.28.0.10
     ports:
-      - "4001:4001"
-      - "9101:9000"
+      - "4001:4001/tcp" # libp2p TCP
+      - "4433:4433/udp" # QUIC (wenn aktiviert)
+      - "9101:9000" # HTTP API
     environment:
-      RUST_LOG: "erynoa=debug,libp2p_gossipsub=info,libp2p_kad=info,libp2p_mdns=info,info"
-      RUST_BACKTRACE: "1"
+      <<: *common-env
       APP_STORAGE__DATA_DIR: "/data"
       NODE_NAME: relay1
       NODE_MODE: relay
       P2P_PORT: "4001"
+      QUIC_PORT: "4433"
       API_PORT: "9000"
-      BOOTSTRAP_PEERS: ""
+      # Genesis: Keine Bootstrap-Peers
       GENESIS_NODE: "true"
+      BOOTSTRAP_PEERS: ""
+      # Relay-Server aktivieren
+      P2P_RELAY_SERVER: "true"
       P2P_ENABLE_MDNS: "true"
-      # Hot-Reload Modus aktivieren
-      DEV_MODE: "true"
-      # Privacy-Full Feature aktivieren
-      CARGO_FEATURES: "privacy-full"
+      P2P_ENABLE_AUTONAT: "true"
+      P2P_ENABLE_DCUTR: "true"
+      P2P_ENABLE_UPNP: "false"
     volumes:
-      # Source-Code Mount für Hot-Reloading
+      # Source-Code (read-only für Hot-Reloading)
       - ../../backend/src:/workspace/backend/src:ro
       - ../../backend/config:/workspace/backend/config:ro
       - ../../backend/Cargo.toml:/workspace/backend/Cargo.toml:ro
       - ../../backend/Cargo.lock:/workspace/backend/Cargo.lock:ro
       - ../../backend/build.rs:/workspace/backend/build.rs:ro
-      # Shared Cargo Cache für schnellere Builds
+      - ../../backend/proto:/workspace/backend/proto:ro
+      # Shared Cargo Cache
       - cargo-registry:/usr/local/cargo/registry
       - cargo-git:/usr/local/cargo/git
-      - target-cache:/workspace/backend/target
-      # Data Volume
+      # Node-spezifisch
+      - relay1-target:/workspace/backend/target
       - relay1-data:/data
     working_dir: /workspace/backend
     entrypoint: ["/entrypoint-dev.sh"]
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:9000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 180s
+    healthcheck: *common-healthcheck
 
+  # ==========================================================================
+  # RELAY 2
+  # ==========================================================================
   relay2:
-    image: erynoa/testnet-node:latest
+    build: *common-build
     container_name: erynoa-relay2-dev
     hostname: relay2
     depends_on:
       relay1:
-        condition: service_started
+        condition: service_healthy
     networks:
       testnet:
         ipv4_address: 172.28.0.11
     ports:
-      - "4002:4001"
+      - "4002:4001/tcp"
+      - "4434:4433/udp"
       - "9102:9000"
     environment:
-      RUST_LOG: "erynoa=debug,libp2p_gossipsub=info,libp2p_kad=info,libp2p_mdns=info,info"
-      RUST_BACKTRACE: "1"
+      <<: *common-env
       APP_STORAGE__DATA_DIR: "/data"
       NODE_NAME: relay2
       NODE_MODE: relay
       P2P_PORT: "4001"
+      QUIC_PORT: "4433"
       API_PORT: "9000"
+      # Bootstrap zu relay1
       BOOTSTRAP_PEERS: "/ip4/172.28.0.10/tcp/4001"
+      P2P_RELAY_SERVER: "true"
       P2P_ENABLE_MDNS: "true"
-      DEV_MODE: "true"
-      CARGO_FEATURES: "privacy-full"
+      P2P_ENABLE_AUTONAT: "true"
+      P2P_ENABLE_DCUTR: "true"
+      P2P_ENABLE_UPNP: "false"
     volumes:
       - ../../backend/src:/workspace/backend/src:ro
       - ../../backend/config:/workspace/backend/config:ro
       - ../../backend/Cargo.toml:/workspace/backend/Cargo.toml:ro
       - ../../backend/Cargo.lock:/workspace/backend/Cargo.lock:ro
       - ../../backend/build.rs:/workspace/backend/build.rs:ro
+      - ../../backend/proto:/workspace/backend/proto:ro
       - cargo-registry:/usr/local/cargo/registry
       - cargo-git:/usr/local/cargo/git
-      - target-cache:/workspace/backend/target
+      - relay2-target:/workspace/backend/target
       - relay2-data:/data
     working_dir: /workspace/backend
     entrypoint: ["/entrypoint-dev.sh"]
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:9000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 180s
+    healthcheck: *common-healthcheck
 
+  # ==========================================================================
+  # RELAY 3
+  # ==========================================================================
   relay3:
-    image: erynoa/testnet-node:latest
+    build: *common-build
     container_name: erynoa-relay3-dev
     hostname: relay3
     depends_on:
       relay1:
-        condition: service_started
+        condition: service_healthy
     networks:
       testnet:
         ipv4_address: 172.28.0.12
     ports:
-      - "4003:4001"
+      - "4003:4001/tcp"
+      - "4435:4433/udp"
       - "9103:9000"
     environment:
-      RUST_LOG: "erynoa=debug,libp2p_gossipsub=info,libp2p_kad=info,libp2p_mdns=info,info"
-      RUST_BACKTRACE: "1"
+      <<: *common-env
       APP_STORAGE__DATA_DIR: "/data"
       NODE_NAME: relay3
       NODE_MODE: relay
       P2P_PORT: "4001"
+      QUIC_PORT: "4433"
       API_PORT: "9000"
-      BOOTSTRAP_PEERS: "/ip4/172.28.0.10/tcp/4001"
+      # Bootstrap zu relay1 und relay2
+      BOOTSTRAP_PEERS: "/ip4/172.28.0.10/tcp/4001,/ip4/172.28.0.11/tcp/4001"
+      P2P_RELAY_SERVER: "true"
       P2P_ENABLE_MDNS: "true"
-      DEV_MODE: "true"
-      CARGO_FEATURES: "privacy-full"
+      P2P_ENABLE_AUTONAT: "true"
+      P2P_ENABLE_DCUTR: "true"
+      P2P_ENABLE_UPNP: "false"
     volumes:
       - ../../backend/src:/workspace/backend/src:ro
       - ../../backend/config:/workspace/backend/config:ro
       - ../../backend/Cargo.toml:/workspace/backend/Cargo.toml:ro
       - ../../backend/Cargo.lock:/workspace/backend/Cargo.lock:ro
       - ../../backend/build.rs:/workspace/backend/build.rs:ro
+      - ../../backend/proto:/workspace/backend/proto:ro
       - cargo-registry:/usr/local/cargo/registry
       - cargo-git:/usr/local/cargo/git
-      - target-cache:/workspace/backend/target
+      - relay3-target:/workspace/backend/target
       - relay3-data:/data
     working_dir: /workspace/backend
     entrypoint: ["/entrypoint-dev.sh"]
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:9000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 180s
+    healthcheck: *common-healthcheck
 
+  # ==========================================================================
+  # CLIENT - Hinter simuliertem NAT
+  # ==========================================================================
   client:
-    image: erynoa/testnet-node:latest
+    build: *common-build
     container_name: erynoa-client-dev
     hostname: client
     depends_on:
       relay1:
-        condition: service_started
+        condition: service_healthy
       relay2:
-        condition: service_started
+        condition: service_healthy
       relay3:
+        condition: service_healthy
+      nat-gateway:
         condition: service_started
     networks:
-      testnet:
-        ipv4_address: 172.28.0.20
+      # Client ist in separatem Netzwerk (simuliertes NAT)
+      testnet-nat:
+        ipv4_address: 172.29.0.20
     ports:
-      - "4004:4001"
+      - "4004:4001/tcp"
+      - "4436:4433/udp"
       - "9104:9000"
     environment:
-      RUST_LOG: "erynoa=debug,libp2p_gossipsub=info,libp2p_kad=info,libp2p_mdns=info,info"
-      RUST_BACKTRACE: "1"
+      <<: *common-env
       APP_STORAGE__DATA_DIR: "/data"
       NODE_NAME: client
       NODE_MODE: client
       P2P_PORT: "4001"
+      QUIC_PORT: "4433"
       API_PORT: "9000"
+      # Client nutzt Relay, ist KEIN Server
+      P2P_RELAY_SERVER: "false"
+      P2P_RELAY_CLIENT: "true"
+      # Kein mDNS über NAT-Grenze
+      P2P_ENABLE_MDNS: "false"
+      P2P_ENABLE_AUTONAT: "true"
+      P2P_ENABLE_DCUTR: "true"
+      P2P_ENABLE_UPNP: "false"
+      # Bootstrap über NAT-Gateway zu allen Relays
       BOOTSTRAP_PEERS: "/ip4/172.28.0.10/tcp/4001,/ip4/172.28.0.11/tcp/4001,/ip4/172.28.0.12/tcp/4001"
-      P2P_ENABLE_MDNS: "true"
-      DEV_MODE: "true"
-      CARGO_FEATURES: "privacy-full"
+      # Explizite Relay-Server für Circuit Relay
+      RELAY_SERVERS: "/ip4/172.28.0.10/tcp/4001/p2p-circuit,/ip4/172.28.0.11/tcp/4001/p2p-circuit,/ip4/172.28.0.12/tcp/4001/p2p-circuit"
     volumes:
       - ../../backend/src:/workspace/backend/src:ro
       - ../../backend/config:/workspace/backend/config:ro
       - ../../backend/Cargo.toml:/workspace/backend/Cargo.toml:ro
       - ../../backend/Cargo.lock:/workspace/backend/Cargo.lock:ro
       - ../../backend/build.rs:/workspace/backend/build.rs:ro
+      - ../../backend/proto:/workspace/backend/proto:ro
       - cargo-registry:/usr/local/cargo/registry
       - cargo-git:/usr/local/cargo/git
-      - target-cache:/workspace/backend/target
+      - client-target:/workspace/backend/target
       - client-data:/data
     working_dir: /workspace/backend
     entrypoint: ["/entrypoint-dev.sh"]
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:9000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 180s
+    healthcheck: *common-healthcheck
+
+  # ==========================================================================
+  # NAT GATEWAY - Simuliert NAT für Client
+  # ==========================================================================
+  nat-gateway:
+    image: alpine:3.19
+    container_name: erynoa-nat-gateway
+    hostname: nat-gateway
+    cap_add:
+      - NET_ADMIN
+    networks:
+      testnet:
+        ipv4_address: 172.28.0.254
+      testnet-nat:
+        ipv4_address: 172.29.0.1
+    command: |
+      sh -c "
+        set -e
+        echo '🌐 NAT-Gateway wird konfiguriert...'
+
+        # Pakete installieren
+        apk add --no-cache iptables iproute2
+
+        # IP-Forwarding aktivieren
+        echo 1 > /proc/sys/net/ipv4/ip_forward
+
+        # NAT für Client-Netzwerk (MASQUERADE)
+        iptables -t nat -A POSTROUTING -s 172.29.0.0/16 -o eth0 -j MASQUERADE
+
+        # Forwarding erlauben
+        iptables -A FORWARD -i eth0 -o eth1 -m state --state RELATED,ESTABLISHED -j ACCEPT
+        iptables -A FORWARD -i eth1 -o eth0 -j ACCEPT
+
+        echo '✓ NAT-Gateway aktiv'
+        echo '  - testnet:     172.28.0.0/16'
+        echo '  - testnet-nat: 172.29.0.0/16 (NAT)'
+
+        # Keep-alive
+        tail -f /dev/null
+      "
+    restart: unless-stopped
+
+# ============================================================================
+# NETWORKS
+# ============================================================================
 
 networks:
+  # Haupt-Netzwerk (Relays erreichbar)
   testnet:
     driver: bridge
     ipam:
       driver: default
       config:
         - subnet: 172.28.0.0/16
+          gateway: 172.28.0.1
+
+  # Client-Netzwerk (hinter NAT)
+  testnet-nat:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.29.0.0/16
+          gateway: 172.29.0.1
+
+# ============================================================================
+# VOLUMES
+# ============================================================================
 
 volumes:
+  # Data-Volumes (persistent)
   relay1-data:
   relay2-data:
   relay3-data:
   client-data:
-  # Shared volumes für schnellere Builds
+
+  # Target-Volumes (Build-Cache pro Node)
+  relay1-target:
+  relay2-target:
+  relay3-target:
+  client-target:
+
+  # Shared Cargo-Caches (beschleunigt Builds)
   cargo-registry:
   cargo-git:
-  target-cache:

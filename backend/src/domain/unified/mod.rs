@@ -48,6 +48,8 @@
 //! let cost = Cost::new(100, 50, 0.1);
 //! ```
 
+pub mod action;
+pub mod component;
 pub mod config;
 pub mod cost;
 pub mod event;
@@ -58,9 +60,12 @@ pub mod primitives;
 pub mod realm;
 pub mod saga;
 pub mod schema;
+pub mod system;
 pub mod trust;
 
 // Re-exports für einfachen Zugriff
+pub use action::{BlueprintAction, MembershipAction, NetworkMetric, RealmAction};
+pub use component::{ComponentLayer, StateComponent, StateRelation};
 pub use config::{
     global_config, init_global_config, ActivityConfig, ConfigValidationError, HumanFactorConfig,
     TemporalConfig, TrustConfig, WorldFormulaConfig, WorldFormulaConfigBuilder,
@@ -96,6 +101,7 @@ pub use saga::{
 pub use schema::{
     append_field_migration, identity_migration, MigrationError, MigrationFn, SchemaRegistry,
 };
+pub use system::{AnomalySeverity, EventPriority, SystemMode};
 pub use trust::{
     ContextType, DailyTrustStats, TrustCombination, TrustDampeningMatrix, TrustDimension,
     TrustHistory, TrustHistoryEntry, TrustRecord, TrustUpdateReason, TrustVector6D,
@@ -393,6 +399,213 @@ impl InvariantChecker {
         }
         Ok(())
     }
+
+    // ========================================================================
+    // SystemMode-Invarianten (Circuit Breaker)
+    // ========================================================================
+
+    /// SystemMode: Prüfe gültige Transition
+    ///
+    /// Erlaubte Transitionen:
+    /// - Normal → Degraded, EmergencyShutdown
+    /// - Degraded → Normal, EmergencyShutdown
+    /// - EmergencyShutdown → Normal (nur mit Admin-Reset)
+    ///
+    /// EmergencyShutdown → Normal erfordert expliziten Admin-Reset.
+    pub fn check_system_mode_transition(
+        old: SystemMode,
+        new: SystemMode,
+        admin_reset: bool,
+    ) -> Result<(), InvariantViolation> {
+        // Gleicher Modus ist immer OK
+        if old == new {
+            return Ok(());
+        }
+
+        match (old, new) {
+            // Normal kann zu allen Modi wechseln
+            (SystemMode::Normal, _) => Ok(()),
+
+            // Degraded kann zu Normal (Recovery) oder Emergency wechseln
+            (SystemMode::Degraded, SystemMode::Normal) => Ok(()),
+            (SystemMode::Degraded, SystemMode::EmergencyShutdown) => Ok(()),
+
+            // Emergency → Normal nur mit Admin-Reset
+            (SystemMode::EmergencyShutdown, SystemMode::Normal) => {
+                if admin_reset {
+                    Ok(())
+                } else {
+                    Err(InvariantViolation::SystemModeInvalidTransition {
+                        from: old,
+                        to: new,
+                        reason: "Emergency→Normal requires admin_reset=true".to_string(),
+                    })
+                }
+            }
+
+            // Emergency → Degraded nicht erlaubt (muss erst zu Normal)
+            (SystemMode::EmergencyShutdown, SystemMode::Degraded) => {
+                Err(InvariantViolation::SystemModeInvalidTransition {
+                    from: old,
+                    to: new,
+                    reason: "Emergency→Degraded not allowed, use Emergency→Normal→Degraded"
+                        .to_string(),
+                })
+            }
+
+            // Same mode transitions (already handled above, but needed for exhaustiveness)
+            (SystemMode::Degraded, SystemMode::Degraded)
+            | (SystemMode::EmergencyShutdown, SystemMode::EmergencyShutdown) => Ok(()),
+        }
+    }
+
+    /// SystemMode: Prüfe ob Operation im aktuellen Modus erlaubt ist
+    pub fn check_operation_allowed_in_mode(
+        mode: SystemMode,
+        operation: &str,
+        requires_normal: bool,
+    ) -> Result<(), InvariantViolation> {
+        match mode {
+            SystemMode::Normal => Ok(()),
+            SystemMode::Degraded => {
+                if requires_normal {
+                    Err(InvariantViolation::OperationNotAllowedInMode {
+                        mode,
+                        operation: operation.to_string(),
+                    })
+                } else {
+                    Ok(())
+                }
+            }
+            SystemMode::EmergencyShutdown => Err(InvariantViolation::OperationNotAllowedInMode {
+                mode,
+                operation: operation.to_string(),
+            }),
+        }
+    }
+
+    // ========================================================================
+    // Κ19: Diversity / Gini-Invarianten
+    // ========================================================================
+
+    /// Κ19: Prüfe Gini-Koeffizient gegen Threshold
+    ///
+    /// Der Gini-Koeffizient misst die Ungleichverteilung (0 = perfekte Gleichheit, 1 = maximale Ungleichheit).
+    /// Erynoa verwendet diesen zur Dezentralisierungs-Überwachung.
+    pub fn check_gini_threshold(gini: f64, threshold: f64) -> Result<(), InvariantViolation> {
+        if !(0.0..=1.0).contains(&gini) {
+            return Err(InvariantViolation::K19InvalidGini { gini });
+        }
+        if !(0.0..=1.0).contains(&threshold) {
+            return Err(InvariantViolation::K19InvalidThreshold { threshold });
+        }
+        if gini > threshold {
+            return Err(InvariantViolation::K19GiniExceeded { gini, threshold });
+        }
+        Ok(())
+    }
+
+    /// Κ19: Berechne Gini-Koeffizient für eine Verteilung
+    ///
+    /// Verwendet die Standard-Formel: G = (2 * Σᵢ i*xᵢ) / (n * Σᵢ xᵢ) - (n+1)/n
+    pub fn calculate_gini(values: &[f64]) -> f64 {
+        if values.is_empty() {
+            return 0.0;
+        }
+
+        let n = values.len() as f64;
+        let sum: f64 = values.iter().sum();
+
+        if sum == 0.0 {
+            return 0.0;
+        }
+
+        let mut sorted = values.to_vec();
+        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+        let weighted_sum: f64 = sorted
+            .iter()
+            .enumerate()
+            .map(|(i, &x)| (i as f64 + 1.0) * x)
+            .sum();
+
+        (2.0 * weighted_sum) / (n * sum) - (n + 1.0) / n
+    }
+
+    // ========================================================================
+    // Quota-Invarianten (Resource-Limits)
+    // ========================================================================
+
+    /// Quota: Prüfe Resource-Nutzung gegen Limit
+    pub fn check_quota(used: u64, limit: u64, resource: &str) -> Result<(), InvariantViolation> {
+        if used > limit {
+            return Err(InvariantViolation::QuotaExceeded {
+                resource: resource.to_string(),
+                used,
+                limit,
+            });
+        }
+        Ok(())
+    }
+
+    /// Quota: Prüfe ob Quota-Warnschwelle erreicht ist (80%)
+    pub fn check_quota_warning(used: u64, limit: u64) -> bool {
+        if limit == 0 {
+            return false;
+        }
+        let usage_percent = (used as f64 / limit as f64) * 100.0;
+        usage_percent >= 80.0
+    }
+
+    /// Quota: Berechne verbleibende Kapazität
+    pub fn remaining_quota(used: u64, limit: u64) -> u64 {
+        limit.saturating_sub(used)
+    }
+
+    // ========================================================================
+    // EventPriority-Invarianten
+    // ========================================================================
+
+    /// EventPriority: Prüfe ob Event-Priorität für Queue-Kapazität akzeptiert wird
+    ///
+    /// Bei hoher Last werden niedrig-priorisierte Events abgelehnt.
+    pub fn check_priority_admission(
+        priority: EventPriority,
+        queue_usage_percent: f64,
+    ) -> Result<(), InvariantViolation> {
+        let min_priority = if queue_usage_percent >= 95.0 {
+            EventPriority::Critical
+        } else if queue_usage_percent >= 80.0 {
+            EventPriority::High
+        } else if queue_usage_percent >= 60.0 {
+            EventPriority::Normal
+        } else {
+            EventPriority::Low
+        };
+
+        if priority > min_priority {
+            // priority > min_priority bedeutet niedrigere Priorität (höherer Ordinalwert)
+            return Err(InvariantViolation::PriorityRejected {
+                priority,
+                min_required: min_priority,
+                queue_usage_percent,
+            });
+        }
+        Ok(())
+    }
+
+    /// EventPriority: Prüfe konsistente Prioritäts-Ordnung
+    ///
+    /// Critical < High < Normal < Low (aufsteigend in Ordinalwert)
+    pub fn check_priority_ordering(
+        higher: EventPriority,
+        lower: EventPriority,
+    ) -> Result<(), InvariantViolation> {
+        if higher >= lower {
+            return Err(InvariantViolation::PriorityOrderViolation { higher, lower });
+        }
+        Ok(())
+    }
 }
 
 /// Invarianten-Verletzung
@@ -469,6 +682,57 @@ pub enum InvariantViolation {
     RealmStoreIncompatible {
         store_type: StoreType,
         template_type: String,
+    },
+
+    // ========================================================================
+    // SystemMode-Invarianten
+    // ========================================================================
+    /// Ungültige SystemMode-Transition
+    SystemModeInvalidTransition {
+        from: SystemMode,
+        to: SystemMode,
+        reason: String,
+    },
+
+    /// Operation im aktuellen Modus nicht erlaubt
+    OperationNotAllowedInMode { mode: SystemMode, operation: String },
+
+    // ========================================================================
+    // Κ19: Diversity / Gini-Invarianten
+    // ========================================================================
+    /// Κ19: Gini-Koeffizient überschreitet Threshold
+    K19GiniExceeded { gini: f64, threshold: f64 },
+
+    /// Κ19: Ungültiger Gini-Wert (muss 0.0-1.0 sein)
+    K19InvalidGini { gini: f64 },
+
+    /// Κ19: Ungültiger Threshold (muss 0.0-1.0 sein)
+    K19InvalidThreshold { threshold: f64 },
+
+    // ========================================================================
+    // Quota-Invarianten
+    // ========================================================================
+    /// Quota überschritten
+    QuotaExceeded {
+        resource: String,
+        used: u64,
+        limit: u64,
+    },
+
+    // ========================================================================
+    // EventPriority-Invarianten
+    // ========================================================================
+    /// Event-Priorität bei hoher Last abgelehnt
+    PriorityRejected {
+        priority: EventPriority,
+        min_required: EventPriority,
+        queue_usage_percent: f64,
+    },
+
+    /// Prioritäts-Ordnung verletzt
+    PriorityOrderViolation {
+        higher: EventPriority,
+        lower: EventPriority,
     },
 }
 
@@ -581,6 +845,74 @@ impl std::fmt::Display for InvariantViolation {
                     f,
                     "Realm invariant violated: Store {:?} incompatible with template {}",
                     store_type, template_type
+                )
+            }
+
+            // SystemMode
+            Self::SystemModeInvalidTransition { from, to, reason } => {
+                write!(
+                    f,
+                    "SystemMode transition {:?}→{:?} invalid: {}",
+                    from, to, reason
+                )
+            }
+            Self::OperationNotAllowedInMode { mode, operation } => {
+                write!(
+                    f,
+                    "Operation '{}' not allowed in mode {:?}",
+                    operation, mode
+                )
+            }
+
+            // Κ19
+            Self::K19GiniExceeded { gini, threshold } => {
+                write!(
+                    f,
+                    "Κ19 violated: Gini coefficient {:.4} exceeds threshold {:.4}",
+                    gini, threshold
+                )
+            }
+            Self::K19InvalidGini { gini } => {
+                write!(f, "Κ19 violated: Gini coefficient {:.4} not in [0, 1]", gini)
+            }
+            Self::K19InvalidThreshold { threshold } => {
+                write!(
+                    f,
+                    "Κ19 violated: Threshold {:.4} not in [0, 1]",
+                    threshold
+                )
+            }
+
+            // Quota
+            Self::QuotaExceeded {
+                resource,
+                used,
+                limit,
+            } => {
+                write!(
+                    f,
+                    "Quota exceeded for '{}': used {} > limit {}",
+                    resource, used, limit
+                )
+            }
+
+            // Priority
+            Self::PriorityRejected {
+                priority,
+                min_required,
+                queue_usage_percent,
+            } => {
+                write!(
+                    f,
+                    "Priority {:?} rejected at {:.1}% queue usage (min required: {:?})",
+                    priority, queue_usage_percent, min_required
+                )
+            }
+            Self::PriorityOrderViolation { higher, lower } => {
+                write!(
+                    f,
+                    "Priority order violated: {:?} should be higher than {:?}",
+                    higher, lower
                 )
             }
         }
@@ -779,5 +1111,203 @@ mod tests {
 
         assert_eq!(custom.trust.asymmetry_base, 1.8);
         assert_eq!(custom.activity.tau_days, 60);
+    }
+
+    // ========================================================================
+    // Phase 5: Neue Invarianten-Tests
+    // ========================================================================
+
+    #[test]
+    fn test_system_mode_transition() {
+        // Normal → Degraded: OK
+        assert!(InvariantChecker::check_system_mode_transition(
+            SystemMode::Normal,
+            SystemMode::Degraded,
+            false
+        )
+        .is_ok());
+
+        // Normal → Emergency: OK
+        assert!(InvariantChecker::check_system_mode_transition(
+            SystemMode::Normal,
+            SystemMode::EmergencyShutdown,
+            false
+        )
+        .is_ok());
+
+        // Degraded → Normal: OK (Recovery)
+        assert!(InvariantChecker::check_system_mode_transition(
+            SystemMode::Degraded,
+            SystemMode::Normal,
+            false
+        )
+        .is_ok());
+
+        // Emergency → Normal ohne Admin: Error
+        assert!(InvariantChecker::check_system_mode_transition(
+            SystemMode::EmergencyShutdown,
+            SystemMode::Normal,
+            false
+        )
+        .is_err());
+
+        // Emergency → Normal mit Admin: OK
+        assert!(InvariantChecker::check_system_mode_transition(
+            SystemMode::EmergencyShutdown,
+            SystemMode::Normal,
+            true
+        )
+        .is_ok());
+
+        // Emergency → Degraded: Error
+        assert!(InvariantChecker::check_system_mode_transition(
+            SystemMode::EmergencyShutdown,
+            SystemMode::Degraded,
+            false
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn test_operation_allowed_in_mode() {
+        // Normal: Alle Operationen erlaubt
+        assert!(
+            InvariantChecker::check_operation_allowed_in_mode(SystemMode::Normal, "crossing", true)
+                .is_ok()
+        );
+
+        // Degraded: Normal-Only Operationen blockiert
+        assert!(InvariantChecker::check_operation_allowed_in_mode(
+            SystemMode::Degraded,
+            "crossing",
+            true
+        )
+        .is_err());
+
+        // Degraded: Nicht-Normal-Only Operationen erlaubt
+        assert!(InvariantChecker::check_operation_allowed_in_mode(
+            SystemMode::Degraded,
+            "read",
+            false
+        )
+        .is_ok());
+
+        // Emergency: Alle Operationen blockiert
+        assert!(InvariantChecker::check_operation_allowed_in_mode(
+            SystemMode::EmergencyShutdown,
+            "any",
+            false
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn test_k19_gini_threshold() {
+        // Gini unter Threshold: OK
+        assert!(InvariantChecker::check_gini_threshold(0.3, 0.5).is_ok());
+        assert!(InvariantChecker::check_gini_threshold(0.5, 0.5).is_ok());
+
+        // Gini über Threshold: Error
+        assert!(InvariantChecker::check_gini_threshold(0.6, 0.5).is_err());
+
+        // Ungültiger Gini: Error
+        assert!(InvariantChecker::check_gini_threshold(-0.1, 0.5).is_err());
+        assert!(InvariantChecker::check_gini_threshold(1.1, 0.5).is_err());
+
+        // Ungültiger Threshold: Error
+        assert!(InvariantChecker::check_gini_threshold(0.3, 1.5).is_err());
+    }
+
+    #[test]
+    fn test_calculate_gini() {
+        // Perfekte Gleichheit
+        let equal = vec![10.0, 10.0, 10.0, 10.0];
+        let gini_equal = InvariantChecker::calculate_gini(&equal);
+        assert!(gini_equal.abs() < 0.01);
+
+        // Hohe Ungleichheit
+        let unequal = vec![0.0, 0.0, 0.0, 100.0];
+        let gini_unequal = InvariantChecker::calculate_gini(&unequal);
+        assert!(gini_unequal > 0.7);
+
+        // Leere Liste
+        assert_eq!(InvariantChecker::calculate_gini(&[]), 0.0);
+    }
+
+    #[test]
+    fn test_quota_checks() {
+        // Unter Limit: OK
+        assert!(InvariantChecker::check_quota(500, 1000, "events").is_ok());
+
+        // Am Limit: OK
+        assert!(InvariantChecker::check_quota(1000, 1000, "events").is_ok());
+
+        // Über Limit: Error
+        assert!(InvariantChecker::check_quota(1500, 1000, "events").is_err());
+
+        // Warning-Schwelle
+        assert!(!InvariantChecker::check_quota_warning(500, 1000)); // 50% - kein Warning
+        assert!(InvariantChecker::check_quota_warning(800, 1000)); // 80% - Warning
+        assert!(InvariantChecker::check_quota_warning(950, 1000)); // 95% - Warning
+
+        // Remaining
+        assert_eq!(InvariantChecker::remaining_quota(300, 1000), 700);
+        assert_eq!(InvariantChecker::remaining_quota(1000, 1000), 0);
+        assert_eq!(InvariantChecker::remaining_quota(1200, 1000), 0); // saturating
+    }
+
+    #[test]
+    fn test_priority_admission() {
+        // Niedrige Last: Alle Prioritäten erlaubt
+        assert!(
+            InvariantChecker::check_priority_admission(EventPriority::Low, 30.0).is_ok()
+        );
+
+        // Mittlere Last (60%+): Nur Normal+ erlaubt
+        assert!(
+            InvariantChecker::check_priority_admission(EventPriority::Normal, 65.0).is_ok()
+        );
+        assert!(
+            InvariantChecker::check_priority_admission(EventPriority::Low, 65.0).is_err()
+        );
+
+        // Hohe Last (80%+): Nur High+ erlaubt
+        assert!(
+            InvariantChecker::check_priority_admission(EventPriority::High, 85.0).is_ok()
+        );
+        assert!(
+            InvariantChecker::check_priority_admission(EventPriority::Normal, 85.0).is_err()
+        );
+
+        // Kritische Last (95%+): Nur Critical erlaubt
+        assert!(
+            InvariantChecker::check_priority_admission(EventPriority::Critical, 98.0).is_ok()
+        );
+        assert!(
+            InvariantChecker::check_priority_admission(EventPriority::High, 98.0).is_err()
+        );
+    }
+
+    #[test]
+    fn test_priority_ordering() {
+        // Korrekte Ordnung
+        assert!(
+            InvariantChecker::check_priority_ordering(EventPriority::Critical, EventPriority::High)
+                .is_ok()
+        );
+        assert!(
+            InvariantChecker::check_priority_ordering(EventPriority::High, EventPriority::Normal)
+                .is_ok()
+        );
+
+        // Falsche Ordnung
+        assert!(
+            InvariantChecker::check_priority_ordering(EventPriority::Normal, EventPriority::High)
+                .is_err()
+        );
+        assert!(
+            InvariantChecker::check_priority_ordering(EventPriority::Normal, EventPriority::Normal)
+                .is_err()
+        );
     }
 }

@@ -23,7 +23,7 @@ use crate::domain::unified::realm::StoreTemplate;
 use crate::domain::{
     RealmId, RootRealm, TrustDampeningMatrix, TrustVector6D, UniversalId, VirtualRealm, DID,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use thiserror::Error;
 
@@ -48,6 +48,9 @@ pub enum GatewayError {
 
     #[error("Entity not registered: {0}")]
     EntityNotRegistered(String),
+
+    #[error("ECL policy denied crossing")]
+    EclPolicyDenied,
 }
 
 /// Ergebnis von Gateway-Operationen
@@ -89,6 +92,12 @@ pub struct GatewayGuard {
 
     /// Konfiguration
     config: GatewayConfig,
+
+    /// Optional: ECL-basierte Crossing-Prüfung (ProgrammableGateway)
+    ecl_evaluator: Option<Arc<dyn crate::eclvm::EclCrossingEvaluator>>,
+
+    /// Realms, für die eine ECL-Entry-Policy ausgeführt werden soll
+    realms_with_ecl_entry: HashSet<RealmId>,
 }
 
 /// Realm-Eintrag für Gateway
@@ -152,6 +161,8 @@ impl GatewayGuard {
             trust_vectors: HashMap::new(),
             credentials: HashMap::new(),
             config,
+            ecl_evaluator: None,
+            realms_with_ecl_entry: HashSet::new(),
         };
 
         // Registriere Root-Realm
@@ -236,6 +247,17 @@ impl GatewayGuard {
             .push(credential);
     }
 
+    /// Optional: ECL-basierte Crossing-Prüfung (ProgrammableGateway mit Observer)
+    pub fn with_ecl_evaluator(mut self, evaluator: Arc<dyn crate::eclvm::EclCrossingEvaluator>) -> Self {
+        self.ecl_evaluator = Some(evaluator);
+        self
+    }
+
+    /// Realm als ECL-Entry-Policy-Realm markieren (ECL wird nach Regel-Check ausgeführt)
+    pub fn register_realm_ecl_entry(&mut self, realm: RealmId) {
+        self.realms_with_ecl_entry.insert(realm);
+    }
+
     /// Κ23: Validiere Realm-Crossing
     ///
     /// `cross(s, 𝒞₁, 𝒞₂) requires G(s, 𝒞₂) = true`
@@ -294,9 +316,29 @@ impl GatewayGuard {
             trust.clone()
         };
 
-        let allowed = violations.is_empty();
+        let mut allowed = violations.is_empty();
 
-        // 4. Bei erfolgreicher Validierung: Bereite Store-Initialisierung vor
+        // 4. Optional: ECL-Entry-Policy für Ziel-Realm (Phase 1.2)
+        if allowed {
+            if let (Some(ref evaluator), true) = (
+                &self.ecl_evaluator,
+                self.realms_with_ecl_entry.contains(to_realm),
+            ) {
+                match evaluator.validate_ecl_crossing(did, trust, from_realm, to_realm) {
+                    Ok(true) => {}
+                    Ok(false) => {
+                        allowed = false;
+                        violations.push("ECL policy denied".to_string());
+                    }
+                    Err(_) => {
+                        allowed = false;
+                        violations.push("ECL policy error".to_string());
+                    }
+                }
+            }
+        }
+
+        // 5. Bei erfolgreicher Validierung: Bereite Store-Initialisierung vor
         let (stores_to_initialize, setup_policy) = if allowed {
             (
                 target.personal_store_templates.clone(),

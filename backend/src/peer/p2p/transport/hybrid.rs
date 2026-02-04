@@ -27,13 +27,23 @@
 //!
 //! Der Manager trackt die Erfolgsraten beider Protokolle und
 //! passt die Timeouts entsprechend an.
+//!
+//! ## StateEvent-Integration (v0.4.0)
+//!
+//! Der HybridTransport emittiert nun StateEvents für Transport-Operationen:
+//!
+//! - `NetworkMetricUpdate(BytesSent/BytesReceived)` bei Datenübertragung
+//! - `NetworkMetricUpdate(LatencyAvg)` bei RTT-Updates
+//! - `NetworkMetricUpdate(ConnectedPeers)` bei Connection-Änderungen
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 
+use crate::core::state::{NetworkMetric, StateEvent, StateEventEmitter, NoOpEmitter};
 use super::quic::{QuicConfig, QuicTransport};
 use super::tcp_fallback::{TcpFallbackConfig, TcpFallbackTransport};
 
@@ -114,6 +124,7 @@ pub struct TcpMetricsSummary {
 /// Hybrid Transport Manager
 ///
 /// Koordiniert QUIC und TCP Transport mit automatischem Fallback.
+/// Emittiert StateEvents für Transport-Metriken (v0.4.0).
 pub struct HybridTransport {
     /// QUIC Transport
     quic: Arc<QuicTransport>,
@@ -125,6 +136,18 @@ pub struct HybridTransport {
     fallback_timeout: Duration,
     /// Erfolgsstatistiken
     stats: RwLock<HybridStats>,
+
+    // ========================================================================
+    // StateEvent-Integration (v0.4.0)
+    // ========================================================================
+    /// StateEvent-Emitter für Integration mit UnifiedState
+    state_event_emitter: Arc<dyn StateEventEmitter>,
+    /// Bytes gesendet (Gesamtzähler)
+    total_bytes_sent: AtomicU64,
+    /// Bytes empfangen (Gesamtzähler)
+    total_bytes_received: AtomicU64,
+    /// Letzte RTT (ms)
+    last_rtt_ms: AtomicU64,
 }
 
 /// Hybrid-Transport-Statistiken
@@ -153,12 +176,111 @@ impl HybridTransport {
             mode: RwLock::new(TransportMode::Hybrid),
             fallback_timeout: Duration::from_millis(QUIC_FALLBACK_TIMEOUT_MS),
             stats: RwLock::new(HybridStats::default()),
+            state_event_emitter: Arc::new(NoOpEmitter),
+            total_bytes_sent: AtomicU64::new(0),
+            total_bytes_received: AtomicU64::new(0),
+            last_rtt_ms: AtomicU64::new(0),
         }
     }
 
     /// Erstelle mit Standard-Konfiguration
     pub fn default_config() -> Self {
         Self::new(QuicConfig::default(), TcpFallbackConfig::default())
+    }
+
+    /// Erstelle mit StateEventEmitter (v0.4.0)
+    pub fn new_with_emitter(
+        quic_config: QuicConfig,
+        tcp_config: TcpFallbackConfig,
+        emitter: Arc<dyn StateEventEmitter>,
+    ) -> Self {
+        let mut transport = Self::new(quic_config, tcp_config);
+        transport.state_event_emitter = emitter;
+        transport
+    }
+
+    /// Setze StateEventEmitter nachträglich
+    pub fn set_state_event_emitter(&mut self, emitter: Arc<dyn StateEventEmitter>) {
+        self.state_event_emitter = emitter;
+    }
+
+    /// Record bytes sent and emit StateEvent (v0.4.0)
+    pub fn record_bytes_sent(&self, bytes: u64) {
+        let new_total = self.total_bytes_sent.fetch_add(bytes, Ordering::Relaxed) + bytes;
+
+        self.state_event_emitter.emit(StateEvent::NetworkMetricUpdate {
+            metric: NetworkMetric::BytesSent,
+            value: new_total,
+            delta: bytes as i64,
+        });
+    }
+
+    /// Record bytes received and emit StateEvent (v0.4.0)
+    pub fn record_bytes_received(&self, bytes: u64) {
+        let new_total = self.total_bytes_received.fetch_add(bytes, Ordering::Relaxed) + bytes;
+
+        self.state_event_emitter.emit(StateEvent::NetworkMetricUpdate {
+            metric: NetworkMetric::BytesReceived,
+            value: new_total,
+            delta: bytes as i64,
+        });
+    }
+
+    /// Record RTT update and emit StateEvent (v0.4.0)
+    pub fn record_rtt_update(&self, rtt_ms: u64) {
+        let old_rtt = self.last_rtt_ms.swap(rtt_ms, Ordering::Relaxed);
+
+        self.state_event_emitter.emit(StateEvent::NetworkMetricUpdate {
+            metric: NetworkMetric::LatencyAvg,
+            value: rtt_ms,
+            delta: rtt_ms as i64 - old_rtt as i64,
+        });
+    }
+
+    /// Record connection change and emit StateEvent (v0.4.0)
+    pub fn record_connection_change(&self, connected: bool, peer_id: &str, transport_type: &str) {
+        let delta = if connected { 1 } else { -1 };
+
+        // Hole aktuelle Anzahl von Metriken
+        let metrics = self.metrics();
+        let total_active = metrics.quic.active_connections + metrics.tcp.active_connections;
+
+        self.state_event_emitter.emit(StateEvent::NetworkMetricUpdate {
+            metric: NetworkMetric::ConnectedPeers,
+            value: total_active,
+            delta,
+        });
+
+        // Logging für Transport-Typ
+        tracing::debug!(
+            peer_id = peer_id,
+            transport = transport_type,
+            connected = connected,
+            total_active = total_active,
+            "Transport connection change"
+        );
+    }
+
+    /// Emit transport fallback event (v0.4.0)
+    fn emit_fallback_event(&self, from: &str, to: &str, reason: &str) {
+        tracing::info!(
+            from = from,
+            to = to,
+            reason = reason,
+            "Transport fallback triggered"
+        );
+
+        // Increment fallback counter
+        let stats = self.stats.read();
+        let fallback_events = stats.fallback_events;
+        drop(stats);
+
+        // Emit StateEvent für Fallback
+        self.state_event_emitter.emit(StateEvent::NetworkMetricUpdate {
+            metric: NetworkMetric::TransportFallbacks,
+            value: fallback_events + 1,
+            delta: 1,
+        });
     }
 
     /// Hole aktuellen Transport-Modus

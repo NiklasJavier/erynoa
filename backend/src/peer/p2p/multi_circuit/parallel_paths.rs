@@ -958,6 +958,7 @@ mod tests {
                 RelayCandidate::from_peer_info(
                     libp2p::PeerId::random(),
                     PeerTrustInfo {
+                        universal_id: None,
                         did: None,
                         trust_r: 0.85,
                         trust_omega: 0.75,

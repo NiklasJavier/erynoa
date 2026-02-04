@@ -36,6 +36,7 @@
 //! let stream = conn.open_bi().await?;
 //! ```
 
+use crate::domain::UniversalId;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -181,6 +182,7 @@ pub struct QuicTransport {
 
 /// Connection-State
 #[derive(Debug, Clone)]
+/// Connection-State für einen Peer (v0.4.0: Mit UniversalId)
 pub struct ConnectionState {
     /// Remote-Adresse
     pub remote_addr: SocketAddr,
@@ -198,6 +200,10 @@ pub struct ConnectionState {
     pub rtt_ms: u32,
     /// Ist 0-RTT Connection
     pub is_0rtt: bool,
+    /// UniversalId des Peers (v0.4.0)
+    pub universal_id: Option<UniversalId>,
+    /// Identität verifiziert (v0.4.0)
+    pub identity_verified: bool,
 }
 
 /// 0-RTT Resumption Token
@@ -314,11 +320,14 @@ impl QuicTransport {
     }
 
     /// Registriere neue Connection
+    ///
+    /// Tracking für Statistiken und Idle-Detection.
     pub fn register_connection(
         &self,
         peer_id: &str,
         remote_addr: SocketAddr,
         is_0rtt: bool,
+        universal_id: Option<UniversalId>,
     ) -> ConnectionState {
         let now = Instant::now();
         let state = ConnectionState {
@@ -330,6 +339,8 @@ impl QuicTransport {
             bytes_received: 0,
             rtt_ms: 0,
             is_0rtt,
+            universal_id,
+            identity_verified: false,
         };
 
         // Update Metrics
@@ -358,6 +369,37 @@ impl QuicTransport {
                 metrics.active_connections -= 1;
             }
         }
+    }
+
+    /// Setze UniversalId für Connection nach Verifikation (v0.4.0)
+    pub fn set_connection_identity(
+        &self,
+        peer_id: &str,
+        universal_id: UniversalId,
+        verified: bool,
+    ) {
+        if let Some(conn) = self.connections.write().get_mut(peer_id) {
+            conn.universal_id = Some(universal_id);
+            conn.identity_verified = verified;
+        }
+    }
+
+    /// Finde Connection nach UniversalId (v0.4.0)
+    pub fn find_connection_by_universal_id(&self, universal_id: &UniversalId) -> Option<(String, ConnectionState)> {
+        self.connections
+            .read()
+            .iter()
+            .find(|(_, conn)| conn.universal_id.as_ref() == Some(universal_id))
+            .map(|(peer_id, conn)| (peer_id.clone(), conn.clone()))
+    }
+
+    /// Anzahl verifizierter Connections (v0.4.0)
+    pub fn verified_connections_count(&self) -> usize {
+        self.connections
+            .read()
+            .values()
+            .filter(|conn| conn.identity_verified)
+            .count()
     }
 
     /// Aktualisiere Connection-Statistiken
@@ -517,7 +559,7 @@ mod tests {
         let transport = QuicTransport::new(QuicConfig::default());
 
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)), 4433);
-        let state = transport.register_connection("peer-1", addr, true);
+        let state = transport.register_connection("peer-1", addr, true, None);
 
         assert!(state.is_0rtt);
         assert_eq!(state.remote_addr, addr);
@@ -535,7 +577,7 @@ mod tests {
         let transport = QuicTransport::new(QuicConfig::default());
 
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)), 4433);
-        transport.register_connection("peer-1", addr, false);
+        transport.register_connection("peer-1", addr, false, None);
         assert_eq!(transport.active_connections(), 1);
 
         transport.remove_connection("peer-1");
@@ -551,7 +593,7 @@ mod tests {
         let transport = QuicTransport::new(QuicConfig::default());
 
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)), 4433);
-        transport.register_connection("peer-1", addr, false);
+        transport.register_connection("peer-1", addr, false, None);
 
         transport.update_connection_stats("peer-1", 1000, 2000, 50);
 
@@ -572,7 +614,7 @@ mod tests {
         let addr1 = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)), 4433);
         let addr2 = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1)), 4433);
 
-        transport.register_connection("peer-1", addr1, false);
+        transport.register_connection("peer-1", addr1, false, None);
         transport.register_migration("peer-1", addr2);
 
         let conn = transport.get_connection("peer-1").unwrap();

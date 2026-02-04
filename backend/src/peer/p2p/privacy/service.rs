@@ -44,6 +44,16 @@
 //! - **RL10**: Cover-Traffic Indistinguishability
 //! - **RL18**: Protocol-Pledge Cover-Rates
 //! - **RL25**: LAMP Threshold-Mixing
+//!
+//! ## StateEvent-Integration (v0.4.0)
+//!
+//! Der PrivacyService emittiert nun StateEvents für Privacy-Operationen:
+//!
+//! - `PrivacyCircuitCreated` - bei Route-Erstellung
+//! - `PrivacyMessageSent` - bei Nachrichtenversand
+//! - `CoverTrafficGenerated` - bei Cover-Traffic-Generierung
+//! - `MixingPoolFlushed` - bei Pool-Flush
+//! - `RelaySelectionCompleted` - bei Relay-Auswahl
 
 use super::cover_traffic::{
     ComplianceMonitor, ComplianceStatus, CoverGeneratorStats, CoverMessage, CoverTrafficConfig,
@@ -52,6 +62,8 @@ use super::cover_traffic::{
 use super::mixing::{LampStats, MixingPool, MixingPoolConfig};
 use super::onion::OnionDecryptor;
 use super::relay_selection::{RelayCandidate, RelaySelector, SensitivityLevel};
+use crate::core::state::{StateEvent, StateEventEmitter, NoOpEmitter};
+use crate::domain::UniversalId;
 use libp2p::PeerId;
 use parking_lot::RwLock;
 use std::collections::HashMap;
@@ -154,19 +166,43 @@ pub struct PrivacyMessage {
 // ROUTE CACHE
 // ============================================================================
 
-/// Gecachte Route für einen Destination-Peer
+/// Gecachte Route für einen Destination-Peer (v0.4.0: Mit circuit_id und UniversalIds)
 struct CachedRoute {
-    /// Route (Relay-Peers)
+    /// Eindeutige Circuit-ID (v0.4.0)
+    circuit_id: String,
+    /// Route (Relay-Peers als PeerId)
     route: Vec<PeerId>,
+    /// Route (Relay-Peers als UniversalId, falls bekannt)
+    ///
+    /// Parallel zu `route` gespeichert für konsistente Identifikation
+    /// und Integration mit StateEvents/TrustGate.
+    route_universal_ids: Vec<Option<UniversalId>>,
     /// Sensitivitätslevel
     sensitivity: SensitivityLevel,
     /// Erstellungszeitpunkt
     created_at: Instant,
+    /// Anzahl gerouteter Nachrichten (v0.4.0)
+    messages_routed: std::sync::atomic::AtomicU64,
 }
 
 impl CachedRoute {
     fn is_expired(&self, max_age: Duration) -> bool {
         self.created_at.elapsed() > max_age
+    }
+
+    /// Lebenszeit in Sekunden (v0.4.0)
+    fn lifetime_secs(&self) -> u64 {
+        self.created_at.elapsed().as_secs()
+    }
+
+    /// Inkrementiere Nachrichtenzähler (v0.4.0)
+    fn record_message(&self) {
+        self.messages_routed.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    /// Hole Nachrichtenzähler (v0.4.0)
+    fn get_messages_routed(&self) -> u64 {
+        self.messages_routed.load(std::sync::atomic::Ordering::Relaxed)
     }
 }
 
@@ -197,16 +233,37 @@ impl RouteCache {
         })
     }
 
-    fn insert(&self, destination: PeerId, route: Vec<PeerId>, sensitivity: SensitivityLevel) {
+    fn insert(
+        &self,
+        destination: PeerId,
+        route: Vec<PeerId>,
+        route_universal_ids: Vec<Option<UniversalId>>,
+        sensitivity: SensitivityLevel,
+        circuit_id: String,
+    ) {
         let mut routes = self.routes.write();
         routes.insert(
             destination,
             CachedRoute {
+                circuit_id,
                 route,
+                route_universal_ids,
                 sensitivity,
                 created_at: Instant::now(),
+                messages_routed: std::sync::atomic::AtomicU64::new(0),
             },
         );
+    }
+
+    /// Invalidiere Route und gib Circuit-Info zurück (v0.4.0)
+    fn invalidate_with_info(&self, destination: &PeerId) -> Option<(String, u64, u64)> {
+        let mut routes = self.routes.write();
+        routes.remove(destination).map(|cached| {
+            let circuit_id = cached.circuit_id.clone();
+            let lifetime = cached.lifetime_secs();
+            let messages = cached.get_messages_routed();
+            (circuit_id, lifetime, messages)
+        })
     }
 
     fn invalidate(&self, destination: &PeerId) {
@@ -217,9 +274,30 @@ impl RouteCache {
         self.routes.write().clear();
     }
 
+    /// Cleanup und gib abgelaufene Circuits zurück (v0.4.0)
+    fn cleanup_expired_with_info(&self) -> Vec<(String, u64, u64)> {
+        let mut routes = self.routes.write();
+        let expired: Vec<_> = routes
+            .iter()
+            .filter(|(_, cached)| cached.is_expired(self.max_age))
+            .map(|(_, cached)| {
+                (cached.circuit_id.clone(), cached.lifetime_secs(), cached.get_messages_routed())
+            })
+            .collect();
+        routes.retain(|_, cached| !cached.is_expired(self.max_age));
+        expired
+    }
+
     fn cleanup_expired(&self) {
         let mut routes = self.routes.write();
         routes.retain(|_, cached| !cached.is_expired(self.max_age));
+    }
+
+    /// Record message für Route (v0.4.0)
+    fn record_message(&self, destination: &PeerId) {
+        if let Some(cached) = self.routes.read().get(destination) {
+            cached.record_message();
+        }
     }
 }
 
@@ -304,6 +382,19 @@ pub struct PrivacyService {
     messages_sent: AtomicU64,
     messages_received: AtomicU64,
     messages_dropped: AtomicU64,
+
+    // ========================================================================
+    // StateEvent-Emission (v0.4.0)
+    // ========================================================================
+    /// StateEvent-Emitter für Integration mit UnifiedState
+    state_event_emitter: Arc<dyn StateEventEmitter>,
+
+    /// Counter für Circuit-IDs
+    circuit_counter: AtomicU64,
+
+    /// Tracking für Cover-Traffic-Metriken
+    cover_messages_total: AtomicU64,
+    cover_bytes_total: AtomicU64,
 }
 
 impl PrivacyService {
@@ -350,15 +441,51 @@ impl PrivacyService {
             messages_sent: AtomicU64::new(0),
             messages_received: AtomicU64::new(0),
             messages_dropped: AtomicU64::new(0),
+            state_event_emitter: Arc::new(NoOpEmitter),
+            circuit_counter: AtomicU64::new(0),
+            cover_messages_total: AtomicU64::new(0),
+            cover_bytes_total: AtomicU64::new(0),
         };
 
         (service, output_rx, cover_output_rx)
+    }
+
+    /// Erstelle Service mit StateEventEmitter
+    ///
+    /// Ermöglicht Integration mit UnifiedState für StateEvent-Emission.
+    pub fn new_with_emitter(
+        config: PrivacyServiceConfig,
+        emitter: Arc<dyn StateEventEmitter>,
+    ) -> (
+        Self,
+        mpsc::Receiver<(PeerId, Vec<u8>)>,
+        mpsc::Receiver<CoverMessage>,
+    ) {
+        let (mut service, output_rx, cover_rx) = Self::new(config);
+        service.state_event_emitter = emitter;
+        (service, output_rx, cover_rx)
+    }
+
+    /// Setze StateEventEmitter nachträglich
+    pub fn set_state_event_emitter(&mut self, emitter: Arc<dyn StateEventEmitter>) {
+        self.state_event_emitter = emitter;
+    }
+
+    /// Erhalte Referenz auf StateEventEmitter
+    pub fn state_event_emitter(&self) -> &Arc<dyn StateEventEmitter> {
+        &self.state_event_emitter
     }
 
     /// Erstelle Service mit Decryptor (für Relay-Nodes)
     pub fn with_decryptor(self, decryptor: OnionDecryptor) -> Self {
         *self.decryptor.lock() = Some(decryptor);
         self
+    }
+
+    /// Generiere neue Circuit-ID
+    fn next_circuit_id(&self) -> String {
+        let counter = self.circuit_counter.fetch_add(1, Ordering::Relaxed);
+        format!("circuit-{:08x}", counter)
     }
 
     /// Ist Service aktiviert?
@@ -382,6 +509,8 @@ impl PrivacyService {
     /// 1. Onion-verschlüsselt (mit gecachter oder neuer Route)
     /// 2. In den Mixing-Pool gelegt
     /// 3. Nach Delay-Ablauf gesendet
+    ///
+    /// Emittiert `StateEvent::PrivacyMessageSent` bei Erfolg.
     pub async fn send_message(
         &self,
         destination: PeerId,
@@ -393,6 +522,8 @@ impl PrivacyService {
             return Err(PrivacyError::ServiceDisabled);
         }
 
+        let payload_size = payload.len() as u64;
+
         // Route auswählen (oder aus Cache)
         let route = self.get_or_create_route(&destination, sensitivity, relay_candidates)?;
 
@@ -400,14 +531,33 @@ impl PrivacyService {
             return Err(PrivacyError::NoRouteAvailable);
         }
 
+        let hop_count = route.len() as u8;
+
         // Onion-Paket bauen
         let onion_packet = self.build_onion_packet(&payload, &route, &destination)?;
 
         // In Mixing-Pool legen
         let first_hop = route[0];
+        let mixing_delay_ms = sensitivity.mixing_delay_ms();
         self.mixing_pool.add_message(onion_packet, first_hop).await;
 
         self.messages_sent.fetch_add(1, Ordering::Relaxed);
+
+        // StateEvent emittieren (v0.4.0)
+        // Versuche UniversalId für Destination zu finden (aus relay_candidates)
+        let destination_id = relay_candidates
+            .iter()
+            .find(|c| c.peer_id == destination)
+            .and_then(|c| c.universal_id.clone());
+
+        self.state_event_emitter.emit(StateEvent::PrivacyMessageSent {
+            destination_id,
+            sensitivity: format!("{:?}", sensitivity),
+            payload_size,
+            mixing_delay_ms,
+            hop_count,
+            is_cover_traffic: false,
+        });
 
         tracing::trace!(
             destination = %destination,
@@ -500,12 +650,21 @@ impl PrivacyService {
             self_clone1.cover_generator.run(route_provider).await;
         });
 
-        // Task 3: Route-Cache Cleanup
+        // Task 3: Route-Cache Cleanup (v0.4.0: Mit StateEvents)
         let cleanup_task = tokio::spawn(async move {
             let mut interval = tokio::time::interval(self_clone2.config.route_refresh_interval / 2);
             loop {
                 interval.tick().await;
-                self_clone2.route_cache.cleanup_expired();
+                // Cleanup und emit StateEvents für abgelaufene Circuits
+                let expired = self_clone2.route_cache.cleanup_expired_with_info();
+                for (circuit_id, lifetime_secs, messages_routed) in expired {
+                    self_clone2.state_event_emitter.emit(StateEvent::PrivacyCircuitClosed {
+                        circuit_id,
+                        reason: "expired".to_string(),
+                        lifetime_secs,
+                        messages_routed,
+                    });
+                }
             }
         });
 
@@ -559,13 +718,37 @@ impl PrivacyService {
         }
     }
 
-    /// Invalidiere Route für Destination
+    /// Invalidiere Route für Destination (v0.4.0: Mit StateEvent)
     pub fn invalidate_route(&self, destination: &PeerId) {
-        self.route_cache.invalidate(destination);
+        self.invalidate_route_with_reason(destination, "manual_invalidation");
     }
 
-    /// Lösche alle gecachten Routen
+    /// Invalidiere Route mit Grund (v0.4.0)
+    pub fn invalidate_route_with_reason(&self, destination: &PeerId, reason: &str) {
+        if let Some((circuit_id, lifetime_secs, messages_routed)) =
+            self.route_cache.invalidate_with_info(destination)
+        {
+            self.state_event_emitter.emit(StateEvent::PrivacyCircuitClosed {
+                circuit_id,
+                reason: reason.to_string(),
+                lifetime_secs,
+                messages_routed,
+            });
+        }
+    }
+
+    /// Lösche alle gecachten Routen (v0.4.0: Mit StateEvents)
     pub fn clear_routes(&self) {
+        // Emit events für alle Circuits
+        let all_circuits = self.route_cache.cleanup_expired_with_info();
+        for (circuit_id, lifetime_secs, messages_routed) in all_circuits {
+            self.state_event_emitter.emit(StateEvent::PrivacyCircuitClosed {
+                circuit_id,
+                reason: "clear_all".to_string(),
+                lifetime_secs,
+                messages_routed,
+            });
+        }
         self.route_cache.clear();
     }
 
@@ -584,27 +767,104 @@ impl PrivacyService {
             return Ok(route);
         }
 
+        let candidates_available = relay_candidates.len() as u64;
+        let candidates_eligible = relay_candidates.iter().filter(|c| c.can_relay()).count() as u64;
+
         // Neue Route erstellen
         let selector = RelaySelector::new(relay_candidates.to_vec(), sensitivity);
-        let route_public_keys = selector
-            .select_route()
+        let route_result = selector.select_route();
+
+        // StateEvent für Relay-Selection emittieren
+        match &route_result {
+            Ok(public_keys) => {
+                // Berechne durchschnittlichen Trust-Score
+                let selected_candidates: Vec<_> = public_keys
+                    .iter()
+                    .filter_map(|pk| relay_candidates.iter().find(|rc| rc.public_key == *pk))
+                    .collect();
+
+                let avg_trust_score = if selected_candidates.is_empty() {
+                    0.0
+                } else {
+                    selected_candidates.iter().map(|c| c.trust_score.total).sum::<f64>()
+                        / selected_candidates.len() as f64
+                };
+
+                self.state_event_emitter.emit(StateEvent::RelaySelectionCompleted {
+                    candidates_available,
+                    candidates_eligible,
+                    relays_selected: public_keys.len() as u8,
+                    sensitivity: format!("{:?}", sensitivity),
+                    avg_trust_score,
+                    success: true,
+                    error: None,
+                });
+            }
+            Err(e) => {
+                self.state_event_emitter.emit(StateEvent::RelaySelectionCompleted {
+                    candidates_available,
+                    candidates_eligible,
+                    relays_selected: 0,
+                    sensitivity: format!("{:?}", sensitivity),
+                    avg_trust_score: 0.0,
+                    success: false,
+                    error: Some(e.to_string()),
+                });
+            }
+        }
+
+        let route_public_keys = route_result
             .map_err(|e| PrivacyError::RouteSelectionFailed(e.to_string()))?;
 
         // Route ist Vec<PublicKey>, wir konvertieren zu PeerIds
         // Hinweis: In Produktion würde man eine PublicKey→PeerId Lookup-Map verwenden
-        let route_peers: Vec<PeerId> = route_public_keys
+        // Extrahiere PeerIds und UniversalIds parallel
+        let route_data: Vec<(PeerId, Option<UniversalId>)> = route_public_keys
             .iter()
             .filter_map(|pk| {
                 relay_candidates
                     .iter()
                     .find(|rc| rc.public_key == *pk)
-                    .map(|rc| rc.peer_id)
+                    .map(|rc| (rc.peer_id, rc.universal_id))
             })
             .collect();
 
-        // Cachen
-        self.route_cache
-            .insert(*destination, route_peers.clone(), sensitivity);
+        let route_peers: Vec<PeerId> = route_data.iter().map(|(pid, _)| *pid).collect();
+        let route_universal_ids: Vec<Option<UniversalId>> =
+            route_data.iter().map(|(_, uid)| *uid).collect();
+
+        // Prüfe ob alle Relays eine UniversalId haben
+        let fully_identified = route_universal_ids.iter().all(|uid| uid.is_some());
+
+        // Zähle Jurisdiktionen
+        let jurisdictions: std::collections::HashSet<_> = route_public_keys
+            .iter()
+            .filter_map(|pk| {
+                relay_candidates
+                    .iter()
+                    .find(|rc| rc.public_key == *pk)
+                    .map(|rc| rc.jurisdiction.clone())
+            })
+            .collect();
+
+        // StateEvent für Circuit-Erstellung emittieren
+        let circuit_id = self.next_circuit_id();
+        self.state_event_emitter.emit(StateEvent::PrivacyCircuitCreated {
+            circuit_id: circuit_id.clone(),
+            hop_count: route_peers.len() as u8,
+            sensitivity: format!("{:?}", sensitivity),
+            fully_identified,
+            jurisdiction_count: jurisdictions.len() as u8,
+        });
+
+        // Cachen mit circuit_id und UniversalIds
+        self.route_cache.insert(
+            *destination,
+            route_peers.clone(),
+            route_universal_ids,
+            sensitivity,
+            circuit_id,
+        );
 
         Ok(route_peers)
     }
@@ -646,6 +906,25 @@ impl PrivacyService {
             actual_rate,
             self.config.cover_traffic.min_compliance_ratio(),
         );
+
+        // StateEvent für Cover-Traffic emittieren (v0.4.0)
+        let compliance_status = if compliance_result.is_compliant {
+            "ok"
+        } else if compliance_result.deficit > 0.3 {
+            "violation"
+        } else {
+            "warning"
+        };
+
+        // Schätze Bytes (Cover-Messages sind typischerweise 512 Bytes)
+        let estimated_bytes = cover_stats.cover_sent * 512;
+
+        self.state_event_emitter.emit(StateEvent::CoverTrafficGenerated {
+            messages_count: cover_stats.cover_sent,
+            total_bytes: estimated_bytes,
+            compliance_status: compliance_status.to_string(),
+            rate_per_minute: actual_rate * 60.0, // Konvertiere zu pro Minute
+        });
 
         if !compliance_result.is_compliant {
             tracing::warn!(
@@ -763,8 +1042,14 @@ mod tests {
         // Initial leer
         assert!(cache.get(&dest, SensitivityLevel::Medium).is_none());
 
-        // Einfügen
-        cache.insert(dest, route.clone(), SensitivityLevel::Medium);
+        // Einfügen mit circuit_id und leeren UniversalIds
+        cache.insert(
+            dest,
+            route.clone(),
+            vec![None, None], // Keine UniversalIds in diesem Test
+            SensitivityLevel::Medium,
+            "test-circuit-1".to_string(),
+        );
 
         // Abrufen
         let cached = cache.get(&dest, SensitivityLevel::Medium);
@@ -774,8 +1059,15 @@ mod tests {
         // Falsches Sensitivity-Level
         assert!(cache.get(&dest, SensitivityLevel::High).is_none());
 
-        // Invalidieren
-        cache.invalidate(&dest);
+        // Invalidieren mit Info (v0.4.0)
+        let info = cache.invalidate_with_info(&dest);
+        assert!(info.is_some());
+        let (circuit_id, lifetime, messages) = info.unwrap();
+        assert_eq!(circuit_id, "test-circuit-1");
+        assert!(lifetime >= 0);
+        assert_eq!(messages, 0);
+
+        // Nach Invalidierung leer
         assert!(cache.get(&dest, SensitivityLevel::Medium).is_none());
     }
 

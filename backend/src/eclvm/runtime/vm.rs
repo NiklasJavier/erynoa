@@ -1,4 +1,4 @@
-//! # ECLVM - Die Virtual Machine
+//! # ECLVM - Die Virtual Machine (E2: ECLVMBudget Integration)
 //!
 //! Stack-basierte, Gas-metered VM für deterministische Policy-Ausführung.
 //!
@@ -18,10 +18,18 @@
 //! │  └─────────────┘  └─────────────────────────────────┘    │
 //! │                                    │                      │
 //! │  ┌─────────────┐                   │                      │
-//! │  │ Gas: 847    │◀──────────────────┘ consume()           │
+//! │  │ Budget/Gas  │◀──────────────────┘ consume()           │
 //! │  └─────────────┘                                         │
 //! └───────────────────────────────────────────────────────────┘
 //! ```
+//!
+//! ## E2: ECLVMBudget Integration
+//!
+//! Die VM unterstützt zwei Modi:
+//! - **Legacy**: `GasMeter` für einfache Gas-Limits
+//! - **Budget**: `ECLVMBudget` für unified Gas + Mana + Timeout Tracking
+
+use std::sync::Arc;
 
 use super::gas::GasMeter;
 use super::host::HostInterface;
@@ -29,9 +37,18 @@ use super::host::HostInterface;
 use super::host::StubHost;
 #[cfg(test)]
 use crate::eclvm::bytecode::TrustDimIndex;
+use crate::core::state::{ECLVMBudget, GasLayer, MultiGas};
 use crate::eclvm::bytecode::{OpCode, Value};
 use crate::error::{ApiError, Result};
 use anyhow::anyhow;
+
+/// E2: Gas-Tracking Modus
+enum GasMode {
+    /// Legacy: Separater GasMeter
+    Meter(GasMeter),
+    /// E2: Unified ECLVMBudget
+    Budget(Arc<ECLVMBudget>),
+}
 
 /// Kontrollfluss-Ergebnis einer Instruktion
 #[derive(Debug)]
@@ -55,8 +72,8 @@ pub struct ECLVM<'a> {
     /// Das Bytecode-Programm
     program: Vec<OpCode>,
 
-    /// Gas Meter für DoS-Schutz
-    gas: GasMeter,
+    /// E2: Gas-Tracking Modus (GasMeter oder ECLVMBudget)
+    gas_mode: GasMode,
 
     /// Host Interface für externe Aufrufe
     host: &'a dyn HostInterface,
@@ -66,6 +83,13 @@ pub struct ECLVM<'a> {
 
     /// Max Stack-Tiefe (DoS-Schutz)
     max_stack_depth: usize,
+
+    /// E5: Optional Multi-Layer Gas Tracker
+    /// Wenn gesetzt, werden Gas-Kosten auch nach Layer differenziert
+    multi_gas: Option<Arc<MultiGas>>,
+
+    /// E5: Realm-ID für per-Realm Gas Tracking
+    realm_id: Option<String>,
 }
 
 /// Ergebnis einer VM-Ausführung
@@ -75,21 +99,43 @@ pub struct ExecutionResult {
     pub value: Value,
     /// Verbrauchtes Gas
     pub gas_used: u64,
+    /// E2: Verbrauchtes Mana (nur bei ECLVMBudget, sonst 0)
+    pub mana_used: u64,
     /// Log-Nachrichten während der Ausführung
     pub logs: Vec<String>,
+    /// Ausführungsdauer in Mikrosekunden (wird vom Runner gesetzt)
+    pub duration_us: u64,
 }
 
 impl<'a> ECLVM<'a> {
-    /// Erstelle neue VM mit Programm und Gas-Limit
+    /// Erstelle neue VM mit Programm und Gas-Limit (Legacy)
     pub fn new(program: Vec<OpCode>, gas_limit: u64, host: &'a dyn HostInterface) -> Self {
         Self {
             stack: Vec::with_capacity(256),
             ip: 0,
             program,
-            gas: GasMeter::new(gas_limit),
+            gas_mode: GasMode::Meter(GasMeter::new(gas_limit)),
             host,
             call_stack: Vec::with_capacity(64),
             max_stack_depth: 1024,
+            multi_gas: None,
+            realm_id: None,
+        }
+    }
+
+    /// E2: Erstelle VM mit ECLVMBudget für unified Gas + Mana + Timeout
+    pub fn with_budget(program: Vec<OpCode>, budget: Arc<ECLVMBudget>, host: &'a dyn HostInterface) -> Self {
+        let max_stack_depth = budget.limits.max_stack_depth as usize;
+        Self {
+            stack: Vec::with_capacity(256),
+            ip: 0,
+            program,
+            gas_mode: GasMode::Budget(budget),
+            host,
+            call_stack: Vec::with_capacity(64),
+            max_stack_depth,
+            multi_gas: None,
+            realm_id: None,
         }
     }
 
@@ -99,10 +145,77 @@ impl<'a> ECLVM<'a> {
             stack: Vec::with_capacity(256),
             ip: 0,
             program,
-            gas: GasMeter::unlimited(),
+            gas_mode: GasMode::Meter(GasMeter::unlimited()),
             host,
             call_stack: Vec::with_capacity(64),
             max_stack_depth: 1024,
+            multi_gas: None,
+            realm_id: None,
+        }
+    }
+
+    /// E5: Setze MultiGas Tracker für 4-Layer Gas Metering
+    pub fn with_multi_gas(mut self, multi_gas: Arc<MultiGas>) -> Self {
+        self.multi_gas = Some(multi_gas);
+        self
+    }
+
+    /// E5: Setze Realm-ID für per-Realm Gas Tracking
+    pub fn with_realm_id(mut self, realm_id: impl Into<String>) -> Self {
+        self.realm_id = Some(realm_id.into());
+        self
+    }
+
+    /// E2: Konsumiere Gas über aktuellen Modus
+    #[inline(always)]
+    fn consume_gas(&mut self, amount: u64) -> Result<()> {
+        match &mut self.gas_mode {
+            GasMode::Meter(meter) => meter.consume(amount),
+            GasMode::Budget(budget) => {
+                if budget.consume_gas(amount) {
+                    Ok(())
+                } else {
+                    // Budget liefert Grund für Erschöpfung
+                    let reason = budget.exhaustion_reason()
+                        .map(|r| format!("{:?}", r))
+                        .unwrap_or_else(|| "Budget exhausted".to_string());
+                    Err(ApiError::Internal(anyhow!("{}", reason)))
+                }
+            }
+        }
+    }
+
+    /// E5: Konsumiere Gas mit Layer-Tracking
+    ///
+    /// Konsumiert Gas aus dem Hauptbudget UND trackt per Layer wenn MultiGas aktiv.
+    #[inline(always)]
+    fn consume_gas_layered(&mut self, layer: GasLayer, amount: u64) -> Result<()> {
+        // Erst das Hauptbudget/Meter konsumieren
+        self.consume_gas(amount)?;
+
+        // E5: Optional auch im MultiGas Tracker nach Layer buchen
+        if let Some(ref multi_gas) = self.multi_gas {
+            multi_gas.consume(layer, amount, self.realm_id.as_deref());
+        }
+
+        Ok(())
+    }
+
+    /// E2: Hole verbrauchtes Gas
+    #[inline(always)]
+    fn gas_consumed(&self) -> u64 {
+        match &self.gas_mode {
+            GasMode::Meter(meter) => meter.consumed(),
+            GasMode::Budget(budget) => budget.gas_used(),
+        }
+    }
+
+    /// E2: Hole verbrauchtes Mana (nur bei Budget-Modus)
+    #[inline(always)]
+    fn mana_consumed(&self) -> u64 {
+        match &self.gas_mode {
+            GasMode::Meter(_) => 0,
+            GasMode::Budget(budget) => budget.mana_used(),
         }
     }
 
@@ -110,13 +223,29 @@ impl<'a> ECLVM<'a> {
     ///
     /// Optimierte Main-Loop mit inline Handler-Funktionen für bessere
     /// Branch Prediction und Instruction Cache Locality.
+    ///
+    /// ## E5: Multi-Layer Gas
+    ///
+    /// Wenn MultiGas gesetzt ist, werden Gas-Kosten nach Layer differenziert:
+    /// - Network: Host-Calls (LoadTrust, HasCredential, ...)
+    /// - Compute: Arithmetik, Logik, Control Flow
+    /// - Storage: Log, Store-Operationen
+    /// - Realm: Cross-Realm Operationen (noch nicht implementiert)
     pub fn run(&mut self) -> Result<ExecutionResult> {
         while self.ip < self.program.len() {
             let op = self.program[self.ip].clone();
             self.ip += 1;
 
-            // 1. Gas abziehen
-            self.gas.consume(op.gas_cost())?;
+            // 1. E5: Gas abziehen mit Layer-Tracking
+            let (layer, layer_cost) = op.gas_layer_cost();
+            // Nutze den ursprünglichen gas_cost() für Budget-Konsum
+            // und layer_cost für MultiGas-Tracking
+            if self.multi_gas.is_some() {
+                self.consume_gas_layered(layer, layer_cost)?;
+            } else {
+                // Fallback: nur op.gas_cost() für Kompatibilität
+                self.consume_gas(op.gas_cost())?;
+            }
 
             // 2. Stack-Tiefe prüfen
             if self.stack.len() > self.max_stack_depth {
@@ -129,8 +258,10 @@ impl<'a> ECLVM<'a> {
                 ControlFlow::Return(result) => {
                     return Ok(ExecutionResult {
                         value: result,
-                        gas_used: self.gas.consumed(),
+                        gas_used: self.gas_consumed(),
+                        mana_used: self.mana_consumed(),
                         logs: Vec::new(),
+                        duration_us: 0, // Runner setzt echte Dauer
                     });
                 }
                 ControlFlow::Error(msg) => {
@@ -142,9 +273,16 @@ impl<'a> ECLVM<'a> {
         // Programm zu Ende ohne explizites Return/Halt
         Ok(ExecutionResult {
             value: self.stack.pop().unwrap_or(Value::Null),
-            gas_used: self.gas.consumed(),
+            gas_used: self.gas_consumed(),
+            mana_used: self.mana_consumed(),
             logs: Vec::new(),
+            duration_us: 0, // Runner setzt echte Dauer
         })
+    }
+
+    /// E5: Hole MultiGas Snapshot (wenn aktiv)
+    pub fn multi_gas_snapshot(&self) -> Option<crate::core::state::MultiGasSnapshot> {
+        self.multi_gas.as_ref().map(|mg| mg.snapshot())
     }
 
     /// Dispatch einer einzelnen Instruktion.
@@ -1411,5 +1549,267 @@ mod tests {
         .unwrap();
 
         assert_eq!(result, Value::Bool(true));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // E2 Tests: ECLVM mit ECLVMBudget
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_e2_vm_with_budget() {
+        use crate::core::state::{ECLVMBudget, ECLVMBudgetLimits};
+
+        let host = StubHost::new();
+        let program = vec![
+            OpCode::PushConst(Value::Number(1.0)),
+            OpCode::PushConst(Value::Number(2.0)),
+            OpCode::Add,
+            OpCode::Return,
+        ];
+
+        let budget = Arc::new(ECLVMBudget::new(ECLVMBudgetLimits::default()));
+        let mut vm = ECLVM::with_budget(program, budget.clone(), &host);
+
+        let result = vm.run().unwrap();
+
+        assert_eq!(result.value, Value::Number(3.0));
+        assert!(result.gas_used > 0);
+        assert_eq!(result.gas_used, budget.gas_used());
+    }
+
+    #[test]
+    fn test_e2_vm_budget_exhaustion() {
+        use crate::core::state::{ECLVMBudget, ECLVMBudgetLimits};
+
+        let host = StubHost::new();
+        // Programm mit vielen Operationen
+        let mut program = vec![];
+        for _ in 0..50 {
+            program.push(OpCode::PushConst(Value::Number(1.0)));
+            program.push(OpCode::Pop);
+        }
+        program.push(OpCode::PushConst(Value::Bool(true)));
+        program.push(OpCode::Return);
+
+        // Sehr kleines Gas-Budget
+        let limits = ECLVMBudgetLimits {
+            gas_limit: 5, // Extrem wenig
+            mana_limit: 1_000,
+            max_stack_depth: 1024,
+            timeout_ms: 5_000,
+        };
+        let budget = Arc::new(ECLVMBudget::new(limits));
+        let mut vm = ECLVM::with_budget(program, budget.clone(), &host);
+
+        let result = vm.run();
+
+        // Sollte fehlschlagen
+        assert!(result.is_err());
+        assert!(budget.is_exhausted());
+    }
+
+    #[test]
+    fn test_e2_vm_budget_max_stack_depth() {
+        use crate::core::state::{ECLVMBudget, ECLVMBudgetLimits};
+
+        let host = StubHost::new();
+
+        // Kleines Stack-Limit
+        let limits = ECLVMBudgetLimits {
+            gas_limit: 100_000,
+            mana_limit: 1_000,
+            max_stack_depth: 5, // Sehr klein
+            timeout_ms: 5_000,
+        };
+        let budget = Arc::new(ECLVMBudget::new(limits));
+
+        // Programm das Stack überfüllt
+        let mut program = vec![];
+        for _ in 0..10 {
+            program.push(OpCode::PushConst(Value::Number(1.0)));
+        }
+        program.push(OpCode::Return);
+
+        let mut vm = ECLVM::with_budget(program, budget, &host);
+
+        let result = vm.run();
+
+        // Sollte wegen Stack Overflow fehlschlagen
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_e2_execution_result_has_mana() {
+        use crate::core::state::{ECLVMBudget, ECLVMBudgetLimits};
+
+        let host = StubHost::new();
+        let program = vec![
+            OpCode::PushConst(Value::Bool(true)),
+            OpCode::Return,
+        ];
+
+        let budget = Arc::new(ECLVMBudget::new(ECLVMBudgetLimits::default()));
+
+        // Konsumiere etwas Mana extern
+        budget.consume_mana(100);
+
+        let mut vm = ECLVM::with_budget(program, budget.clone(), &host);
+        let result = vm.run().unwrap();
+
+        // mana_used sollte die externe Konsumption reflektieren
+        assert_eq!(result.mana_used, 100);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // E5 Tests: MultiGas 4-Layer
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_e5_multi_gas_tracking() {
+        use std::sync::atomic::Ordering;
+
+        let host = StubHost::new();
+
+        // Programm mit verschiedenen Op-Typen
+        let program = vec![
+            // Compute Ops
+            OpCode::PushConst(Value::Number(1.0)),
+            OpCode::PushConst(Value::Number(2.0)),
+            OpCode::Add,
+            // Noch mehr Compute
+            OpCode::PushConst(Value::Number(3.0)),
+            OpCode::Mul,
+            OpCode::Return,
+        ];
+
+        let multi_gas = Arc::new(MultiGas::new());
+        let mut vm = ECLVM::new_unlimited(program, &host)
+            .with_multi_gas(multi_gas.clone());
+
+        let result = vm.run().unwrap();
+
+        // Ergebnis sollte korrekt sein
+        assert_eq!(result.value, Value::Number(9.0)); // (1+2)*3 = 9
+
+        // MultiGas sollte Compute-Gas haben
+        let compute_gas = multi_gas.compute.load(Ordering::Relaxed);
+        assert!(compute_gas > 0, "Compute gas should be tracked");
+
+        // Network und Storage sollten 0 sein (keine solchen Ops)
+        let network_gas = multi_gas.network.load(Ordering::Relaxed);
+        assert_eq!(network_gas, 0, "No network ops should mean 0 network gas");
+    }
+
+    #[test]
+    fn test_e5_multi_gas_with_realm() {
+        use std::sync::atomic::Ordering;
+
+        let host = StubHost::new();
+
+        let program = vec![
+            OpCode::PushConst(Value::Bool(true)),
+            OpCode::Return,
+        ];
+
+        let multi_gas = Arc::new(MultiGas::new());
+
+        // Realm registrieren
+        multi_gas.register_realm("realm:test");
+
+        let mut vm = ECLVM::new_unlimited(program, &host)
+            .with_multi_gas(multi_gas.clone())
+            .with_realm_id("realm:test");
+
+        let _result = vm.run().unwrap();
+
+        // Snapshot sollte funktionieren
+        let snapshot = vm.multi_gas_snapshot();
+        assert!(snapshot.is_some());
+
+        let snap = snapshot.unwrap();
+        assert!(snap.compute > 0);
+        assert_eq!(snap.realm_count, 1);
+    }
+
+    #[test]
+    fn test_e5_gas_layer_cost_compute() {
+        // Compute Ops
+        assert_eq!(OpCode::Add.gas_layer_cost(), (GasLayer::Compute, 2));
+        assert_eq!(OpCode::Sub.gas_layer_cost(), (GasLayer::Compute, 2));
+        assert_eq!(OpCode::Mul.gas_layer_cost(), (GasLayer::Compute, 3));
+        assert_eq!(OpCode::Div.gas_layer_cost(), (GasLayer::Compute, 5));
+        assert_eq!(OpCode::PushConst(Value::Null).gas_layer_cost(), (GasLayer::Compute, 1));
+    }
+
+    #[test]
+    fn test_e5_gas_layer_cost_network() {
+        // Network Ops (Host Calls)
+        assert_eq!(OpCode::LoadTrust.gas_layer_cost(), (GasLayer::Network, 10));
+        assert_eq!(OpCode::HasCredential.gas_layer_cost(), (GasLayer::Network, 5));
+        assert_eq!(OpCode::ResolveDID.gas_layer_cost(), (GasLayer::Network, 5));
+    }
+
+    #[test]
+    fn test_e5_gas_layer_cost_storage() {
+        // Storage Ops
+        assert_eq!(OpCode::Log.gas_layer_cost(), (GasLayer::Storage, 2));
+    }
+
+    #[test]
+    fn test_e5_vm_without_multi_gas_still_works() {
+        // Sicherstellen dass VM ohne MultiGas weiterhin funktioniert
+
+        let host = StubHost::new();
+        let program = vec![
+            OpCode::PushConst(Value::Number(5.0)),
+            OpCode::PushConst(Value::Number(3.0)),
+            OpCode::Sub,
+            OpCode::Return,
+        ];
+
+        // Ohne MultiGas
+        let mut vm = ECLVM::new(program, 10_000, &host);
+        let result = vm.run().unwrap();
+
+        assert_eq!(result.value, Value::Number(2.0));
+        assert!(result.gas_used > 0);
+
+        // multi_gas_snapshot sollte None sein
+        assert!(vm.multi_gas_snapshot().is_none());
+    }
+
+    #[test]
+    fn test_e5_multi_gas_aggregation() {
+        use std::sync::atomic::Ordering;
+
+        let host = StubHost::new();
+
+        // Mehrere verschiedene Ops
+        let program = vec![
+            // 3 Compute Ops
+            OpCode::PushConst(Value::Number(1.0)),  // Compute: 1
+            OpCode::PushConst(Value::Number(2.0)),  // Compute: 1
+            OpCode::Add,                            // Compute: 2
+            OpCode::Pop,                            // Compute: 1
+            // Return
+            OpCode::PushConst(Value::Bool(true)),   // Compute: 1
+            OpCode::Return,                         // Compute: 5
+        ];
+
+        let multi_gas = Arc::new(MultiGas::new());
+        let mut vm = ECLVM::new_unlimited(program, &host)
+            .with_multi_gas(multi_gas.clone());
+
+        vm.run().unwrap();
+
+        // Total sollte alle Compute-Kosten enthalten
+        let total = multi_gas.total_consumed.load(Ordering::Relaxed);
+        assert!(total > 0);
+
+        // Snapshot prüfen
+        let snapshot = multi_gas.snapshot();
+        assert!(snapshot.compute > 0);
+        assert_eq!(snapshot.network, 0);
+        assert_eq!(snapshot.storage, 0);
     }
 }

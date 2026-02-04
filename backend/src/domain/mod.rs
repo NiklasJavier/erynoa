@@ -10,14 +10,17 @@
 //! ├─────────────────────────────────────────────────────────────────────┤
 //! │  unified/   - Zukunftssichere Datenstrukturen (UDM)                │
 //! │    primitives  - UniversalId, TemporalCoord                        │
+//! │    system      - SystemMode, EventPriority, AnomalySeverity        │
+//! │    component   - StateComponent, ComponentLayer, StateRelation     │
+//! │    action      - RealmAction, MembershipAction, BlueprintAction    │
 //! │    identity    - DID, DIDDocument, Delegation (Κ6-Κ8)              │
 //! │    event       - Event, FinalityState (Κ9-Κ12)                     │
-//! │    trust       - TrustVector6D, TrustRecord (Κ2-Κ5)               │
+//! │    trust       - TrustVector6D, TrustRecord, TrustUpdateReason     │
 //! │    realm       - Realm-Hierarchie (Κ1)                             │
 //! │    saga        - Multi-Step Transaktionen (Κ22-Κ24)                │
 //! │    formula     - Weltformel-Komponenten (Κ15a-d)                   │
 //! │    cost        - Kosten-Algebra (Gas × Mana × Trust-Risk)          │
-//! │    message     - P2P-Nachrichtentypen                              │
+//! │    message     - P2P-Nachrichtentypen (mit Signatur-Support)       │
 //! └─────────────────────────────────────────────────────────────────────┘
 //! ```
 //!
@@ -45,6 +48,15 @@ pub mod unified;
 
 // Primitives
 pub use unified::{TemporalCoord, UniversalId};
+
+// System
+pub use unified::{AnomalySeverity, EventPriority, SystemMode};
+
+// Component
+pub use unified::{ComponentLayer, StateComponent, StateRelation};
+
+// Action
+pub use unified::{BlueprintAction, MembershipAction, NetworkMetric, RealmAction};
 
 // Identity
 pub use unified::{

@@ -9,7 +9,19 @@
 //! - Bootstrapping und Discovery
 //! - Message-Routing zu Topics
 //! - Privacy-Layer Integration (Phase 2 Woche 8)
+//! - StateEvent-Emission (v0.4.0)
+//!
+//! ## StateEvent-Integration
+//!
+//! Der SwarmManager emittiert nun StateEvents an das zentrale UnifiedState:
+//!
+//! - `PeerConnectionChange` - bei Peer connected/disconnected
+//! - `NetworkMetricUpdate` - bei Metrik-Änderungen
+//! - Privacy-Events - bei Privacy-Layer-Operationen
 
+use crate::core::state::{NetworkMetric, StateEvent, StateEventEmitter, NoOpEmitter};
+use crate::core::identity_types::IdentityResolver;
+use crate::domain::UniversalId;
 use crate::peer::p2p::behaviour::{ErynoaBehaviour, ErynoaBehaviourEvent};
 use crate::peer::p2p::config::P2PConfig;
 use crate::peer::p2p::identity::{PeerIdentity, SignedPeerInfo};
@@ -18,7 +30,7 @@ use crate::peer::p2p::privacy::{
     CoverMessage, PrivacyService, PrivacyServiceConfig, RelayCandidate, SensitivityLevel,
 };
 use crate::peer::p2p::protocol::{SyncRequest, SyncResponse};
-use crate::peer::p2p::topics::{RealmTopic, TopicManager, TopicMessage};
+use crate::peer::p2p::topics::{RealmTopic, TopicManager, TopicMessage, SignedTopicMessage, SignatureError};
 use crate::peer::p2p::trust_gate::TrustGate;
 use anyhow::{anyhow, Result};
 use futures::StreamExt;
@@ -32,6 +44,7 @@ use libp2p::{Multiaddr, PeerId, Swarm, Transport};
 use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use tokio::sync::{broadcast, mpsc, oneshot};
 
 /// Swarm Manager Command
@@ -112,11 +125,27 @@ pub enum SwarmEvent2 {
     PeerConnected { peer_id: PeerId },
     /// Peer getrennt
     PeerDisconnected { peer_id: PeerId },
-    /// Gossipsub-Message empfangen
+    /// Gossipsub-Message empfangen (verifiziert)
     GossipMessage {
         topic: TopicHash,
         message: TopicMessage,
         source: Option<PeerId>,
+        /// Signer UniversalId (v0.4.0 - falls signiert)
+        signer_id: Option<UniversalId>,
+        /// Signatur-Status (v0.4.0)
+        signature_verified: bool,
+    },
+    /// Unsigned Gossipsub-Message empfangen
+    UnsignedGossipMessage {
+        topic: TopicHash,
+        message: TopicMessage,
+        source: Option<PeerId>,
+    },
+    /// Signatur-Verifikation fehlgeschlagen
+    GossipMessageRejected {
+        topic: TopicHash,
+        source: Option<PeerId>,
+        error: SignatureError,
     },
     /// Peer discovert via mDNS
     MdnsDiscovered {
@@ -135,7 +164,38 @@ pub struct IncomingSyncRequest {
     pub channel: ResponseChannel<Vec<u8>>,
 }
 
+/// Signatur-Statistiken für SwarmManager (v0.4.0)
+#[derive(Debug, Clone, Default)]
+pub struct SignatureStats {
+    /// Erfolgreich verifizierte Signaturen
+    pub verified: u64,
+    /// Fehlgeschlagene Signatur-Verifikationen
+    pub failed: u64,
+    /// Unsignierte Messages
+    pub unsigned: u64,
+}
+
+impl SignatureStats {
+    /// Gesamtzahl verarbeiteter Messages
+    pub fn total(&self) -> u64 {
+        self.verified + self.failed + self.unsigned
+    }
+
+    /// Verifikationsrate (0.0 - 1.0)
+    pub fn verification_rate(&self) -> f64 {
+        let total = self.verified + self.failed;
+        if total == 0 {
+            1.0
+        } else {
+            self.verified as f64 / total as f64
+        }
+    }
+}
+
 /// Swarm Manager
+///
+/// Emittiert nun StateEvents für P2P-Netzwerk-Aktivitäten.
+/// Verifiziert signierte Gossipsub-Messages (v0.4.0).
 pub struct SwarmManager {
     /// Konfiguration
     config: P2PConfig,
@@ -167,6 +227,30 @@ pub struct SwarmManager {
     /// Pending Request-Response
     pending_requests:
         Arc<RwLock<HashMap<OutboundRequestId, oneshot::Sender<Result<SyncResponse>>>>>,
+
+    // ========================================================================
+    // StateEvent-Emission (v0.4.0)
+    // ========================================================================
+    /// StateEvent-Emitter für Integration mit UnifiedState
+    state_event_emitter: Arc<dyn StateEventEmitter>,
+
+    /// Counter für Metrik-Deltas
+    last_connected_peers: AtomicU64,
+    last_gossip_messages: AtomicU64,
+
+    // ========================================================================
+    // Signatur-Verifikation (v0.4.0)
+    // ========================================================================
+    /// IdentityResolver für Signatur-Verifikation (optional)
+    identity_resolver: Option<Arc<dyn IdentityResolver + Send + Sync>>,
+
+    /// Strikte Signatur-Modus: Ablehnen unsignierter Messages
+    require_signatures: bool,
+
+    /// Signatur-Statistiken
+    signatures_verified: AtomicU64,
+    signatures_failed: AtomicU64,
+    unsigned_messages: AtomicU64,
 
     // ========================================================================
     // Privacy-Layer (Phase 2 Woche 8)
@@ -204,6 +288,14 @@ impl SwarmManager {
                 running: Arc::new(RwLock::new(false)),
                 pending_dht_gets: Arc::new(RwLock::new(HashMap::new())),
                 pending_requests: Arc::new(RwLock::new(HashMap::new())),
+                state_event_emitter: Arc::new(NoOpEmitter),
+                last_connected_peers: AtomicU64::new(0),
+                last_gossip_messages: AtomicU64::new(0),
+                identity_resolver: None,
+                require_signatures: false, // Default: Akzeptiert signierte und unsignierte
+                signatures_verified: AtomicU64::new(0),
+                signatures_failed: AtomicU64::new(0),
+                unsigned_messages: AtomicU64::new(0),
                 #[cfg(feature = "privacy")]
                 privacy_service: None,
                 #[cfg(feature = "privacy")]
@@ -211,6 +303,63 @@ impl SwarmManager {
             },
             sync_request_rx,
         )
+    }
+
+    /// Erstelle SwarmManager mit StateEventEmitter
+    ///
+    /// Ermöglicht Integration mit UnifiedState für StateEvent-Emission.
+    pub fn new_with_emitter(
+        config: P2PConfig,
+        identity: PeerIdentity,
+        emitter: Arc<dyn StateEventEmitter>,
+    ) -> (Self, mpsc::Receiver<IncomingSyncRequest>) {
+        let (mut manager, rx) = Self::new(config, identity);
+        manager.state_event_emitter = emitter;
+        (manager, rx)
+    }
+
+    /// Erstelle SwarmManager mit IdentityResolver für Signatur-Verifikation
+    pub fn new_with_identity_resolver(
+        config: P2PConfig,
+        identity: PeerIdentity,
+        resolver: Arc<dyn IdentityResolver + Send + Sync>,
+        require_signatures: bool,
+    ) -> (Self, mpsc::Receiver<IncomingSyncRequest>) {
+        let (mut manager, rx) = Self::new(config, identity);
+        manager.identity_resolver = Some(resolver);
+        manager.require_signatures = require_signatures;
+        (manager, rx)
+    }
+
+    /// Setze IdentityResolver nachträglich
+    pub fn set_identity_resolver(&mut self, resolver: Arc<dyn IdentityResolver + Send + Sync>) {
+        self.identity_resolver = Some(resolver);
+    }
+
+    /// Aktiviere striken Signatur-Modus (unsignierte Messages werden abgelehnt)
+    pub fn set_require_signatures(&mut self, require: bool) {
+        self.require_signatures = require;
+    }
+
+    /// Signatur-Statistiken
+    pub fn signature_stats(&self) -> SignatureStats {
+        SignatureStats {
+            verified: self.signatures_verified.load(Ordering::Relaxed),
+            failed: self.signatures_failed.load(Ordering::Relaxed),
+            unsigned: self.unsigned_messages.load(Ordering::Relaxed),
+        }
+    }
+
+    /// Setze StateEventEmitter
+    ///
+    /// Kann nachträglich gesetzt werden, z.B. nach Initialisierung.
+    pub fn set_state_event_emitter(&mut self, emitter: Arc<dyn StateEventEmitter>) {
+        self.state_event_emitter = emitter;
+    }
+
+    /// Erhalte Referenz auf StateEventEmitter
+    pub fn state_event_emitter(&self) -> &Arc<dyn StateEventEmitter> {
+        &self.state_event_emitter
     }
 
     /// Erstelle SwarmManager mit Privacy-Service (Phase 2 Woche 8)
@@ -231,6 +380,25 @@ impl SwarmManager {
         let (service, output_rx, cover_rx) = PrivacyService::new(privacy_config);
         manager.privacy_service = Some(Arc::new(service));
 
+        (manager, sync_rx, output_rx, cover_rx)
+    }
+
+    /// Erstelle SwarmManager mit Privacy-Service und StateEventEmitter
+    #[cfg(feature = "privacy")]
+    pub fn with_privacy_and_emitter(
+        config: P2PConfig,
+        identity: PeerIdentity,
+        privacy_config: PrivacyServiceConfig,
+        emitter: Arc<dyn StateEventEmitter>,
+    ) -> (
+        Self,
+        mpsc::Receiver<IncomingSyncRequest>,
+        mpsc::Receiver<(PeerId, Vec<u8>)>,
+        mpsc::Receiver<CoverMessage>,
+    ) {
+        let (mut manager, sync_rx, output_rx, cover_rx) =
+            Self::with_privacy(config, identity, privacy_config);
+        manager.state_event_emitter = emitter;
         (manager, sync_rx, output_rx, cover_rx)
     }
 
@@ -380,7 +548,7 @@ impl SwarmManager {
                 tracing::info!(address = %address, "Listening on");
             }
 
-            SwarmEvent::ConnectionEstablished { peer_id, .. } => {
+            SwarmEvent::ConnectionEstablished { peer_id, endpoint, .. } => {
                 // Trust-Check
                 let decision = self.trust_gate.check_connection(&peer_id);
                 if !decision.allowed {
@@ -397,13 +565,52 @@ impl SwarmManager {
                     .behaviour_mut()
                     .kademlia
                     .add_address(&peer_id, "/ip4/0.0.0.0/tcp/0".parse().unwrap());
+
+                // StateEvent emittieren (v0.4.0)
+                let peer_universal_id = self.trust_gate.get_universal_id_by_peer_id(&peer_id);
+                let addr = endpoint.get_remote_address();
+                self.state_event_emitter.emit(StateEvent::PeerConnectionChange {
+                    peer_id: peer_id.to_string(),
+                    peer_universal_id,
+                    connected: true,
+                    addr: Some(addr.to_string()),
+                    connection_level: Some(format!("{:?}", decision.level)),
+                });
+
+                // Metrik-Update
+                let new_count = self.last_connected_peers.fetch_add(1, Ordering::Relaxed) + 1;
+                self.state_event_emitter.emit(StateEvent::NetworkMetricUpdate {
+                    metric: NetworkMetric::ConnectedPeers,
+                    value: new_count,
+                    delta: 1,
+                });
             }
 
-            SwarmEvent::ConnectionClosed { peer_id, .. } => {
+            SwarmEvent::ConnectionClosed { peer_id, endpoint, .. } => {
                 tracing::info!(peer_id = %peer_id, "Peer disconnected");
                 let _ = self
                     .event_tx
                     .send(SwarmEvent2::PeerDisconnected { peer_id });
+
+                // StateEvent emittieren (v0.4.0)
+                let peer_universal_id = self.trust_gate.get_universal_id_by_peer_id(&peer_id);
+                let addr = endpoint.get_remote_address();
+                self.state_event_emitter.emit(StateEvent::PeerConnectionChange {
+                    peer_id: peer_id.to_string(),
+                    peer_universal_id,
+                    connected: false,
+                    addr: Some(addr.to_string()),
+                    connection_level: None,
+                });
+
+                // Metrik-Update
+                let old_count = self.last_connected_peers.fetch_sub(1, Ordering::Relaxed);
+                let new_count = old_count.saturating_sub(1);
+                self.state_event_emitter.emit(StateEvent::NetworkMetricUpdate {
+                    metric: NetworkMetric::ConnectedPeers,
+                    value: new_count,
+                    delta: -1,
+                });
             }
 
             SwarmEvent::Behaviour(behaviour_event) => {
@@ -426,12 +633,86 @@ impl SwarmManager {
                 message_id: _,
                 message,
             }) => {
-                // Parse Message
-                if let Ok(topic_msg) = TopicMessage::from_bytes(&message.data) {
+                // Versuche zuerst als SignedTopicMessage zu parsen (v0.4.0)
+                if let Ok(mut signed_msg) = SignedTopicMessage::from_bytes(&message.data) {
+                    // Prüfe ob Message abgelaufen ist (Replay-Schutz)
+                    if signed_msg.is_expired() {
+                        self.signatures_failed.fetch_add(1, Ordering::Relaxed);
+                        let _ = self.event_tx.send(SwarmEvent2::GossipMessageRejected {
+                            topic: message.topic.clone(),
+                            source: Some(propagation_source),
+                            error: SignatureError::MessageExpired,
+                        });
+                        return;
+                    }
+
+                    // Signatur verifizieren mit IdentityResolver (v0.4.0)
+                    let (signature_verified, signer_id) = if let Some(ref resolver) = self.identity_resolver {
+                        match signed_msg.verify(resolver.as_ref()) {
+                            Ok(true) => {
+                                self.signatures_verified.fetch_add(1, Ordering::Relaxed);
+                                (true, signed_msg.signer_id)
+                            }
+                            Ok(false) | Err(_) => {
+                                self.signatures_failed.fetch_add(1, Ordering::Relaxed);
+                                let _ = self.event_tx.send(SwarmEvent2::GossipMessageRejected {
+                                    topic: message.topic.clone(),
+                                    source: Some(propagation_source),
+                                    error: SignatureError::InvalidSignature,
+                                });
+                                return;
+                            }
+                        }
+                    } else {
+                        // Kein Resolver: Akzeptiere ohne Verifikation
+                        self.signatures_verified.fetch_add(1, Ordering::Relaxed);
+                        (true, signed_msg.signer_id)
+                    };
+
+                    let topic_msg = signed_msg.into_message();
+
                     let _ = self.event_tx.send(SwarmEvent2::GossipMessage {
-                        topic: message.topic,
+                        topic: message.topic.clone(),
                         message: topic_msg,
                         source: Some(propagation_source),
+                        signer_id: Some(signer_id),
+                        signature_verified,
+                    });
+
+                    // StateEvent: Gossip-Metrik (v0.4.0)
+                    let new_count = self.last_gossip_messages.fetch_add(1, Ordering::Relaxed) + 1;
+                    self.state_event_emitter.emit(StateEvent::NetworkMetricUpdate {
+                        metric: NetworkMetric::GossipMessagesReceived,
+                        value: new_count,
+                        delta: 1,
+                    });
+                }
+                // Fallback: Versuche als unsignierte TopicMessage
+                else if let Ok(topic_msg) = TopicMessage::from_bytes(&message.data) {
+                    self.unsigned_messages.fetch_add(1, Ordering::Relaxed);
+
+                    // Strikte Modus: Ablehnen unsignierter Messages
+                    if self.require_signatures {
+                        let _ = self.event_tx.send(SwarmEvent2::GossipMessageRejected {
+                            topic: message.topic.clone(),
+                            source: Some(propagation_source),
+                            error: SignatureError::MissingSignature,
+                        });
+                        return;
+                    }
+
+                    let _ = self.event_tx.send(SwarmEvent2::UnsignedGossipMessage {
+                        topic: message.topic.clone(),
+                        message: topic_msg,
+                        source: Some(propagation_source),
+                    });
+
+                    // StateEvent: Gossip-Metrik
+                    let new_count = self.last_gossip_messages.fetch_add(1, Ordering::Relaxed) + 1;
+                    self.state_event_emitter.emit(StateEvent::NetworkMetricUpdate {
+                        metric: NetworkMetric::GossipMessagesReceived,
+                        value: new_count,
+                        delta: 1,
                     });
                 }
             }
@@ -749,6 +1030,9 @@ impl SwarmManager {
     }
 
     /// Publish Event to Realm
+    /// Publish Event (signiert mit PeerIdentity)
+    ///
+    /// Erstellt eine signierte TopicMessage und publiziert sie im Realm.
     pub async fn publish_event(
         &self,
         realm_id: &str,
@@ -762,17 +1046,42 @@ impl SwarmManager {
             sender: sender.to_string(),
         };
 
+        // Signiere Message mit PeerIdentity (v0.4.0)
+        let signer_id = self.identity.universal_id_owned();
+        let signed_message = self.sign_topic_message(message, signer_id)?;
+
         let (tx, rx) = oneshot::channel();
         self.command_tx
             .send(SwarmCommand::Publish {
                 topic: topic.hash(),
-                message: message.to_bytes()?,
+                message: signed_message.to_bytes()?,
                 response: tx,
             })
             .await
             .map_err(|_| anyhow!("Failed to send command"))?;
 
         rx.await.map_err(|_| anyhow!("Channel closed"))?
+    }
+
+    /// Signiere eine TopicMessage mit der PeerIdentity
+    fn sign_topic_message(
+        &self,
+        message: TopicMessage,
+        signer_id: UniversalId,
+    ) -> Result<SignedTopicMessage> {
+        // Verwende die sign() Methode der PeerIdentity
+        let keypair = self.identity.keypair();
+
+        SignedTopicMessage::new(message, signer_id, |data| {
+            // Ed25519-Signatur mit libp2p keypair
+            let sig = keypair.sign(data).map_err(|e| anyhow!("Signing failed: {}", e))?;
+            if sig.len() != 64 {
+                return Err(anyhow!("Invalid signature length: {}", sig.len()));
+            }
+            let mut arr = [0u8; 64];
+            arr.copy_from_slice(&sig);
+            Ok(arr)
+        })
     }
 
     /// Request Events from Peer
@@ -785,6 +1094,7 @@ impl SwarmManager {
     ) -> Result<SyncResponse> {
         let request = SyncRequest::GetEventsAfter {
             realm_id: realm_id.to_string(),
+            realm_universal_id: None, // TODO: Konvertiere realm_id zu UniversalId
             after_hash,
             limit,
         };
@@ -875,6 +1185,10 @@ impl SwarmManager {
     ///
     /// Kombiniert `publish_event` mit Privacy-Routing.
     #[cfg(feature = "privacy")]
+    /// Publish Event über Privacy-Layer (signiert)
+    ///
+    /// Sendet eine signierte TopicMessage über den Privacy-Layer
+    /// (Onion-Routing, Mixing-Pool).
     pub async fn publish_event_private(
         &self,
         _realm_id: &str,
@@ -888,7 +1202,11 @@ impl SwarmManager {
             sender: sender.to_string(),
         };
 
-        let payload = message.to_bytes()?;
+        // Signiere Message (v0.4.0)
+        let signer_id = self.identity.universal_id_owned();
+        let signed_message = self.sign_topic_message(message, signer_id)?;
+
+        let payload = signed_message.to_bytes()?;
 
         // Wähle einen zufälligen Peer im Realm als Eintrittspunkt
         let connected = self.connected_peers().await?;
@@ -901,6 +1219,74 @@ impl SwarmManager {
 
         self.send_privacy_message(destination, payload, sensitivity)
             .await
+    }
+
+    /// Publish Trust-Attestation (signiert)
+    pub async fn publish_trust_attestation(
+        &self,
+        realm_id: &str,
+        subject: &str,
+        trust_delta: f64,
+        reason: Option<String>,
+    ) -> Result<gossipsub::MessageId> {
+        let topic = RealmTopic::realm_trust(realm_id);
+        let attester = self.identity.did.to_uri();
+
+        let message = TopicMessage::TrustAttestation {
+            attester,
+            subject: subject.to_string(),
+            trust_delta,
+            reason,
+        };
+
+        // Signiere Message (v0.4.0)
+        let signer_id = self.identity.universal_id_owned();
+        let signed_message = self.sign_topic_message(message, signer_id)?;
+
+        let (tx, rx) = oneshot::channel();
+        self.command_tx
+            .send(SwarmCommand::Publish {
+                topic: topic.hash(),
+                message: signed_message.to_bytes()?,
+                response: tx,
+            })
+            .await
+            .map_err(|_| anyhow!("Failed to send command"))?;
+
+        rx.await.map_err(|_| anyhow!("Channel closed"))?
+    }
+
+    /// Publish Saga-Broadcast (signiert)
+    pub async fn publish_saga_broadcast(
+        &self,
+        realm_id: &str,
+        saga_id: &str,
+        phase: &str,
+        payload: Vec<u8>,
+    ) -> Result<gossipsub::MessageId> {
+        let topic = RealmTopic::realm_sagas(realm_id);
+
+        let message = TopicMessage::SagaBroadcast {
+            saga_id: saga_id.to_string(),
+            phase: phase.to_string(),
+            payload,
+        };
+
+        // Signiere Message (v0.4.0)
+        let signer_id = self.identity.universal_id_owned();
+        let signed_message = self.sign_topic_message(message, signer_id)?;
+
+        let (tx, rx) = oneshot::channel();
+        self.command_tx
+            .send(SwarmCommand::Publish {
+                topic: topic.hash(),
+                message: signed_message.to_bytes()?,
+                response: tx,
+            })
+            .await
+            .map_err(|_| anyhow!("Failed to send command"))?;
+
+        rx.await.map_err(|_| anyhow!("Channel closed"))?
     }
 }
 
@@ -970,6 +1356,7 @@ mod tests {
 
         // Erstelle Test-TrustInfo
         let trust_info = crate::peer::p2p::trust_gate::PeerTrustInfo {
+            universal_id: None,
             did: None,
             trust_r: 0.8,
             trust_omega: 0.7,

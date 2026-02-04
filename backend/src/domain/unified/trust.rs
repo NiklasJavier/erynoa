@@ -586,18 +586,131 @@ pub struct DailyTrustStats {
 /// Grund für Trust-Update
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum TrustUpdateReason {
+    // ========================================================================
+    // Interaction-basierte Gründe
+    // ========================================================================
+    /// Direkte Interaktion zwischen Identitäten
     DirectInteraction,
-    AttestationReceived,
-    DelegationCreated,
-    DelegationRevoked,
-    VouchReceived,
-    VouchRevoked,
-    PolicyViolation,
+    /// Positive Beitrag zum Realm/System
     PositiveContribution,
+    /// Realm-spezifische Aktivität
+    RealmActivity,
+
+    // ========================================================================
+    // Attestation/Delegation-basierte Gründe (Κ8)
+    // ========================================================================
+    /// Attestation erhalten
+    AttestationReceived,
+    /// Delegation erstellt
+    DelegationCreated,
+    /// Delegation widerrufen
+    DelegationRevoked,
+    /// Vouch erhalten
+    VouchReceived,
+    /// Vouch widerrufen
+    VouchRevoked,
+
+    // ========================================================================
+    // Negative/Policy-basierte Gründe
+    // ========================================================================
+    /// Policy-Verletzung erkannt
+    PolicyViolation,
+    /// Anomalie erkannt (Protection-Layer)
     AnomalyDetected,
+    /// Dispute-Resolution (Streitbeilegung)
+    DisputeResolution,
+
+    // ========================================================================
+    // System-basierte Gründe
+    // ========================================================================
+    /// System-Anpassung (automatisch)
     SystemAdjustment,
+    /// Zeitbasierter Decay
     DecayOverTime,
+    /// Consensus-Validierung
+    ConsensusValidation,
+    /// Kalibrierung (Self-Healing)
+    Calibration,
+    /// Admin-Override (manuell)
+    AdminOverride,
+
+    // ========================================================================
+    // Extensibility
+    // ========================================================================
+    /// Custom-Grund mit Beschreibung
     Custom(String),
+}
+
+impl TrustUpdateReason {
+    /// Prüfe ob Grund positiv ist (Trust erhöhend)
+    pub fn is_positive(&self) -> bool {
+        matches!(
+            self,
+            TrustUpdateReason::DirectInteraction
+                | TrustUpdateReason::PositiveContribution
+                | TrustUpdateReason::AttestationReceived
+                | TrustUpdateReason::DelegationCreated
+                | TrustUpdateReason::VouchReceived
+                | TrustUpdateReason::ConsensusValidation
+                | TrustUpdateReason::RealmActivity
+        )
+    }
+
+    /// Prüfe ob Grund negativ ist (Trust senkend)
+    pub fn is_negative(&self) -> bool {
+        matches!(
+            self,
+            TrustUpdateReason::DelegationRevoked
+                | TrustUpdateReason::VouchRevoked
+                | TrustUpdateReason::PolicyViolation
+                | TrustUpdateReason::AnomalyDetected
+                | TrustUpdateReason::DecayOverTime
+                | TrustUpdateReason::DisputeResolution
+        )
+    }
+
+    /// Prüfe ob Grund system-initiiert ist
+    pub fn is_system_initiated(&self) -> bool {
+        matches!(
+            self,
+            TrustUpdateReason::SystemAdjustment
+                | TrustUpdateReason::DecayOverTime
+                | TrustUpdateReason::ConsensusValidation
+                | TrustUpdateReason::Calibration
+                | TrustUpdateReason::AdminOverride
+        )
+    }
+
+    /// Prüfe ob Grund manuell/admin-initiiert ist
+    pub fn requires_admin(&self) -> bool {
+        matches!(
+            self,
+            TrustUpdateReason::AdminOverride | TrustUpdateReason::DisputeResolution
+        )
+    }
+
+    /// Human-readable Beschreibung
+    pub fn description(&self) -> &'static str {
+        match self {
+            TrustUpdateReason::DirectInteraction => "Direct interaction between identities",
+            TrustUpdateReason::PositiveContribution => "Positive contribution to realm/system",
+            TrustUpdateReason::RealmActivity => "Realm-specific activity",
+            TrustUpdateReason::AttestationReceived => "Attestation received",
+            TrustUpdateReason::DelegationCreated => "Delegation created",
+            TrustUpdateReason::DelegationRevoked => "Delegation revoked",
+            TrustUpdateReason::VouchReceived => "Vouch received",
+            TrustUpdateReason::VouchRevoked => "Vouch revoked",
+            TrustUpdateReason::PolicyViolation => "Policy violation detected",
+            TrustUpdateReason::AnomalyDetected => "Anomaly detected by protection layer",
+            TrustUpdateReason::DisputeResolution => "Dispute resolution outcome",
+            TrustUpdateReason::SystemAdjustment => "Automatic system adjustment",
+            TrustUpdateReason::DecayOverTime => "Time-based decay",
+            TrustUpdateReason::ConsensusValidation => "Consensus validation",
+            TrustUpdateReason::Calibration => "Self-healing calibration",
+            TrustUpdateReason::AdminOverride => "Manual admin override",
+            TrustUpdateReason::Custom(_) => "Custom reason",
+        }
+    }
 }
 
 // ============================================================================

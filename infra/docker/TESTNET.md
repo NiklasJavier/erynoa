@@ -1,62 +1,85 @@
 # 🌐 Erynoa P2P Testnet
 
-Multi-Node Docker-Umgebung für P2P-Entwicklung und Tests.
+Multi-Node Docker-Umgebung für P2P-Entwicklung und Tests mit Hot-Reloading.
 
 ## Quick Start
 
 ```bash
-# Testnet starten
-./scripts/dev/testnet.sh start
+# Dev-Testnet starten (Hot-Reloading + NAT-Simulation)
+just testnet-dev run
 
 # Status prüfen
-./scripts/dev/testnet.sh status
+just testnet-dev status
 
 # Logs verfolgen
-./scripts/dev/testnet.sh logs:f
+just testnet-dev logs
 
-# Testnet stoppen
-./scripts/dev/testnet.sh stop
+# Relay-Verbindung testen
+just testnet-dev test-relay
+
+# Stoppen
+just testnet-dev down
 ```
 
 ## Architektur
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    erynoa-testnet (Bridge Network)                  │
-│                         172.28.0.0/16                               │
-│                                                                     │
-│   ┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐     │
-│   │ relay1  │◄───►│ relay2  │◄───►│ relay3  │◄───►│ client  │     │
-│   │ .0.10   │     │ .0.11   │     │ .0.12   │     │ .0.20   │     │
-│   │ :4001   │     │ :4002   │     │ :4003   │     │ :4004   │     │
-│   │ :9001   │     │ :9002   │     │ :9003   │     │ :9004   │     │
-│   │ GENESIS │     │         │     │         │     │         │     │
-│   └─────────┘     └─────────┘     └─────────┘     └─────────┘     │
-│        △               │               │               │          │
-│        └───────────────┴───────────────┴───────────────┘          │
-│                    Bootstrap via relay1                            │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    erynoa-testnet (Bridge Networks)                         │
+│                                                                             │
+│   ┌───────────────────────────────────────────────────────────────────┐    │
+│   │                    testnet (172.28.0.0/16)                        │    │
+│   │                                                                   │    │
+│   │  ┌─────────┐     ┌─────────┐     ┌─────────┐                     │    │
+│   │  │ relay1  │◄───►│ relay2  │◄───►│ relay3  │                     │    │
+│   │  │ .0.10   │     │ .0.11   │     │ .0.12   │                     │    │
+│   │  │ :4001   │     │ :4002   │     │ :4003   │                     │    │
+│   │  │ :4433/u │     │ :4434/u │     │ :4435/u │                     │    │
+│   │  │ GENESIS │     │  RELAY  │     │  RELAY  │                     │    │
+│   │  └────┬────┘     └────┬────┘     └────┬────┘                     │    │
+│   │       │               │               │                          │    │
+│   │       └───────────────┴───────────────┴───────────────┐          │    │
+│   │                    Gossipsub Mesh                     │          │    │
+│   │                    Kademlia DHT                       │          │    │
+│   └───────────────────────────────────────────────────────┼──────────┘    │
+│                                                           │               │
+│   ┌───────────────────────────────────────────────────────┼──────────┐    │
+│   │               testnet-nat (172.29.0.0/16)             │          │    │
+│   │                                                       │          │    │
+│   │  ┌─────────┐                              ┌───────────┴────┐     │    │
+│   │  │ client  │◄─────── Circuit Relay ──────►│  nat-gateway   │     │    │
+│   │  │ .0.20   │                              │  .0.1 / .0.254 │     │    │
+│   │  │ :4004   │                              │   MASQUERADE   │     │    │
+│   │  │ (NAT)   │                              └────────────────┘     │    │
+│   │  └─────────┘                                                     │    │
+│   │                                                                   │    │
+│   └───────────────────────────────────────────────────────────────────┘    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Nodes
 
-| Node   | Rolle   | P2P Port | API Port | Bootstrap              |
-| ------ | ------- | -------- | -------- | ---------------------- |
-| relay1 | Genesis | 4001     | 9001     | -                      |
-| relay2 | Relay   | 4002     | 9002     | relay1                 |
-| relay3 | Relay   | 4003     | 9003     | relay1                 |
-| client | Client  | 4004     | 9004     | relay1, relay2, relay3 |
+| Node   | Rolle   | TCP Port | QUIC Port | API Port | Netzwerk    | Bootstrap              |
+| ------ | ------- | -------- | --------- | -------- | ----------- | ---------------------- |
+| relay1 | Genesis | 4001     | 4433/udp  | 9101     | testnet     | -                      |
+| relay2 | Relay   | 4002     | 4434/udp  | 9102     | testnet     | relay1                 |
+| relay3 | Relay   | 4003     | 4435/udp  | 9103     | testnet     | relay1, relay2         |
+| client | Client  | 4004     | 4436/udp  | 9104     | testnet-nat | relay1, relay2, relay3 |
 
 ## API Endpoints
 
-Jeder Node stellt einen einfachen HTTP-API bereit:
+Jeder Node stellt einen HTTP-API bereit:
 
 ```bash
 # Health-Check
-curl http://localhost:9001/health
+curl http://localhost:9101/health
 
 # Status (inkl. Peer-Count)
-curl http://localhost:9001/status | jq
+curl http://localhost:9101/status | jq
+
+# Verbundene Peers
+curl http://localhost:9101/peers | jq
 ```
 
 **Beispiel-Response:**
@@ -65,48 +88,69 @@ curl http://localhost:9001/status | jq
 {
   "node_name": "relay1",
   "mode": "relay",
+  "peer_id": "12D3KooW...",
   "is_genesis": true,
   "peer_count": 3,
+  "connected_peers": ["12D3KooW..."],
   "uptime_secs": 120,
   "version": "0.1.0"
 }
 ```
 
-## Hot-Reloading
+## Hot-Reloading (Dev-Modus)
 
-Das Testnet unterstützt Hot-Reloading via `cargo-watch`:
+Das Dev-Testnet unterstützt Hot-Reloading via `cargo-watch`:
 
-1. **Source-Code mounten**: `backend/src/` wird in alle Container gemountet
+1. **Source-Code mounten**: `backend/src/` wird in alle Container gemountet (read-only)
 2. **Auto-Rebuild**: Änderungen an `.rs`, `Cargo.toml` oder `config/` lösen Rebuild aus
 3. **Shared Caches**: Cargo-Registry und Git-Cache werden zwischen Nodes geteilt
+4. **Polling-Modus**: `--poll` für zuverlässige Erkennung in Docker-Volumes
 
-**Workflow:**
+**Typischer Workflow:**
 
 ```bash
-# Testnet starten
-./scripts/dev/testnet.sh start
+# 1. Testnet starten
+just testnet-dev run
 
-# Logs verfolgen (zeigt Rebuilds)
-./scripts/dev/testnet.sh logs:f
+# 2. Logs verfolgen (zeigt Rebuilds)
+just testnet-dev logs
 
-# Code ändern - automatischer Rebuild in allen Nodes
+# 3. Code ändern
+# → cargo-watch erkennt Änderung (~2s Delay)
+# → Rebuild startet (~10-20s)
+# → Node startet mit neuem Code
+
+# 4. Status prüfen
+just testnet-dev status
 ```
 
 ## Befehle
 
 ```bash
-./scripts/dev/testnet.sh [COMMAND]
+just testnet-dev [COMMAND]
 
-start      # Startet alle 4 Nodes
-stop       # Stoppt alle Nodes
-restart    # Neustart aller Nodes
-logs       # Zeigt Logs aller Nodes
-logs:f     # Folgt den Logs (tail -f)
-status     # Zeigt Status aller Nodes mit Peer-Count
-build      # Baut Container neu (ohne Cache)
-clean      # Löscht Container und Volumes
-shell      # Öffnet Shell in Container (default: relay1)
+run         # Startet das Dev-Testnet (4 Nodes + NAT-Gateway)
+down        # Stoppt alle Nodes
+status      # Zeigt Status aller Nodes mit Peer-Count
+logs        # Folgt den Logs aller Nodes
+build       # Baut Container neu (ohne Cache)
+clean       # Entfernt Container, Volumes, Netzwerke
+rebuild     # Komplett neu: clean + build + start
+shell       # Öffnet Shell in relay1
+test-relay  # Testet Relay-Verbindung vom Client
+test-gossip # Testet Gossipsub-Mesh aller Nodes
 ```
+
+stop # Stoppt alle Nodes
+restart # Neustart aller Nodes
+logs # Zeigt Logs aller Nodes
+logs:f # Folgt den Logs (tail -f)
+status # Zeigt Status aller Nodes mit Peer-Count
+build # Baut Container neu (ohne Cache)
+clean # Löscht Container und Volumes
+shell # Öffnet Shell in Container (default: relay1)
+
+````
 
 ## Manueller Docker-Compose
 
@@ -124,7 +168,7 @@ docker compose -f docker-compose.testnet.yml down
 
 # Mit Volumes löschen
 docker compose -f docker-compose.testnet.yml down -v
-```
+````
 
 ## P2P-Konfiguration
 

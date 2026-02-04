@@ -2,13 +2,24 @@
 //!
 //! Speichert DIDs und zugehörige Schlüsselpaare lokal.
 //! Ermöglicht Challenge-Response Authentifizierung ohne externen Auth-Server.
+//!
+//! ## Phase 2 Features
+//!
+//! - Metriken für alle Operationen
+//! - Identity-spezifische Counters (local/external/vouched)
+//! - Signature-Tracking
+//! - Snapshot-Pattern für konsistente Reads
 
 use anyhow::{bail, Context, Result};
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use fjall::Keyspace;
 use rand::rngs::OsRng;
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
+use std::time::Instant;
 
+use super::metrics::{StoreMetrics, StoreMetricsSnapshot};
 use super::KvStore;
 use crate::domain::{DIDNamespace, DID};
 
@@ -62,6 +73,8 @@ pub enum VouchStatus {
 }
 
 /// Identity Store für lokale DID-Verwaltung
+///
+/// Jetzt mit integriertem Metriken-Tracking gemäß `state.rs` Patterns.
 #[derive(Clone)]
 pub struct IdentityStore {
     /// Alle bekannten Identitäten (did -> StoredIdentity)
@@ -74,22 +87,60 @@ pub struct IdentityStore {
     passkey_credentials: KvStore,
     /// Passkey DID Index (did -> credential_id)
     passkey_did_index: KvStore,
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // METRICS (Phase 2)
+    // ─────────────────────────────────────────────────────────────────────────
+    /// Gemeinsame Metriken
+    metrics: Arc<StoreMetrics>,
+
+    /// Lokale Identitäten (mit Private Key)
+    local_identities: Arc<AtomicU64>,
+
+    /// Externe Identitäten (nur Public Key)
+    external_identities: Arc<AtomicU64>,
+
+    /// Gebürgte Identitäten
+    vouched_identities: Arc<AtomicU64>,
+
+    /// Erstellte Signaturen
+    signatures_created: Arc<AtomicU64>,
+
+    /// Verifizierte Signaturen
+    signatures_verified: Arc<AtomicU64>,
+
+    /// Fehlgeschlagene Verifizierungen
+    verification_failures: Arc<AtomicU64>,
 }
 
 impl IdentityStore {
     /// Erstellt einen neuen Identity Store
     pub fn new(keyspace: &Keyspace) -> Result<Self> {
-        Ok(Self {
+        let store = Self {
             identities: KvStore::new(keyspace, "identities")?,
             pubkey_index: KvStore::new(keyspace, "pubkey_index")?,
             vouch_records: KvStore::new(keyspace, "vouch_records")?,
             passkey_credentials: KvStore::new(keyspace, "passkey_credentials")?,
             passkey_did_index: KvStore::new(keyspace, "passkey_did_index")?,
-        })
+            metrics: Arc::new(StoreMetrics::new()),
+            local_identities: Arc::new(AtomicU64::new(0)),
+            external_identities: Arc::new(AtomicU64::new(0)),
+            vouched_identities: Arc::new(AtomicU64::new(0)),
+            signatures_created: Arc::new(AtomicU64::new(0)),
+            signatures_verified: Arc::new(AtomicU64::new(0)),
+            verification_failures: Arc::new(AtomicU64::new(0)),
+        };
+
+        // Initial count setzen
+        store.metrics.set_count(store.identities.len() as u64);
+
+        Ok(store)
     }
 
     /// Generiert eine neue lokale Identität mit Schlüsselpaar
     pub fn create_identity(&self, namespace: DIDNamespace) -> Result<StoredIdentity> {
+        let start = Instant::now();
+
         // Ed25519 Schlüsselpaar generieren
         let signing_key = SigningKey::generate(&mut OsRng);
         let verifying_key = signing_key.verifying_key();
@@ -115,11 +166,19 @@ impl IdentityStore {
         self.identities.put(did.to_string(), &identity)?;
         self.pubkey_index.put(&public_key_hex, &did.to_string())?;
 
+        // Metriken
+        let latency = start.elapsed().as_micros() as u64;
+        self.metrics.record_write(latency, 256);
+        self.metrics.increment_count();
+        self.local_identities.fetch_add(1, Ordering::Relaxed);
+
         Ok(identity)
     }
 
     /// Importiert eine externe Identität (nur Public Key)
     pub fn import_identity(&self, did: DID, public_key: &str) -> Result<StoredIdentity> {
+        let start = Instant::now();
+
         let identity = StoredIdentity {
             did: did.clone(),
             public_key: public_key.to_string(),
@@ -132,6 +191,12 @@ impl IdentityStore {
 
         self.identities.put(did.to_string(), &identity)?;
         self.pubkey_index.put(public_key, &did.to_string())?;
+
+        // Metriken
+        let latency = start.elapsed().as_micros() as u64;
+        self.metrics.record_write(latency, 256);
+        self.metrics.increment_count();
+        self.external_identities.fetch_add(1, Ordering::Relaxed);
 
         Ok(identity)
     }
@@ -146,6 +211,8 @@ impl IdentityStore {
         voucher_did: &DID,
         stake_ratio: f64,
     ) -> Result<StoredIdentity> {
+        let start = Instant::now();
+
         // Stake begrenzen auf max 30%
         let stake = stake_ratio.clamp(0.0, 0.3);
 
@@ -191,6 +258,13 @@ impl IdentityStore {
         self.pubkey_index.put(&public_key_hex, &did.to_string())?;
         self.vouch_records.put(&vouch_key, &vouch_record)?;
 
+        // Metriken
+        let latency = start.elapsed().as_micros() as u64;
+        self.metrics.record_write(latency, 512); // Identity + Vouch Record
+        self.metrics.increment_count();
+        self.local_identities.fetch_add(1, Ordering::Relaxed);
+        self.vouched_identities.fetch_add(1, Ordering::Relaxed);
+
         Ok(identity)
     }
 
@@ -224,7 +298,20 @@ impl IdentityStore {
 
     /// Holt eine Identität per DID
     pub fn get(&self, did: &DID) -> Result<Option<StoredIdentity>> {
-        self.identities.get(did.to_string())
+        let start = Instant::now();
+        let result = self.identities.get(did.to_string());
+
+        let latency = start.elapsed().as_micros() as u64;
+        self.metrics.record_read(
+            latency,
+            if result.as_ref().map(|r| r.is_some()).unwrap_or(false) {
+                256
+            } else {
+                0
+            },
+        );
+
+        result
     }
 
     /// Holt eine Identität per Public Key
@@ -250,6 +337,10 @@ impl IdentityStore {
             .map_err(|e| anyhow::anyhow!("Invalid signing key: {}", e))?;
 
         let signature = signing_key.sign(data);
+
+        // Metriken
+        self.signatures_created.fetch_add(1, Ordering::Relaxed);
+
         Ok(signature.to_bytes().to_vec())
     }
 
@@ -267,7 +358,15 @@ impl IdentityStore {
             .map_err(|_| anyhow::anyhow!("Invalid signature length"))?;
         let sig = Signature::from_bytes(&sig_bytes);
 
-        Ok(verifying_key.verify(data, &sig).is_ok())
+        let valid = verifying_key.verify(data, &sig).is_ok();
+
+        // Metriken
+        self.signatures_verified.fetch_add(1, Ordering::Relaxed);
+        if !valid {
+            self.verification_failures.fetch_add(1, Ordering::Relaxed);
+        }
+
+        Ok(valid)
     }
 
     /// Erstellt eine Challenge für Auth
@@ -380,6 +479,10 @@ impl IdentityStore {
         self.pubkey_index
             .put(&credential.public_key_hex, &credential.did)?;
 
+        // Metriken
+        self.metrics.increment_count();
+        self.external_identities.fetch_add(1, Ordering::Relaxed);
+
         Ok(())
     }
 
@@ -429,6 +532,9 @@ impl IdentityStore {
 
             // Lösche Credential
             self.passkey_credentials.delete(credential_id)?;
+
+            // Metriken
+            self.metrics.decrement_count();
         }
         Ok(())
     }
@@ -451,6 +557,92 @@ impl IdentityStore {
     /// Anzahl der gespeicherten Passkey Credentials
     pub fn passkey_count(&self) -> usize {
         self.passkey_credentials.len()
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // METRICS API (Phase 2)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Snapshot der Identity-Store-Metriken
+    pub fn snapshot(&self) -> IdentityStoreSnapshot {
+        IdentityStoreSnapshot {
+            total: self.count() as u64,
+            local: self.local_identities.load(Ordering::Relaxed),
+            external: self.external_identities.load(Ordering::Relaxed),
+            vouched: self.vouched_identities.load(Ordering::Relaxed),
+            passkeys: self.passkey_count() as u64,
+            signatures_created: self.signatures_created.load(Ordering::Relaxed),
+            signatures_verified: self.signatures_verified.load(Ordering::Relaxed),
+            verification_failures: self.verification_failures.load(Ordering::Relaxed),
+            metrics: self.metrics.snapshot(),
+        }
+    }
+
+    /// Health-Score (0.0 - 1.0)
+    pub fn health_score(&self) -> f64 {
+        self.metrics.health_score()
+    }
+
+    /// Ist der Store gesund?
+    pub fn is_healthy(&self) -> bool {
+        self.health_score() >= 0.9
+    }
+
+    /// Zugriff auf die internen Metriken (für Aggregation)
+    pub fn metrics(&self) -> &Arc<StoreMetrics> {
+        &self.metrics
+    }
+}
+
+/// Snapshot der IdentityStore-Metriken
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IdentityStoreSnapshot {
+    /// Gesamtzahl Identitäten
+    pub total: u64,
+
+    /// Lokale Identitäten (mit Private Key)
+    pub local: u64,
+
+    /// Externe Identitäten (nur Public Key)
+    pub external: u64,
+
+    /// Gebürgte Identitäten
+    pub vouched: u64,
+
+    /// Passkey-Credentials
+    pub passkeys: u64,
+
+    /// Erstellte Signaturen
+    pub signatures_created: u64,
+
+    /// Verifizierte Signaturen
+    pub signatures_verified: u64,
+
+    /// Fehlgeschlagene Verifizierungen
+    pub verification_failures: u64,
+
+    /// Basis-Metriken
+    pub metrics: StoreMetricsSnapshot,
+}
+
+impl IdentityStoreSnapshot {
+    /// Verification Success Rate (0.0 - 1.0)
+    pub fn verification_success_rate(&self) -> f64 {
+        if self.signatures_verified > 0 {
+            let successful = self.signatures_verified - self.verification_failures;
+            successful as f64 / self.signatures_verified as f64
+        } else {
+            1.0
+        }
+    }
+
+    /// Vouch Rate (Anteil gebürgter Identitäten)
+    pub fn vouch_rate(&self) -> f64 {
+        if self.total > 0 {
+            self.vouched as f64 / self.total as f64
+        } else {
+            0.0
+        }
     }
 }
 
@@ -590,5 +782,64 @@ mod tests {
             .unwrap();
 
         assert!((newcomer.vouch_stake - 0.3).abs() < 0.001);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Phase 2: Metrics Tests
+    // ─────────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_identity_store_snapshot() {
+        let store = create_test_store();
+
+        // Lokale Identität erstellen
+        store.create_identity(DIDNamespace::Self_).unwrap();
+
+        let snapshot = store.snapshot();
+
+        assert_eq!(snapshot.total, 1);
+        assert_eq!(snapshot.local, 1);
+        assert_eq!(snapshot.external, 0);
+        assert!(store.is_healthy());
+    }
+
+    #[test]
+    fn test_signature_tracking() {
+        let store = create_test_store();
+
+        let identity = store.create_identity(DIDNamespace::Self_).unwrap();
+        let data = b"Test data";
+
+        // Signieren
+        let sig = store.sign(&identity.did, data).unwrap();
+
+        // Verifizieren (erfolgreich)
+        store.verify(&identity.did, data, &sig).unwrap();
+
+        // Verifizieren (fehlgeschlagen)
+        store.verify(&identity.did, b"wrong", &sig).unwrap();
+
+        let snapshot = store.snapshot();
+
+        assert_eq!(snapshot.signatures_created, 1);
+        assert_eq!(snapshot.signatures_verified, 2);
+        assert_eq!(snapshot.verification_failures, 1);
+    }
+
+    #[test]
+    fn test_vouched_metrics() {
+        let store = create_test_store();
+
+        let voucher = store.create_identity(DIDNamespace::Self_).unwrap();
+        store
+            .create_vouched_identity(DIDNamespace::Self_, &voucher.did, 0.2)
+            .unwrap();
+
+        let snapshot = store.snapshot();
+
+        assert_eq!(snapshot.total, 2);
+        assert_eq!(snapshot.local, 2); // Beide haben Private Key
+        assert_eq!(snapshot.vouched, 1);
+        assert!((snapshot.vouch_rate() - 0.5).abs() < 0.001);
     }
 }

@@ -19,6 +19,7 @@
 
 use super::event::Signature64;
 use super::primitives::{TemporalCoord, UniversalId};
+use super::system::EventPriority;
 use serde::{Deserialize, Serialize};
 
 /// P2P-Protokoll-Typ
@@ -64,6 +65,16 @@ impl P2PProtocol {
 }
 
 /// Vereinheitlichte P2P-Message
+///
+/// Unterstützt optionale Signatur für Identity-Verifizierung (Phase 7).
+///
+/// ## Signatur-Workflow
+///
+/// ```text
+/// 1. Message erstellen
+/// 2. Optional: sign() aufrufen mit Private Key
+/// 3. Empfänger: verify_signature() mit IdentityResolver
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct P2PMessage {
     /// Eindeutige Message-ID
@@ -87,8 +98,29 @@ pub struct P2PMessage {
     /// TTL (Time-To-Live) in Hops
     pub ttl: u8,
 
-    /// Priorität (0 = niedrig, 255 = höchste)
+    /// Priorität (Legacy u8, für Rückwärtskompatibilität)
+    #[serde(default = "default_priority_u8")]
     pub priority: u8,
+
+    // ========================================================================
+    // Phase 7: Identity-Integration (NEU)
+    // ========================================================================
+    /// Typisierte Priorität (EventPriority)
+    #[serde(default)]
+    pub typed_priority: EventPriority,
+
+    /// Optionale Signatur (64 Bytes Ed25519)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signature: Option<Signature64>,
+
+    /// Signatur-Verifizierungsstatus (Cache)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signature_verified: Option<bool>,
+}
+
+/// Default-Wert für Legacy priority field
+fn default_priority_u8() -> u8 {
+    128
 }
 
 impl P2PMessage {
@@ -112,8 +144,11 @@ impl P2PMessage {
             recipient: None,
             payload,
             timestamp,
-            ttl: 7,       // Default: 7 Hops
-            priority: 128, // Default: mittlere Priorität
+            ttl: 7,                              // Default: 7 Hops
+            priority: 128,                       // Default: mittlere Priorität (Legacy)
+            typed_priority: EventPriority::Normal, // Default: Normal
+            signature: None,
+            signature_verified: None,
         }
     }
 
@@ -129,9 +164,22 @@ impl P2PMessage {
         self
     }
 
-    /// Mit Priorität
+    /// Mit Priorität (Legacy u8)
     pub fn with_priority(mut self, priority: u8) -> Self {
         self.priority = priority;
+        self
+    }
+
+    /// Mit typisierter Priorität (EventPriority)
+    pub fn with_typed_priority(mut self, priority: EventPriority) -> Self {
+        self.typed_priority = priority;
+        // Sync mit Legacy-Field
+        self.priority = match priority {
+            EventPriority::Critical => 255,
+            EventPriority::High => 192,
+            EventPriority::Normal => 128,
+            EventPriority::Low => 64,
+        };
         self
     }
 
@@ -153,6 +201,90 @@ impl P2PMessage {
     /// Ist Broadcast-Message?
     pub fn is_broadcast(&self) -> bool {
         self.recipient.is_none()
+    }
+
+    // ========================================================================
+    // Phase 7: Signatur-Methoden
+    // ========================================================================
+
+    /// Prüfe ob Message signiert ist
+    #[inline]
+    pub fn is_signed(&self) -> bool {
+        self.signature.is_some()
+    }
+
+    /// Prüfe ob Signatur bereits verifiziert wurde
+    #[inline]
+    pub fn is_verified(&self) -> Option<bool> {
+        self.signature_verified
+    }
+
+    /// Setze Signatur (für Signing)
+    pub fn with_signature(mut self, signature: Signature64) -> Self {
+        self.signature = Some(signature);
+        self.signature_verified = None; // Reset verification cache
+        self
+    }
+
+    /// Hole Signatur-Bytes (für Verification)
+    pub fn signature_bytes(&self) -> Option<&[u8; 64]> {
+        self.signature.as_ref().map(|s| &s.0)
+    }
+
+    /// Berechne signierbaren Payload (ohne Signatur-Felder)
+    ///
+    /// Für Ed25519-Signatur über Message-Inhalt.
+    pub fn signable_bytes(&self) -> Vec<u8> {
+        // Signiere: id + protocol + sender + recipient + payload_type + timestamp
+        let mut bytes = Vec::with_capacity(128);
+        bytes.extend_from_slice(self.id.as_bytes());
+        bytes.push(self.protocol as u8);
+        bytes.extend_from_slice(self.sender.as_bytes());
+        if let Some(ref recipient) = self.recipient {
+            bytes.push(1);
+            bytes.extend_from_slice(recipient.as_bytes());
+        } else {
+            bytes.push(0);
+        }
+        bytes.extend_from_slice(&self.timestamp.to_bytes());
+        bytes.push(self.ttl);
+        bytes.push(self.priority);
+        bytes
+    }
+
+    /// Markiere Signatur als verifiziert (Cache-Update)
+    pub fn mark_verified(&mut self, verified: bool) {
+        self.signature_verified = Some(verified);
+    }
+
+    /// Prüfe ob Message dringend ist (Critical oder High Priority)
+    #[inline]
+    pub fn is_urgent(&self) -> bool {
+        self.typed_priority.is_urgent()
+    }
+
+    /// Prüfe ob Message kritisch ist
+    #[inline]
+    pub fn is_critical(&self) -> bool {
+        self.typed_priority.is_critical()
+    }
+
+    /// Hole effektive Priorität als EventPriority
+    ///
+    /// Verwendet typed_priority wenn gesetzt, sonst konvertiert von legacy priority.
+    pub fn effective_priority(&self) -> EventPriority {
+        // Wenn typed_priority explizit gesetzt, verwende sie
+        // Sonst konvertiere von Legacy-Priority
+        if self.priority == 128 {
+            self.typed_priority
+        } else {
+            match self.priority {
+                224..=255 => EventPriority::Critical,
+                160..=223 => EventPriority::High,
+                96..=159 => EventPriority::Normal,
+                _ => EventPriority::Low,
+            }
+        }
     }
 }
 

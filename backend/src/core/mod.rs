@@ -21,6 +21,7 @@
 //! ```
 
 pub mod consensus;
+pub mod eclvm_state_host;
 pub mod engine;
 pub mod event_engine;
 pub mod identity_types;
@@ -30,6 +31,9 @@ pub mod state_integration;
 pub mod surprisal;
 pub mod trust_engine;
 pub mod world_formula;
+
+// Re-exports - State-backed ECL Host (Gap 2)
+pub use eclvm_state_host::StateBackedHost;
 
 // Re-exports - Legacy engines
 pub use consensus::ConsensusEngine;
@@ -204,7 +208,8 @@ pub use state_integration::{
     ConsensusObserver,
     ControllerObserver,
     DataLogicObserver,
-    // ECLVM Observer (ECL/ECLVM Integration)
+    // ECLVM Observer (ECL/ECLVM Integration) + Adapter für ProgrammableGateway (Phase 1.1)
+    ECLVMObserverAdapter,
     ECLVMObserver,
     EventObserver,
     ExecutionObserver,

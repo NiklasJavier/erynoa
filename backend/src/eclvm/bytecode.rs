@@ -321,7 +321,128 @@ impl OpCode {
             OpCode::Abort => 0,
         }
     }
+
+    /// E5: Gas-Layer und Kosten für Multi-Layer Gas Metering
+    ///
+    /// Jede Instruktion hat einen primären Layer und Kosten.
+    /// Dies ermöglicht differenzierte Abrechnung nach:
+    /// - Network: P2P-Bandbreite (Host-Calls die Netzwerk-Zugriff benötigen)
+    /// - Compute: CPU/Instructions (arithmetische Operationen)
+    /// - Storage: Persistence (Store-Operationen)
+    /// - Realm: Per-Realm Quotas (Realm-Crossing)
+    pub fn gas_layer_cost(&self) -> (GasLayer, u64) {
+        match self {
+            // ═══════════════════════════════════════════════════════════════
+            // Stack Manipulation → Compute (sehr billig)
+            // ═══════════════════════════════════════════════════════════════
+            OpCode::PushConst(_) => (GasLayer::Compute, 1),
+            OpCode::Pop => (GasLayer::Compute, 1),
+            OpCode::Dup => (GasLayer::Compute, 1),
+            OpCode::Swap => (GasLayer::Compute, 1),
+            OpCode::Pick(_) => (GasLayer::Compute, 2),
+
+            // ═══════════════════════════════════════════════════════════════
+            // Arithmetik → Compute
+            // ═══════════════════════════════════════════════════════════════
+            OpCode::Add | OpCode::Sub => (GasLayer::Compute, 2),
+            OpCode::Mul => (GasLayer::Compute, 3),
+            OpCode::Div | OpCode::Mod => (GasLayer::Compute, 5),
+            OpCode::Neg => (GasLayer::Compute, 1),
+            OpCode::Min | OpCode::Max => (GasLayer::Compute, 2),
+
+            // ═══════════════════════════════════════════════════════════════
+            // Vergleiche → Compute
+            // ═══════════════════════════════════════════════════════════════
+            OpCode::Eq | OpCode::Neq => (GasLayer::Compute, 2),
+            OpCode::Gt | OpCode::Gte | OpCode::Lt | OpCode::Lte => (GasLayer::Compute, 2),
+
+            // ═══════════════════════════════════════════════════════════════
+            // Logik → Compute
+            // ═══════════════════════════════════════════════════════════════
+            OpCode::And | OpCode::Or => (GasLayer::Compute, 2),
+            OpCode::Not => (GasLayer::Compute, 1),
+
+            // ═══════════════════════════════════════════════════════════════
+            // Control Flow → Compute
+            // ═══════════════════════════════════════════════════════════════
+            OpCode::Jump(_) => (GasLayer::Compute, 1),
+            OpCode::JumpIfFalse(_) | OpCode::JumpIfTrue(_) => (GasLayer::Compute, 2),
+            OpCode::Call(_, _) => (GasLayer::Compute, 10),
+            OpCode::Return => (GasLayer::Compute, 5),
+
+            // ═══════════════════════════════════════════════════════════════
+            // TrustVector → Compute (Float-Operationen)
+            // ═══════════════════════════════════════════════════════════════
+            OpCode::TrustDim(_) => (GasLayer::Compute, 3),
+            OpCode::TrustNorm => (GasLayer::Compute, 10),
+            OpCode::TrustCombine => (GasLayer::Compute, 15),
+            OpCode::TrustCreate => (GasLayer::Compute, 8),
+
+            // ═══════════════════════════════════════════════════════════════
+            // Host Calls → Network (benötigen externe Daten)
+            // ═══════════════════════════════════════════════════════════════
+            OpCode::LoadTrust => (GasLayer::Network, 10),
+            OpCode::HasCredential => (GasLayer::Network, 5),
+            OpCode::ResolveDID => (GasLayer::Network, 5),
+            OpCode::GetBalance => (GasLayer::Network, 5),
+            OpCode::GetTimestamp => (GasLayer::Compute, 1), // Lokal verfügbar
+            OpCode::Log => (GasLayer::Storage, 2), // Logging = Storage
+
+            // ═══════════════════════════════════════════════════════════════
+            // Assertions → Compute
+            // ═══════════════════════════════════════════════════════════════
+            OpCode::Assert => (GasLayer::Compute, 3),
+            OpCode::Require => (GasLayer::Compute, 5),
+
+            // ═══════════════════════════════════════════════════════════════
+            // Erweiterte Built-ins → Compute
+            // ═══════════════════════════════════════════════════════════════
+            OpCode::Surprisal => (GasLayer::Compute, 8),
+            OpCode::TrustAboveThreshold => (GasLayer::Compute, 10),
+            OpCode::TrustWeightedAvg => (GasLayer::Compute, 12),
+            OpCode::TrustDistance => (GasLayer::Compute, 15),
+
+            // ═══════════════════════════════════════════════════════════════
+            // String-Operationen → Compute
+            // ═══════════════════════════════════════════════════════════════
+            OpCode::StrLen => (GasLayer::Compute, 3),
+            OpCode::StrEqIgnoreCase => (GasLayer::Compute, 5),
+            OpCode::StrContains => (GasLayer::Compute, 8),
+
+            // ═══════════════════════════════════════════════════════════════
+            // Math-Operationen → Compute
+            // ═══════════════════════════════════════════════════════════════
+            OpCode::MathAbs => (GasLayer::Compute, 2),
+            OpCode::MathSqrt => (GasLayer::Compute, 5),
+            OpCode::MathFloor | OpCode::MathCeil | OpCode::MathRound => (GasLayer::Compute, 3),
+            OpCode::Clamp => (GasLayer::Compute, 4),
+            OpCode::Lerp => (GasLayer::Compute, 5),
+
+            // ═══════════════════════════════════════════════════════════════
+            // Zeit → Compute
+            // ═══════════════════════════════════════════════════════════════
+            OpCode::TimeSince => (GasLayer::Compute, 5),
+
+            // ═══════════════════════════════════════════════════════════════
+            // Array-Operationen → Compute
+            // ═══════════════════════════════════════════════════════════════
+            OpCode::Contains => (GasLayer::Compute, 10),
+            OpCode::ArrayLen => (GasLayer::Compute, 2),
+            OpCode::ArrayGet => (GasLayer::Compute, 3),
+
+            // ═══════════════════════════════════════════════════════════════
+            // Ende → keine Kosten
+            // ═══════════════════════════════════════════════════════════════
+            OpCode::Halt => (GasLayer::Compute, 0),
+            OpCode::Abort => (GasLayer::Compute, 0),
+        }
+    }
 }
+
+/// E5: GasLayer für hierarchisches Multi-Layer Metering
+///
+/// Importiert aus core::state für OpCode-Integration
+pub use crate::core::state::GasLayer;
 
 /// Index für TrustVector6D Dimensionen
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

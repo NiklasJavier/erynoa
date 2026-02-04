@@ -32,12 +32,78 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::core::state::{ECLVMBudget, ECLVMBudgetLimits};
 use crate::domain::{RealmId, TrustVector6D, DID};
 use crate::eclvm::bytecode::{OpCode, TrustDimIndex, Value};
 use crate::eclvm::mana::{ManaConfig, ManaManager};
 use crate::eclvm::runtime::host::HostInterface;
-use crate::eclvm::runtime::vm::ECLVM;
+use crate::eclvm::runtime::runner::{run_policy, PolicyRunContext};
 use crate::error::{ApiError, Result};
+
+// =============================================================================
+// Policy Execution Observer (Phase 1.1 – ECLVMState-Metriken)
+// =============================================================================
+
+/// Observer für Policy-Ausführung und Crossing-Entscheidungen.
+/// Wird nach jeder ECL-Policy-Ausführung bzw. Crossing-Evaluation aufgerufen,
+/// damit StateIntegrator ECLVMState (policies_executed, crossing_*, etc.) befüllen kann.
+pub trait PolicyExecutionObserver: Send + Sync {
+    /// Policy ausgeführt (Gas/Mana/Dauer für Metriken).
+    fn on_policy_executed(
+        &self,
+        policy_id: &str,
+        policy_type: &str,
+        passed: bool,
+        gas_used: u64,
+        mana_used: u64,
+        duration_us: u64,
+        realm_id: Option<&str>,
+    );
+
+    /// Crossing-Policy evaluiert (von Realm A nach Realm B).
+    fn on_crossing_policy_evaluated(
+        &self,
+        from_realm: &str,
+        to_realm: &str,
+        entity_id: &str,
+        allowed: bool,
+        trust_score: f64,
+        policy_id: Option<&str>,
+    );
+}
+
+// =============================================================================
+// ECL Crossing Evaluator (Phase 1.2 – Gateway-Vereinheitlichung)
+// =============================================================================
+//
+// Trait für GatewayGuard: optional ECL-basierte Crossing-Prüfung pro Realm.
+// ProgrammableGateway implementiert dieses Trait.
+
+/// ECL-basierte Crossing-Validierung (für GatewayGuard-Integration).
+pub trait EclCrossingEvaluator: Send + Sync {
+    /// Validiere Crossing mit ECL-Entry-Policy des Ziel-Realms.
+    /// Returns: Ok(true) = erlaubt, Ok(false) = verweigert, Err = Fehler (z. B. VM/Policy-Fehler).
+    fn validate_ecl_crossing(
+        &self,
+        sender: &DID,
+        sender_trust: &TrustVector6D,
+        from_realm: &RealmId,
+        to_realm: &RealmId,
+    ) -> Result<bool>;
+}
+
+impl<H: HostInterface + Send + Sync> EclCrossingEvaluator for ProgrammableGateway<H> {
+    fn validate_ecl_crossing(
+        &self,
+        sender: &DID,
+        sender_trust: &TrustVector6D,
+        from_realm: &RealmId,
+        to_realm: &RealmId,
+    ) -> Result<bool> {
+        let decision = self.validate_crossing(sender, sender_trust, from_realm, to_realm)?;
+        Ok(decision.allowed)
+    }
+}
 
 /// Kompilierte Policy für ein Realm
 #[derive(Debug, Clone)]
@@ -71,7 +137,7 @@ impl CompiledPolicy {
     }
 }
 
-/// Programmable Gateway Guard
+/// Programmable Gateway Guard (E2: ECLVMBudget Integration)
 pub struct ProgrammableGateway<H: HostInterface> {
     /// Host Interface für VM
     host: Arc<H>,
@@ -82,11 +148,17 @@ pub struct ProgrammableGateway<H: HostInterface> {
     /// Default Entry Policy (wenn Realm keine eigene hat)
     default_entry_policy: CompiledPolicy,
 
-    /// Mana Manager für Rate Limiting
+    /// Legacy: Mana Manager für Rate Limiting (wird noch für ManaStatus genutzt)
     mana_manager: ManaManager,
 
-    /// Gas-Limit pro Policy-Ausführung
-    max_gas_per_execution: u64,
+    /// E2: Default Budget-Limits (können pro Ausführung überschrieben werden)
+    default_budget_limits: ECLVMBudgetLimits,
+
+    /// E2: Ob ECLVMBudget verwendet werden soll (statt separatem ManaManager)
+    use_unified_budget: bool,
+
+    /// Optional: Observer für Metriken (ECLVMState via StateIntegrator)
+    observer: Option<Arc<dyn PolicyExecutionObserver>>,
 }
 
 impl<H: HostInterface> ProgrammableGateway<H> {
@@ -97,19 +169,40 @@ impl<H: HostInterface> ProgrammableGateway<H> {
             policies: HashMap::new(),
             default_entry_policy: Self::create_default_entry_policy(),
             mana_manager: ManaManager::new(ManaConfig::default()),
-            max_gas_per_execution: 50_000,
+            default_budget_limits: ECLVMBudgetLimits {
+                gas_limit: 50_000,
+                mana_limit: 10_000,
+                max_stack_depth: 1024,
+                timeout_ms: 5_000,
+            },
+            use_unified_budget: true, // E2: Default ist unified Budget
+            observer: None,
         }
     }
 
-    /// Mit Custom Mana-Config
+    /// Mit Custom Mana-Config (Legacy)
     pub fn with_mana_config(mut self, config: ManaConfig) -> Self {
         self.mana_manager = ManaManager::new(config);
+        self.use_unified_budget = false; // Fallback auf Legacy
         self
     }
 
-    /// Mit Custom Gas-Limit
+    /// E2: Mit Custom Budget-Limits
+    pub fn with_budget_limits(mut self, limits: ECLVMBudgetLimits) -> Self {
+        self.default_budget_limits = limits;
+        self.use_unified_budget = true;
+        self
+    }
+
+    /// Mit Custom Gas-Limit (Legacy-Kompatibilität)
     pub fn with_max_gas(mut self, max_gas: u64) -> Self {
-        self.max_gas_per_execution = max_gas;
+        self.default_budget_limits.gas_limit = max_gas;
+        self
+    }
+
+    /// Optional: Observer für ECLVMState-Metriken (StateIntegrator)
+    pub fn with_observer(mut self, observer: Arc<dyn PolicyExecutionObserver>) -> Self {
+        self.observer = Some(observer);
         self
     }
 
@@ -154,39 +247,110 @@ impl<H: HostInterface> ProgrammableGateway<H> {
             .and_then(|policies| policies.get(policy_name))
     }
 
-    /// Führe Policy aus
+    /// Führe Policy aus (Phase 3.1 + E2: ECLVMBudget)
     ///
-    /// Returns: true = allowed, false = denied
+    /// Returns: (allowed, gas_used, mana_used, duration_us) für Metriken/Observer
     pub fn execute_policy(
         &self,
         policy: &CompiledPolicy,
         sender: &DID,
         sender_trust: &TrustVector6D,
-    ) -> Result<bool> {
+    ) -> Result<(bool, u64, u64, u64)> {
+        if self.use_unified_budget {
+            // E2: Unified ECLVMBudget für Gas + Mana + Timeout
+            self.execute_policy_with_budget(policy, sender, sender_trust)
+        } else {
+            // Legacy: Separater ManaManager
+            self.execute_policy_legacy(policy, sender, sender_trust)
+        }
+    }
+
+    /// E2: Policy-Ausführung mit ECLVMBudget
+    fn execute_policy_with_budget(
+        &self,
+        policy: &CompiledPolicy,
+        sender: &DID,
+        sender_trust: &TrustVector6D,
+    ) -> Result<(bool, u64, u64, u64)> {
+        // 1. Erstelle Budget mit Trust-basierter Skalierung
+        let trust_factor = sender_trust.r as f64; // R-Dimension für Reliability
+        let limits = self.default_budget_limits.with_trust_factor(trust_factor);
+        let budget = Arc::new(ECLVMBudget::new(limits));
+
+        // 2. Pre-Flight: Mana für Policy reservieren
+        // Bei niedrigem Trust: weniger Mana-Budget, also eher Rate-Limited
+        let mana_cost = (policy.estimated_gas / 10).max(10); // ~10% des Gas als Mana
+        if !budget.consume_mana(mana_cost) {
+            return Err(ApiError::RateLimited {
+                retry_after: std::time::Duration::from_secs(10),
+            });
+        }
+
+        // 3. Runner: VM mit Bytecode + Host + Budget
+        let ctx = PolicyRunContext::with_budget(
+            sender.to_uri(),
+            "", // realm wird bei validate_crossing/validate_entry gesetzt
+            budget.clone(),
+        )
+        .with_policy_id(&policy.name)
+        .with_policy_type("crossing");
+
+        let result = run_policy(&policy.bytecode, self.host.as_ref(), &ctx)?;
+
+        // 4. Interpretiere Ergebnis
+        let allowed = match result.value {
+            Value::Bool(a) => a,
+            _ => {
+                return Err(ApiError::Internal(anyhow::anyhow!(
+                    "Policy returned non-boolean value: {:?}",
+                    result.value
+                )));
+            }
+        };
+
+        // 5. Hole finale Metriken aus Budget
+        let gas_used = budget.gas_used();
+        let mana_used = budget.mana_used();
+
+        Ok((allowed, gas_used, mana_used, result.duration_us))
+    }
+
+    /// Legacy: Policy-Ausführung mit separatem ManaManager
+    fn execute_policy_legacy(
+        &self,
+        policy: &CompiledPolicy,
+        sender: &DID,
+        sender_trust: &TrustVector6D,
+    ) -> Result<(bool, u64, u64, u64)> {
         // 1. Pre-Flight: Mana-Check
         self.mana_manager
             .preflight_check(&sender.to_uri(), sender_trust, policy.estimated_gas)?;
 
-        // 2. Baue Programm mit Sender-DID
-        let mut program = vec![OpCode::PushConst(Value::DID(sender.to_uri()))];
-        program.extend(policy.bytecode.clone());
+        // 2. Runner: VM mit Bytecode + Host + Kontext
+        let ctx = PolicyRunContext::new(
+            sender.to_uri(),
+            "",
+            self.default_budget_limits.gas_limit,
+        )
+        .with_policy_id(&policy.name)
+        .with_policy_type("crossing");
+        let result = run_policy(&policy.bytecode, self.host.as_ref(), &ctx)?;
 
-        // 3. Führe VM aus
-        let mut vm = ECLVM::new(program, self.max_gas_per_execution, self.host.as_ref());
-        let result = vm.run()?;
-
-        // 4. Deduct Mana
+        // 3. Deduct Mana
         self.mana_manager
             .deduct(&sender.to_uri(), sender_trust, result.gas_used)?;
 
-        // 5. Interpretiere Ergebnis
-        match result.value {
-            Value::Bool(allowed) => Ok(allowed),
-            _ => Err(ApiError::Internal(anyhow::anyhow!(
-                "Policy returned non-boolean value: {:?}",
-                result.value
-            ))),
-        }
+        // 4. Interpretiere Ergebnis
+        let allowed = match result.value {
+            Value::Bool(a) => a,
+            _ => {
+                return Err(ApiError::Internal(anyhow::anyhow!(
+                    "Policy returned non-boolean value: {:?}",
+                    result.value
+                )));
+            }
+        };
+        Ok((allowed, result.gas_used, 0, result.duration_us))
     }
 
     /// Validiere Realm-Entry
@@ -201,7 +365,8 @@ impl<H: HostInterface> ProgrammableGateway<H> {
             .get_policy(target_realm, "entry")
             .unwrap_or(&self.default_entry_policy);
 
-        let allowed = self.execute_policy(policy, sender, sender_trust)?;
+        // E2: execute_policy liefert jetzt auch mana_used
+        let (allowed, gas_used, mana_used, duration_us) = self.execute_policy(policy, sender, sender_trust)?;
 
         Ok(GatewayDecision {
             allowed,
@@ -213,6 +378,9 @@ impl<H: HostInterface> ProgrammableGateway<H> {
             } else {
                 format!("Entry denied by policy '{}'", policy.name)
             },
+            gas_used,
+            mana_used, // E2: Jetzt korrekt aus Budget
+            duration_us,
         })
     }
 
@@ -221,12 +389,35 @@ impl<H: HostInterface> ProgrammableGateway<H> {
         &self,
         sender: &DID,
         sender_trust: &TrustVector6D,
-        _from_realm: &RealmId,
+        from_realm: &RealmId,
         to_realm: &RealmId,
     ) -> Result<GatewayDecision> {
-        // Für jetzt: Entry-Policy des Ziel-Realms prüfen
-        // TODO: Cross-Realm spezifische Policies
-        self.validate_entry(sender, sender_trust, to_realm)
+        let decision = self.validate_entry(sender, sender_trust, to_realm)?;
+
+        if let Some(ref obs) = self.observer {
+            let trust_score = sender_trust.weighted_norm(&[1.0_f32; 6]) as f64;
+            let to_realm_str = decision.target_realm.to_string();
+            let from_realm_str = from_realm.to_string();
+            obs.on_policy_executed(
+                &decision.policy_name,
+                "crossing",
+                decision.allowed,
+                decision.gas_used,
+                decision.mana_used,
+                decision.duration_us,
+                Some(&to_realm_str),
+            );
+            obs.on_crossing_policy_evaluated(
+                &from_realm_str,
+                &to_realm_str,
+                &sender.to_uri(),
+                decision.allowed,
+                trust_score,
+                Some(&decision.policy_name),
+            );
+        }
+
+        Ok(decision)
     }
 }
 
@@ -238,6 +429,12 @@ pub struct GatewayDecision {
     pub target_realm: RealmId,
     pub policy_name: String,
     pub message: String,
+    /// Gas verbraucht bei ECL-Ausführung (für Metriken)
+    pub gas_used: u64,
+    /// Mana verbraucht (optional; VM trackt derzeit nur Gas)
+    pub mana_used: u64,
+    /// Ausführungsdauer in Mikrosekunden (für avg_evaluation_time_us)
+    pub duration_us: u64,
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

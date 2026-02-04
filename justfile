@@ -378,3 +378,185 @@ testnet-logs node="":
     else
         docker compose -f "$COMPOSE_FILE" logs -f {{node}}
     fi
+
+# ═══════════════════════════════════════════════════════
+# 🔥 P2P TESTNET - DEV MODE (Hot-Reloading)
+# ═══════════════════════════════════════════════════════
+
+# Testnet im Dev-Modus mit Hot-Reloading + NAT-Simulation
+testnet-dev cmd="status":
+    #!/usr/bin/env bash
+    set -e
+    COMPOSE_FILE="{{WORKSPACE_ROOT}}/infra/docker/docker-compose.testnet.dev.yml"
+
+    case "{{cmd}}" in
+        run|up|start)
+            echo ""
+            echo "╔════════════════════════════════════════════════════════════════════╗"
+            echo "║  🔥 Erynoa P2P Testnet - DEV MODE                                  ║"
+            echo "║     Hot-Reloading + NAT-Simulation + QUIC Support                  ║"
+            echo "╚════════════════════════════════════════════════════════════════════╝"
+            echo ""
+            docker compose -f "$COMPOSE_FILE" up -d --build
+            echo ""
+            echo "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "  Nodes (Hot-Reloading aktiviert!):"
+            echo "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "    relay1: http://localhost:9101/status (Genesis + Relay)"
+            echo "    relay2: http://localhost:9102/status (Relay)"
+            echo "    relay3: http://localhost:9103/status (Relay)"
+            echo "    client: http://localhost:9104/status (hinter NAT)"
+            echo ""
+            echo "  Ports:"
+            echo "    TCP:   4001, 4002, 4003, 4004"
+            echo "    QUIC:  4433, 4434, 4435, 4436/udp"
+            echo "    API:   9101, 9102, 9103, 9104"
+            echo ""
+            echo "  ⚡ Code ändern → automatischer Rebuild in ~10-20s"
+            echo ""
+            echo "  Commands:"
+            echo "    Logs:        just testnet-dev logs"
+            echo "    Status:      just testnet-dev status"
+            echo "    Relay-Test:  just testnet-dev test-relay"
+            echo "    Stop:        just testnet-dev down"
+            echo ""
+            ;;
+        down|stop)
+            echo "🛑 Stoppe Dev-Testnet..."
+            docker compose -f "$COMPOSE_FILE" down
+            echo "✓ Gestoppt"
+            ;;
+        status)
+            echo ""
+            echo "═══════════════════════════════════════════════════════════════"
+            echo "  📊 Testnet Status (DEV MODE)"
+            echo "═══════════════════════════════════════════════════════════════"
+            echo ""
+            # Container-Status
+            docker compose -f "$COMPOSE_FILE" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || \
+                docker compose -f "$COMPOSE_FILE" ps
+            echo ""
+            echo "───────────────────────────────────────────────────────────────"
+            echo "  Node Health:"
+            echo "───────────────────────────────────────────────────────────────"
+            for node in relay1 relay2 relay3 client; do
+                case $node in
+                    relay1) port=9101 ;;
+                    relay2) port=9102 ;;
+                    relay3) port=9103 ;;
+                    client) port=9104 ;;
+                esac
+                status=$(curl -s "http://localhost:$port/status" 2>/dev/null || echo "")
+                if [ -n "$status" ]; then
+                    peers=$(echo "$status" | jq -r '.peer_count // 0' 2>/dev/null || echo "?")
+                    uptime=$(echo "$status" | jq -r '.uptime_secs // 0' 2>/dev/null || echo "?")
+                    mode=$(echo "$status" | jq -r '.mode // "?"' 2>/dev/null || echo "?")
+                    peer_id=$(echo "$status" | jq -r '.peer_id // "?"' 2>/dev/null | head -c 20)
+                    printf "  ✓ %-10s Mode: %-8s Peers: %2s  Uptime: %ss  ID: %s...\n" "$node" "$mode" "$peers" "$uptime" "$peer_id"
+                else
+                    printf "  ⏳ %-10s (compiliert oder startet...)\n" "$node"
+                fi
+            done
+            echo ""
+            ;;
+        logs)
+            docker compose -f "$COMPOSE_FILE" logs -f --tail=100
+            ;;
+        build)
+            echo "🔨 Baue Dev-Testnet-Container (ohne Cache)..."
+            docker compose -f "$COMPOSE_FILE" build --no-cache
+            echo "✓ Build abgeschlossen"
+            ;;
+        clean)
+            echo "🧹 Räume Dev-Testnet komplett auf..."
+            docker compose -f "$COMPOSE_FILE" down -v --remove-orphans
+            echo "✓ Container, Volumes und Netzwerke entfernt"
+            ;;
+        rebuild)
+            echo "🔄 Kompletter Rebuild..."
+            docker compose -f "$COMPOSE_FILE" down -v --remove-orphans
+            docker compose -f "$COMPOSE_FILE" build --no-cache
+            docker compose -f "$COMPOSE_FILE" up -d
+            echo "✓ Rebuild abgeschlossen"
+            ;;
+        shell)
+            node="${2:-relay1}"
+            echo "🐚 Shell in $node..."
+            docker compose -f "$COMPOSE_FILE" exec relay1 bash
+            ;;
+        test-relay)
+            echo ""
+            echo "🧪 Teste Relay-Verbindung (Client → Relays)..."
+            echo ""
+            CLIENT_STATUS=$(curl -s http://localhost:9104/status 2>/dev/null)
+            if [ -n "$CLIENT_STATUS" ]; then
+                PEERS=$(echo "$CLIENT_STATUS" | jq -r '.peer_count // 0')
+                CONNECTED=$(echo "$CLIENT_STATUS" | jq -r '.connected_peers // []')
+                echo "  Client-Status:"
+                echo "    Peer-Count: $PEERS"
+                if [ "$PEERS" -gt 0 ]; then
+                    echo "    ✓ Client hat Verbindung zu Peers"
+                    echo ""
+                    echo "  Verbundene Peers:"
+                    echo "$CONNECTED" | jq -r '.[]' 2>/dev/null | while read peer; do
+                        echo "    - ${peer:0:20}..."
+                    done
+                else
+                    echo "    ⚠ Client hat noch keine Peers"
+                    echo "    → Warte auf Relay-Verbindung (kann 30-60s dauern)"
+                fi
+            else
+                echo "  ✗ Client nicht erreichbar (noch am Compilieren?)"
+            fi
+            echo ""
+            ;;
+        test-gossip)
+            echo ""
+            echo "📨 Teste Gossipsub-Mesh..."
+            echo ""
+            for node in relay1 relay2 relay3 client; do
+                case $node in
+                    relay1) port=9101 ;;
+                    relay2) port=9102 ;;
+                    relay3) port=9103 ;;
+                    client) port=9104 ;;
+                esac
+                status=$(curl -s "http://localhost:$port/status" 2>/dev/null)
+                if [ -n "$status" ]; then
+                    peers=$(echo "$status" | jq -r '.peer_count // 0')
+                    printf "  %-10s Peers im Mesh: %s\n" "$node" "$peers"
+                fi
+            done
+            echo ""
+            ;;
+        *)
+            echo "Verwendung: just testnet-dev [COMMAND]"
+            echo ""
+            echo "Commands:"
+            echo "  run         Startet Dev-Testnet mit Hot-Reloading"
+            echo "  down        Stoppt alle Nodes"
+            echo "  status      Zeigt Status aller Nodes"
+            echo "  logs        Zeigt Logs (tail -f)"
+            echo "  build       Baut Container neu (ohne Cache)"
+            echo "  clean       Entfernt Container, Volumes, Netzwerke"
+            echo "  rebuild     Komplett neu: clean + build + start"
+            echo "  shell       Shell in relay1"
+            echo "  test-relay  Testet Relay-Verbindung"
+            echo "  test-gossip Testet Gossipsub-Mesh"
+            echo ""
+            echo "Tipps:"
+            echo "  - Code ändern → automatischer Rebuild (~10-20s)"
+            echo "  - Bei Problemen: just testnet-dev rebuild"
+            echo "  - Privacy-Mode: CARGO_FEATURES=p2p,privacy-full just testnet-dev run"
+            ;;
+    esac
+
+# Testnet-Dev Logs für spezifischen Node
+testnet-dev-logs node="":
+    #!/usr/bin/env bash
+    COMPOSE_FILE="{{WORKSPACE_ROOT}}/infra/docker/docker-compose.testnet.dev.yml"
+    if [ -z "{{node}}" ]; then
+        docker compose -f "$COMPOSE_FILE" logs -f --tail=100
+    else
+        docker compose -f "$COMPOSE_FILE" logs -f --tail=100 {{node}}
+    fi

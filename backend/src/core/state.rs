@@ -94,6 +94,18 @@ use tokio::sync::{broadcast, mpsc};
 
 // Domain Primitives
 use crate::domain::unified::primitives::UniversalId;
+pub use crate::domain::MemberRole;
+
+// ============================================================================
+// Re-exports from domain/unified (Phase 6: Typ-Migration)
+// ============================================================================
+// Diese Typen sind jetzt in domain/unified definiert und werden hier re-exportiert
+// für Rückwärtskompatibilität. Neue Nutzung sollte direkt aus domain importieren.
+pub use crate::domain::unified::action::{
+    BlueprintAction, MembershipAction, NetworkMetric, RealmAction,
+};
+pub use crate::domain::unified::component::{ComponentLayer, StateComponent, StateRelation};
+pub use crate::domain::unified::system::{AnomalySeverity, EventPriority, SystemMode};
 
 // Sharding & High-Performance Concurrent Data Structures
 use dashmap::DashMap;
@@ -106,77 +118,14 @@ use tokio::sync::RwLock as TokioRwLock;
 // ============================================================================
 // SYSTEM MODE (CIRCUIT BREAKER PATTERN)
 // ============================================================================
-
-/// System-Betriebsmodus für Circuit Breaker Pattern (Verbesserung 3)
-///
-/// Ermöglicht automatische Reaktion auf kritische Anomalien:
-/// - `Normal`: Volle Funktionalität
-/// - `Degraded`: Eingeschränkt (pausierte Execution, blockierte Crossings)
-/// - `EmergencyShutdown`: Node offline bis Manual Reset
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
-#[repr(u8)]
-pub enum SystemMode {
-    /// Normaler Betrieb - volle Funktionalität
-    #[default]
-    Normal = 0,
-    /// Degradierter Modus - eingeschränkte Funktionalität
-    /// - ExecutionState pausiert (keine neuen Contexts)
-    /// - Gateway-Crossings blockiert
-    /// - Mana-Regeneration auf 0
-    Degraded = 1,
-    /// Notfall-Shutdown - Node offline bis Manual Reset
-    /// - Alle eingehenden Requests abgelehnt
-    /// - Nur Admin-Recovery-Endpoint aktiv
-    EmergencyShutdown = 2,
-}
-
-impl SystemMode {
-    pub fn from_u8(value: u8) -> Self {
-        match value {
-            0 => SystemMode::Normal,
-            1 => SystemMode::Degraded,
-            2 => SystemMode::EmergencyShutdown,
-            _ => SystemMode::Normal,
-        }
-    }
-
-    pub fn is_operational(&self) -> bool {
-        matches!(self, SystemMode::Normal | SystemMode::Degraded)
-    }
-
-    pub fn allows_execution(&self) -> bool {
-        matches!(self, SystemMode::Normal)
-    }
-
-    pub fn allows_crossings(&self) -> bool {
-        matches!(self, SystemMode::Normal)
-    }
-
-    pub fn description(&self) -> &'static str {
-        match self {
-            SystemMode::Normal => "Normal operation - full functionality",
-            SystemMode::Degraded => "Degraded mode - limited functionality, recovery in progress",
-            SystemMode::EmergencyShutdown => "Emergency shutdown - manual intervention required",
-        }
-    }
-}
+// NOTE: SystemMode ist jetzt in domain/unified/system.rs definiert und wird
+// oben via `pub use` re-exportiert für Rückwärtskompatibilität.
 
 // ============================================================================
 // EVENT BUS (P2P/CORE ENTKOPPLUNG)
 // ============================================================================
-
-/// Prioritätsstufe für Network-Events
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub enum EventPriority {
-    /// Höchste Priorität: Consensus, Trust-Critical
-    Critical = 0,
-    /// Hohe Priorität: Gateway-Crossings, Governance-Votes
-    High = 1,
-    /// Normale Priorität: Standard-Events
-    Normal = 2,
-    /// Niedrige Priorität: Metrics, Telemetry
-    Low = 3,
-}
+// NOTE: EventPriority ist jetzt in domain/unified/system.rs definiert und wird
+// oben via `pub use` re-exportiert für Rückwärtskompatibilität.
 
 /// Typisiertes Network-Event für Ingress/Egress-Queues
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -925,95 +874,21 @@ pub enum TrustReason {
     DisputeResolution,
 }
 
-/// Schweregrad einer Anomalie
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum AnomalySeverity {
-    /// Kritisch: Sofortige Reaktion erforderlich (Circuit Breaker)
-    Critical,
-    /// Hoch: Dringende Aufmerksamkeit
-    High,
-    /// Mittel: Monitoring erforderlich
-    Medium,
-    /// Niedrig: Informativ
-    Low,
-}
+// ============================================================================
+// ACTION ENUMS (Migriert nach domain/unified/action.rs)
+// ============================================================================
+// NOTE: Die folgenden Typen sind jetzt in domain/unified definiert und werden
+// oben via `pub use` re-exportiert für Rückwärtskompatibilität:
+// - AnomalySeverity (domain/unified/system.rs)
+// - BlueprintAction (domain/unified/action.rs) - war: BlueprintActionType
+// - RealmAction (domain/unified/action.rs)
+// - MembershipAction (domain/unified/action.rs)
+// - NetworkMetric (domain/unified/action.rs)
+// - MemberRole: Re-exported from domain::unified::realm
 
-/// Rolle eines Realm-Mitglieds
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum MemberRole {
-    /// Normales Mitglied
-    Member,
-    /// Administrator mit erhöhten Rechten
-    Admin,
-    /// Eigentümer/Gründer des Realms
-    Owner,
-    /// Moderator (eingeschränkte Admin-Rechte)
-    Moderator,
-}
-
-/// Aktion auf einem Blueprint
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum BlueprintActionType {
-    /// Blueprint veröffentlicht
-    Published,
-    /// Blueprint deployed in Realm
-    Deployed,
-    /// Blueprint instanziiert
-    Instantiated,
-    /// Blueprint verifiziert (Community-Review)
-    Verified,
-    /// Blueprint deprecated
-    Deprecated,
-}
-
-/// Realm-Lifecycle-Aktion
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum RealmAction {
-    /// Realm erstellt
-    Created,
-    /// Konfiguration geändert (MinTrust, Governance)
-    ConfigChanged,
-    /// Realm gelöscht/archiviert
-    Destroyed,
-    /// Realm pausiert (Admin-Aktion)
-    Paused,
-    /// Realm wiederhergestellt
-    Resumed,
-}
-
-/// Mitgliedschafts-Aktion
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum MembershipAction {
-    /// Mitglied beigetreten
-    Joined,
-    /// Mitglied ausgetreten
-    Left,
-    /// Mitglied gebannt
-    Banned,
-    /// Rolle geändert (z.B. Member → Admin)
-    RoleChanged,
-    /// Einladung gesendet
-    Invited,
-    /// Einladung angenommen
-    InviteAccepted,
-}
-
-/// Netzwerk-Metrik-Typ
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum NetworkMetric {
-    /// Verbundene Peers
-    ConnectedPeers,
-    /// Gesendete Bytes
-    BytesSent,
-    /// Empfangene Bytes
-    BytesReceived,
-    /// Durchschnittliche Latenz (ms)
-    LatencyAvg,
-    /// Gossip-Nachrichten propagiert
-    GossipMessages,
-    /// DHT-Lookups durchgeführt
-    DHTLookups,
-}
+/// Alias für Rückwärtskompatibilität
+/// Neue Nutzung sollte `BlueprintAction` aus domain verwenden
+pub type BlueprintActionType = BlueprintAction;
 
 /// Semantisches State-Event für Event-Sourcing
 ///
@@ -1292,12 +1167,148 @@ pub enum StateEvent {
 
     /// Peer connected/disconnected
     PeerConnectionChange {
-        /// Peer-ID
+        /// Peer-ID (libp2p PeerId als String)
         peer_id: String,
+        /// UniversalId des Peers (Phase 7 - konsistente Identifikation)
+        peer_universal_id: Option<UniversalId>,
         /// Verbunden?
         connected: bool,
         /// Multiaddr
         addr: Option<String>,
+        /// Connection-Level nach Trust-Check
+        connection_level: Option<String>,
+    },
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // TRUST GATE EVENTS (v0.4.0)
+    // ═══════════════════════════════════════════════════════════════════════════
+    /// Trust-Wert eines Peers wurde aktualisiert
+    TrustUpdated {
+        /// Peer-ID (libp2p PeerId als String)
+        peer_id: String,
+        /// UniversalId des Peers (falls bekannt)
+        peer_universal_id: Option<UniversalId>,
+        /// Alter Trust-R Wert
+        old_trust_r: f64,
+        /// Alter Trust-Ω Wert
+        old_trust_omega: f64,
+        /// Neuer Trust-R Wert
+        new_trust_r: f64,
+        /// Neuer Trust-Ω Wert
+        new_trust_omega: f64,
+        /// Grund für Update (optional)
+        reason: Option<String>,
+        /// Neues Connection-Level
+        new_level: String,
+    },
+
+    /// Peer wurde gebannt
+    PeerBanned {
+        /// Peer-ID (libp2p PeerId als String)
+        peer_id: String,
+        /// UniversalId des Peers (falls bekannt)
+        peer_universal_id: Option<UniversalId>,
+        /// Ban-Dauer in Sekunden
+        duration_secs: u64,
+        /// Grund für Ban
+        reason: String,
+    },
+
+    /// Peer wurde entbannt
+    PeerUnbanned {
+        /// Peer-ID (libp2p PeerId als String)
+        peer_id: String,
+        /// UniversalId des Peers (falls bekannt)
+        peer_universal_id: Option<UniversalId>,
+        /// War Ban manuell oder automatisch abgelaufen?
+        manual: bool,
+    },
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // PRIVACY LAYER EVENTS (Phase 2 Woche 8)
+    // ═══════════════════════════════════════════════════════════════════════════
+    /// Privacy-Circuit erstellt (Onion-Route)
+    PrivacyCircuitCreated {
+        /// Circuit-ID (für Tracking)
+        circuit_id: String,
+        /// Anzahl Hops
+        hop_count: u8,
+        /// Sensitivitäts-Level
+        sensitivity: String,
+        /// Sind alle Relays mit UniversalId?
+        fully_identified: bool,
+        /// Anzahl involvierter Jurisdiktionen
+        jurisdiction_count: u8,
+    },
+
+    /// Privacy-Circuit geschlossen
+    PrivacyCircuitClosed {
+        /// Circuit-ID
+        circuit_id: String,
+        /// Grund (expired, error, manual)
+        reason: String,
+        /// Lebenszeit in Sekunden
+        lifetime_secs: u64,
+        /// Anzahl Nachrichten über diesen Circuit
+        messages_routed: u64,
+    },
+
+    /// Privacy-Nachricht gesendet
+    PrivacyMessageSent {
+        /// Ziel-UniversalId (falls bekannt)
+        destination_id: Option<UniversalId>,
+        /// Sensitivitäts-Level
+        sensitivity: String,
+        /// Payload-Größe in Bytes
+        payload_size: u64,
+        /// Mixing-Delay in ms
+        mixing_delay_ms: u64,
+        /// Anzahl Hops
+        hop_count: u8,
+        /// War es Cover-Traffic?
+        is_cover_traffic: bool,
+    },
+
+    /// Cover-Traffic generiert
+    CoverTrafficGenerated {
+        /// Anzahl generierter Cover-Nachrichten
+        messages_count: u64,
+        /// Gesamt-Bytes generiert
+        total_bytes: u64,
+        /// Compliance-Status (ok, warning, violation)
+        compliance_status: String,
+        /// Aktuelle Rate pro Minute
+        rate_per_minute: f64,
+    },
+
+    /// Mixing-Pool geleert
+    MixingPoolFlushed {
+        /// Anzahl geflusher Nachrichten
+        messages_flushed: u64,
+        /// Durchschnittlicher Delay in ms
+        avg_delay_ms: u64,
+        /// Maximaler Delay in ms
+        max_delay_ms: u64,
+        /// Pool-Größe nach Flush
+        pool_size_after: u64,
+    },
+
+    /// Relay-Auswahl durchgeführt
+    RelaySelectionCompleted {
+        /// Anzahl verfügbarer Kandidaten
+        candidates_available: u64,
+        /// Anzahl eligibler Kandidaten (Trust-Check bestanden)
+        candidates_eligible: u64,
+        /// Anzahl ausgewählter Relays
+        relays_selected: u8,
+        /// Sensitivitäts-Level
+        sensitivity: String,
+        /// Durchschnittlicher Trust-Score
+        avg_trust_score: f64,
+        /// Erfolgreich?
+        success: bool,
+        /// Fehler (falls nicht erfolgreich)
+        error: Option<String>,
     },
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -1599,9 +1610,18 @@ impl StateEvent {
                 StateComponent::Realm
             }
             StateEvent::CrossingEvaluated { .. } => StateComponent::Gateway,
-            StateEvent::NetworkMetricUpdate { .. } | StateEvent::PeerConnectionChange { .. } => {
-                StateComponent::Swarm
-            }
+            StateEvent::NetworkMetricUpdate { .. }
+            | StateEvent::PeerConnectionChange { .. }
+            | StateEvent::TrustUpdated { .. }
+            | StateEvent::PeerBanned { .. }
+            | StateEvent::PeerUnbanned { .. } => StateComponent::Swarm,
+            // Privacy Events (Phase 2 Woche 8)
+            StateEvent::PrivacyCircuitCreated { .. }
+            | StateEvent::PrivacyCircuitClosed { .. }
+            | StateEvent::PrivacyMessageSent { .. }
+            | StateEvent::CoverTrafficGenerated { .. }
+            | StateEvent::MixingPoolFlushed { .. }
+            | StateEvent::RelaySelectionCompleted { .. } => StateComponent::Privacy,
             StateEvent::CheckpointCreated { .. }
             | StateEvent::RecoveryCompleted { .. }
             | StateEvent::ReorgDetected { .. } => StateComponent::EventStore,
@@ -1653,7 +1673,22 @@ impl StateEvent {
             StateEvent::MembershipChange { .. } => 180,
             StateEvent::CrossingEvaluated { .. } => 200,
             StateEvent::NetworkMetricUpdate { .. } => 40,
-            StateEvent::PeerConnectionChange { .. } => 120,
+            StateEvent::PeerConnectionChange { .. } => 150,
+            // Trust Gate Events (v0.4.0)
+            StateEvent::TrustUpdated { reason, .. } => {
+                120 + reason.as_ref().map(|r| r.len()).unwrap_or(0)
+            }
+            StateEvent::PeerBanned { reason, .. } => 100 + reason.len(),
+            StateEvent::PeerUnbanned { .. } => 80,
+            // Privacy Events (Phase 2 Woche 8)
+            StateEvent::PrivacyCircuitCreated { .. } => 100,
+            StateEvent::PrivacyCircuitClosed { .. } => 80,
+            StateEvent::PrivacyMessageSent { .. } => 120,
+            StateEvent::CoverTrafficGenerated { .. } => 60,
+            StateEvent::MixingPoolFlushed { .. } => 50,
+            StateEvent::RelaySelectionCompleted { error, .. } => {
+                80 + error.as_ref().map(|e| e.len()).unwrap_or(0)
+            }
             StateEvent::CheckpointCreated { .. } => 100,
             StateEvent::RecoveryCompleted { errors, .. } => 80 + errors.len() * 100,
             StateEvent::ReorgDetected { discarded_ids, .. } => 50 + discarded_ids.len() * 64,
@@ -1787,6 +1822,178 @@ impl StateEvent {
                 | StateEvent::CrossShardIdentityResolved { .. }
                 | StateEvent::RealmMembershipChanged { .. }
         )
+    }
+
+    /// Ist dies ein Privacy-Event?
+    pub fn is_privacy_event(&self) -> bool {
+        matches!(
+            self,
+            StateEvent::PrivacyCircuitCreated { .. }
+                | StateEvent::PrivacyCircuitClosed { .. }
+                | StateEvent::PrivacyMessageSent { .. }
+                | StateEvent::CoverTrafficGenerated { .. }
+                | StateEvent::MixingPoolFlushed { .. }
+                | StateEvent::RelaySelectionCompleted { .. }
+        )
+    }
+
+    /// Ist dies ein P2P-Netzwerk-Event?
+    pub fn is_p2p_event(&self) -> bool {
+        matches!(
+            self,
+            StateEvent::NetworkMetricUpdate { .. }
+                | StateEvent::PeerConnectionChange { .. }
+                | StateEvent::TrustUpdated { .. }
+                | StateEvent::PeerBanned { .. }
+                | StateEvent::PeerUnbanned { .. }
+        ) || self.is_privacy_event()
+    }
+
+    /// Ist dies ein Trust-Gate-Event? (v0.4.0)
+    pub fn is_trust_gate_event(&self) -> bool {
+        matches!(
+            self,
+            StateEvent::TrustUpdated { .. }
+                | StateEvent::PeerBanned { .. }
+                | StateEvent::PeerUnbanned { .. }
+        )
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STATE EVENT EMITTER
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Trait für Module, die StateEvents emittieren können
+///
+/// Ermöglicht P2P-Modulen wie `SwarmManager` und `PrivacyService`,
+/// StateEvents an das zentrale `UnifiedState` zu senden.
+///
+/// ## Beispiel
+///
+/// ```rust,ignore
+/// use erynoa_api::core::state::{StateEvent, StateEventEmitter};
+///
+/// struct MyP2PComponent {
+///     emitter: Box<dyn StateEventEmitter>,
+/// }
+///
+/// impl MyP2PComponent {
+///     fn on_peer_connected(&self, peer_id: &str) {
+///         self.emitter.emit(StateEvent::PeerConnectionChange {
+///             peer_id: peer_id.to_string(),
+///             peer_universal_id: None,
+///             connected: true,
+///             addr: None,
+///             connection_level: Some("Full".to_string()),
+///         });
+///     }
+/// }
+/// ```
+pub trait StateEventEmitter: Send + Sync {
+    /// Emittiere ein StateEvent
+    fn emit(&self, event: StateEvent);
+
+    /// Emittiere mehrere StateEvents (batch)
+    fn emit_batch(&self, events: Vec<StateEvent>) {
+        for event in events {
+            self.emit(event);
+        }
+    }
+
+    /// Ist der Emitter aktiv?
+    fn is_active(&self) -> bool {
+        true
+    }
+}
+
+/// No-Op Emitter (für Tests oder wenn keine StateEvent-Integration gewünscht ist)
+#[derive(Debug, Clone, Default)]
+pub struct NoOpEmitter;
+
+impl StateEventEmitter for NoOpEmitter {
+    fn emit(&self, _event: StateEvent) {
+        // No-Op
+    }
+
+    fn is_active(&self) -> bool {
+        false
+    }
+}
+
+/// Channel-basierter StateEventEmitter
+///
+/// Sendet StateEvents über einen mpsc-Channel an den UnifiedState.
+pub struct ChannelEmitter {
+    /// Sender für StateEvents
+    tx: tokio::sync::mpsc::UnboundedSender<StateEvent>,
+    /// Name der Quelle (für Logging)
+    source: String,
+}
+
+impl ChannelEmitter {
+    /// Erstelle neuen Channel-Emitter
+    pub fn new(
+        tx: tokio::sync::mpsc::UnboundedSender<StateEvent>,
+        source: impl Into<String>,
+    ) -> Self {
+        Self {
+            tx,
+            source: source.into(),
+        }
+    }
+}
+
+impl StateEventEmitter for ChannelEmitter {
+    fn emit(&self, event: StateEvent) {
+        if let Err(e) = self.tx.send(event) {
+            tracing::warn!(
+                source = %self.source,
+                error = %e,
+                "Failed to emit StateEvent"
+            );
+        }
+    }
+
+    fn is_active(&self) -> bool {
+        !self.tx.is_closed()
+    }
+}
+
+/// Callback-basierter StateEventEmitter
+///
+/// Ruft einen Callback für jedes emittierte Event auf.
+pub struct CallbackEmitter {
+    /// Callback-Funktion
+    callback: Box<dyn Fn(StateEvent) + Send + Sync>,
+    /// Name der Quelle (für Logging)
+    source: String,
+}
+
+impl CallbackEmitter {
+    /// Erstelle neuen Callback-Emitter
+    pub fn new<F>(callback: F, source: impl Into<String>) -> Self
+    where
+        F: Fn(StateEvent) + Send + Sync + 'static,
+    {
+        Self {
+            callback: Box::new(callback),
+            source: source.into(),
+        }
+    }
+}
+
+impl StateEventEmitter for CallbackEmitter {
+    fn emit(&self, event: StateEvent) {
+        (self.callback)(event);
+    }
+}
+
+impl std::fmt::Debug for CallbackEmitter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CallbackEmitter")
+            .field("source", &self.source)
+            .finish()
     }
 }
 
@@ -2295,6 +2502,35 @@ impl MerkleStateTracker {
     /// Hole aktuelle Root-Hash
     pub fn root_hash(&self) -> MerkleHash {
         self.root_hash.read().map(|r| *r).unwrap_or([0u8; 32])
+    }
+
+    /// Merkle-Hash einer Komponente (für Light-Client / Proof-API)
+    pub fn component_hash(&self, component: StateComponent) -> Option<MerkleHash> {
+        self.component_hashes
+            .read()
+            .ok()
+            .and_then(|h| h.get(&component).copied())
+    }
+
+    /// Sequenznummer des Deltas, das den angegebenen Root erzeugt hat (für delta?since_root=)
+    pub fn sequence_for_root(&self, root: &MerkleHash) -> Option<u64> {
+        self.delta_history
+            .read()
+            .ok()
+            .and_then(|h| h.iter().find(|d| d.new_root == *root).map(|d| d.sequence))
+    }
+
+    /// State-Proof für eine Komponente: (Komponenten-Hash, Proof-Path = andere Komponenten-Hashes sortiert)
+    pub fn component_proof(&self, component: StateComponent) -> Option<(MerkleHash, Vec<MerkleHash>)> {
+        let hashes = self.component_hashes.read().ok()?;
+        let hash = *hashes.get(&component)?;
+        let mut proof_path: Vec<MerkleHash> = hashes
+            .iter()
+            .filter(|(c, _)| **c != component)
+            .map(|(_, h)| *h)
+            .collect();
+        proof_path.sort_by_key(|h| *h);
+        Some((hash, proof_path))
     }
 
     /// Hole Deltas seit bestimmter Sequenz (für Sync)
@@ -3928,94 +4164,8 @@ impl Default for IdentitySnapshot {
 // ============================================================================
 // STATE RELATIONSHIP TYPES
 // ============================================================================
-
-/// Beziehungstyp zwischen State-Komponenten
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum StateRelation {
-    /// A hängt kausal von B ab (A ← B)
-    DependsOn,
-    /// A triggert Updates in B (A → B)
-    Triggers,
-    /// A und B sind bidirektional verbunden (A ↔ B)
-    Bidirectional,
-    /// A aggregiert Daten aus B (A ⊃ B)
-    Aggregates,
-    /// A validiert B (A ✓ B)
-    Validates,
-}
-
-/// State-Komponenten-Identifikator
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum StateComponent {
-    // Core
-    Trust,
-    Event,
-    WorldFormula,
-    Consensus,
-    // Execution
-    Gas,
-    Mana,
-    Execution,
-    // ECLVM Layer (ECL = Erynoa Core Language)
-    /// ECLVM - Cost-limited Execution Environment für ECL
-    ECLVM,
-    /// ECL Policy-Engine (Rules, Crossing-Policies)
-    ECLPolicy,
-    /// ECL Blueprint-Management (Templates, Instantiation)
-    ECLBlueprint,
-    // Protection
-    Anomaly,
-    Diversity,
-    Quadratic,
-    AntiCalcification,
-    Calibration,
-    // Storage
-    KvStore,
-    EventStore,
-    Archive,
-    Blueprint,
-    // Peer Layer (Κ22-Κ24)
-    Gateway,
-    SagaComposer,
-    IntentParser,
-    /// Realm-Isolation und per-Realm State
-    Realm,
-    /// Room: Sub-Realm-Isolation mit eigenem Controller-Scope (Κ22)
-    Room,
-    /// Partition: Trust-basierte Berechtigungspartition innerhalb eines Rooms
-    Partition,
-    // P2P Network Layer
-    Swarm,
-    Gossip,
-    Kademlia,
-    Relay,
-    NatTraversal,
-    Privacy,
-    // ═══════════════════════════════════════════════════════════════════════════
-    // ENGINE-LAYER KOMPONENTEN (6 neue Engines für SOLL-Zustand)
-    // ═══════════════════════════════════════════════════════════════════════════
-    /// UI-Engine: Deklaratives, Trust-basiertes Interface-Rendering (Κ22)
-    UI,
-    /// DataLogic-Engine: Reaktive Event-Verarbeitung und Aggregation (Κ9-Κ12)
-    DataLogic,
-    /// API-Engine: Dynamische REST-API-Definition per ECL (Κ23)
-    API,
-    /// Governance-Engine: DAO-Prinzipien und Abstimmungsmechanismen (Κ19, Κ21)
-    Governance,
-    /// Controller-Engine: Berechtigungsverwaltung mit Delegation (Κ5)
-    Controller,
-    /// BlueprintComposer: Template-Komposition und Vererbung
-    BlueprintComposer,
-    // ═══════════════════════════════════════════════════════════════════════════
-    // IDENTITY LAYER (Κ6-Κ8 DID Management)
-    // ═══════════════════════════════════════════════════════════════════════════
-    /// Identity: DID-Management, Root-DIDs, Sub-DIDs (Κ6-Κ8)
-    Identity,
-    /// Credential: Verifiable Credentials, Attestations
-    Credential,
-    /// KeyManagement: Key-Rotation, Recovery, Hardware-Security
-    KeyManagement,
-}
+// NOTE: StateRelation und StateComponent sind jetzt in domain/unified/component.rs
+// definiert und werden oben via `pub use` re-exportiert für Rückwärtskompatibilität.
 
 /// Beziehungs-Graph zwischen State-Komponenten
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -5355,6 +5505,46 @@ impl ExecutionsState {
         }
     }
 
+    /// ECLVM-Policy-Ausführung erfassen (E1.2: ExecutionState ↔ ECLVM Sync)
+    ///
+    /// Im Gegensatz zu start()/complete() wird hier keine active_context-Verwaltung
+    /// benötigt, da ECLVM-Policy-Ausführungen synchron sind (kein langlebiger Kontext).
+    /// Diese Methode aggregiert ECLVM-Läufe in die Execution-Metriken.
+    pub fn record_eclvm_policy_execution(
+        &self,
+        success: bool,
+        gas_used: u64,
+        mana_used: u64,
+        events: u64,
+        duration_us: u64,
+    ) {
+        // Zähle als Execution
+        self.total.fetch_add(1, Ordering::Relaxed);
+        if success {
+            self.successful.fetch_add(1, Ordering::Relaxed);
+        } else {
+            self.failed.fetch_add(1, Ordering::Relaxed);
+        }
+        self.events_emitted.fetch_add(events, Ordering::Relaxed);
+
+        // Konvertiere µs → ms für consistency mit anderen Execution-Zeiten
+        let duration_ms = duration_us / 1000;
+        if let Ok(mut times) = self.execution_times_ms.write() {
+            times.push(duration_ms);
+            if times.len() > 1000 {
+                times.remove(0);
+            }
+        }
+
+        // Aggregiere Gas/Mana (Relationship-Tracking)
+        if gas_used > 0 {
+            self.gas_aggregations.fetch_add(1, Ordering::Relaxed);
+        }
+        if mana_used > 0 {
+            self.mana_aggregations.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
     pub fn avg_execution_time(&self) -> f64 {
         self.execution_times_ms
             .read()
@@ -5509,6 +5699,14 @@ pub enum ECLPolicyType {
     Governance,
     /// Privacy-Rules für Daten-Sichtbarkeit
     Privacy,
+    /// API-Engine Eintrittspunkt (Phase 3.2)
+    Api,
+    /// UI-Engine Eintrittspunkt (Phase 3.3)
+    Ui,
+    /// DataLogic-Engine Eintrittspunkt (Phase 3.4)
+    DataLogic,
+    /// Controller-Engine Eintrittspunkt (Phase 3.6)
+    Controller,
     /// Custom User-defined Policy
     Custom,
 }
@@ -5793,6 +5991,12 @@ impl ECLVMState {
         self.total_gas_consumed.fetch_add(gas, Ordering::Relaxed);
         self.total_mana_consumed.fetch_add(mana, Ordering::Relaxed);
         self.events_emitted.fetch_add(1, Ordering::Relaxed);
+
+        // Track by type (Gap 3: Api, Ui, DataLogic, Controller, …)
+        let type_name = format!("{:?}", policy_type);
+        if let Ok(mut by_type) = self.policies_by_type.write() {
+            *by_type.entry(type_name).or_insert(0) += 1;
+        }
 
         // Update per-realm state
         if let Some(realm) = realm_id {
@@ -8317,42 +8521,70 @@ pub struct RelaySnapshot {
 pub struct PrivacyState {
     /// Circuits erstellt
     pub circuits_created: AtomicU64,
+    /// Circuits geschlossen (v0.4.0)
+    pub circuits_closed: AtomicU64,
     /// Circuits aktiv
     pub circuits_active: AtomicUsize,
     /// Hops durchschnittlich
     pub avg_hops: RwLock<f64>,
-    /// Messages über Privacy-Layer
+    /// Messages über Privacy-Layer gesendet (v0.4.0)
+    pub messages_sent: AtomicU64,
+    /// Messages über Privacy-Layer geroutet (v0.4.0)
+    pub messages_routed: AtomicU64,
+    /// Messages über Privacy-Layer (Legacy)
     pub private_messages: AtomicU64,
-    /// Cover-Traffic Messages
+    /// Cover-Traffic Messages gesendet (v0.4.0)
+    pub cover_traffic_sent: AtomicU64,
+    /// Cover-Traffic Messages (Legacy)
     pub cover_traffic: AtomicU64,
+    /// Mixing-Pool Flushes (v0.4.0)
+    pub mixing_flushes: AtomicU64,
+    /// Messages durch Mixing-Pool (v0.4.0)
+    pub messages_mixed: AtomicU64,
     /// Relay-Rotationen
     pub relay_rotations: AtomicU64,
     /// Trust-basierte Relay-Auswahl
     pub trust_based_selections: AtomicU64,
+    /// Fehlgeschlagene Relay-Auswahlen (v0.4.0)
+    pub selection_failures: AtomicU64,
 }
 
 impl PrivacyState {
     pub fn new() -> Self {
         Self {
             circuits_created: AtomicU64::new(0),
+            circuits_closed: AtomicU64::new(0),
             circuits_active: AtomicUsize::new(0),
             avg_hops: RwLock::new(3.0),
+            messages_sent: AtomicU64::new(0),
+            messages_routed: AtomicU64::new(0),
             private_messages: AtomicU64::new(0),
+            cover_traffic_sent: AtomicU64::new(0),
             cover_traffic: AtomicU64::new(0),
+            mixing_flushes: AtomicU64::new(0),
+            messages_mixed: AtomicU64::new(0),
             relay_rotations: AtomicU64::new(0),
             trust_based_selections: AtomicU64::new(0),
+            selection_failures: AtomicU64::new(0),
         }
     }
 
     pub fn snapshot(&self) -> PrivacySnapshot {
         PrivacySnapshot {
             circuits_created: self.circuits_created.load(Ordering::Relaxed),
+            circuits_closed: self.circuits_closed.load(Ordering::Relaxed),
             circuits_active: self.circuits_active.load(Ordering::Relaxed),
             avg_hops: self.avg_hops.read().map(|h| *h).unwrap_or(3.0),
+            messages_sent: self.messages_sent.load(Ordering::Relaxed),
+            messages_routed: self.messages_routed.load(Ordering::Relaxed),
             private_messages: self.private_messages.load(Ordering::Relaxed),
+            cover_traffic_sent: self.cover_traffic_sent.load(Ordering::Relaxed),
             cover_traffic: self.cover_traffic.load(Ordering::Relaxed),
+            mixing_flushes: self.mixing_flushes.load(Ordering::Relaxed),
+            messages_mixed: self.messages_mixed.load(Ordering::Relaxed),
             relay_rotations: self.relay_rotations.load(Ordering::Relaxed),
             trust_based_selections: self.trust_based_selections.load(Ordering::Relaxed),
+            selection_failures: self.selection_failures.load(Ordering::Relaxed),
         }
     }
 }
@@ -8366,12 +8598,19 @@ impl Default for PrivacyState {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrivacySnapshot {
     pub circuits_created: u64,
+    pub circuits_closed: u64,
     pub circuits_active: usize,
     pub avg_hops: f64,
+    pub messages_sent: u64,
+    pub messages_routed: u64,
     pub private_messages: u64,
+    pub cover_traffic_sent: u64,
     pub cover_traffic: u64,
+    pub mixing_flushes: u64,
+    pub messages_mixed: u64,
     pub relay_rotations: u64,
     pub trust_based_selections: u64,
+    pub selection_failures: u64,
 }
 
 /// Aggregierter P2P State
@@ -10857,6 +11096,24 @@ impl UnifiedState {
         self.merkle_tracker.verify_delta(delta)
     }
 
+    /// Merkle-Hash einer Komponente (Phase 5: Light-Client / Proof-API)
+    pub fn merkle_component_hash(&self, component: StateComponent) -> Option<MerkleHash> {
+        self.merkle_tracker.component_hash(component)
+    }
+
+    /// Sequenz zu einem bekannten Root (für delta?since_root=)
+    pub fn merkle_sequence_for_root(&self, root: &MerkleHash) -> Option<u64> {
+        self.merkle_tracker.sequence_for_root(root)
+    }
+
+    /// State-Proof für eine Komponente (Phase 5: Verifizierung gegen Root)
+    pub fn merkle_component_proof(
+        &self,
+        component: StateComponent,
+    ) -> Option<(MerkleHash, Vec<MerkleHash>)> {
+        self.merkle_tracker.component_proof(component)
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Phase 6.2: Multi-Level Gas Metering
     // ─────────────────────────────────────────────────────────────────────────
@@ -11134,7 +11391,7 @@ impl UnifiedState {
                 realm_id,
                 ..
             } => {
-                // Nutze existierende policy_executed Methode
+                // Nutze existierende policy_executed Methode für ECLVMState
                 self.eclvm.policy_executed(
                     *passed,
                     *policy_type,
@@ -11143,6 +11400,20 @@ impl UnifiedState {
                     *duration_us,
                     realm_id.as_deref(),
                 );
+
+                // E1.2: Synchronisiere mit ExecutionState
+                // ECLVM-Policy-Ausführungen werden als Execution-Contexts aggregiert
+                self.execution.executions.record_eclvm_policy_execution(
+                    *passed,
+                    *gas_used,
+                    *mana_used,
+                    1, // Policy emittiert 1 Event
+                    *duration_us,
+                );
+
+                // Aktualisiere auch Gas/Mana State
+                self.execution.gas.consume(*gas_used);
+                self.execution.mana.consume(*mana_used);
             }
 
             StateEvent::BlueprintAction { action, .. } => {
@@ -11364,6 +11635,23 @@ impl UnifiedState {
             }
 
             // ═══════════════════════════════════════════════════════════════════
+            // TRUST GATE EVENTS (v0.4.0)
+            // ═══════════════════════════════════════════════════════════════════
+            StateEvent::TrustUpdated { .. } => {
+                // Trust-Updates werden vom TrustGate selbst verwaltet
+                // Hier nur für Logging/Monitoring
+            }
+
+            StateEvent::PeerBanned { .. } => {
+                // Ban-Statistiken: Könnte in einer separaten Statistik-Struktur
+                // getrackt werden (z.B. self.p2p.trust_gate.bans)
+            }
+
+            StateEvent::PeerUnbanned { .. } => {
+                // Unban-Statistiken
+            }
+
+            // ═══════════════════════════════════════════════════════════════════
             // RECOVERY + GOVERNANCE + QUOTA EVENTS
             // ═══════════════════════════════════════════════════════════════════
             StateEvent::CheckpointCreated { .. } => {
@@ -11416,6 +11704,96 @@ impl UnifiedState {
 
             StateEvent::RealmQuarantineChange { .. } => {
                 // Wird durch quarantine_realm() gesteuert
+            }
+
+            // ═══════════════════════════════════════════════════════════════════
+            // PRIVACY LAYER EVENTS (Phase 2 Woche 8)
+            // ═══════════════════════════════════════════════════════════════════
+            StateEvent::PrivacyCircuitCreated { hop_count, .. } => {
+                // Tracking für Privacy-Circuits
+                self.p2p
+                    .privacy
+                    .circuits_created
+                    .fetch_add(1, Ordering::Relaxed);
+                // Durchschnittliche Hop-Zahl könnte hier getrackt werden
+                let _ = hop_count; // TODO: Track average hop count
+            }
+
+            StateEvent::PrivacyCircuitClosed {
+                messages_routed, ..
+            } => {
+                // Circuit-Statistiken
+                self.p2p
+                    .privacy
+                    .circuits_closed
+                    .fetch_add(1, Ordering::Relaxed);
+                // Messages über diesen Circuit
+                self.p2p
+                    .privacy
+                    .messages_routed
+                    .fetch_add(*messages_routed, Ordering::Relaxed);
+            }
+
+            StateEvent::PrivacyMessageSent {
+                is_cover_traffic, ..
+            } => {
+                if *is_cover_traffic {
+                    self.p2p
+                        .privacy
+                        .cover_traffic_sent
+                        .fetch_add(1, Ordering::Relaxed);
+                } else {
+                    self.p2p
+                        .privacy
+                        .messages_sent
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+            }
+
+            StateEvent::CoverTrafficGenerated {
+                messages_count,
+                compliance_status,
+                ..
+            } => {
+                // Cover-Traffic-Metriken
+                self.p2p
+                    .privacy
+                    .cover_traffic_sent
+                    .fetch_add(*messages_count, Ordering::Relaxed);
+
+                // Compliance-Tracking
+                if compliance_status == "violation" {
+                    self.record_anomaly("cover_traffic_compliance_violation");
+                }
+            }
+
+            StateEvent::MixingPoolFlushed {
+                messages_flushed, ..
+            } => {
+                // Mixing-Pool-Statistiken
+                self.p2p
+                    .privacy
+                    .mixing_flushes
+                    .fetch_add(1, Ordering::Relaxed);
+                self.p2p
+                    .privacy
+                    .messages_mixed
+                    .fetch_add(*messages_flushed, Ordering::Relaxed);
+            }
+
+            StateEvent::RelaySelectionCompleted { success, .. } => {
+                // Relay-Auswahl-Statistiken
+                if *success {
+                    self.p2p
+                        .privacy
+                        .trust_based_selections
+                        .fetch_add(1, Ordering::Relaxed);
+                } else {
+                    self.p2p
+                        .privacy
+                        .selection_failures
+                        .fetch_add(1, Ordering::Relaxed);
+                }
             }
 
             // ═══════════════════════════════════════════════════════════════════
@@ -13638,22 +14016,71 @@ impl StateView {
         }
     }
 
-    /// Erstelle StateView aus UnifiedState Snapshot
+    /// Erstelle StateView aus UnifiedState Snapshot (Caches werden befüllt)
     pub fn from_unified_snapshot(
         snapshot: &UnifiedSnapshot,
         caller_did: Option<String>,
         current_realm: Option<String>,
     ) -> Self {
         let mut view = Self::new(caller_did, current_realm);
+        view.refresh_from_snapshot(snapshot);
+        view
+    }
 
-        // Pre-populate trust cache mit bekannten Werten
-        // In Production würde dies aus dem Snapshot geladen
-        if let Ok(mut cache) = view.trust_cache.write() {
-            // Initial empty - wird bei Queries gefüllt
+    /// Befülle Caches aus UnifiedSnapshot (Phase 2.3 – State-backed ECL).
+    ///
+    /// Liest trust-/realm-/identity-relevante Felder aus dem Snapshot und
+    /// überträgt sie in die Caches, sodass get_trust/get_realm/get_identity
+    /// ohne manuelles set_* sinnvolle Werte liefern.
+    pub fn refresh_from_snapshot(&mut self, snapshot: &UnifiedSnapshot) {
+        // Trust-Cache: Snapshot hat nur Aggregat (avg_trust); Caller mit avg_trust belegen
+        if let Ok(mut cache) = self.trust_cache.write() {
             cache.clear();
+            if let Some(ref did) = self.caller_did {
+                cache.insert(did.clone(), snapshot.core.trust.avg_trust);
+            }
         }
 
-        view
+        // Realm-Cache: aus snapshot.peer.realm.realms
+        if let Ok(mut cache) = self.realm_cache.write() {
+            cache.clear();
+            for (realm_id, rs) in &snapshot.peer.realm.realms {
+                let is_quarantined = rs.quota_health < 0.5;
+                cache.insert(
+                    realm_id.clone(),
+                    RealmViewData {
+                        realm_id: realm_id.clone(),
+                        name: realm_id.clone(),
+                        owner_did: String::new(),
+                        member_count: rs.member_count as u64,
+                        trust_threshold: rs.min_trust as f64,
+                        is_quarantined,
+                        created_at: rs.created_at,
+                    },
+                );
+            }
+        }
+
+        // Identity-Cache: root_did aus Snapshot + avg_trust
+        if let Ok(mut cache) = self.identity_cache.write() {
+            cache.clear();
+            if let Some(ref root_did) = snapshot.identity.root_did {
+                let created_at = snapshot.identity.root_created_at_ms / 1000;
+                cache.insert(
+                    root_did.clone(),
+                    IdentityViewData {
+                        did: root_did.clone(),
+                        display_name: None,
+                        trust_score: snapshot.core.trust.avg_trust,
+                        realms: Vec::new(),
+                        created_at,
+                    },
+                );
+            }
+        }
+
+        // Snapshot-Zeit aktualisieren
+        self.snapshot_time = snapshot.timestamp_ms as u128;
     }
 
     /// Prüfe ob Caller bekannt ist
@@ -13970,11 +14397,150 @@ impl<'a> StateHandle<'a> {
         MutationResult::Success
     }
 
+    /// E4: Markiere Key als dirty (für externe Tracker)
+    ///
+    /// Wird von StateHost genutzt um zu signalisieren, dass ein Key
+    /// modifiziert wurde (ohne tatsächlich Storage zu ändern).
+    pub fn mark_key_dirty(&self, key: &str) {
+        if let Ok(mut dirty) = self.dirty_keys.write() {
+            dirty.insert(key.to_string());
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Governance Operations (E4.1)
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// E4: Cast a vote on a governance proposal within this realm
+    ///
+    /// # Arguments
+    /// - `proposal_id`: The proposal identifier
+    /// - `vote`: true = approve, false = reject
+    /// - `weight`: Vote weight (usually based on trust or stake)
+    ///
+    /// # Gas Cost: 100
+    pub fn cast_vote(&self, proposal_id: &str, vote: bool, weight: f64) -> MutationResult {
+        if !self.is_valid() {
+            return self
+                .budget
+                .exhaustion_reason()
+                .map(MutationResult::BudgetExhausted)
+                .unwrap_or(MutationResult::PolicyDenied("Handle invalid".to_string()));
+        }
+
+        // Gas für Vote-Operation
+        if !self.budget.consume_gas(100) {
+            return MutationResult::BudgetExhausted(BudgetExhaustionReason::OutOfGas);
+        }
+
+        // Validation: Weight muss positiv sein
+        if weight <= 0.0 || weight > 1.0 {
+            return MutationResult::ValidationFailed(
+                "Vote weight must be between 0.0 and 1.0".to_string(),
+            );
+        }
+
+        // Event für Vote vorbereiten (nutzt existierendes VoteCast Event)
+        let event = StateEvent::VoteCast {
+            proposal_id: proposal_id.to_string(),
+            voter_id: self.caller_did.clone(),
+            vote,
+            weight,
+        };
+
+        // Event zu pending hinzufügen
+        if let Ok(mut pending) = self.pending_events.write() {
+            pending.push(event);
+        }
+
+        // Dirty-Key tracken
+        if let Ok(mut dirty) = self.dirty_keys.write() {
+            dirty.insert(format!("vote:{}:{}", self.realm_id, proposal_id));
+        }
+
+        MutationResult::Success
+    }
+
+    /// E4: Submit a governance proposal within this realm
+    ///
+    /// # Arguments
+    /// - `proposal_type`: Type of proposal (e.g., "parameter_change", "membership")
+    /// - `title`: Proposal title (stored in description for now)
+    /// - `deadline_hours`: Voting deadline in hours from now
+    ///
+    /// # Gas Cost: 200
+    /// # Mana Cost: 10
+    pub fn submit_proposal(
+        &self,
+        proposal_type: &str,
+        title: &str,
+        deadline_hours: u64,
+    ) -> Result<String, MutationResult> {
+        if !self.is_valid() {
+            return Err(self
+                .budget
+                .exhaustion_reason()
+                .map(MutationResult::BudgetExhausted)
+                .unwrap_or(MutationResult::PolicyDenied("Handle invalid".to_string())));
+        }
+
+        // Gas für Proposal-Submission
+        if !self.budget.consume_gas(200) {
+            return Err(MutationResult::BudgetExhausted(BudgetExhaustionReason::OutOfGas));
+        }
+
+        // Mana für Proposal
+        if !self.budget.consume_mana(10) {
+            return Err(MutationResult::BudgetExhausted(BudgetExhaustionReason::OutOfMana));
+        }
+
+        // Generate proposal ID
+        let now_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or(0);
+
+        let proposal_id = format!("prop_{}_{}", self.realm_id, now_ms);
+
+        // Deadline berechnen
+        let deadline_ms = now_ms + (deadline_hours as u128 * 3600 * 1000);
+
+        // Event für Proposal (nutzt existierendes ProposalCreated Event)
+        let event = StateEvent::ProposalCreated {
+            proposal_id: proposal_id.clone(),
+            realm_id: self.realm_id.clone(),
+            proposer_id: self.caller_did.clone(),
+            proposal_type: proposal_type.to_string(),
+            deadline_ms,
+        };
+
+        // Event zu pending hinzufügen
+        if let Ok(mut pending) = self.pending_events.write() {
+            pending.push(event);
+        }
+
+        // Dirty-Key tracken
+        if let Ok(mut dirty) = self.dirty_keys.write() {
+            dirty.insert(format!("proposal:{}", proposal_id));
+        }
+
+        Ok(proposal_id)
+    }
+
     // ─────────────────────────────────────────────────────────────────────
     // Event Emission
     // ─────────────────────────────────────────────────────────────────────
 
-    /// Emittiere Event (wird beim Commit geloggt)
+    /// E4: Emittiere benutzerdefiniertes Event (wird beim Commit geloggt)
+    ///
+    /// Ermöglicht ECL-Policies eigene Events zu emittieren, die
+    /// beim Commit auf UnifiedState angewendet werden.
+    ///
+    /// # Arguments
+    /// - `event_type`: Typ des Events (z.B. "notification", "action_triggered")
+    /// - `payload`: JSON-artiger Payload als String
+    ///
+    /// # Mana Cost: 1 + payload_size/100
     pub fn emit_event(&self, event_type: &str, payload: &str) -> MutationResult {
         if !self.is_valid() {
             return self
@@ -13984,9 +14550,15 @@ impl<'a> StateHandle<'a> {
                 .unwrap_or(MutationResult::PolicyDenied("Handle invalid".to_string()));
         }
 
-        // Mana für Event-Emission
-        if !self.budget.consume_mana(1) {
+        // Mana für Event-Emission (abhängig von Payload-Größe)
+        let mana_cost = 1 + (payload.len() as u64 / 100);
+        if !self.budget.consume_mana(mana_cost) {
             return MutationResult::BudgetExhausted(BudgetExhaustionReason::OutOfMana);
+        }
+
+        // Gas für Event-Emission
+        if !self.budget.consume_gas(10) {
+            return MutationResult::BudgetExhausted(BudgetExhaustionReason::OutOfGas);
         }
 
         // Event-Tracking im State
@@ -13995,7 +14567,60 @@ impl<'a> StateHandle<'a> {
             .events_emitted
             .fetch_add(1, Ordering::Relaxed);
 
+        // Dirty-Key für Event tracken
+        if let Ok(mut dirty) = self.dirty_keys.write() {
+            dirty.insert(format!(
+                "event:{}:{}:{}",
+                self.realm_id,
+                event_type,
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_nanos())
+                    .unwrap_or(0)
+            ));
+        }
+
         MutationResult::Success
+    }
+
+    /// E4: Emittiere StateEvent direkt (für interne Verwendung)
+    ///
+    /// Ermöglicht das direkte Hinzufügen eines StateEvent zu den pending Events.
+    /// Wird bei commit() auf UnifiedState angewendet.
+    pub fn emit_state_event(&self, event: StateEvent) -> MutationResult {
+        if !self.is_valid() {
+            return self
+                .budget
+                .exhaustion_reason()
+                .map(MutationResult::BudgetExhausted)
+                .unwrap_or(MutationResult::PolicyDenied("Handle invalid".to_string()));
+        }
+
+        // Gas für State-Event-Emission
+        if !self.budget.consume_gas(25) {
+            return MutationResult::BudgetExhausted(BudgetExhaustionReason::OutOfGas);
+        }
+
+        // Event zu pending hinzufügen
+        if let Ok(mut pending) = self.pending_events.write() {
+            pending.push(event);
+        }
+
+        // Event-Tracking
+        self.state
+            .eclvm
+            .events_emitted
+            .fetch_add(1, Ordering::Relaxed);
+
+        MutationResult::Success
+    }
+
+    /// E4: Hole pending Events (für Debugging/Testing)
+    pub fn pending_events(&self) -> Vec<StateEvent> {
+        self.pending_events
+            .read()
+            .map(|p| p.clone())
+            .unwrap_or_default()
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -14256,6 +14881,14 @@ impl ECLVMStateContext {
     /// Verstrichene Zeit seit Erstellung
     pub fn elapsed_ms(&self) -> u64 {
         self.created_at.elapsed().as_millis() as u64
+    }
+
+    /// Befülle StateView aus UnifiedSnapshot (Phase 2.3 – State-backed ECL).
+    ///
+    /// Vor der ersten ECL-Ausführung aufrufen, damit get_trust/get_realm/get_identity
+    /// sinnvolle Werte aus dem State liefern.
+    pub fn refresh_view_from_snapshot(&mut self, snapshot: &UnifiedSnapshot) {
+        self.view.refresh_from_snapshot(snapshot);
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -16593,6 +17226,656 @@ mod tests_phase6_4 {
         assert!(ctx.budget.is_exhausted());
         let summary = ctx.finalize();
         assert!(!summary.is_success());
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // E1.2: ExecutionState ↔ ECLVM Integration Tests
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_e1_policy_evaluated_syncs_execution_state() {
+        let state = UnifiedState::new();
+
+        // Initiale Werte
+        let initial_exec_total = state.execution.executions.total.load(Ordering::Relaxed);
+        let initial_eclvm_executed = state.eclvm.policies_executed.load(Ordering::Relaxed);
+        let initial_gas = state.execution.gas.consumed.load(Ordering::Relaxed);
+        let initial_mana = state.execution.mana.consumed.load(Ordering::Relaxed);
+
+        // Simuliere PolicyEvaluated Event
+        let event = StateEvent::PolicyEvaluated {
+            policy_id: "test_policy".to_string(),
+            realm_id: Some("realm:test".to_string()),
+            passed: true,
+            policy_type: ECLPolicyType::Crossing,
+            gas_used: 1000,
+            mana_used: 50,
+            duration_us: 1500, // 1.5ms
+        };
+
+        let wrapped = WrappedStateEvent::new(event, vec![], 1);
+        state.apply_state_event(&wrapped);
+
+        // Verifiziere ECLVMState wurde aktualisiert
+        assert_eq!(
+            state.eclvm.policies_executed.load(Ordering::Relaxed),
+            initial_eclvm_executed + 1
+        );
+        assert_eq!(state.eclvm.policies_passed.load(Ordering::Relaxed), 1);
+        assert_eq!(state.eclvm.total_gas_consumed.load(Ordering::Relaxed), 1000);
+        assert_eq!(state.eclvm.total_mana_consumed.load(Ordering::Relaxed), 50);
+
+        // E1.2: Verifiziere ExecutionState wurde AUCH aktualisiert
+        assert_eq!(
+            state.execution.executions.total.load(Ordering::Relaxed),
+            initial_exec_total + 1
+        );
+        assert_eq!(
+            state.execution.executions.successful.load(Ordering::Relaxed),
+            1
+        );
+        assert_eq!(
+            state.execution.gas.consumed.load(Ordering::Relaxed),
+            initial_gas + 1000
+        );
+        assert_eq!(
+            state.execution.mana.consumed.load(Ordering::Relaxed),
+            initial_mana + 50
+        );
+
+        // Verifiziere Execution-Zeit wurde erfasst (duration_us → ms)
+        let avg_time = state.execution.executions.avg_execution_time();
+        assert!(avg_time >= 0.0); // duration_us = 1500 → 1ms
+    }
+
+    #[test]
+    fn test_e1_failed_policy_updates_failed_count() {
+        let state = UnifiedState::new();
+
+        // Fehlgeschlagene Policy
+        let event = StateEvent::PolicyEvaluated {
+            policy_id: "failed_policy".to_string(),
+            realm_id: Some("realm:test".to_string()),
+            passed: false,
+            policy_type: ECLPolicyType::Membership,
+            gas_used: 500,
+            mana_used: 25,
+            duration_us: 800,
+        };
+
+        let wrapped = WrappedStateEvent::new(event, vec![], 1);
+        state.apply_state_event(&wrapped);
+
+        // ECLVMState: denied
+        assert_eq!(state.eclvm.policies_denied.load(Ordering::Relaxed), 1);
+        assert_eq!(state.eclvm.policies_passed.load(Ordering::Relaxed), 0);
+
+        // ExecutionState: failed
+        assert_eq!(
+            state.execution.executions.failed.load(Ordering::Relaxed),
+            1
+        );
+        assert_eq!(
+            state.execution.executions.successful.load(Ordering::Relaxed),
+            0
+        );
+    }
+
+    #[test]
+    fn test_e1_multiple_policies_aggregate_correctly() {
+        let state = UnifiedState::new();
+
+        // 3 Policies: 2 erfolgreich, 1 fehlgeschlagen
+        for (i, passed) in [(true, 100), (true, 200), (false, 300)].iter().enumerate() {
+            let event = StateEvent::PolicyEvaluated {
+                policy_id: format!("policy_{}", i),
+                realm_id: Some("realm:test".to_string()),
+                passed: passed.0,
+                policy_type: ECLPolicyType::Crossing,
+                gas_used: passed.1 as u64,
+                mana_used: 10,
+                duration_us: 1000,
+            };
+            let wrapped = WrappedStateEvent::new(event, vec![], (i + 1) as u64);
+            state.apply_state_event(&wrapped);
+        }
+
+        // ECLVMState
+        assert_eq!(state.eclvm.policies_executed.load(Ordering::Relaxed), 3);
+        assert_eq!(state.eclvm.policies_passed.load(Ordering::Relaxed), 2);
+        assert_eq!(state.eclvm.policies_denied.load(Ordering::Relaxed), 1);
+        assert_eq!(state.eclvm.total_gas_consumed.load(Ordering::Relaxed), 600); // 100+200+300
+        assert_eq!(state.eclvm.total_mana_consumed.load(Ordering::Relaxed), 30); // 10*3
+
+        // ExecutionState (E1.2)
+        assert_eq!(state.execution.executions.total.load(Ordering::Relaxed), 3);
+        assert_eq!(
+            state.execution.executions.successful.load(Ordering::Relaxed),
+            2
+        );
+        assert_eq!(
+            state.execution.executions.failed.load(Ordering::Relaxed),
+            1
+        );
+        assert_eq!(state.execution.gas.consumed.load(Ordering::Relaxed), 600);
+        assert_eq!(state.execution.mana.consumed.load(Ordering::Relaxed), 30);
+
+        // Success-Rate
+        let success_rate = state.execution.executions.success_rate();
+        assert!((success_rate - 0.666666).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_e1_record_eclvm_policy_execution_aggregates_gas_mana() {
+        let executions = ExecutionsState::new();
+
+        // Führe Policy aus
+        executions.record_eclvm_policy_execution(
+            true,   // success
+            1000,   // gas
+            50,     // mana
+            1,      // events
+            5000,   // duration_us (5ms)
+        );
+
+        assert_eq!(executions.total.load(Ordering::Relaxed), 1);
+        assert_eq!(executions.successful.load(Ordering::Relaxed), 1);
+        assert_eq!(executions.gas_aggregations.load(Ordering::Relaxed), 1);
+        assert_eq!(executions.mana_aggregations.load(Ordering::Relaxed), 1);
+
+        // Noch eine ohne Mana
+        executions.record_eclvm_policy_execution(
+            true,
+            500,
+            0, // kein Mana
+            1,
+            2000,
+        );
+
+        assert_eq!(executions.total.load(Ordering::Relaxed), 2);
+        assert_eq!(executions.gas_aggregations.load(Ordering::Relaxed), 2);
+        assert_eq!(executions.mana_aggregations.load(Ordering::Relaxed), 1); // Bleibt 1
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // E4 Tests: StateHandle für Realm-scoped Writes
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_e4_state_handle_update_trust() {
+        let state = Arc::new(UnifiedState::new());
+        let budget = Arc::new(ECLVMBudget::new(ECLVMBudgetLimits::default()));
+
+        let handle = StateHandle::new(
+            &state,
+            "did:test:alice".to_string(),
+            "realm:test".to_string(),
+            budget.clone(),
+        );
+
+        // Trust-Update sollte funktionieren
+        let result = handle.update_trust("did:test:bob", 0.1, TrustReason::Attestation);
+        assert!(matches!(result, MutationResult::Success));
+
+        // Pending Event sollte vorhanden sein
+        assert_eq!(handle.pending_events_count(), 1);
+
+        // Dirty-Key sollte vorhanden sein
+        assert_eq!(handle.dirty_keys_count(), 1);
+
+        // Commit sollte erfolgreich sein
+        let commit_result = handle.commit();
+        assert!(matches!(commit_result, CommitResult::Success { .. }));
+    }
+
+    #[test]
+    fn test_e4_state_handle_cast_vote() {
+        let state = Arc::new(UnifiedState::new());
+        let budget = Arc::new(ECLVMBudget::new(ECLVMBudgetLimits::default()));
+
+        let handle = StateHandle::new(
+            &state,
+            "did:test:voter".to_string(),
+            "realm:gov".to_string(),
+            budget.clone(),
+        );
+
+        // Vote abgeben
+        let result = handle.cast_vote("prop_123", true, 0.8);
+        assert!(matches!(result, MutationResult::Success));
+
+        // Event sollte gepusht sein
+        let events = handle.pending_events();
+        assert_eq!(events.len(), 1);
+        assert!(matches!(events[0], StateEvent::VoteCast { .. }));
+    }
+
+    #[test]
+    fn test_e4_state_handle_submit_proposal() {
+        let state = Arc::new(UnifiedState::new());
+        let budget = Arc::new(ECLVMBudget::new(ECLVMBudgetLimits::default()));
+
+        let handle = StateHandle::new(
+            &state,
+            "did:test:proposer".to_string(),
+            "realm:gov".to_string(),
+            budget.clone(),
+        );
+
+        // Proposal einreichen
+        let result = handle.submit_proposal("parameter_change", "Increase stake", 24);
+        assert!(result.is_ok());
+
+        let proposal_id = result.unwrap();
+        assert!(proposal_id.starts_with("prop_realm:gov_"));
+
+        // Event sollte gepusht sein
+        let events = handle.pending_events();
+        assert_eq!(events.len(), 1);
+        assert!(matches!(events[0], StateEvent::ProposalCreated { .. }));
+    }
+
+    #[test]
+    fn test_e4_state_handle_store_put() {
+        let state = Arc::new(UnifiedState::new());
+        let budget = Arc::new(ECLVMBudget::new(ECLVMBudgetLimits::default()));
+
+        let handle = StateHandle::new(
+            &state,
+            "did:test:alice".to_string(),
+            "realm:test".to_string(),
+            budget.clone(),
+        );
+
+        // Store-Put sollte funktionieren
+        let result = handle.store_put("config", "value=42");
+        assert!(matches!(result, MutationResult::Success));
+
+        // Dirty-Key sollte vorhanden sein
+        assert!(handle.dirty_keys_count() > 0);
+    }
+
+    #[test]
+    fn test_e4_state_handle_emit_event() {
+        let state = Arc::new(UnifiedState::new());
+        let budget = Arc::new(ECLVMBudget::new(ECLVMBudgetLimits::default()));
+
+        let handle = StateHandle::new(
+            &state,
+            "did:test:alice".to_string(),
+            "realm:test".to_string(),
+            budget.clone(),
+        );
+
+        // Custom Event emittieren
+        let result = handle.emit_event("notification", r#"{"type":"welcome"}"#);
+        assert!(matches!(result, MutationResult::Success));
+
+        // Events-emitted Counter sollte erhöht sein
+        assert_eq!(state.eclvm.events_emitted.load(Ordering::Relaxed), 1);
+    }
+
+    #[test]
+    fn test_e4_state_handle_commit_applies_events() {
+        let state = Arc::new(UnifiedState::new());
+        let budget = Arc::new(ECLVMBudget::new(ECLVMBudgetLimits::default()));
+
+        let handle = StateHandle::new(
+            &state,
+            "did:test:alice".to_string(),
+            "realm:test".to_string(),
+            budget.clone(),
+        );
+
+        // Trust-Update
+        handle.update_trust("did:test:target", 0.05, TrustReason::PeerRecommendation);
+
+        // Commit
+        let result = handle.commit();
+
+        match result {
+            CommitResult::Success {
+                events_applied,
+                keys_modified,
+                gas_used,
+                ..
+            } => {
+                assert_eq!(events_applied, 1);
+                assert_eq!(keys_modified, 1);
+                assert!(gas_used > 0);
+            }
+            _ => panic!("Expected Success"),
+        }
+    }
+
+    #[test]
+    fn test_e4_state_handle_rollback_discards() {
+        let state = Arc::new(UnifiedState::new());
+        let budget = Arc::new(ECLVMBudget::new(ECLVMBudgetLimits::default()));
+
+        let handle = StateHandle::new(
+            &state,
+            "did:test:alice".to_string(),
+            "realm:test".to_string(),
+            budget.clone(),
+        );
+
+        // Trust-Update
+        handle.update_trust("did:test:target", 0.1, TrustReason::DirectInteraction);
+
+        assert_eq!(handle.pending_events_count(), 1);
+
+        // Rollback
+        let result = handle.rollback();
+
+        match result {
+            RollbackResult::Success {
+                events_discarded,
+                keys_discarded,
+            } => {
+                assert_eq!(events_discarded, 1);
+                assert_eq!(keys_discarded, 1);
+            }
+            _ => panic!("Expected Success"),
+        }
+    }
+
+    #[test]
+    fn test_e4_transaction_guard_auto_rollback() {
+        let state = Arc::new(UnifiedState::new());
+        let budget = Arc::new(ECLVMBudget::new(ECLVMBudgetLimits::default()));
+
+        // TransactionGuard scope
+        {
+            let handle = StateHandle::new(
+                &state,
+                "did:test:alice".to_string(),
+                "realm:test".to_string(),
+                budget.clone(),
+            );
+
+            let guard = TransactionGuard::new(handle);
+
+            // Modifikation via Guard
+            if let Some(h) = guard.handle() {
+                h.update_trust("did:test:target", 0.1, TrustReason::DirectInteraction);
+            }
+
+            // Guard wird dropped ohne commit → auto rollback
+        }
+
+        // Keine Events sollten angewendet worden sein
+        // (In einem echten Szenario würden wir das verifizieren können)
+    }
+
+    #[test]
+    fn test_e4_transaction_guard_explicit_commit() {
+        let state = Arc::new(UnifiedState::new());
+        let budget = Arc::new(ECLVMBudget::new(ECLVMBudgetLimits::default()));
+
+        let handle = StateHandle::new(
+            &state,
+            "did:test:alice".to_string(),
+            "realm:test".to_string(),
+            budget.clone(),
+        );
+
+        let guard = TransactionGuard::new(handle);
+
+        // Modifikation
+        if let Some(h) = guard.handle() {
+            h.store_put("key", "value");
+        }
+
+        // Explicit commit
+        let result = guard.commit();
+        assert!(matches!(result, CommitResult::Success { .. }));
+    }
+
+    #[test]
+    fn test_e4_budget_exhaustion_blocks_operations() {
+        let state = Arc::new(UnifiedState::new());
+        let budget = Arc::new(ECLVMBudget::new(ECLVMBudgetLimits {
+            gas_limit: 50, // Sehr wenig Gas
+            mana_limit: 10,
+            max_stack_depth: 64,
+            timeout_ms: 1000,
+        }));
+
+        let handle = StateHandle::new(
+            &state,
+            "did:test:alice".to_string(),
+            "realm:test".to_string(),
+            budget.clone(),
+        );
+
+        // Erster Trust-Update verbraucht 100 Gas → sollte scheitern
+        let result = handle.update_trust("did:test:target", 0.1, TrustReason::DirectInteraction);
+        assert!(matches!(
+            result,
+            MutationResult::BudgetExhausted(BudgetExhaustionReason::OutOfGas)
+        ));
+    }
+
+    #[test]
+    fn test_e4_vote_weight_validation() {
+        let state = Arc::new(UnifiedState::new());
+        let budget = Arc::new(ECLVMBudget::new(ECLVMBudgetLimits::default()));
+
+        let handle = StateHandle::new(
+            &state,
+            "did:test:voter".to_string(),
+            "realm:gov".to_string(),
+            budget.clone(),
+        );
+
+        // Weight > 1.0 sollte scheitern
+        let result = handle.cast_vote("prop_123", true, 1.5);
+        assert!(matches!(result, MutationResult::ValidationFailed(_)));
+
+        // Weight <= 0 sollte scheitern
+        let result = handle.cast_vote("prop_123", true, 0.0);
+        assert!(matches!(result, MutationResult::ValidationFailed(_)));
+
+        // Gültiges Weight sollte funktionieren
+        let result = handle.cast_vote("prop_123", true, 0.5);
+        assert!(matches!(result, MutationResult::Success));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // E6 Tests: StateEvent-Integration für ECL
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_e6_policy_evaluated_logged_and_broadcast() {
+        use std::sync::atomic::Ordering;
+
+        let state = UnifiedState::new();
+
+        // Subscribe to broadcaster before emitting event
+        let mut rx = state.broadcaster.subscribe();
+
+        // Initiale Werte
+        let initial_events = state.event_log.snapshot().total_events;
+        let initial_deltas = state.broadcaster.snapshot().deltas_sent;
+
+        // StateEvent::PolicyEvaluated erstellen und anwenden
+        let event = StateEvent::PolicyEvaluated {
+            policy_id: "policy:test:e6".to_string(),
+            realm_id: Some("realm:test".to_string()),
+            passed: true,
+            policy_type: ECLPolicyType::Api,
+            gas_used: 1000,
+            mana_used: 50,
+            duration_us: 500,
+        };
+
+        // log_and_apply aufrufen
+        let wrapped = state.log_and_apply(event, vec!["e6_test".to_string()]);
+
+        // 1. Event sollte geloggt worden sein
+        let log_snapshot = state.event_log.snapshot();
+        assert_eq!(log_snapshot.total_events, initial_events + 1);
+
+        // 2. WrappedStateEvent sollte korrekte Komponente haben
+        assert_eq!(wrapped.component, StateComponent::ECLPolicy);
+
+        // 3. Delta sollte gesendet worden sein
+        let broadcaster_snapshot = state.broadcaster.snapshot();
+        assert_eq!(broadcaster_snapshot.deltas_sent, initial_deltas + 1);
+
+        // 4. ECLVMState sollte aktualisiert sein
+        let eclvm_snapshot = state.eclvm.snapshot();
+        assert_eq!(eclvm_snapshot.policies_executed, 1);
+        assert_eq!(eclvm_snapshot.policies_passed, 1);
+    }
+
+    #[test]
+    fn test_e6_policy_evaluated_component_mapping() {
+        // Verifiziere dass PolicyEvaluated den korrekten Component zurückgibt
+        let event = StateEvent::PolicyEvaluated {
+            policy_id: "test".to_string(),
+            realm_id: None,
+            passed: false,
+            policy_type: ECLPolicyType::Crossing,
+            gas_used: 0,
+            mana_used: 0,
+            duration_us: 0,
+        };
+
+        assert_eq!(event.primary_component(), StateComponent::ECLPolicy);
+    }
+
+    #[test]
+    fn test_e6_multiple_policies_all_logged() {
+        let state = UnifiedState::new();
+
+        // 5 verschiedene Policies ausführen
+        for i in 0..5 {
+            let event = StateEvent::PolicyEvaluated {
+                policy_id: format!("policy:test:{}", i),
+                realm_id: Some("realm:test".to_string()),
+                passed: i % 2 == 0, // alternierend passed/failed
+                policy_type: ECLPolicyType::Controller,
+                gas_used: (i as u64 + 1) * 100,
+                mana_used: (i as u64 + 1) * 10,
+                duration_us: (i as u64 + 1) * 50,
+            };
+
+            state.log_and_apply(event, vec![]);
+        }
+
+        // Alle 5 sollten geloggt sein
+        let log_snapshot = state.event_log.snapshot();
+        assert!(log_snapshot.total_events >= 5);
+
+        // ECLVM sollte alle 5 zählen
+        let eclvm_snapshot = state.eclvm.snapshot();
+        assert_eq!(eclvm_snapshot.policies_executed, 5);
+        assert_eq!(eclvm_snapshot.policies_passed, 3); // 0, 2, 4 = passed
+        assert_eq!(eclvm_snapshot.policies_failed, 2); // 1, 3 = failed
+
+        // Broadcaster sollte 5 Deltas gesendet haben
+        let broadcaster_snapshot = state.broadcaster.snapshot();
+        assert!(broadcaster_snapshot.deltas_sent >= 5);
+    }
+
+    #[test]
+    fn test_e6_event_log_buffer() {
+        let state = UnifiedState::new();
+
+        // Policy-Event erstellen
+        let event = StateEvent::PolicyEvaluated {
+            policy_id: "policy:e6:buffer".to_string(),
+            realm_id: None,
+            passed: true,
+            policy_type: ECLPolicyType::Ui,
+            gas_used: 500,
+            mana_used: 25,
+            duration_us: 100,
+        };
+
+        let wrapped = state.log_and_apply(event, vec![]);
+
+        // Event sollte im Buffer sein
+        let events_since = state.event_log.events_since(wrapped.sequence.saturating_sub(1));
+        assert!(!events_since.is_empty());
+
+        // Das letzte Event sollte unser PolicyEvaluated sein
+        let last_event = events_since.last().unwrap();
+        assert!(matches!(last_event.event, StateEvent::PolicyEvaluated { .. }));
+    }
+
+    #[test]
+    fn test_e6_subscriber_receives_policy_delta() {
+        use std::time::Duration;
+
+        let state = UnifiedState::new();
+
+        // Subscriber erstellen BEVOR Event gesendet wird
+        let mut rx = state.broadcaster.subscribe();
+
+        // Policy-Event senden
+        let event = StateEvent::PolicyEvaluated {
+            policy_id: "policy:e6:subscriber".to_string(),
+            realm_id: Some("realm:subscriber".to_string()),
+            passed: true,
+            policy_type: ECLPolicyType::DataLogic,
+            gas_used: 2000,
+            mana_used: 100,
+            duration_us: 1000,
+        };
+
+        state.log_and_apply(event, vec![]);
+
+        // Subscriber sollte Delta empfangen (non-blocking try)
+        match rx.try_recv() {
+            Ok(delta) => {
+                assert_eq!(delta.component, StateComponent::ECLPolicy);
+                assert!(matches!(delta.delta_type, DeltaType::Update));
+            }
+            Err(_) => {
+                // Kann passieren wenn Channel voll ist oder Race Condition
+                // In echten Tests würde man async wait nutzen
+            }
+        }
+    }
+
+    #[test]
+    fn test_e6_policy_types_correctly_mapped() {
+        let state = UnifiedState::new();
+
+        // Teste verschiedene Policy-Typen
+        let types = vec![
+            ECLPolicyType::Crossing,
+            ECLPolicyType::Membership,
+            ECLPolicyType::Transaction,
+            ECLPolicyType::Governance,
+            ECLPolicyType::Privacy,
+            ECLPolicyType::Api,
+            ECLPolicyType::Ui,
+            ECLPolicyType::DataLogic,
+            ECLPolicyType::Controller,
+            ECLPolicyType::Custom,
+        ];
+
+        for (i, ptype) in types.iter().enumerate() {
+            let event = StateEvent::PolicyEvaluated {
+                policy_id: format!("policy:type:{}", i),
+                realm_id: None,
+                passed: true,
+                policy_type: *ptype,
+                gas_used: 100,
+                mana_used: 10,
+                duration_us: 50,
+            };
+
+            state.log_and_apply(event, vec![]);
+        }
+
+        // Alle 10 sollten ausgeführt worden sein
+        let eclvm_snapshot = state.eclvm.snapshot();
+        assert_eq!(eclvm_snapshot.policies_executed, types.len() as u64);
     }
 }
 

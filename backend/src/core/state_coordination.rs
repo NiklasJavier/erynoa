@@ -12,6 +12,7 @@
 
 use super::state::{SharedUnifiedState, UnifiedSnapshot};
 use super::state_integration::StateIntegrator;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
@@ -21,7 +22,7 @@ use std::time::Instant;
 // ============================================================================
 
 /// System-Invarianten die geprüft werden
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
 pub enum Invariant {
     /// Trust-Asymmetry zwischen 1.5 und 3.0 (Κ4)
     TrustAsymmetry,
@@ -71,7 +72,7 @@ impl Invariant {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum InvariantSeverity {
     Warning,
     Error,
@@ -79,7 +80,7 @@ pub enum InvariantSeverity {
 }
 
 /// Ergebnis einer Invariant-Prüfung
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct InvariantResult {
     pub invariant: Invariant,
     pub passed: bool,
@@ -406,7 +407,7 @@ impl StateCoordinator {
 // HEALTH REPORT
 // ============================================================================
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum HealthStatus {
     Healthy,
     Degraded,
@@ -425,7 +426,7 @@ impl std::fmt::Display for HealthStatus {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct HealthReport {
     pub overall_score: f64,
     pub status: HealthStatus,

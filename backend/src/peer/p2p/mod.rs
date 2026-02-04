@@ -63,8 +63,6 @@ pub mod behaviour;
 #[cfg(feature = "p2p")]
 pub mod config;
 #[cfg(feature = "p2p")]
-pub mod diagnostics;
-#[cfg(feature = "p2p")]
 pub mod identity;
 #[cfg(feature = "p2p")]
 pub mod protocol;
@@ -103,52 +101,6 @@ pub mod censorship;
 pub use behaviour::ErynoaBehaviour;
 #[cfg(feature = "p2p")]
 pub use config::P2PConfig;
-#[cfg(feature = "p2p")]
-pub use diagnostics::{
-    // Helpers
-    create_diagnostic_state,
-    create_system_state,
-    diagnostic_routes,
-    format_bytes,
-    format_rate,
-    // Dashboard
-    generate_dashboard_html,
-    // System Layers
-    generate_system_layers,
-    // Core types
-    ComponentStatus,
-    // State (für Real-Time)
-    ConnectionType,
-    DiagnosticCheck,
-    // Events
-    DiagnosticEvent,
-    // Runner
-    DiagnosticRunner,
-    DiagnosticState,
-    DiagnosticSummary,
-    EventBuffer,
-    EventSeverity,
-    EventType,
-    // Stream
-    HealthStatus,
-    LayerDiagnostic,
-    LivePeerInfo,
-    // Metrics
-    MetricsCollector,
-    NatStatus,
-    NetworkMetrics,
-    P2PDiagnostics,
-    PeerInfo,
-    StreamSnapshot,
-    SwarmSnapshot,
-    // SwarmState für echte Laufzeit-Daten (V2.7)
-    SwarmState,
-    // SystemState für Core/ECLVM/Local/Protection Metriken (V2.8)
-    SystemSnapshot,
-    SystemState,
-    // UnifiedStateBridge für Integration mit core::UnifiedState (V2.9)
-    UnifiedStateBridge,
-};
 #[cfg(feature = "p2p")]
 pub use identity::PeerIdentity;
 #[cfg(feature = "p2p")]

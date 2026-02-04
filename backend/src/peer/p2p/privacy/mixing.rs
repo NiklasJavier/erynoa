@@ -52,6 +52,7 @@
 //! └─────────────────────────────────────────────────────────────────┘
 //! ```
 
+use crate::core::state::{StateEvent, StateEventEmitter, NoOpEmitter};
 use libp2p::PeerId;
 use parking_lot::Mutex;
 use rand::Rng;
@@ -299,6 +300,9 @@ pub struct LampStats {
 ///
 /// Implementiert RL8 (Laplace-Delays), RL9 (Minimum-Anonymität) und
 /// RL25 (LAMP Threshold-Mixing).
+/// LAMP-Enhanced Mixing-Pool (v0.4.0)
+///
+/// Emittiert nun MixingPoolFlushed StateEvents.
 pub struct MixingPool {
     /// Konfiguration
     config: MixingPoolConfig,
@@ -318,6 +322,16 @@ pub struct MixingPool {
     threshold_flush_count: AtomicU64,
     /// Statistik: Standard-Flushes
     standard_flush_count: AtomicU64,
+
+    // ========================================================================
+    // StateEvent-Integration (v0.4.0)
+    // ========================================================================
+    /// StateEvent-Emitter für Integration mit UnifiedState
+    state_event_emitter: Arc<dyn StateEventEmitter>,
+    /// Totale Delay-Zeit für Durchschnitt
+    total_delay_ms: AtomicU64,
+    /// Anzahl geflushed Messages (für Durchschnittsberechnung)
+    total_flushed_count: AtomicU64,
 }
 
 impl MixingPool {
@@ -336,7 +350,26 @@ impl MixingPool {
             prob_forward_count: AtomicU64::new(0),
             threshold_flush_count: AtomicU64::new(0),
             standard_flush_count: AtomicU64::new(0),
+            state_event_emitter: Arc::new(NoOpEmitter),
+            total_delay_ms: AtomicU64::new(0),
+            total_flushed_count: AtomicU64::new(0),
         }
+    }
+
+    /// Erstelle mit StateEventEmitter (v0.4.0)
+    pub fn new_with_emitter(
+        config: MixingPoolConfig,
+        output_tx: mpsc::Sender<(PeerId, Vec<u8>)>,
+        emitter: Arc<dyn StateEventEmitter>,
+    ) -> Self {
+        let mut pool = Self::new(config, output_tx);
+        pool.state_event_emitter = emitter;
+        pool
+    }
+
+    /// Setze StateEventEmitter nachträglich
+    pub fn set_state_event_emitter(&mut self, emitter: Arc<dyn StateEventEmitter>) {
+        self.state_event_emitter = emitter;
     }
 
     /// LAMP: Berechne dynamisches k_opt (RL25)
@@ -486,6 +519,22 @@ impl MixingPool {
         // LAMP: Kompaktere Delays (τ/√k statt τ)
         let delay_factor = 1.0 / (messages.len() as f64).sqrt();
 
+        // Statistiken VOR dem Spawn berechnen (v0.4.0)
+        let total_delay: u64 = messages.iter()
+            .map(|m| m.assigned_delay.as_millis() as u64)
+            .sum();
+        let max_delay = messages.iter()
+            .map(|m| m.assigned_delay.as_millis() as u64)
+            .max()
+            .unwrap_or(0);
+        let flushed_count = messages.len();
+        let avg_delay = if flushed_count > 0 {
+            total_delay / flushed_count as u64
+        } else {
+            0
+        };
+        let pool_size_after = self.buffer.lock().len();
+
         let output_tx = self.output_tx.clone();
         tokio::spawn(async move {
             for msg in messages {
@@ -503,9 +552,23 @@ impl MixingPool {
             }
         });
 
+        // Globale Statistik aktualisieren
+        self.total_delay_ms.fetch_add(total_delay, Ordering::Relaxed);
+        self.total_flushed_count.fetch_add(flushed_count as u64, Ordering::Relaxed);
+
+        // StateEvent emittieren (v0.4.0)
+        self.state_event_emitter.emit(StateEvent::MixingPoolFlushed {
+            messages_flushed: flushed_count as u64,
+            avg_delay_ms: avg_delay,
+            max_delay_ms: max_delay,
+            pool_size_after: pool_size_after as u64,
+        });
+
         tracing::debug!(
             k_opt,
             delay_factor = format!("{:.2}", delay_factor),
+            messages_flushed = flushed_count,
+            avg_delay_ms = avg_delay,
             "LAMP threshold flush"
         );
     }
@@ -526,6 +589,30 @@ impl MixingPool {
             return;
         }
 
+        // Statistiken für StateEvent
+        let total_delay: u64 = messages.iter()
+            .map(|m| m.assigned_delay.as_millis() as u64)
+            .sum();
+        let max_delay = messages.iter()
+            .map(|m| m.assigned_delay.as_millis() as u64)
+            .max()
+            .unwrap_or(0);
+        let avg_delay = total_delay / messages.len() as u64;
+        let flushed_count = messages.len();
+        let pool_size_after = self.buffer.lock().len();
+
+        // Globale Statistik aktualisieren
+        self.total_delay_ms.fetch_add(total_delay, Ordering::Relaxed);
+        self.total_flushed_count.fetch_add(flushed_count as u64, Ordering::Relaxed);
+
+        // StateEvent emittieren (v0.4.0)
+        self.state_event_emitter.emit(StateEvent::MixingPoolFlushed {
+            messages_flushed: flushed_count as u64,
+            avg_delay_ms: avg_delay,
+            max_delay_ms: max_delay,
+            pool_size_after: pool_size_after as u64,
+        });
+
         let output_tx = self.output_tx.clone();
         tokio::spawn(async move {
             for msg in messages {
@@ -539,7 +626,11 @@ impl MixingPool {
             }
         });
 
-        tracing::debug!("Standard flush triggered");
+        tracing::debug!(
+            messages_flushed = flushed_count,
+            avg_delay_ms = avg_delay,
+            "Standard flush triggered"
+        );
     }
 
     /// Fisher-Yates Shuffle

@@ -58,6 +58,7 @@ pub mod bytecode;
 #[cfg(feature = "cli")]
 pub mod cli;
 pub mod compiler;
+pub mod entrypoints;
 pub mod erynoa_host;
 pub mod mana;
 pub mod optimizer;
@@ -74,8 +75,13 @@ pub use cli::{run_cli, Cli, Commands};
 pub use erynoa_host::{ErynoaHost, PolicyContext};
 pub use mana::{BandwidthTier, ManaAccount, ManaConfig, ManaManager, ManaStatus};
 pub use optimizer::{OptimizationStats, Optimizer};
+pub use entrypoints::{EclEntrypoints, DEFAULT_ENGINE_GAS_LIMIT};
 pub use programmable_gateway::{
-    CompiledPolicy, GatewayDecision, ProgrammableGateway, StandardPolicies,
+    CompiledPolicy, EclCrossingEvaluator, GatewayDecision, PolicyExecutionObserver,
+    ProgrammableGateway, StandardPolicies,
 };
-pub use runtime::{gas::GasMeter, host::HostInterface, vm::ECLVM};
+pub use runtime::{
+    gas::GasMeter, host::HostInterface, runner::{run_policy, PolicyRunContext},
+    vm::{ECLVM, ExecutionResult},
+};
 pub use stdlib::{PolicyBuilder, StdLib};

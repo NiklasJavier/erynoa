@@ -22,6 +22,14 @@
 //! - **Κ19**: Anti-Calcification (Power-Cap für einzelne Relays)
 //! - **Κ20**: Diversity-Requirement (Multi-Jurisdiction)
 //!
+//! ## UniversalId-Integration (v0.4.0)
+//!
+//! `RelayCandidate` enthält nun `universal_id` für konsistente Identifikation
+//! über alle Erynoa-Subsysteme. Dies ermöglicht:
+//! - Persistente Relay-Tracking über PeerId-Änderungen hinweg
+//! - Integration mit StateEvents und Trust-Updates
+//! - Cross-Referenz mit TrustGate und IdentityState
+//!
 //! ## Beispiel
 //!
 //! ```rust,ignore
@@ -39,6 +47,7 @@
 //! let route = selector.select_route()?;
 //! ```
 
+use crate::domain::UniversalId;
 use crate::peer::p2p::trust_gate::PeerTrustInfo;
 use libp2p::PeerId;
 use std::collections::{HashMap, HashSet};
@@ -226,38 +235,56 @@ impl Default for RelayTrustScore {
 // RELAY CANDIDATE
 // ============================================================================
 
-/// Relay-Kandidat mit Trust-Score und Metadaten
+/// Relay-Kandidat mit Trust-Score, UniversalId und Metadaten
 ///
 /// Enthält alle Informationen zur Relay-Auswahl:
+/// - **UniversalId** für systemweite Identifikation
 /// - Trust-Score (6D-Vektor aggregiert)
 /// - Geographische Diversitätsdaten
 /// - Performance-Metriken
 #[derive(Debug, Clone)]
 pub struct RelayCandidate {
-    /// Peer-ID des Relays
+    /// Peer-ID des Relays (libp2p-Identifier)
     pub peer_id: PeerId,
-    /// Legacy-Trust-Info (Kompatibilität mit trust_gate.rs)
+
+    /// UniversalId des Relays (Content-Addressed Identifier)
+    ///
+    /// Ermöglicht persistente Identifikation über PeerId-Änderungen hinweg
+    /// und Integration mit TrustGate, StateEvents und IdentityState.
+    pub universal_id: Option<UniversalId>,
+
+    /// Trust-Info (aus TrustGate)
     pub trust_info: PeerTrustInfo,
+
     /// Berechneter Trust-Score (Κ15b)
     pub trust_score: RelayTrustScore,
+
     /// Geographische Region (ISO 3166-1 Alpha-2, z.B. "DE", "CH")
     pub region: String,
+
     /// Autonomous System Number (für Diversität)
     pub asn: u32,
+
     /// Jurisdiktion (Rechtsraum, z.B. "EU", "CH", "US")
     pub jurisdiction: String,
+
     /// Durchschnittliche Latenz in ms
     pub avg_latency_ms: u32,
+
     /// Uptime-Ratio (0.0 - 1.0)
     pub uptime_ratio: f64,
+
     /// Bandwidth-Score (0.0 - 1.0)
     pub bandwidth_score: f64,
+
     /// X25519 Public Key (für Onion-Routing)
     pub public_key: x25519_dalek::PublicKey,
 }
 
 impl RelayCandidate {
-    /// Erstelle aus PeerTrustInfo (Legacy-Konvertierung)
+    /// Erstelle aus PeerTrustInfo
+    ///
+    /// Extrahiert automatisch die UniversalId aus PeerTrustInfo falls vorhanden.
     pub fn from_peer_info(
         peer_id: PeerId,
         info: PeerTrustInfo,
@@ -265,8 +292,12 @@ impl RelayCandidate {
     ) -> Self {
         let trust_score = RelayTrustScore::from_legacy(info.trust_r, info.trust_omega);
 
+        // UniversalId aus PeerTrustInfo extrahieren
+        let universal_id = info.universal_id.clone();
+
         Self {
             peer_id,
+            universal_id,
             trust_info: info,
             trust_score,
             region: "XX".to_string(), // Unknown
@@ -277,6 +308,61 @@ impl RelayCandidate {
             bandwidth_score: 0.5,
             public_key,
         }
+    }
+
+    /// Erstelle mit expliziter UniversalId
+    pub fn from_peer_info_with_universal_id(
+        peer_id: PeerId,
+        universal_id: UniversalId,
+        info: PeerTrustInfo,
+        public_key: x25519_dalek::PublicKey,
+    ) -> Self {
+        let trust_score = RelayTrustScore::from_legacy(info.trust_r, info.trust_omega);
+
+        Self {
+            peer_id,
+            universal_id: Some(universal_id),
+            trust_info: info,
+            trust_score,
+            region: "XX".to_string(),
+            asn: 0,
+            jurisdiction: "XX".to_string(),
+            avg_latency_ms: 100,
+            uptime_ratio: 0.9,
+            bandwidth_score: 0.5,
+            public_key,
+        }
+    }
+
+    /// Erstelle mit vollem 6D-Trust-Vektor
+    ///
+    /// Verwendet die vollständigen 6D-Trust-Werte statt Legacy-Schätzung.
+    pub fn from_6d_trust(
+        peer_id: PeerId,
+        universal_id: Option<UniversalId>,
+        info: PeerTrustInfo,
+        trust_6d: RelayTrustScore,
+        public_key: x25519_dalek::PublicKey,
+    ) -> Self {
+        Self {
+            peer_id,
+            universal_id,
+            trust_info: info,
+            trust_score: trust_6d,
+            region: "XX".to_string(),
+            asn: 0,
+            jurisdiction: "XX".to_string(),
+            avg_latency_ms: 100,
+            uptime_ratio: 0.9,
+            bandwidth_score: 0.5,
+            public_key,
+        }
+    }
+
+    /// Setze UniversalId
+    pub fn with_universal_id(mut self, universal_id: UniversalId) -> Self {
+        self.universal_id = Some(universal_id);
+        self
     }
 
     /// Setze Diversitäts-Metadaten
@@ -295,16 +381,29 @@ impl RelayCandidate {
         self
     }
 
+    /// Hat dieser Kandidat eine UniversalId?
+    pub fn has_universal_id(&self) -> bool {
+        self.universal_id.is_some()
+    }
+
     /// Berechne kombinierten Score für Auswahl
     ///
     /// Berücksichtigt Trust und Performance.
+    /// Kandidaten mit UniversalId erhalten einen kleinen Bonus.
     pub fn selection_score(&self) -> f64 {
         // Trust ist primär (70%), Performance sekundär (30%)
         let trust_component = self.trust_score.total * 0.7;
         let perf_component =
             (self.uptime_ratio * 0.5 + self.bandwidth_score * 0.3 + (1.0 - self.avg_latency_ms as f64 / 500.0).max(0.0) * 0.2) * 0.3;
 
-        trust_component + perf_component
+        let base_score = trust_component + perf_component;
+
+        // Kleiner Bonus für Kandidaten mit UniversalId (bessere Verifizierbarkeit)
+        if self.universal_id.is_some() {
+            base_score * 1.02 // 2% Bonus
+        } else {
+            base_score
+        }
     }
 
     /// Kann als Relay fungieren?
@@ -312,6 +411,14 @@ impl RelayCandidate {
         self.trust_score.is_relay_eligible()
             && self.trust_info.connection_level.can_relay()
             && self.uptime_ratio >= 0.8
+    }
+
+    /// Vergleiche UniversalId (falls beide vorhanden)
+    pub fn has_same_universal_id(&self, other: &Self) -> bool {
+        match (&self.universal_id, &other.universal_id) {
+            (Some(a), Some(b)) => a == b,
+            _ => false,
+        }
     }
 }
 
@@ -667,6 +774,12 @@ mod tests {
     use rand::rngs::OsRng;
     use x25519_dalek::StaticSecret;
 
+    fn test_universal_id(id: u8) -> UniversalId {
+        let mut data = vec![0u8; 32];
+        data[0] = id;
+        UniversalId::new(UniversalId::TAG_DID, 1, &data)
+    }
+
     fn create_test_candidate(
         id: u8,
         trust_r: f64,
@@ -679,7 +792,40 @@ mod tests {
         let public_key = x25519_dalek::PublicKey::from(&secret);
 
         let peer_id = PeerId::random();
+        let universal_id = test_universal_id(id);
+
         let trust_info = PeerTrustInfo {
+            universal_id: Some(universal_id.clone()),
+            did: None,
+            trust_r,
+            trust_omega,
+            last_seen: 0,
+            successful_interactions: 100,
+            failed_interactions: 1,
+            is_newcomer: false,
+            newcomer_since: None,
+            connection_level: ConnectionLevel::Full,
+        };
+
+        RelayCandidate::from_peer_info(peer_id, trust_info, public_key)
+            .with_diversity(region, asn, jurisdiction)
+            .with_performance(50, 0.95, 0.8)
+    }
+
+    fn create_test_candidate_without_uid(
+        trust_r: f64,
+        trust_omega: f64,
+        region: &str,
+        asn: u32,
+        jurisdiction: &str,
+    ) -> RelayCandidate {
+        let secret = StaticSecret::random_from_rng(OsRng);
+        let public_key = x25519_dalek::PublicKey::from(&secret);
+
+        let peer_id = PeerId::random();
+
+        let trust_info = PeerTrustInfo {
+            universal_id: None, // Ohne UniversalId
             did: None,
             trust_r,
             trust_omega,
@@ -808,5 +954,131 @@ mod tests {
         assert!(candidate.selection_score() > 0.5);
         assert_eq!(candidate.region, "DE");
         assert_eq!(candidate.jurisdiction, "EU");
+    }
+
+    #[test]
+    fn test_relay_candidate_universal_id() {
+        let candidate = create_test_candidate(42, 0.8, 0.7, "DE", 1001, "EU");
+
+        // UniversalId sollte vorhanden sein
+        assert!(candidate.has_universal_id());
+        assert!(candidate.universal_id.is_some());
+
+        // UniversalId sollte mit der in trust_info übereinstimmen
+        assert_eq!(candidate.universal_id, candidate.trust_info.universal_id);
+    }
+
+    #[test]
+    fn test_relay_candidate_without_universal_id() {
+        let candidate = create_test_candidate_without_uid(0.8, 0.7, "DE", 1001, "EU");
+
+        // Kein UniversalId
+        assert!(!candidate.has_universal_id());
+        assert!(candidate.universal_id.is_none());
+
+        // Sollte trotzdem funktionieren
+        assert!(candidate.can_relay());
+    }
+
+    #[test]
+    fn test_relay_candidate_uid_bonus() {
+        // Kandidat mit UniversalId
+        let with_uid = create_test_candidate(1, 0.8, 0.7, "DE", 1001, "EU");
+
+        // Kandidat ohne UniversalId (gleiche Trust-Werte)
+        let without_uid = create_test_candidate_without_uid(0.8, 0.7, "DE", 1001, "EU");
+
+        // Mit UniversalId sollte minimal höheren Score haben (2% Bonus)
+        let score_with = with_uid.selection_score();
+        let score_without = without_uid.selection_score();
+
+        assert!(score_with > score_without);
+        // Bonus sollte ca. 2% sein
+        let ratio = score_with / score_without;
+        assert!(ratio > 1.01 && ratio < 1.03);
+    }
+
+    #[test]
+    fn test_relay_candidate_same_universal_id() {
+        let candidate1 = create_test_candidate(1, 0.8, 0.7, "DE", 1001, "EU");
+        let candidate2 = create_test_candidate(1, 0.7, 0.6, "CH", 2002, "CH");
+        let candidate3 = create_test_candidate(2, 0.9, 0.8, "NO", 3003, "EEA");
+
+        // 1 und 2 haben gleiche ID (test_universal_id(1))
+        assert!(candidate1.has_same_universal_id(&candidate2));
+
+        // 1 und 3 haben unterschiedliche IDs
+        assert!(!candidate1.has_same_universal_id(&candidate3));
+    }
+
+    #[test]
+    fn test_relay_candidate_from_6d_trust() {
+        let secret = StaticSecret::random_from_rng(OsRng);
+        let public_key = x25519_dalek::PublicKey::from(&secret);
+        let peer_id = PeerId::random();
+        let universal_id = test_universal_id(99);
+
+        let trust_info = PeerTrustInfo {
+            universal_id: Some(universal_id.clone()),
+            did: Some("did:erynoa:self:test".to_string()),
+            trust_r: 0.9,
+            trust_omega: 1.5,
+            last_seen: 0,
+            successful_interactions: 100,
+            failed_interactions: 0,
+            is_newcomer: false,
+            newcomer_since: None,
+            connection_level: ConnectionLevel::Full,
+        };
+
+        // Vollständiger 6D-Trust-Vektor
+        let trust_6d = RelayTrustScore::from_6d(0.9, 0.85, 0.8, 0.75, 0.88, 1.5);
+
+        let candidate = RelayCandidate::from_6d_trust(
+            peer_id,
+            Some(universal_id.clone()),
+            trust_info,
+            trust_6d,
+            public_key,
+        );
+
+        // 6D-Trust sollte direkt verwendet werden
+        assert_eq!(candidate.trust_score.reliability, 0.9);
+        assert_eq!(candidate.trust_score.integrity, 0.85);
+        assert_eq!(candidate.trust_score.competence, 0.8);
+
+        // UniversalId sollte korrekt gesetzt sein
+        assert_eq!(candidate.universal_id, Some(universal_id));
+    }
+
+    #[test]
+    fn test_relay_candidate_with_universal_id_builder() {
+        let secret = StaticSecret::random_from_rng(OsRng);
+        let public_key = x25519_dalek::PublicKey::from(&secret);
+        let peer_id = PeerId::random();
+
+        // Erstelle ohne UniversalId
+        let trust_info = PeerTrustInfo {
+            universal_id: None,
+            did: None,
+            trust_r: 0.8,
+            trust_omega: 1.0,
+            last_seen: 0,
+            successful_interactions: 50,
+            failed_interactions: 0,
+            is_newcomer: false,
+            newcomer_since: None,
+            connection_level: ConnectionLevel::Full,
+        };
+
+        let candidate = RelayCandidate::from_peer_info(peer_id, trust_info, public_key)
+            .with_universal_id(test_universal_id(77))
+            .with_diversity("CH", 5000, "CH")
+            .with_performance(25, 0.99, 0.95);
+
+        // UniversalId sollte über Builder gesetzt sein
+        assert!(candidate.has_universal_id());
+        assert_eq!(candidate.region, "CH");
+        assert_eq!(candidate.avg_latency_ms, 25);
     }
 }

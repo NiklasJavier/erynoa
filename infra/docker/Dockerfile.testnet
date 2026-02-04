@@ -80,9 +80,10 @@ COPY backend/config ./config
 WORKDIR /workspace/backend
 
 # P2P Ports:
-#   4001 - libp2p Swarm (TCP/QUIC)
-#   9000 - HTTP API
-EXPOSE 4001 9000
+#   4001     - libp2p Swarm (TCP)
+#   4433/udp - QUIC Transport
+#   9000     - HTTP API
+EXPOSE 4001 4433/udp 9000
 
 # Build the testnet binary - this caches the compilation
 RUN RUSTFLAGS="-C link-arg=-fuse-ld=mold" cargo build --release --features p2p --bin erynoa-testnet-node
@@ -97,16 +98,18 @@ set -e
 # Bestimme welche Features zu aktivieren sind
 FEATURES="${CARGO_FEATURES:-p2p}"
 
-echo "========================================="
+echo "═══════════════════════════════════════════════════════════════"
 echo "🔥 Erynoa P2P Testnet Node - DEV MODE"
-echo "========================================="
-echo "  Node:      ${NODE_NAME:-relay}"
-echo "  P2P Port:  ${P2P_PORT:-4001}"
-echo "  API Port:  ${API_PORT:-9000}"
-echo "  Bootstrap: ${BOOTSTRAP_PEERS:-none}"
-echo "  Mode:      ${NODE_MODE:-relay}"
-echo "  Features:  ${FEATURES}"
-echo "========================================="
+echo "═══════════════════════════════════════════════════════════════"
+echo "  Node:         ${NODE_NAME:-node}"
+echo "  Mode:         ${NODE_MODE:-relay}"
+echo "  P2P Port:     ${P2P_PORT:-4001} (TCP)"
+echo "  QUIC Port:    ${QUIC_PORT:-4433} (UDP)"
+echo "  API Port:     ${API_PORT:-9000}"
+echo "  Bootstrap:    ${BOOTSTRAP_PEERS:-none}"
+echo "  Relay Server: ${P2P_RELAY_SERVER:-false}"
+echo "  Features:     ${FEATURES}"
+echo "═══════════════════════════════════════════════════════════════"
 echo ""
 echo "🔄 Hot-Reloading aktiviert!"
 echo "   Änderungen an src/ werden automatisch erkannt."
@@ -114,7 +117,7 @@ echo ""
 
 # Warte auf Bootstrap-Peers
 if [ -n "$BOOTSTRAP_PEERS" ]; then
-    echo "Waiting for bootstrap peers..."
+    echo "⏳ Warte auf Bootstrap-Peers..."
     for peer in $(echo $BOOTSTRAP_PEERS | tr ',' ' '); do
         host=$(echo $peer | sed 's|/ip4/\([^/]*\)/.*|\1|')
         if [[ ! $host =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -130,9 +133,9 @@ fi
 # Staggered start für verschiedene Nodes
 case $NODE_NAME in
     relay1) DELAY=0 ;;
-    relay2) DELAY=5 ;;
-    relay3) DELAY=10 ;;
-    client) DELAY=15 ;;
+    relay2) DELAY=8 ;;
+    relay3) DELAY=16 ;;
+    client) DELAY=24 ;;
     *) DELAY=0 ;;
 esac
 
@@ -142,15 +145,19 @@ if [ $DELAY -gt 0 ]; then
 fi
 
 echo ""
-echo "🚀 Starte mit cargo-watch..."
+echo "🚀 Starte mit cargo-watch (Hot-Reloading)..."
 echo "   Features: ${FEATURES}"
-echo "   Bei Änderungen wird automatisch neu kompiliert."
+echo "   Beobachte: src/, Cargo.toml, config/"
 echo ""
 
 # cargo-watch: Beobachtet src/ und startet bei Änderungen neu
+# --poll für Docker-Volume-Mounts (inotify funktioniert nicht zuverlässig)
 exec cargo watch \
+    --poll \
+    --delay 2 \
     --watch src \
     --watch Cargo.toml \
+    --watch config \
     -x "build --features ${FEATURES} --bin erynoa-testnet-node" \
     -s "RUST_LOG=${RUST_LOG:-info} ./target/debug/erynoa-testnet-node"
 DEVEOF
@@ -165,9 +172,9 @@ RUN cat > /entrypoint.sh << 'EOF'
 #!/bin/bash
 set -e
 
-echo "========================================="
+echo "═══════════════════════════════════════════════════════════════"
 echo "🌐 Erynoa P2P Testnet Node"
-echo "========================================="
+echo "═══════════════════════════════════════════════════════════════"
 echo "  Node:      ${NODE_NAME:-relay}"
 echo "  P2P Port:  ${P2P_PORT:-4001}"
 echo "  API Port:  ${API_PORT:-9000}"
