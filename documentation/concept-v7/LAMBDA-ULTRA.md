@@ -1,6 +1,6 @@
 # λ-𝕌ₚ v16.5 — The Energy-Standard Specification
 
-> **233KB → 27KB | 108 Axiome | 16 Theoreme | λ-Notation | 2026-02-05**
+> **233KB → 20KB | 108 Axiome | 16 Theoreme | λ-Notation | 2026-02-05**
 
 ```text
 Notation: [AX]=Axiom [DE]=Design [TH]=Theorem [GO]=Ziel [DF]=Definition
@@ -283,45 +283,6 @@ L8:Social-Recovery  L9:Homeostasis  L10:Meta-Protocol
 
 ---
 
-## §27 Axiom-Index (aktualisiert)
-
-```text
-CORE(15): Κ₀,Κ₁,Κ₂,Κ₆,Κ₇,Κ₉,Κ₁₀,Κ₁₁,Κ₂₂,Κ₂₈,Κ₂₉,Κ₅₁,Κ₅₉,Κ₆₂,Μ₁
-TRUST(12): Κ₃,Κ₄,Κ₈,Κ₁₃,Κ₂₃,Κ₂₄,Κ₅₂,Κ₅₃,Κ₅₄,Κ₅₅,Κ₅₆,Κ₅₈
-GOV(10): Κ₁₈,Κ₁₉,Κ₂₁,Κ₂₅,Κ₂₆,Κ₃₀,Κ₅₇,Κ₆₀,Κ₆₁,Κ₆₃
-EXEC(6): Κ₃₅,Κ₃₆,Κ₆₈,Κ₇₁,Κ₇₂,Κ₇₃
-NET(8): Κ₆₄,Κ₆₅,Κ₆₆,Κ₆₇,Κ₆₉,Κ₇₀,Κ₇₄,Κ₇₆
-zkWASM(2): Κ₇₅,Κ₇₆
-ETERNITY(5): Κ₈₂,Κ₈₃,Κ₈₄,Κ₈₅,Κ₈₆
-FRACTAL(3): Κ₉₁,Κ₉₂,Κ₉₃
-EXT(23): Κ₃₉-Κ₅₀+
-```
-
-## §28 Dependencies (aktualisiert)
-
-```text
-Κ₀→{Κ₆→Κ₇,Κ₂→{Κ₃→Κ₄→TH₁,Κ₁₁→TH₂,Κ₁₃→TH₃},Κ₉₁→{Κ₉₂,Κ₉₃}}
-Κ₁→Κ₂₄→{Κ₂₃,TH₅}  Κ₉→{Κ₂₈,TH₆}  Κ₁₀→Κ₂₉→Κ₃₀
-Κ₂₂→TH₄  Κ₅₁→TH₇,TH₈  Κ₅₅→TH₉  Κ₅₆→TH₁₀  Κ₅₈→TH₁₁
-Κ₅₂∧Κ₅₉∧Κ₆₀→TH₁₂  Κ₈→Κ₉₁  Κ₉₂→{Modus_A,Modus_B}  Κ₉₃→Κ₅₄
-```
-
-## §29 Tech-Stack (aktualisiert)
-
-```text
-blake3,ed25519-dalek,webauthn-rs,wasmtime,dashmap,tokio,libp2p,rocksdb,
-nova,halo2,ark-groth16,x25519-dalek,chacha20poly1305,fastcdc,zstd,
-bip32,slip-0010,semaphore(ZK-groups)
-```
-
-## §30 Roadmap
-
-```text
-/spec→Lean4  /circuits→Halo2  /core→Rust  /network→libp2p  /nexus→Tauri  /sim→Python
-```
-
----
-
 ## §31 Adversarial Resilience (v14.0)
 
 ```text
@@ -367,31 +328,6 @@ Eclipse         │ Κ₉₅ Light  │ Random Sampling unkontrollierbar
 AI-Sybil        │ Κ₉₆ Gate   │ Ökonomische Barriere (Time-Lock)
 Bestechung      │ Κ₉₇ Slash  │ Kosten > Gewinn (Economic Irrationality)
 Lazy Verify     │ Κ₉₈ Watch  │ Profit-Incentive für Überwachung
-```
-
----
-
-## §32 Axiom-Index (v14.0)
-
-```text
-CORE(15): Κ₀,Κ₁,Κ₂,Κ₆,Κ₇,Κ₉,Κ₁₀,Κ₁₁,Κ₂₂,Κ₂₈,Κ₂₉,Κ₅₁,Κ₅₉,Κ₆₂,Μ₁
-TRUST(12): Κ₃,Κ₄,Κ₈,Κ₁₃,Κ₂₃,Κ₂₄,Κ₅₂,Κ₅₃,Κ₅₄,Κ₅₅,Κ₅₆,Κ₅₈
-GOV(10): Κ₁₈,Κ₁₉,Κ₂₁,Κ₂₅,Κ₂₆,Κ₃₀,Κ₅₇,Κ₆₀,Κ₆₁,Κ₆₃
-EXEC(6): Κ₃₅,Κ₃₆,Κ₆₈,Κ₇₁,Κ₇₂,Κ₇₃
-NET(8): Κ₆₄,Κ₆₅,Κ₆₆,Κ₆₇,Κ₆₉,Κ₇₀,Κ₇₄,Κ₇₆
-zkWASM(2): Κ₇₅,Κ₇₆
-ETERNITY(5): Κ₈₂,Κ₈₃,Κ₈₄,Κ₈₅,Κ₈₆
-FRACTAL(3): Κ₉₁,Κ₉₂,Κ₉₃
-HARDENING(5): Κ₉₄,Κ₉₅,Κ₉₆,Κ₉₇,Κ₉₈
-EXT(23): Κ₃₉-Κ₅₀+
-```
-
-## §33 Tech-Stack (v14.0)
-
-```text
-blake3,ed25519-dalek,webauthn-rs,wasmtime,dashmap,tokio,libp2p,rocksdb,
-nova,halo2,circom,ark-groth16,x25519-dalek,chacha20poly1305,fastcdc,zstd,
-bip32,slip-0010,semaphore,worldcoin-iris(PoP)
 ```
 
 ---
@@ -503,71 +439,25 @@ Antwort: "Mathematisch bewiesen valide, aber Transaktionshistorie gelöscht."
 ## §39 Guardian-Mode (v16.1)
 
 ```text
-[DF] Guardian(ι, ρ) = Active Replication mit ZK-Filterung
+[DF] Guardian(ι,ρ) = Active Replication + ZK-Filterung
 [DF] CLI: `up realm guardian attach did:up:realm:<id>`
 
 [AX] Κ₁₀₅: Guardian-Subscription
-     Guardian(ι, ρ) aktiviert:
-       1. Identity-Check: verify(sig(ι)) == true
-       2. Listener: ι.subscribe(Topic:up/gossip/ρ)
-       3. Sync: fetch(StateRoot_ρ) → download_all_until_synced
+     activate ⟹ verify(sig(ι)) ∧ subscribe(Topic:ρ) ∧ sync(StateRoot)
 
-[AX] Κ₁₀₆: Active-Verification (Unterschied zu IPFS)
-     IPFS (passiv): store(Block) ohne Prüfung — speichert Spam
-     Guardian (aktiv):
-       ∀Block_incoming:
-         IF verify(π_block) ∧ valid_sig ∧ policy(ρ).allows THEN
-           Store(Block, RocksDB) ∧ Index(Block)
-         ELSE
-           Reject(Block) — NIE Müll speichern
-
-     ⟹ Guardian = verifizierender Wächter, nicht blinder Speicher
+[AX] Κ₁₀₆: Active-Verification (vs IPFS passiv)
+     ∀Block: verify(π)∧valid_sig∧policy.allows ⟹ Store ELSE Reject
+     ⟹ NIE Müll speichern
 
 [AX] Κ₁₀₇: Guardian-Retention
-     verify(π) ⟹
-       Store(Block, Local) ∧
-       Pin_Count += 1 ∧
-       Ignore(Flux_Limits, ρ)
+     verify(π) ⟹ Store(Block,Local) ∧ Pin++ ∧ Ignore(Flux_Limits)
+     ρ überlebt solange ∃Guardian(ι,ρ)∧powered(ι)
 
-     Realm überlebt solange ∃ι: Guardian(ι,ρ) ∧ powered(ι)
+[AX] Κ₁₁₅: Genesis-Seeding (Local-First)
+     create(ρ,ι) ⟹ Guardian(ι,ρ) ∧ Pin=1 ∧ UI:"⚠️ Realm At Risk" bis ACK(remote)
 
 [TH] TH₁₅: Sovereign-Persistence
-     ∃ Guardian(ι,ρ) offline ⟹ ρ.State vollständig rekonstruierbar
-     ⟹ Besser als Cloud, besser als IPFS ⇐ Κ₁₀₅,Κ₁₀₆,Κ₁₀₇
-```
-
-### Szenario: Bunker-Persistenz
-
-```text
-1. Server im Keller (nur Outbound, kein Inbound)
-2. Admin: `up realm guardian attach did:up:realm:firma`
-3. Mitarbeiter arbeiten weltweit via Internet
-4. Server saugt jeden validen Block, verifiziert ZK, speichert auf RAID
-5. Internet-Netzwerk gelöscht → Server hat vollständigen Zustand
-   verify(π_history) = true ∧ data(entire_realm) = preserved
-
-⟹ Echte Souveränität: Unabhängig von DHT, Cloud, externen Diensten
-```
-
-### Genesis-Seeding
-
-```text
-[AX] Κ₁₁₅: Genesis-Seeding (Local-First)
-     Wenn Identität ι einen Realm ρ erstellt:
-
-     1. Auto-Pin: ι wird automatisch Guardian(ι, ρ)
-        Store(ρ.Manifest, Local) ∧ Pin_Count = 1
-
-     2. Health-Check: Client zeigt Warnung solange:
-        Replica_Count(ρ) < 2 → UI: "⚠️ Realm At Risk"
-        ⟹ Nur lokal vorhanden, kein Backup
-
-     3. Release-Condition:
-        Creator darf erst offline gehen, wenn:
-        ∃ Peer_remote: ACK(ρ.Manifest) == true
-
-     ⟹ Kein Datenverlust bei neuem Realm
-     ⟹ Local-First mit automatischer Redundanz-Mahnung
+     ∃Guardian(ι,ρ) ⟹ ρ.State vollständig rekonstruierbar ⇐ Κ₁₀₅-Κ₁₀₇,Κ₁₁₅
 ```
 
 ---
@@ -575,43 +465,15 @@ Antwort: "Mathematisch bewiesen valide, aber Transaktionshistorie gelöscht."
 ## §41 Real-Time Transport (v16.5)
 
 ```text
-[DF] Transport-Modes:
-     Live-Mode  = Ephemeral (RAM, GossipSub, Mana)
-     Log-Mode   = Persistent (Disk, Object-Store, Flux)
+[DF] Live  = Ephemeral(RAM,GossipSub,Mana)  |  Log = Persistent(Disk,Flux)
 
 [AX] Κ₁₁₆: Ephemeral-Streams (Live-Mode)
-     Nachrichten m ∈ Stream(ρ) werden via GossipSub verbreitet.
-
-     Validierung (Empfänger):
-       1. verify_sig(m.sender) ∧ m.sender ∈ Members(ρ)
-       2. decrypt(m.payload, K_read) == success
-
-     Kosten: Mana (Regenerativ)
-     Persistence: Keine (RAM only, flüchtig)
-
-     ⟹ Chat-Nachrichten "verschwinden" nach Session-Ende
-     ⟹ Perfekt für: Live-Chat, Voice, Typing-Indicators
+     m∈Stream(ρ): GossipSub | verify_sig ∧ member ∧ decrypt(K_read)
+     Kosten=Mana | Persist=RAM | verschwinden nach Session
 
 [AX] Κ₁₁₇: Stream-Archiving (Log-Mode)
-     Ein Guardian KANN Stream(ρ) aggregieren:
-
-     Process:
-       Buffer [m₁..mₙ] → ZK-Batch-Proof → Object(Log_Block)
-       Store(Log_Block) → Flux-Kosten
-
-     Effekt:
-       Wandelt flüchtige Mana-Interaktionen in dauerhafte Flux-Objekte
-       ⟹ Basis für "History"-Funktion in Chats
-       ⟹ Archivierung = opt-in, nicht default
-```
-
-### Transport-Matrix
-
-```text
-Modus        │ Kosten  │ Persistenz │ Use-Case
-─────────────┼─────────┼────────────┼─────────────────────
-Live (Κ₁₁₆)  │ Mana    │ RAM        │ Chat, Voice, Presence
-Log (Κ₁₁₇)   │ Flux    │ Disk       │ History, Audit, Legal
+     Buffer[m₁..mₙ] → ZK-Batch → Object(Log_Block) → Flux
+     ⟹ opt-in Archivierung für History/Audit
 ```
 
 ---
@@ -619,66 +481,23 @@ Log (Κ₁₁₇)   │ Flux    │ Disk       │ History, Audit, Legal
 ## §42 Replication Governance (v16.2)
 
 ```text
-[DF] Key-Separation:
-     K_read  = Decrypt(Content)    — haben alle Members
-     K_sync  = Find(Shards)        — haben nur autorisierte Guardians
+[DF] K_read=Decrypt(Content) | K_sync=Find(Shards)
+[DF] Topic_pub=H(ρ.id) | Topic_restricted=HMAC(ρ.id,K_sync)
 
-[DF] Topic-Obfuscation:
-     Topic_public     = H(ρ.id)                    — jeder findet
-     Topic_restricted = HMAC(ρ.id, K_sync)         — nur mit Key findbar
+[AX] Κ₁₀₈: Policy-Level
+     L0(Public):   pin=* | Topic=H(ρ.id)
+     L1(Members):  pin=members | K_sync=derive(K_read)
+     L2(Whitelist): pin=[DIDs] | K_sync=Encrypt(Target.PubKey)
 
-     Ohne K_sync: Node hört nur Stille (taub für Realm-Updates)
+[AX] Κ₁₀₉: Topic-Obfuscation
+     subscribe ⟺ policy=Public ∨ has(K_sync)
+     ⟹ ohne K_sync: TopicID unbekannt → faktisches Pinning-Verbot
 
-[DF] Replication-Policy ∈ {Public, Members, Whitelist}
-
-[AX] Κ₁₀₈: Policy-Level-Definition
-     Level 0 (Public):
-       policy.pinning = *
-       Topic = H(ρ.id)
-       ⟹ Jeder kann Guardian sein (Wiki-Mode)
-
-     Level 1 (Members):
-       policy.pinning = members
-       K_sync = derive(K_read, "sync")
-       ⟹ Nur Mitglieder können pinnen (Community-Mode)
-
-     Level 2 (Whitelist):
-       policy.pinning = [did:up:server_a, did:up:backup_b]
-       K_sync = Encrypt(K_sync_raw, Target.PubKey)
-       ⟹ Nur explizite DIDs erhalten K_sync (Enterprise-Mode)
-
-[AX] Κ₁₀₉: Topic-Obfuscation-Enforcement
-     Guardian(ι, ρ).subscribe ⟺
-       (policy=Public) ∨ (ι ∈ policy.whitelist ∧ has(ι, K_sync))
-
-     Attacker ohne K_sync:
-       ⟹ Kennt TopicID nicht
-       ⟹ Kann Updates nicht empfangen
-       ⟹ Kann Shards nicht sammeln (faktisches Pinning-Verbot)
-
-[AX] Κ₁₁₀: Anti-Harvesting-Guarantee
-     ∀ι ∉ policy.allowed:
-       P(find_shards(ι, ρ)) ≈ 2⁻²⁵⁶ (HMAC-Brute-Force)
-
-     ⟹ Fremde Nodes (China/NSA/...) können Realm nicht pinnen
-     ⟹ Guardians = privilegierter Infrastruktur-Dienst
+[AX] Κ₁₁₀: Anti-Harvesting
+     ∀ι∉policy: P(find_shards)≈2⁻²⁵⁶
 
 [TH] TH₁₆: Replication-Sovereignty
-     Owner(ρ) kontrolliert vollständig:
-       1. WER Daten lesen darf (K_read Distribution)
-       2. WER Daten replizieren darf (K_sync Distribution)
-     ⇐ Κ₁₀₈,Κ₁₀₉,Κ₁₁₀
-```
-
-### Security-Matrix
-
-```text
-Bedrohung          │ Level 0   │ Level 1     │ Level 2
-───────────────────┼───────────┼─────────────┼─────────────
-Fremdes Pinning    │ erlaubt   │ unmöglich   │ unmöglich
-Harvesting         │ möglich   │ unmöglich   │ unmöglich
-Mitarbeiter-Leak   │ -         │ möglich     │ unmöglich
-Eigene Guardians   │ optional  │ empfohlen   │ PFLICHT
+     Owner(ρ) kontrolliert: WER lesen (K_read) + WER replizieren (K_sync) ⇐ Κ₁₀₈-Κ₁₁₀
 ```
 
 ---
@@ -686,60 +505,20 @@ Eigene Guardians   │ optional  │ empfohlen   │ PFLICHT
 ## §45 Realm-Interface-Layer (v16.3)
 
 ```text
-[DF] Interface_Type ∈ {Chat, Files, Kanban, Voice, Code, Custom}
-
-[DF] Manifest.interface:
-     "std::chat::v1"     → Native Chat-UI
-     "std::files::v1"    → Native Datei-Browser
-     "std::kanban::v1"   → Native Board-UI
-     "custom::<blob_id>" → Sandboxed Custom-UI
+[DF] Interface ∈ {std::chat|files|kanban|voice|code::v1, custom::<blob>}
 
 [AX] Κ₁₁₁: Interface-Separation
-     Realm definiert: Logik + Datenstruktur
-     Client definiert: Darstellung + UX
+     Realm=Logik+Data | Client=Darstellung+UX
 
-     ⟹ Logik diktiert der Realm
-     ⟹ Optik diktiert der Client
-
-[AX] Κ₁₁₂: Standard-Interface-Mapping
-     manifest.interface = "std::<type>::v<n>"
-     ⟹ Client nutzt native UI (schnell, sicher, offline-fähig)
-     ⟹ Keine Remote-Code-Ausführung nötig
+[AX] Κ₁₁₂: Standard-Interface
+     "std::<type>::v<n>" ⟹ native UI (schnell, sicher, offline)
 
 [AX] Κ₁₁₃: Custom-Interface-Sandbox
-     manifest.interface = "custom::<blob_hash>"
-
-     Client-Verhalten:
-       1. Load: fetch(blob_hash) → UI-Code (HTML/JS/WASM)
-       2. Execute: Sandbox.run(UI-Code)
-       3. Isolation: Kein Zugriff auf Private Keys, Kein Netzwerk außer Realm-API
-
-     ⟹ Custom UIs können schön sein, aber niemals gefährlich
+     "custom::<blob>" ⟹ Sandbox.run | Isolation: kein KeyAccess, nur Realm-API
 
 [AX] Κ₁₁₄: Logic-Enforcement
-     ∀ Message m im Realm ρ:
-       valid(m) ⟺ WASM.execute(ρ.rules, m) == true
-
-     IF valid(m) == false THEN discard(m)
-
-     ⟹ Egal welche UI: Die Realm-Regeln sind unumgehbar
-     ⟹ UI-Injection-Angriffe wirkungslos
-
-[DF] UI-Flow:
-     User → [UI (Client)] → [Message] → [WASM-Validate (Realm)] → [State]
-                                              ↓
-                                        valid? Store : Reject
-```
-
-### Interface-Beispiele
-
-```text
-std::chat::v1    │ Telegram-like, Threaded Messages
-std::files::v1   │ Dropbox-like, Ordner + Dateien
-std::kanban::v1  │ Trello-like, Spalten + Karten
-std::voice::v1   │ Discord-like, Kanäle + Streams
-std::code::v1    │ GitHub-like, Repos + PRs
-custom::<blob>   │ Eigene React/Vue/WASM App
+     valid(m) ⟺ WASM.execute(ρ.rules,m) | invalid ⟹ discard
+     ⟹ Realm-Regeln unumgehbar, UI-Injection wirkungslos
 ```
 
 ---
