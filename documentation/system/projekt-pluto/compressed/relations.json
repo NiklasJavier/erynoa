@@ -1,0 +1,253 @@
+{
+  "meta": {
+    "version": "2.0.0",
+    "phase": "1.4: Relation Matrix Extraction",
+    "source_documents": ["03-BEZIEHUNGSMATRIX.md"],
+    "description": "Mathematisch-logische Formalisierung aller Modul-Beziehungen"
+  },
+  "symbols": {
+    "Σ": "UnifiedState",
+    "Hub": "SynapseHub",
+    "ι": "Identity",
+    "τ": "Trust",
+    "ρ": "Realm",
+    "Ψ": "ECLVM",
+    "Ω": "Storage",
+    "π": "Package",
+    "🛡️": "Protection",
+    "⊳": "DependsOn",
+    "→": "Triggers",
+    "⊲⊳": "Bidirectional",
+    "⊢": "Validates",
+    "⊎": "Aggregates",
+    "↝": "Updates"
+  },
+  "relation_types": {
+    "DependsOn": {
+      "symbol": "⊳",
+      "semantics": "A ⊳ B ≡ A requires B to function",
+      "transitivity": true
+    },
+    "Triggers": {
+      "symbol": "→",
+      "semantics": "A → B ≡ state_change(A) ⟹ event(B)",
+      "transitivity": false
+    },
+    "Validates": {
+      "symbol": "⊢",
+      "semantics": "A ⊢ B ≡ A asserts invariants on B",
+      "transitivity": false
+    },
+    "Aggregates": {
+      "symbol": "⊎",
+      "semantics": "A ⊎ B ≡ A contains or manages B",
+      "transitivity": true
+    },
+    "Bidirectional": {
+      "symbol": "⊲⊳",
+      "semantics": "A ⊲⊳ B ≡ (A ⊳ B) ∧ (B ⊳ A)",
+      "transitivity": false
+    },
+    "Updates": {
+      "symbol": "↝",
+      "semantics": "A ↝ B ≡ A modifies state of B",
+      "transitivity": false
+    }
+  },
+  "topology": {
+    "layers": {
+      "L0_Core": {
+        "components": ["Σ", "Hub"],
+        "description": "Nervensystem-Kern",
+        "formalism": "L₀ = {Σ, Hub}"
+      },
+      "L1_Engines": {
+        "components": ["τ", "Event", "Formula", "Consensus"],
+        "description": "Verarbeitungs-Engines",
+        "formalism": "L₁ = {E_τ, E_event, E_formula, E_consensus}"
+      },
+      "L2_Domain": {
+        "components": ["ι", "ρ", "Gateway", "Saga", "Quota"],
+        "description": "Domänen-Logik",
+        "formalism": "L₂ = {ι, ρ, G, S, Q}"
+      },
+      "L3_Infrastructure": {
+        "components": ["Ω", "P2P", "Ψ"],
+        "description": "Infrastruktur-Schicht",
+        "formalism": "L₃ = {Ω, P2P, Ψ}"
+      },
+      "L4_Protection": {
+        "components": ["Anomaly", "Diversity", "Quadratic", "Calibration"],
+        "description": "Schutz-Mechanismen",
+        "formalism": "L₄ = 🛡️ = {A, D, Q, C}"
+      }
+    },
+    "data_flow": {
+      "primary": "Σ → Hub → L₁ → L₂ → L₃",
+      "feedback": "L₄ ⊢ (L₁ ∪ L₂ ∪ L₃)"
+    }
+  },
+  "relations": {
+    "identity_relations": [
+      { "from": "τ", "to": "ι", "type": "⊳", "axiom": "K6", "formalism": "τ(x) ⊳ ι(x) ≡ trust requires identity" },
+      { "from": "ι", "to": "τ", "type": "→", "axiom": "K2", "formalism": "∀ι_new: spawn(ι) → init(τ(ι))" },
+      { "from": "Event", "to": "ι", "type": "⊳", "axiom": "K9", "formalism": "∀e: author(e) ∈ ι" },
+      { "from": "Gateway", "to": "ι", "type": "⊳", "axiom": "K23", "formalism": "crossing ⟹ verify(ι)" },
+      { "from": "Gateway", "to": "ι", "type": "⊢", "axiom": "K23", "formalism": "G ⊢ valid(ι)" },
+      { "from": "P2P.Swarm", "to": "ι", "type": "⊳", "axiom": null, "formalism": "PeerId ≡ DeviceDID ∈ ι" },
+      { "from": "Anomaly", "to": "ι", "type": "⊢", "axiom": "K26", "formalism": "🛡️.A ⊢ ¬anomalous(ι)" },
+      { "from": "Hub", "to": "ι", "type": "⊎", "axiom": null, "formalism": "Hub ⊎ Observer(ι)" },
+      { "from": "Ψ", "to": "ι", "type": "⊳", "axiom": null, "formalism": "Ψ.call ⊳ caller ∈ ι" },
+      { "from": "Ω.Identity", "to": "ι", "type": "⊎", "axiom": null, "formalism": "Ω ⊎ persist(ι)" }
+    ],
+    "trust_relations": [
+      { "from": "Gateway", "to": "τ", "type": "⊳", "axiom": "K23", "formalism": "crossing ⟹ τ > θ_min" },
+      { "from": "Saga", "to": "τ", "type": "⊳", "axiom": "K24", "formalism": "saga.exec ⊳ τ(participants)" },
+      { "from": "Gas", "to": "τ", "type": "⊳", "axiom": null, "formalism": "γ_limit = f(τ)" },
+      { "from": "Mana", "to": "τ", "type": "⊳", "axiom": null, "formalism": "μ_regen = g(τ)" },
+      { "from": "Formula", "to": "τ", "type": "⊳", "axiom": "K15", "formalism": "F.input ⊳ τ" },
+      { "from": "Consensus", "to": "τ", "type": "⊳", "axiom": "K18", "formalism": "vote_weight = h(τ)" },
+      { "from": "P2P.Gossip", "to": "τ", "type": "⊳", "axiom": null, "formalism": "propagate ⊳ τ(peer)" },
+      { "from": "Diversity", "to": "τ", "type": "⊢", "axiom": "K19", "formalism": "🛡️.D ⊢ Gini(τ) < θ" }
+    ],
+    "realm_relations": [
+      { "from": "ρ", "to": "ι", "type": "⊳", "axiom": "K22", "formalism": "ρ.members ⊆ ι" },
+      { "from": "ρ", "to": "τ", "type": "⊲⊳", "axiom": "K22", "formalism": "ρ ⊲⊳ τ" },
+      { "from": "Gateway", "to": "Ψ", "type": "⊳", "axiom": "K23", "formalism": "G.policy → Ψ.eval" },
+      { "from": "Saga", "to": "Ψ", "type": "⊳", "axiom": "K24", "formalism": "S.step → Ψ.exec" },
+      { "from": "Quota", "to": "🛡️", "type": "→", "axiom": "K22", "formalism": "quota_exceeded → trigger(🛡️)" },
+      { "from": "ρ", "to": "Ω.Realm", "type": "⊎", "axiom": null, "formalism": "ρ ⊎ persist(ρ)" }
+    ],
+    "p2p_relations": [
+      { "from": "P2P.Swarm", "to": "ι", "type": "⊳", "axiom": null, "formalism": "peer ≡ device_did" },
+      { "from": "P2P.Gossip", "to": "τ", "type": "⊳", "axiom": null, "formalism": "gossip_priority = f(τ)" },
+      { "from": "P2P.Gossip", "to": "Event", "type": "→", "axiom": null, "formalism": "recv(msg) → emit(event)" },
+      { "from": "P2P.DHT", "to": "P2P.Swarm", "type": "⊎", "axiom": null, "formalism": "DHT ⊎ Swarm" },
+      { "from": "P2P.Relay", "to": "τ", "type": "⊳", "axiom": null, "formalism": "relay ⊳ τ(destination)" },
+      { "from": "P2P.Privacy", "to": "ι", "type": "⊳", "axiom": null, "formalism": "privacy ⊳ ι.mode" }
+    ],
+    "shell_relations": [
+      { "from": "Shell", "to": "ι", "type": "⊳", "axiom": "K8", "formalism": "shell.access ⊳ valid(agent_did)" },
+      { "from": "Shell", "to": "τ", "type": "⊳", "axiom": "K6", "formalism": "shell.action ⊳ τ > θ_shell" },
+      { "from": "Shell", "to": "Ψ", "type": "⊳", "axiom": "K23", "formalism": "shell → Ψ.eval(ShellPolicy)" },
+      { "from": "Shell", "to": "Capability", "type": "⊳", "axiom": "K8", "formalism": "action ∈ capabilities(agent)" },
+      { "from": "Delegation", "to": "Shell", "type": "→", "axiom": "K8", "formalism": "delegate(cap) → grant(shell)" },
+      { "from": "Shell", "to": "Event", "type": "→", "axiom": "K9", "formalism": "shell.action → audit_event" },
+      { "from": "Shell", "to": "Anomaly", "type": "→", "axiom": "K26", "formalism": "shell.action → check(🛡️.A)" },
+      { "from": "Shell", "to": "τ", "type": "↝", "axiom": "K6", "formalism": "result(action) ↝ Δτ" }
+    ]
+  },
+  "event_flow": {
+    "formal_definition": "EventFlow: Source → Bus → State → Hub → Observers",
+    "stages": [
+      {
+        "stage": 1,
+        "name": "External Event",
+        "formalism": "e_ext ∈ P2P.recv()",
+        "component": "P2P.Swarm"
+      },
+      {
+        "stage": 2,
+        "name": "Ingress",
+        "formalism": "Bus.ingress(e_ext) → e_state",
+        "component": "EventBus"
+      },
+      {
+        "stage": 3,
+        "name": "State Application",
+        "formalism": "Σ' = apply(Σ, e_state) ∧ log(e_state) ∧ merkle.update()",
+        "component": "UnifiedState"
+      },
+      {
+        "stage": 4,
+        "name": "Dispatch",
+        "formalism": "∀obs ∈ Hub.observers(e_state): obs.notify(e_state)",
+        "component": "SynapseHub"
+      },
+      {
+        "stage": 5,
+        "name": "Observer Reaction",
+        "formalism": "obs.on_event(e) → side_effects",
+        "component": "Observers"
+      }
+    ]
+  },
+  "synergy_matrix": {
+    "definition": "Synergy(A,B) ∈ [0,10] measures coupling strength",
+    "entries": [
+      { "A": "ι", "B": "τ", "score": 10, "reason": "Fundamental coupling", "formalism": "ι ⊲⊳ τ" },
+      { "A": "τ", "B": "Consensus", "score": 9, "reason": "K18 Voting weight", "formalism": "vote = f(τ)" },
+      { "A": "ρ", "B": "Gateway", "score": 9, "reason": "K23 Crossing", "formalism": "cross ⟹ G.eval" },
+      { "A": "Event", "B": "Ω", "score": 8, "reason": "Persistence", "formalism": "e → Ω.persist(e)" },
+      { "A": "Ψ", "B": "ρ", "score": 8, "reason": "Policy execution", "formalism": "ρ.policy → Ψ" },
+      { "A": "Shell", "B": "ι", "score": 8, "reason": "K8 Capabilities", "formalism": "shell ⊳ ι" },
+      { "A": "Shell", "B": "τ", "score": 8, "reason": "Trust thresholds", "formalism": "shell ⊳ τ" },
+      { "A": "Shell", "B": "Ψ", "score": 7, "reason": "Policy evaluation", "formalism": "shell → Ψ" },
+      { "A": "P2P", "B": "ι", "score": 7, "reason": "PeerId mapping", "formalism": "peer ≡ did" },
+      { "A": "🛡️", "B": "τ", "score": 7, "reason": "Monitoring", "formalism": "🛡️ ⊢ τ" },
+      { "A": "Formula", "B": "τ", "score": 6, "reason": "K15 Input", "formalism": "F ⊳ τ" }
+    ]
+  },
+  "critical_paths": {
+    "trust_update": {
+      "name": "Trust-Update Hot Path",
+      "formalism": "T_total = Σᵢ t_i where t_i = stage_latency",
+      "stages": [
+        { "op": "τ.update()", "latency_μs": 50 },
+        { "op": "Σ_τ.apply() [atomic]", "latency_μs": 1 },
+        { "op": "StateEvent::TrustUpdate", "latency_μs": 5 },
+        { "op": "log_and_apply()", "latency_μs": 30 },
+        { "op": "Hub.dispatch()", "latency_μs": 20 }
+      ],
+      "total_μs": 106,
+      "target_μs": 50,
+      "optimization_needed": true
+    },
+    "realm_crossing": {
+      "name": "Realm-Crossing Complex Path",
+      "formalism": "T_cross = T_parse + T_compose + T_eval",
+      "stages": [
+        { "op": "Intent.recv()", "latency_μs": 10 },
+        { "op": "IntentParser.parse()", "latency_μs": 100 },
+        { "op": "SagaComposer.compose()", "latency_μs": 200 },
+        { "op": "GatewayGuard.evaluate()", "latency_μs": 500, "sub_ops": [
+          { "op": "Ψ.validate()", "latency_μs": 300 },
+          { "op": "τ.get()", "latency_μs": 5 },
+          { "op": "Quota.check()", "latency_μs": 10 }
+        ]},
+        { "op": "StateEvent::CrossingEvaluated", "latency_μs": 30 }
+      ],
+      "total_μs": 1200,
+      "acceptable": true
+    }
+  },
+  "cross_cutting": {
+    "error_hierarchy": {
+      "root": "ErynoaError",
+      "formalism": "ErynoaError = Σ(IdentityError | ExecutionError | RealmError | StorageError | P2PError | ECLVMError | StateError)",
+      "variants": ["IdentityError", "ExecutionError", "RealmError", "StorageError", "P2PError", "ECLVMError", "StateError"]
+    },
+    "telemetry": {
+      "formalism": "∀module: module → telemetry.{trace, metric, log}",
+      "outputs": ["Traces (Jaeger)", "Metrics (Prometheus)", "Logs (structured)"]
+    },
+    "config": {
+      "formalism": "Config = Env ⊕ ModuleConfigs",
+      "modules": ["TrustEngineConfig", "EventEngineConfig", "RealmStorageConfig", "P2PConfig", "ECLVMConfig"]
+    }
+  },
+  "invariants": {
+    "layer_isolation": {
+      "formalism": "∀(a,b) ∈ L_i × L_j: i < j ⟹ ¬(b ⊳ a)",
+      "description": "Höhere Schichten dürfen nicht von niedrigeren abhängen (außer via Events)"
+    },
+    "event_causality": {
+      "formalism": "∀e₁,e₂: e₁ → e₂ ⟹ t(e₁) < t(e₂)",
+      "description": "Kausale Ordnung von Events"
+    },
+    "observer_independence": {
+      "formalism": "∀obs₁,obs₂ ∈ Observers: obs₁.effect ∩ obs₂.effect = ∅",
+      "description": "Observer-Effekte sind disjunkt"
+    }
+  }
+}

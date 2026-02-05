@@ -1,0 +1,82 @@
+{
+  "meta": {
+    "version": "2.0.0",
+    "phase": "1.3: Formula Extraction (Final Polish)",
+    "source_documents": [
+      "12-PACKAGEMANAGER-SYNERGIEN-FEATURES.md", "19-USE-CASES-DEZENTRALER-STORAGE.md",
+      "08-STATE-KERNGEDANKEN.md", "14-SHARDING-ARCHITEKTUR.md"
+    ]
+  },
+  "operations": {
+    "storage": {
+      "upload": {
+        "cost_formula": "Cost = (SizeMB * 1.0 Mana) + (Chunks * 0.1 Gas)",
+        "trust_req": "min_upload_trust (default: 0.3)",
+        "description": "Upload mit Mana-Kosten für Bandbreite und Gas für Indexierung."
+      },
+      "download": {
+        "cost_formula": "Cost = SizeMB * 0.1 Mana",
+        "p2p_logic": "BitSwap + Gossip Discovery",
+        "description": "Download kostet Mana (Bandbreite)."
+      },
+      "pin": {
+        "cost_formula": "Cost = SizeMB * 0.01 Mana / Day",
+        "description": "Laufende Kosten für Pinned Content."
+      }
+    },
+    "trust_update": {
+      "definition": "τ⃗' = update(τ⃗, δ)",
+      "formula": "τ⃗' = clamp(τ⃗ + δ × AsymmetryMatrix, 0, 1)",
+      "asymmetry": "Impact(-) = 2.0 * Impact(+)"
+    },
+    "protection": {
+      "circuit_breaker": {
+        "trigger": "Anomalies/Minute > CriticalThreshold",
+        "effect": "SystemMode -> Degraded",
+        "recovery": "Anomalies/Minute < SafeThreshold for 5 Minutes"
+      },
+      "anti_calcification": {
+        "trigger": "Gini(TrustDistribution) > 0.8",
+        "effect": "TrustDecayFactor *= 1.1 (globally)"
+      }
+    },
+    "package_resolution": {
+      "formula": "Maximize(Trust) AND Minimize(Conflicts) AND VersionMatch(SemVer)",
+      "heuristics": ["PreferHighestTrust", "PreferPinned"]
+    },
+    "governance": {
+      "quadratic_voting": {
+        "formula": "Votes = floor(sqrt(Tokens))",
+        "weight": "Votes * (1 + α * relative_trust)"
+      }
+    },
+    "p2p": {
+      "propagation": {
+         "formula": "TargetPeers = log2(NetworkSize) * K",
+         "ttl": "Default: 5 hops"
+      }
+    }
+  },
+  "synergies": {
+    "Trust->Storage": {
+      "name": "Trusted Seeding",
+      "formula": "Seed_Bonus = min(0.01, HostedGB * 0.0001)",
+      "description": "Hosting von Content erhöht Trust (Integrity)."
+    },
+    "Trust->Identity": {
+      "name": "Verified Badges",
+      "formula": "Badge = Trust > 0.9 + ID_Age > 30d",
+      "description": "Hohes Vertrauen schaltet Identity-Badges frei."
+    },
+    "Mana->Storage": {
+      "name": "Storage Rent",
+      "formula": "Quota = Trust * BaseQuota * (1 + ManaBalance/1000)",
+      "description": "Mana bezahlt für Storage-Garantien."
+    },
+    "Protection->Governance": {
+      "name": "Emergency Governance",
+      "formula": "Mode=Degraded => ProposalTime / 2",
+      "description": "Im Notfall (ProtectionTrigger) beschleunigte Governance."
+    }
+  }
+}

@@ -50,53 +50,66 @@
 
 ### 2.1 Identity-Abhängigkeiten
 
-| Von | Zu | Relation | Axiom | Beschreibung |
-|-----|-----|----------|-------|--------------|
-| `engines/trust` | `identity/` | DependsOn | Κ6 | Trust basiert auf DID |
-| `identity/` | `engines/trust` | Triggers | Κ2 | Neue Identity → Initial Trust |
-| `engines/event` | `identity/` | DependsOn | Κ9 | Events haben Autor-DID |
-| `realm/gateway` | `identity/` | DependsOn | Κ23 | Crossing prüft Identity |
-| `realm/gateway` | `identity/` | Validates | Κ23 | Identity-Verifikation |
-| `p2p/swarm` | `identity/` | DependsOn | - | PeerId ist Device-DID |
-| `protection/anomaly` | `identity/` | Validates | Κ26 | Identity-Anomalien |
-| `synapses/` | `identity/` | Aggregates | - | ControllerObserver |
-| `eclvm/` | `identity/` | DependsOn | - | Caller-Identity prüfen |
-| `storage/identity_store` | `identity/` | Aggregates | - | DID-Persistenz |
+| Von                      | Zu              | Relation   | Axiom | Beschreibung                  |
+| ------------------------ | --------------- | ---------- | ----- | ----------------------------- |
+| `engines/trust`          | `identity/`     | DependsOn  | Κ6    | Trust basiert auf DID         |
+| `identity/`              | `engines/trust` | Triggers   | Κ2    | Neue Identity → Initial Trust |
+| `engines/event`          | `identity/`     | DependsOn  | Κ9    | Events haben Autor-DID        |
+| `realm/gateway`          | `identity/`     | DependsOn  | Κ23   | Crossing prüft Identity       |
+| `realm/gateway`          | `identity/`     | Validates  | Κ23   | Identity-Verifikation         |
+| `p2p/swarm`              | `identity/`     | DependsOn  | -     | PeerId ist Device-DID         |
+| `protection/anomaly`     | `identity/`     | Validates  | Κ26   | Identity-Anomalien            |
+| `synapses/`              | `identity/`     | Aggregates | -     | ControllerObserver            |
+| `eclvm/`                 | `identity/`     | DependsOn  | -     | Caller-Identity prüfen        |
+| `storage/identity_store` | `identity/`     | Aggregates | -     | DID-Persistenz                |
 
 ### 2.2 Trust-Abhängigkeiten
 
-| Von | Zu | Relation | Axiom |
-|-----|-----|----------|-------|
-| `realm/gateway` | `engines/trust` | DependsOn | Κ23 |
-| `realm/saga` | `engines/trust` | DependsOn | Κ24 |
-| `execution/gas` | `engines/trust` | DependsOn | - |
-| `execution/mana` | `engines/trust` | DependsOn | - |
-| `engines/formula` | `engines/trust` | DependsOn | Κ15 |
-| `engines/consensus` | `engines/trust` | DependsOn | Κ18 |
-| `p2p/gossip` | `engines/trust` | DependsOn | - |
-| `protection/diversity` | `engines/trust` | Validates | Κ19 |
+| Von                    | Zu              | Relation  | Axiom |
+| ---------------------- | --------------- | --------- | ----- |
+| `realm/gateway`        | `engines/trust` | DependsOn | Κ23   |
+| `realm/saga`           | `engines/trust` | DependsOn | Κ24   |
+| `execution/gas`        | `engines/trust` | DependsOn | -     |
+| `execution/mana`       | `engines/trust` | DependsOn | -     |
+| `engines/formula`      | `engines/trust` | DependsOn | Κ15   |
+| `engines/consensus`    | `engines/trust` | DependsOn | Κ18   |
+| `p2p/gossip`           | `engines/trust` | DependsOn | -     |
+| `protection/diversity` | `engines/trust` | Validates | Κ19   |
 
 ### 2.3 Realm-Abhängigkeiten
 
-| Von | Zu | Relation | Axiom |
-|-----|-----|----------|-------|
-| `realm/` | `identity/` | DependsOn | Κ22 |
-| `realm/` | `engines/trust` | Bidirectional | Κ22 |
-| `realm/gateway` | `eclvm/` | DependsOn | Κ23 |
-| `realm/saga` | `eclvm/` | DependsOn | Κ24 |
-| `realm/quota` | `protection/` | Triggers | Κ22 |
-| `realm/` | `storage/realm` | Aggregates | - |
+| Von             | Zu              | Relation      | Axiom |
+| --------------- | --------------- | ------------- | ----- |
+| `realm/`        | `identity/`     | DependsOn     | Κ22   |
+| `realm/`        | `engines/trust` | Bidirectional | Κ22   |
+| `realm/gateway` | `eclvm/`        | DependsOn     | Κ23   |
+| `realm/saga`    | `eclvm/`        | DependsOn     | Κ24   |
+| `realm/quota`   | `protection/`   | Triggers      | Κ22   |
+| `realm/`        | `storage/realm` | Aggregates    | -     |
 
 ### 2.4 P2P-Abhängigkeiten
 
-| Von | Zu | Relation |
-|-----|-----|----------|
-| `p2p/swarm` | `identity/` | DependsOn |
-| `p2p/gossip` | `engines/trust` | DependsOn |
-| `p2p/gossip` | `engines/event` | Triggers |
-| `p2p/dht` | `p2p/swarm` | Aggregates |
-| `p2p/relay` | `engines/trust` | DependsOn |
-| `p2p/privacy` | `identity/` | DependsOn |
+| Von           | Zu              | Relation   |
+| ------------- | --------------- | ---------- |
+| `p2p/swarm`   | `identity/`     | DependsOn  |
+| `p2p/gossip`  | `engines/trust` | DependsOn  |
+| `p2p/gossip`  | `engines/event` | Triggers   |
+| `p2p/dht`     | `p2p/swarm`     | Aggregates |
+| `p2p/relay`   | `engines/trust` | DependsOn  |
+| `p2p/privacy` | `identity/`     | DependsOn  |
+
+### 2.5 Shell-Access-Abhängigkeiten (Agent → Peer)
+
+| Von                   | Zu                   | Relation  | Axiom | Beschreibung              |
+| --------------------- | -------------------- | --------- | ----- | ------------------------- |
+| `peer/shell`          | `identity/`          | DependsOn | Κ8    | Agent-DID validieren      |
+| `peer/shell`          | `engines/trust`      | DependsOn | Κ6    | Trust-Schwellen prüfen    |
+| `peer/shell`          | `eclvm/`             | DependsOn | Κ23   | ShellAccessGateway Policy |
+| `peer/shell`          | `domain/capability`  | DependsOn | Κ8    | ShellCapability prüfen    |
+| `identity/delegation` | `peer/shell`         | Triggers  | Κ8    | Capability-Delegation     |
+| `peer/shell`          | `engines/event`      | Triggers  | Κ9    | Shell-Audit-Events        |
+| `peer/shell`          | `protection/anomaly` | Triggers  | Κ26   | Anomalie-Erkennung        |
+| `peer/shell`          | `engines/trust`      | Updates   | Κ6    | Trust-Impact nach Aktion  |
 
 ---
 
@@ -233,16 +246,19 @@ config/
 
 ## 6. Synergy-Matrix
 
-| Modul A | Modul B | Synergy-Score | Grund |
-|---------|---------|---------------|-------|
-| identity | trust | 10/10 | Fundamental |
-| trust | consensus | 9/10 | Κ18 Voting |
-| realm | gateway | 9/10 | Κ23 Crossing |
-| event | storage | 8/10 | Persistenz |
-| eclvm | realm | 8/10 | Policies |
-| p2p | identity | 7/10 | PeerId |
-| protection | trust | 7/10 | Monitoring |
-| formula | trust | 6/10 | Κ15 Input |
+| Modul A    | Modul B      | Synergy-Score | Grund                 |
+| ---------- | ------------ | ------------- | --------------------- |
+| identity   | trust        | 10/10         | Fundamental           |
+| trust      | consensus    | 9/10          | Κ18 Voting            |
+| realm      | gateway      | 9/10          | Κ23 Crossing          |
+| event      | storage      | 8/10          | Persistenz            |
+| eclvm      | realm        | 8/10          | Policies              |
+| **shell**  | **identity** | **8/10**      | **Κ8 Capabilities**   |
+| **shell**  | **trust**    | **8/10**      | **Trust-Schwellen**   |
+| **shell**  | **eclvm**    | **7/10**      | **Policy-Evaluation** |
+| p2p        | identity     | 7/10          | PeerId                |
+| protection | trust        | 7/10          | Monitoring            |
+| formula    | trust        | 6/10          | Κ15 Input             |
 
 ---
 

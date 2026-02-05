@@ -1,0 +1,351 @@
+{
+	"meta": {
+		"version": "2.0.0",
+		"phase": "1.4: Synergistic Integration Compression",
+		"source_document": "07-SYNERGISTISCHE-INTEGRATION.md",
+		"description": "Mathematisch-logische Formalisierung des Erynoa Nervensystems"
+	},
+
+	"nervous_system": {
+		"symbol": "𝒩",
+		"definition": "𝒩 = ⟨Σ, Hub, ℰ, 𝒪, 𝒜⟩",
+		"components": {
+			"Σ": "UnifiedState (Gehirn)",
+			"Hub": "SynapseHub (Synapsen)",
+			"ℰ": "Engines (Muskeln)",
+			"𝒪": "Observers (Sensorik)",
+			"𝒜": "Adapters (Schnittstellen)"
+		},
+		"biological_mapping": {
+			"UnifiedState": { "metaphor": "Gehirn", "function": "Zentrale Koordination" },
+			"SynapseHub": { "metaphor": "Synapsen", "function": "Signalübertragung" },
+			"Engines": { "metaphor": "Muskeln", "function": "Ausführung" },
+			"Protection": { "metaphor": "Immunsystem", "function": "Schutz" },
+			"Storage": { "metaphor": "Gedächtnis", "function": "Persistenz" },
+			"P2P": { "metaphor": "Nervenbahnen", "function": "Kommunikation" },
+			"Realm": { "metaphor": "Organe", "function": "Isolation & Spezialisierung" },
+			"Domain": { "metaphor": "DNA", "function": "Typen & Invarianten" }
+		}
+	},
+
+	"state_relations": {
+		"symbol": "ℛ",
+		"definition": "ℛ ⊆ StateComponent × StateComponent × RelationType",
+		"types": {
+			"DependsOn": {
+				"symbol": "→ₐ",
+				"formalism": "A →ₐ B ⟺ init(A) requires init(B)",
+				"description": "A hängt von B ab (B muss vor A initialisiert sein)"
+			},
+			"Triggers": {
+				"symbol": "→ₜ",
+				"formalism": "A →ₜ B ⟺ update(A) ⟹ notify(B)",
+				"description": "A löst Updates in B aus"
+			},
+			"Aggregates": {
+				"symbol": "⊇",
+				"formalism": "A ⊇ B ⟺ state(A) contains state(B)",
+				"description": "A enthält/aggregiert B"
+			},
+			"Validates": {
+				"symbol": "⊢",
+				"formalism": "A ⊢ B ⟺ invariants(A) checked_by B",
+				"description": "A validiert B"
+			},
+			"Bidirectional": {
+				"symbol": "↔",
+				"formalism": "A ↔ B ⟺ A →ₜ B ∧ B →ₜ A",
+				"description": "Bidirektionale Abhängigkeit"
+			}
+		}
+	},
+
+	"state_events": {
+		"symbol": "𝒮ℰ",
+		"definition": "𝒮ℰ = Σ_{c ∈ Components} Events(c)",
+		"total_variants": 42,
+		"event_categories": {
+			"trust_events": {
+				"TrustUpdate": "ΔΤ(ι, τ⃗, τ⃗', reason)",
+				"TrustViolation": "⚠T(ι, violation_type)",
+				"IdentityBootstrapped": "∃ι: Σ' = Σ ∪ {ι}"
+			},
+			"event_events": {
+				"EventAdded": "e ∈ Log ⟹ Log' = Log ∪ {e}",
+				"EventFinalized": "finalized(e) ∧ merkle_root'",
+				"EventPersisted": "storage(e) = committed"
+			},
+			"protection_events": {
+				"AnomalyDetected": "α: (type, severity, subject)",
+				"EntropyUpdate": "H(Σ) → H'",
+				"SystemModeChange": "Mode: M → M' (reason)"
+			},
+			"realm_events": {
+				"CrossingEvaluated": "ι: ρ₁ →? ρ₂ ⟹ {Allow, Deny}",
+				"RealmRegistered": "∃ρ: Realms' = Realms ∪ {ρ}"
+			},
+			"storage_events": {
+				"EventPersisted": "(event_id, size, timestamp)",
+				"ArchiveCompleted": "tier(blob): Hot → Cold"
+			},
+			"p2p_events": {
+				"PeerConnectionChange": "Peers' = Peers ± {p}",
+				"NetworkMetricUpdate": "Metric(m) → v (Δ)"
+			}
+		}
+	},
+
+	"synapse_hub": {
+		"symbol": "Hub",
+		"definition": "Hub = ⟨𝒪_reg, Graph, Queue⟩",
+		"components": {
+			"observer_registry": {
+				"symbol": "𝒪_reg",
+				"type": "Map<StateComponent, List<Observer>>",
+				"cardinality": "|𝒪_reg| ≥ 30 traits"
+			},
+			"state_graph": {
+				"symbol": "Graph",
+				"type": "DAG<StateComponent, StateRelation>",
+				"operations": ["get_dependencies", "get_triggered_by", "topological_sort"]
+			},
+			"event_queue": {
+				"symbol": "Queue",
+				"type": "MPSC<WrappedStateEvent>",
+				"semantics": "async dispatch"
+			}
+		},
+		"dispatch_algorithm": {
+			"definition": "dispatch: StateEvent → IO ()",
+			"steps": [
+				"1. direct_observers = 𝒪_reg[event.component]",
+				"2. transitive_observers = ⋃_{c ∈ triggered_by(event.component)} 𝒪_reg[c]",
+				"3. ∀ obs ∈ direct_observers ∪ transitive_observers: obs.on_event(event)"
+			],
+			"complexity": "O(|observers| + |edges|)"
+		}
+	},
+
+	"observer_traits": {
+		"symbol": "𝒪",
+		"definition": "𝒪 = {TrustObs, EventObs, ProtectionObs, RealmObs, StorageObs, P2PObs}",
+		"mappings": {
+			"TrustObserver": {
+				"events": ["TrustUpdate", "IdentityBootstrapped", "TrustViolation"],
+				"trait_signature": "fn on_trust_update(entity, old, new, reason)"
+			},
+			"EventObserver": {
+				"events": ["EventAdded", "EventFinalized"],
+				"trait_signature": "fn on_event_added(event), fn on_event_finalized(event)"
+			},
+			"ProtectionObserver": {
+				"events": ["AnomalyDetected", "EntropyUpdate"],
+				"trait_signature": "fn on_anomaly_detected(anomaly)"
+			},
+			"RealmObserver": {
+				"events": ["CrossingEvaluated", "RealmRegistered"],
+				"trait_signature": "fn on_crossing_succeeded(from, to)"
+			},
+			"StorageObserver": {
+				"events": ["EventPersisted", "ArchiveCompleted"],
+				"trait_signature": "fn on_event_persisted(event_id, size, ts)"
+			},
+			"P2PObserver": {
+				"events": ["PeerConnectionChange", "NetworkMetricUpdate"],
+				"trait_signature": "fn on_peer_connected(peer_id, addr)"
+			}
+		}
+	},
+
+	"state_components": {
+		"symbol": "𝒞",
+		"cardinality": 37,
+		"layers": {
+			"Core": {
+				"components": ["Identity", "Trust", "Event", "Formula", "Consensus"],
+				"criticality": "🔴 Kritisch"
+			},
+			"Execution": {
+				"components": ["Gas", "Mana", "Execution"],
+				"criticality": "🟡 Hoch"
+			},
+			"Engine": {
+				"components": [
+					"ECLVM",
+					"ECLPolicy",
+					"ECLBlueprint",
+					"UI",
+					"API",
+					"Governance",
+					"Controller"
+				],
+				"criticality": "🟡-🟢"
+			},
+			"Protection": {
+				"components": ["Anomaly", "Diversity", "Quadratic", "AntiCalcification", "Calibration"],
+				"criticality": "🔴-🟢"
+			},
+			"Peer": {
+				"components": ["Realm", "Gateway", "SagaComposer", "IntentParser", "Room"],
+				"criticality": "🔴-🟢"
+			},
+			"P2P": {
+				"components": ["Swarm", "Gossip", "DHT", "Relay", "Privacy", "TrustGate"],
+				"criticality": "🔴-🟢"
+			},
+			"Storage": {
+				"components": [
+					"Storage",
+					"EventStore",
+					"IdentityStore",
+					"TrustStore",
+					"ContentStore",
+					"Archive"
+				],
+				"criticality": "🔴-🟢"
+			}
+		}
+	},
+
+	"cascade_patterns": {
+		"symbol": "Cascade",
+		"definition": "Cascade(e₀) = transitive_closure(triggers, e₀)",
+		"examples": {
+			"trust_update_cascade": {
+				"trigger": "TrustEngine.update_trust(ι, +δ)",
+				"chain": [
+					"1. StateEvent::TrustUpdate{ι, τ, τ', reason}",
+					"2. TrustState.apply_event() [Direct Owner]",
+					"3. RealmState.apply_event() [DependsOn] → recalc_access()",
+					"4. GatewayState.recalc_access() [Triggers] → neue Realms zugänglich",
+					"5. QuotaEnforcer.update_limits() [Triggers] → mehr Quota",
+					"6. ECLVMState.update_budget() [Triggers] → mehr Gas/Mana"
+				],
+				"formal": "Δτ(ι) →ₜ Δaccess(ι) →ₜ Δquota(ι) →ₜ Δbudget(ι)"
+			}
+		}
+	},
+
+	"engine_adapters": {
+		"symbol": "𝒜",
+		"definition": "𝒜: StateComponent → EngineAdapter",
+		"trait_interface": {
+			"component": "() → StateComponent",
+			"init": "(Arc<UnifiedState>) → ()",
+			"on_event": "(&WrappedStateEvent) → ()",
+			"health_score": "() → f64 ∈ [0,1]"
+		},
+		"instances": {
+			"TrustEngineAdapter": {
+				"component": "StateComponent::Trust",
+				"handles": [
+					"TrustUpdate → state.trust.update_trust()",
+					"IdentityBootstrapped → state.trust.init_trust(NEWCOMER)"
+				]
+			},
+			"EventEngineAdapter": { "component": "StateComponent::Event" },
+			"AnomalyAdapter": { "component": "StateComponent::Anomaly" },
+			"StorageAdapter": { "component": "StateComponent::Storage" },
+			"P2PAdapter": { "component": "StateComponent::Swarm" }
+		}
+	},
+
+	"state_integrator": {
+		"symbol": "ℐ",
+		"definition": "ℐ = ⟨Σ, Hub, 𝒜⟩",
+		"facade_operations": {
+			"connect_engines": "∀c ∈ 𝒞: 𝒜[c] := Adapter(c, Σ)",
+			"propagate": {
+				"signature": "(StateEvent) → IO ()",
+				"algorithm": [
+					"1. wrapped = Σ.log_and_apply(event)",
+					"2. Hub.dispatch(wrapped)",
+					"3. if requires_persistence(wrapped): Σ.persist_checkpoint()"
+				]
+			}
+		}
+	},
+
+	"domain_primitives": {
+		"UniversalId": {
+			"structure": "(tag: u8, version: u8, hash: [u8; 32])",
+			"encoding": "tag || version || blake3(content)"
+		},
+		"TemporalCoord": {
+			"structure": "(unix_ts: u128, lamport: u64, node_id: UniversalId)",
+			"ordering": "lexicographic(unix_ts, lamport, node_id)"
+		},
+		"TrustVector6D": {
+			"structure": "(r, i, c, p, v, ω) ∈ [0,1]⁶",
+			"presets": {
+				"NEWCOMER": { "r": 0.1, "i": 0.1, "c": 0.1, "p": 0.1, "v": 0.1, "ω": 0.1 },
+				"TRUSTED": { "r": 0.7, "i": 0.7, "c": 0.7, "p": 0.7, "v": 0.7, "ω": 0.7 },
+				"VERIFIED": { "r": 0.9, "i": 0.9, "c": 0.9, "p": 0.9, "v": 0.9, "ω": 0.9 }
+			}
+		}
+	},
+
+	"invariant_checker": {
+		"symbol": "Check",
+		"definition": "Check: Constraint → Result<(), InvariantViolation>",
+		"checks": {
+			"K1": "check_realm_rule_inheritance(ρ, ρ')",
+			"K4": "check_asymmetric_update(Δτ)",
+			"K8": "check_delegation_trust_factor(depth, τ_eff)",
+			"K9": "check_event_causality(e, parent(e))"
+		}
+	},
+
+	"module_integrations": {
+		"P2P_integration": {
+			"emitter": "StateEventEmitter",
+			"on_connection": [
+				"trust_gate.check_connection(peer_id) → decision",
+				"emit(PeerConnectionChange{peer_id, connected: true, level})",
+				"emit(NetworkMetricUpdate{ConnectedPeers, +1})"
+			]
+		},
+		"Storage_integration": {
+			"method": "persist_event",
+			"emits": "EventPersisted{event_id, size_bytes, timestamp}"
+		},
+		"Protection_integration": {
+			"method": "analyze_with_state",
+			"emits": [
+				"AnomalyDetected{type, severity, subject}",
+				"SystemModeChange if severity = Critical"
+			]
+		},
+		"Execution_integration": {
+			"gas_metering": "consume_gas(amount) → observer.on_gas_consumed()",
+			"finalize": "observer.on_execution_complete(ctx_id, success, gas, mana, events, duration)"
+		},
+		"Realm_integration": {
+			"crossing_evaluation": [
+				"1. trust = Σ.trust.get_trust(ι)",
+				"2. policy = ECLVM.get_crossing_policy(ρ_target)",
+				"3. result = ECLVM.evaluate_policy(policy, ctx) [gas-metered]",
+				"4. emit(CrossingSucceeded|CrossingFailed)"
+			]
+		}
+	},
+
+	"performance_targets": {
+		"metrics": {
+			"event_dispatch_latency": { "current": "100 µs", "phase4": "50 µs", "phase6": "30 µs" },
+			"observer_notification": { "current": "sync", "phase4": "async", "phase6": "batch-async" },
+			"stategraph_traversal": { "current": "O(n)", "phase4": "O(log n)", "phase6": "O(1) cached" },
+			"memory_footprint": { "current": "100 MB", "phase4": "80 MB", "phase6": "60 MB" },
+			"module_coupling": { "current": "Tight", "phase4": "Loose", "phase6": "Event-driven" }
+		}
+	},
+
+	"feature_flags": {
+		"default": ["p2p", "storage", "protection"],
+		"optional": {
+			"privacy": { "requires": ["p2p"], "feature": "onion-routing" },
+			"wasm": { "feature": "wasmtime" },
+			"full": ["p2p", "privacy", "storage", "protection", "wasm"]
+		}
+	}
+}

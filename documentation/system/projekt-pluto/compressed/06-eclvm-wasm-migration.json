@@ -1,0 +1,249 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "source": "06-ECLVM-WASM-MIGRATION.md",
+    "phase": "Projekt Pluto Phase 5",
+    "timeframe": "Woche 11-13",
+    "description": "Mathematisch-logische Formalisierung der ECLVM → WASM Migration"
+  },
+
+  "symbols": {
+    "Ψ": "ECLVM (Execution Engine)",
+    "Ψ_legacy": "Stack-VM Interpreter",
+    "Ψ_wasm": "WebAssembly Runtime",
+    "σ": "SystemState",
+    "π": "Policy (ECL-Programm)",
+    "τ⃗": "TrustVector6D ∈ [0,1]⁶",
+    "γ": "Gas (computational cost)",
+    "μ": "Mana (resource credits)",
+    "Φ": "Host-Function Interface"
+  },
+
+  "algebraic_types": {
+    "ExecutionMode": {
+      "definition": "Mode ::= Legacy | Wasm | Auto",
+      "auto_predicate": "Auto(π) = if |opcodes(π)| > θ then Wasm else Legacy",
+      "threshold": "θ = auto_threshold (configurable)"
+    },
+    "WasmPolicyEngine": {
+      "definition": "Engine = ⟨E_wasm, Cache, Linker, Config⟩",
+      "components": {
+        "E_wasm": "Wasmtime Engine (shared)",
+        "Cache": "Map⟨PolicyId, CompiledModule⟩",
+        "Linker": "HostFunctions → WasmImports",
+        "Config": "⟨fuel_limit: ℕ, mem_pages: ℕ, simd: Bool⟩"
+      }
+    },
+    "WasmStateBridge": {
+      "definition": "Bridge = ⟨View, Handle?, Budget, MultiGas, PendingEvents⟩",
+      "type_signature": "Bridge: (StateView × Budget × MultiGas) → HostCallable"
+    },
+    "TrustVector": {
+      "definition": "τ⃗ = [R, I, C, P, V, Ω] ∈ [0,1]⁶",
+      "components": {
+        "R": "Reliability",
+        "I": "Integrity", 
+        "C": "Competence",
+        "P": "Predictability",
+        "V": "Verifiability",
+        "Ω": "Omega (meta-trust)"
+      }
+    },
+    "GasLayer": {
+      "definition": "Layer ::= Network | Compute | Storage | Realm",
+      "multi_gas": "MultiGas = Map⟨Layer, (used: ℕ, limit: ℕ)⟩"
+    }
+  },
+
+  "operations": {
+    "compile": {
+      "signature": "compile: ECL_Source → Result⟨CompiledWasmPolicy, Error⟩",
+      "pipeline": "Source →[parse]→ AST →[optimize]→ AST' →[codegen]→ WASM_Bytes →[wasmtime]→ Module"
+    },
+    "execute": {
+      "signature": "execute: (Policy × Context) →^async Result⟨Value, Error⟩",
+      "semantics": "π(σ) = Ψ_mode(π, σ) where mode ∈ {Legacy, Wasm, Auto}"
+    },
+    "host_calls": {
+      "trust": {
+        "get_trust": "get_trust: DID → Result⟨τ⃗, Error⟩",
+        "trust_norm": "trust_norm: τ⃗ → ℝ, ||τ⃗|| = √(Σᵢ τᵢ²)"
+      },
+      "identity": {
+        "has_credential": "has_credential: (DID × Schema) → Result⟨Bool, Error⟩",
+        "resolve_did": "resolve_did: DID → Result⟨Bool, Error⟩"
+      },
+      "state": {
+        "store_get": "store_get: (Store × Key) → Result⟨Option⟨Value⟩, Error⟩",
+        "store_put": "store_put: (Store × Key × Value) → Result⟨(), Error⟩"
+      },
+      "budget": {
+        "consume_gas": "consume_gas: (Layer × Amount) → Result⟨(), Error⟩",
+        "get_budget": "get_budget: () → (gas_used, gas_limit, mana_used, mana_limit)"
+      },
+      "events": {
+        "emit_event": "emit_event: (EventType × Payload) → Result⟨(), Error⟩"
+      }
+    }
+  },
+
+  "opcode_mappings": {
+    "direct": {
+      "Push(f64)": "f64.const",
+      "Add": "f64.add",
+      "Sub": "f64.sub",
+      "Mul": "f64.mul",
+      "Div": "f64.div",
+      "Eq": "f64.eq",
+      "Lt": "f64.lt",
+      "Return": "return"
+    },
+    "with_conversion": {
+      "And": "i32.and (nach bool-conversion)",
+      "Or": "i32.or (nach bool-conversion)",
+      "Not": "i32.eqz (nach bool-conversion)"
+    },
+    "host_calls": {
+      "LoadTrust(dim)": "call $erynoa.get_trust",
+      "HasCredential": "call $erynoa.has_credential",
+      "StoreGet": "call $erynoa.store_get + Mana",
+      "StorePut": "call $erynoa.store_put + Mana"
+    },
+    "control_flow": {
+      "Require": "br_if + unreachable (conditional abort)"
+    },
+    "invariant": "∀op ∈ ECL_OpCodes: ∃wasm_equiv(op) ∈ WASM_Instrs"
+  },
+
+  "performance_model": {
+    "latency": {
+      "legacy": "2ms avg",
+      "wasm": "0.2ms avg",
+      "improvement": "10×",
+      "formula": "T_wasm ≈ T_legacy / 10"
+    },
+    "throughput": {
+      "legacy": "50 trust_ops/ms, 500 policies/s",
+      "wasm": "500 trust_ops/ms, 5000 policies/s",
+      "improvement": "10×"
+    },
+    "startup": {
+      "cold": "T_cold = 1ms (includes compilation)",
+      "hot": "T_hot = 0.1ms (cached module)",
+      "cache_benefit": "T_hot = T_cold / 10"
+    },
+    "memory": {
+      "per_policy": "2MB (WASM) vs 1MB (Legacy)",
+      "constraint": "mem_pages ≤ Config.mem_pages_limit"
+    },
+    "fuel_model": {
+      "mapping": "Fuel →[linear]→ MultiGas",
+      "formula": "gas_consumed = fuel_used × fuel_factor(layer)"
+    }
+  },
+
+  "constraints": {
+    "K_WASM_Determinism": {
+      "id": "K_WASM_Det",
+      "name": "WASM Determinism",
+      "formalism": "∀π, σ: Ψ_wasm(π, σ) = Ψ_wasm(π, σ)",
+      "description": "IEEE 754 strict floating-point garantiert Konsensus-Determinismus"
+    },
+    "K_WASM_Isolation": {
+      "id": "K_WASM_Iso",
+      "name": "Sandbox Isolation",
+      "formalism": "∀π: effects(π) ⊆ Φ(Bridge)",
+      "description": "WASM-Sandbox erlaubt nur Host-Function-Seiteneffekte"
+    },
+    "K_WASM_Fuel": {
+      "id": "K_WASM_Fuel",
+      "name": "Fuel Boundedness",
+      "formalism": "fuel_consumed(π) ≤ fuel_limit ⟹ terminates(π)",
+      "description": "Fuel-Metering garantiert Terminierung"
+    },
+    "K_Mode_Equivalence": {
+      "id": "K_Mode_Eq",
+      "name": "Execution Mode Equivalence",
+      "formalism": "∀π, σ: Ψ_legacy(π, σ) ≡ Ψ_wasm(π, σ)",
+      "description": "Legacy und WASM liefern semantisch identische Ergebnisse"
+    },
+    "K_Host_Consistency": {
+      "id": "K_Host_Con",
+      "name": "Host-State Consistency",
+      "formalism": "commit(Bridge) ⟹ consistent(UnifiedState)",
+      "description": "Pending Events werden atomar committed"
+    }
+  },
+
+  "synergies": {
+    "WASM->Trust": {
+      "name": "Accelerated Trust Computation",
+      "formula": "τ_compute_time(wasm) = τ_compute_time(legacy) / 10",
+      "description": "Realm-Crossings 10× schneller durch WASM-Ausführung"
+    },
+    "WASM->Gateway": {
+      "name": "Low-Latency Policy Evaluation",
+      "formula": "Gateway_latency = min(T_wasm, T_threshold)",
+      "description": "ProgrammableGateway Policies mit 0.2ms statt 2ms"
+    },
+    "WASM->Realm": {
+      "name": "RealmQuota Enforcement",
+      "formula": "enforce(quota) via Fuel ⟹ Realm_isolation",
+      "description": "WASM-Fuel mapped direkt auf RealmQuota"
+    },
+    "Cache->Startup": {
+      "name": "Module Caching",
+      "formula": "T_exec = if cached(π) then T_hot else T_cold",
+      "description": "Pre-compiled Module Cache reduziert Startup auf 0.1ms"
+    }
+  },
+
+  "integration": {
+    "nervous_system": {
+      "UnifiedState": {
+        "connection": "WasmStateBridge ↔ UnifiedState",
+        "views": ["ECLVMState", "TrustState", "IdentityState"],
+        "handle": "StateHandle für Write-Ops"
+      },
+      "StateEventLog": {
+        "connection": "Event Emission → StateEventLog",
+        "protocol": "emit_event(type, payload) → StateEvent"
+      }
+    },
+    "directory_structure": {
+      "eclvm/wasm/": {
+        "mod.rs": "Modul-Root",
+        "engine.rs": "WasmPolicyEngine",
+        "codegen/": "ECL → WASM Compiler",
+        "host/": "Host-Functions (trust, identity, state, budget)",
+        "runtime/": "Wasmtime Integration (store, fuel, cache)",
+        "types/": "WIT-Bindings & Conversions"
+      }
+    }
+  },
+
+  "migration_strategy": {
+    "phases": {
+      "A": "Neue Policies mit WASM kompilieren",
+      "B": "Bestehende Policies bei Änderung migrieren",
+      "C": "Legacy-Interpreter deprecated",
+      "D": "Legacy-Code entfernen (v1.0)"
+    },
+    "compatibility": {
+      "api_stable": "evaluate_policy() API bleibt unverändert",
+      "feature_flags": {
+        "wasm": "WASM aktiviert (default)",
+        "wasm-simd": "WASM + SIMD Optimierungen",
+        "legacy-only": "Nur Bytecode-Interpreter"
+      }
+    }
+  },
+
+  "success_metrics": {
+    "latency": "T_policy ≤ 0.2ms",
+    "throughput": "Policies/s ≥ 5000",
+    "coverage": "Test-Coverage ≥ 90%",
+    "completeness": "|OpCodes_implemented| ≥ 50",
+    "seamless": "Dual-Mode transparent für API-Consumer"
+  }
+}

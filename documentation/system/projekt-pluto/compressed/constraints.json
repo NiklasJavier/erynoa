@@ -1,0 +1,72 @@
+{
+  "meta": {
+    "version": "2.0.0",
+    "phase": "1.2: Constraint Extraction (Final Polish)",
+    "source_documents": [
+      "08-STATE-KERNGEDANKEN.md", "09-TRUST-GAS-MANA-DREIEINIGKEIT.md",
+      "13-REALM-ARCHITEKTUR-ISOLATION.md", "19-USE-CASES-DEZENTRALER-STORAGE.md",
+      "16-REALM-GOVERNANCE.md"
+    ]
+  },
+  "constraints": {
+    "Core": {
+      "K1": {
+        "id": "K1",
+        "name": "MonotoneInheritance",
+        "formalism": "ρ' ⊲ ρ ⟹ rules(ρ) ⊆ rules(ρ')",
+        "description": "Sub-Realms erben alle Regeln der Eltern (Verfassungs-Treu)."
+      },
+      "K9": {
+        "id": "K9",
+        "name": "EventCausality",
+        "formalism": "∀e ∈ Log: timestamp(e) < timestamp(parent(e))",
+        "description": "Kausalität von Events muss gewahrt bleiben (Lamport Clocks)."
+      },
+       "K10": {
+        "id": "K10",
+        "name": "ContentAddressing",
+        "formalism": "ID(blob) = Hash(content(blob))",
+        "description": "Unveränderlichkeit durch Hash-Adressierung (Blake3)."
+      }
+    },
+    "Trust": {
+      "K2": { "id": "K2", "name": "BoundedTrust", "formalism": "τ ∈ [0,1]⁶" },
+      "K4": { "id": "K4", "name": "AsymmetricDecay", "formalism": "Δ⁻ = λ × Δ⁺, λ > 1" },
+      "K8": {
+        "id": "K8",
+        "name": "DelegationDecay",
+        "formalism": "τ_eff(depth) = τ_base × (decay_factor ^ depth)",
+        "description": "Trust verringert sich exponentiell mit Delegations-Tiefe."
+      }
+    },
+    "Protection": {
+      "K19": {
+        "id": "K19",
+        "name": "AntiCalcification",
+        "formalism": "Gini(Trust) > Threshold ⟹ Trigger(Redistribution)",
+        "description": "Verhindert System-Verknöcherung durch zu starke Trust-Konzentration."
+      },
+      "K_SystemStable": {
+        "id": "K_Stable",
+        "name": "SystemStability",
+        "formalism": "Anomalies(t) > Threshold ⟹ Mode = Degraded",
+        "description": "Automatischer Circuit-Breaker bei Anomalie-Spikes."
+      }
+    },
+    "Resource": {
+      "K11": { "id": "K11", "name": "GasMonotonic", "formalism": "γ(t+1) ≥ γ(t)" },
+      "K13": { "id": "K13", "name": "ManaRegen", "formalism": "μ(t) = min(Cap, μ(t-1) + Rate)" }
+    },
+    "Storage": {
+      "K26": {
+        "id": "K26",
+        "name": "URLSchema",
+        "formalism": "Unique Mapping: URL <-> Resource",
+        "description": "Jede Ressource ist eindeutig via erynoa:// adressierbar."
+      }
+    },
+    "Identity": {
+      "K6": { "id": "K6", "name": "SelfSovereign", "formalism": "Keys ⊂ Control(User)" }
+    }
+  }
+}

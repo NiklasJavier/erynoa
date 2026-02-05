@@ -9,24 +9,27 @@
 
 ## 📋 Dokumentenübersicht
 
-| Datei | Inhalt |
-|-------|--------|
-| `00-OVERVIEW.md` | Diese Datei – Vision & Roadmap |
-| `01-IST-ANALYSE.md` | Detaillierte Code-Analyse |
-| `02-ZIEL-ARCHITEKTUR.md` | Neue Verzeichnisstruktur |
-| `03-BEZIEHUNGSMATRIX.md` | Logische Modul-Beziehungen |
-| `04-PHASENPLAN.md` | Konkrete Umsetzungsschritte (14 Wochen) |
-| `05-MIGRATION-SCRIPTS.md` | Automatisierbare Migrationen |
-| `06-ECLVM-WASM-MIGRATION.md` | ECLVM → WASM Refactoring |
-| `07-SYNERGISTISCHE-INTEGRATION.md` | Tiefgehende Modul-Kopplung |
-| `08-STATE-KERNGEDANKEN.md` | State.rs Tiefenanalyse (21.495 LOC) |
-| `09-TRUST-GAS-MANA-DREIEINIGKEIT.md` | 💫 Die Lebensenergie des Systems |
-| `10-IDENTITY-MULTI-DID-ARCHITEKTUR.md` | 🪭 Multi-DID & Wallet-Integration |
-| `11-PACKAGEMANAGER-BLUEPRINT-TRANSFORMATION.md` | 📦 Dezentraler PackageManager |
-| `12-PACKAGEMANAGER-SYNERGIEN-FEATURES.md` | 🚀 Emergente Potenziale |
-| `13-REALM-ARCHITEKTUR-ISOLATION.md` | **🏰 Souveräne Realm-Welten** |
-| `14-SHARDING-ARCHITEKTUR.md` | **⚡ Horizontale Skalierung** |
-| `15-KI-KOMPRIMIERUNGSPLAN.md` | **🧮 KI-kompatible Abstraktion** |
+| Datei                                           | Inhalt                                   |
+| ----------------------------------------------- | ---------------------------------------- |
+| `00-OVERVIEW.md`                                | Diese Datei – Vision & Roadmap           |
+| `01-IST-ANALYSE.md`                             | Detaillierte Code-Analyse                |
+| `02-ZIEL-ARCHITEKTUR.md`                        | Neue Verzeichnisstruktur                 |
+| `03-BEZIEHUNGSMATRIX.md`                        | Logische Modul-Beziehungen               |
+| `04-PHASENPLAN.md`                              | Konkrete Umsetzungsschritte (14 Wochen)  |
+| `05-MIGRATION-SCRIPTS.md`                       | Automatisierbare Migrationen             |
+| `06-ECLVM-WASM-MIGRATION.md`                    | ECLVM → WASM Refactoring                 |
+| `07-SYNERGISTISCHE-INTEGRATION.md`              | Tiefgehende Modul-Kopplung               |
+| `08-STATE-KERNGEDANKEN.md`                      | State.rs Tiefenanalyse (21.495 LOC)      |
+| `09-TRUST-GAS-MANA-DREIEINIGKEIT.md`            | 💫 Die Lebensenergie des Systems         |
+| `10-IDENTITY-MULTI-DID-ARCHITEKTUR.md`          | 🪭 Multi-DID & Wallet-Integration        |
+| `11-PACKAGEMANAGER-BLUEPRINT-TRANSFORMATION.md` | 📦 Dezentraler PackageManager            |
+| `12-PACKAGEMANAGER-SYNERGIEN-FEATURES.md`       | 🚀 Emergente Potenziale                  |
+| `13-REALM-ARCHITEKTUR-ISOLATION.md`             | **🏰 Souveräne Realm-Welten**            |
+| `14-SHARDING-ARCHITEKTUR.md`                    | **⚡ Horizontale Skalierung**            |
+| `15-KI-KOMPRIMIERUNGSPLAN.md`                   | **🧮 KI-kompatible Abstraktion**         |
+| `16-REALM-GOVERNANCE.md`                        | **🗳️ Realm-gebundene Governance**        |
+| `17-REALM-URL-RESOURCE-ADDRESSING.md`           | **🌐 URL-Schema & Ressourcen-Auflösung** |
+| `18-AGENT-SHELL-ZUGRIFF.md`                     | **🐚 Agent Shell-Zugriff auf Peers**     |
 
 ---
 
@@ -75,14 +78,14 @@
 
 ## 📊 Aktuelle Metriken
 
-| Metrik | Wert | Ziel |
-|--------|------|------|
-| `state.rs` Zeilen | 21.495 | < 2.000 |
-| `state_integration.rs` Zeilen | 6.427 | < 1.500 |
-| Durchschnittliche Dateigröße | ~30 KB | < 15 KB |
-| Maximale Dateigröße | 823 KB | < 50 KB |
-| Module ohne Trait-Impl | ~40% | 0% |
-| Test-Coverage | ~60% | > 85% |
+| Metrik                        | Wert   | Ziel    |
+| ----------------------------- | ------ | ------- |
+| `state.rs` Zeilen             | 21.495 | < 2.000 |
+| `state_integration.rs` Zeilen | 6.427  | < 1.500 |
+| Durchschnittliche Dateigröße  | ~30 KB | < 15 KB |
+| Maximale Dateigröße           | 823 KB | < 50 KB |
+| Module ohne Trait-Impl        | ~40%   | 0%      |
+| Test-Coverage                 | ~60%   | > 85%   |
 
 ---
 
@@ -137,13 +140,13 @@ Woche 1-2     Woche 3-5       Woche 6-7      Woche 8-10     Woche 11-13    Woche
 
 ## ✅ Erfolgsmetriken
 
-| Metrik | Aktuell | Phase 2 | Phase 5 |
-|--------|---------|---------|---------|
-| Max. Datei-Zeilen | 21.495 | 5.000 | 2.000 |
-| Trait-Coverage | 60% | 85% | 100% |
-| Compile-Zeit | 4 min | 3 min | 2 min |
-| Event-Dispatch | 100 µs | 75 µs | 50 µs |
-| Memory | 100 MB | 80 MB | 60 MB |
+| Metrik            | Aktuell | Phase 2 | Phase 5 |
+| ----------------- | ------- | ------- | ------- |
+| Max. Datei-Zeilen | 21.495  | 5.000   | 2.000   |
+| Trait-Coverage    | 60%     | 85%     | 100%    |
+| Compile-Zeit      | 4 min   | 3 min   | 2 min   |
+| Event-Dispatch    | 100 µs  | 75 µs   | 50 µs   |
+| Memory            | 100 MB  | 80 MB   | 60 MB   |
 
 ---
 
@@ -170,4 +173,4 @@ documentation/system/projekt-pluto/
 
 ---
 
-*Nächster Schritt: Detaillierte Dokumentation in den Teil-Dateien*
+_Nächster Schritt: Detaillierte Dokumentation in den Teil-Dateien_
