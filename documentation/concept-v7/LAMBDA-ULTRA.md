@@ -1,6 +1,6 @@
-# λ-𝕌ₚ v11.0 — Ultra-Komprimierte Formale Spezifikation
+# λ-𝕌ₚ v16.1 — The Energy-Standard Specification
 
-> **233KB → 18KB | 81 Axiome | 12 Theoreme | λ-Notation | 2026-02-05**
+> **233KB → 21KB | 98 Axiome | 15 Theoreme | λ-Notation | 2026-02-05**
 
 ```text
 Notation: [AX]=Axiom [DE]=Design [TH]=Theorem [GO]=Ziel [DF]=Definition
@@ -51,6 +51,15 @@ Symbole:  τ=Trust γ=Gas μ=Mana ι=Identity ρ=Realm π=Proof Σ=State
 [AX] Κ₁₁: γ(t+1) ≤ γ(t)  -- Gas non-regenerating
 [AX] Κ₁₃: μ(t) = min(cap, μ(t-1)+r)  -- Mana regeneriert
 [DF] κ=(γ,μ,ϱ), κ₁⊕κ₂=(γ₁+γ₂, μ₁+μ₂, 1-(1-ϱ₁)(1-ϱ₂))
+
+[AX] Κ₁₀₄: Fuel-Hybrid-Switching
+     Sei γ_req = Cost(Op).
+     Decision-Logic:
+       1. IF γ_req ≤ μ_available THEN μ -= γ_req      (kostenlos/regenerativ)
+       2. ELIF γ_req ≤ Flux THEN Flux -= γ_req·Price  (bezahlt/substanziell)
+       3. ELSE ABORT "Out of Fuel"
+     ⟹ Nahtloser Übergang: Chatten(Mana) → Hosting(Flux)
+
 [TH] TH₂: lim_{t→∞}R(Attacker,t)=0 ⇐Κ₁₁,Κ₁₃
 [TH] TH₃: τ↑⟹(γ,μ)_cap↑⟹P(Erfolg)↑⟹τ↑ ⇐Κ₃,Κ₄
 ```
@@ -491,7 +500,58 @@ Antwort: "Mathematisch bewiesen valide, aber Transaktionshistorie gelöscht."
 
 ---
 
-## §37 Axiom-Index (v16.0)
+## §39 Guardian-Mode (v16.1)
+
+```text
+[DF] Guardian(ι, ρ) = Active Replication mit ZK-Filterung
+[DF] CLI: `up realm guardian attach did:up:realm:<id>`
+
+[AX] Κ₁₀₅: Guardian-Subscription
+     Guardian(ι, ρ) aktiviert:
+       1. Identity-Check: verify(sig(ι)) == true
+       2. Listener: ι.subscribe(Topic:up/gossip/ρ)
+       3. Sync: fetch(StateRoot_ρ) → download_all_until_synced
+
+[AX] Κ₁₀₆: Active-Verification (Unterschied zu IPFS)
+     IPFS (passiv): store(Block) ohne Prüfung — speichert Spam
+     Guardian (aktiv):
+       ∀Block_incoming:
+         IF verify(π_block) ∧ valid_sig ∧ policy(ρ).allows THEN
+           Store(Block, RocksDB) ∧ Index(Block)
+         ELSE
+           Reject(Block) — NIE Müll speichern
+
+     ⟹ Guardian = verifizierender Wächter, nicht blinder Speicher
+
+[AX] Κ₁₀₇: Guardian-Retention
+     verify(π) ⟹
+       Store(Block, Local) ∧
+       Pin_Count += 1 ∧
+       Ignore(Flux_Limits, ρ)
+
+     Realm überlebt solange ∃ι: Guardian(ι,ρ) ∧ powered(ι)
+
+[TH] TH₁₅: Sovereign-Persistence
+     ∃ Guardian(ι,ρ) offline ⟹ ρ.State vollständig rekonstruierbar
+     ⟹ Besser als Cloud, besser als IPFS ⇐ Κ₁₀₅,Κ₁₀₆,Κ₁₀₇
+```
+
+### Szenario: Bunker-Persistenz
+
+```text
+1. Server im Keller (nur Outbound, kein Inbound)
+2. Admin: `up realm guardian attach did:up:realm:firma`
+3. Mitarbeiter arbeiten weltweit via Internet
+4. Server saugt jeden validen Block, verifiziert ZK, speichert auf RAID
+5. Internet-Netzwerk gelöscht → Server hat vollständigen Zustand
+   verify(π_history) = true ∧ data(entire_realm) = preserved
+
+⟹ Echte Souveränität: Unabhängig von DHT, Cloud, externen Diensten
+```
+
+---
+
+## §40 Axiom-Index (v16.1 FINAL)
 
 ```text
 CORE(15): Κ₀,Κ₁,Κ₂,Κ₆,Κ₇,Κ₉,Κ₁₀,Κ₁₁,Κ₂₂,Κ₂₈,Κ₂₉,Κ₅₁,Κ₅₉,Κ₆₂,Μ₁
@@ -505,21 +565,24 @@ FRACTAL(3): Κ₉₁,Κ₉₂,Κ₉₃
 HARDENING(5): Κ₉₄,Κ₉₅,Κ₉₆,Κ₉₇,Κ₉₈
 PRIVACY(1): Κ₉₉
 REACTOR(4): Κ₁₀₀,Κ₁₀₁,Κ₁₀₂,Κ₁₀₃
+FUEL(1): Κ₁₀₄
+GUARDIAN(3): Κ₁₀₅,Κ₁₀₆,Κ₁₀₇
 EXT(23): Κ₃₉-Κ₅₀+
 ```
 
-## §38 Theorem-Index (v16.0)
+## §41 Theorem-Index (v16.1)
 
 ```text
-TH₁-TH₁₂: (unverändert)
+TH₁-TH₁₂: (Core, Trust, Saga, Resilience, Object-Chains)
 TH₁₃: Closed-Loop-Economy ⇐ Κ₁₀₀,Κ₁₀₁,Κ₁₀₂
 TH₁₄: Economic-Immunity ⇐ Κ₁₀₀
+TH₁₅: Sovereign-Persistence ⇐ Κ₁₀₅,Κ₁₀₆,Κ₁₀₇
 ```
 
 ---
 
 ```text
 ═══════════════════════════════════════════════════════════════════════════════
-λ-𝕌ₚ v16.0 | 94Ax | 14TH | PoU | REACTOR | DSGVO | HD-DID | PQ | 2026-02-05 | ∎
+λ-𝕌ₚ v16.1 ENERGY-STANDARD | 98Ax | 15TH | PoU | GUARDIAN | DSGVO | PQ | ∎
 ═══════════════════════════════════════════════════════════════════════════════
 ```
