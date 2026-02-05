@@ -24,30 +24,36 @@ $$\text{V5} \to \text{V6}: \quad \exp\!\left(\frac{\sum_i \ln t_i}{\sqrt{n}}\rig
 
 ### Ι11.2 Konstanten-Manifest
 
-| Symbol | Wert | Domäne | Invariante |
-|--------|------|--------|------------|
-| $\kappa_\sigma$ | $15.0$ | $\mathbb{R}^+$ | $\kappa = \frac{\text{inner}_{\text{typ}}}{0.8}$ |
-| $\kappa_A$ | $10$ | $\mathbb{N}^+$ | Aktivitätsschwelle |
-| $\lambda_{\text{asym}}$ | $(1.5, 2.0)$ | $\mathbb{R}^2$ | Trust-Asymmetrie |
-| $\tau$ | $90\text{d}$ | $\mathbb{R}^+$ | Zeitfenster |
+| Symbol                  | Wert         | Domäne         | Invariante                                       |
+| ----------------------- | ------------ | -------------- | ------------------------------------------------ |
+| $\kappa_\sigma$         | $15.0$       | $\mathbb{R}^+$ | $\kappa = \frac{\text{inner}_{\text{typ}}}{0.8}$ |
+| $\kappa_A$              | $10$         | $\mathbb{N}^+$ | Aktivitätsschwelle                               |
+| $\lambda_{\text{asym}}$ | $(1.5, 2.0)$ | $\mathbb{R}^2$ | Trust-Asymmetrie                                 |
+| $\tau$                  | $90\text{d}$ | $\mathbb{R}^+$ | Zeitfenster                                      |
 
 ---
 
 ### Ι11.3 Funktionsänderungen
 
 **Δ compute_value():**
-$$\boxed{
+
+$$
+\boxed{
 \begin{aligned}
 \ell &\coloneqq \ln(|\mathbb{C}| + 1) \\
 \iota &\coloneqq \frac{\|\mathbb{W}\|_w \cdot \ell \cdot \mathcal{S}}{\kappa_\sigma} \\
 \text{return} &\coloneqq \mathbb{A} \cdot \sigma(\iota) \cdot \hat{H} \cdot w
 \end{aligned}
-}$$
+}
+$$
 
 **Δ chain_trust():**
-$$\boxed{
+
+$$
+\boxed{
 t_{\text{chain}} \coloneqq \left(\prod_{i=1}^{n} \max(t_i, \epsilon)\right)^{1/\sqrt{n}} \quad\text{mit}\quad \epsilon = 10^{-10}
-}$$
+}
+$$
 
 ---
 
@@ -57,15 +63,18 @@ t_{\text{chain}} \coloneqq \left(\prod_{i=1}^{n} \max(t_i, \epsilon)\right)^{1/\
 $$\forall f \in \text{API}: \quad \text{dom}(f_{\text{V6}}) = \text{dom}(f_{\text{V5}}) \land \text{cod}(f_{\text{V6}}) = \text{cod}(f_{\text{V5}})$$
 
 **Wertbereichs-Änderung:**
-$$\begin{aligned}
+
+$$
+\begin{aligned}
 \text{compute()}_{\text{V5}} &: \to [0.5, 1.0) \quad\text{(saturiert)} \\
 \text{compute()}_{\text{V6}} &: \to [0.3, 0.95) \quad\text{(verteilt)}
-\end{aligned}$$
+\end{aligned}
+$$
 
-| Methode | $\text{Im}_{\text{V5}}$ | $\text{Im}_{\text{V6}}$ |
-|---------|-------------------------|-------------------------|
-| `compute()` | $[0.5, 1.0)$ | $[0.3, 0.95)$ |
-| `chain_trust([0.8]^4)` | $\approx 0.25$ | $\approx 0.64$ |
+| Methode                | $\text{Im}_{\text{V5}}$ | $\text{Im}_{\text{V6}}$ |
+| ---------------------- | ----------------------- | ----------------------- |
+| `compute()`            | $[0.5, 1.0)$            | $[0.3, 0.95)$           |
+| `chain_trust([0.8]^4)` | $\approx 0.25$          | $\approx 0.64$          |
 
 ---
 
@@ -81,7 +90,8 @@ $$\text{rank}(e) \coloneqq \text{percentile}\left(\text{compute}(e), \mathcal{E}
 
 ### Ι11.6 Komplexitätserhaltung
 
-$$\begin{array}{|l|c|c|}
+$$
+\begin{array}{|l|c|c|}
 \hline
 \textbf{Operation} & \mathcal{O}_{\text{V5}} & \mathcal{O}_{\text{V6}} \\
 \hline
@@ -89,7 +99,8 @@ $$\begin{array}{|l|c|c|}
 \text{chain\_trust(n)} & O(n) & O(n) \\
 \text{incremental\_update()} & O(1) & O(1) \\
 \hline
-\end{array}$$
+\end{array}
+$$
 
 ---
 
@@ -99,12 +110,12 @@ $$\begin{array}{|l|c|c|}
 
 $$\mathcal{T} = \mathcal{T}_U \cup \mathcal{T}_I \cup \mathcal{T}_P \cup \mathcal{T}_R$$
 
-| Symbol | Kategorie | Kardinalität |
-|--------|-----------|--------------|
-| $\mathcal{T}_U$ | Unit-Tests | $|\mathcal{T}_U| \geq 3$ |
-| $\mathcal{T}_I$ | Integration-Tests | $|\mathcal{T}_I| \geq 2$ |
-| $\mathcal{T}_P$ | Property-Tests | $|\mathcal{T}_P| \geq 5$ |
-| $\mathcal{T}_R$ | Regressions-Tests | $|\mathcal{T}_R| \geq 3$ |
+| Symbol          | Kategorie         | Kardinalität |
+| --------------- | ----------------- | ------------ | -------------- | ------- |
+| $\mathcal{T}_U$ | Unit-Tests        | $            | \mathcal{T}\_U | \geq 3$ |
+| $\mathcal{T}_I$ | Integration-Tests | $            | \mathcal{T}\_I | \geq 2$ |
+| $\mathcal{T}_P$ | Property-Tests    | $            | \mathcal{T}\_P | \geq 5$ |
+| $\mathcal{T}_R$ | Regressions-Tests | $            | \mathcal{T}\_R | \geq 3$ |
 
 ---
 
@@ -168,7 +179,9 @@ $$\neg\mathcal{B}_3 \iff t_{\text{chain}}([0.8]^4) \in [0.5, 0.85]$$
 ### Ψ12.5 Erwartungswert-Matrix
 
 **Sigmoid-Verteilung:**
-$$\begin{array}{|l|c|c|c|}
+
+$$
+\begin{array}{|l|c|c|c|}
 \hline
 \textbf{Szenario} & \sigma_{\text{V5}} & \sigma_{\text{V6}} & \Delta \\
 \hline
@@ -176,10 +189,13 @@ $$\begin{array}{|l|c|c|c|}
 \text{Medium} & \approx 0.95 & \approx 0.55 & -0.40 \\
 \text{Low} & \approx 0.80 & \approx 0.40 & -0.40 \\
 \hline
-\end{array}$$
+\end{array}
+$$
 
 **Chain-Trust-Verhalten:**
-$$\begin{array}{|l|c|c|}
+
+$$
+\begin{array}{|l|c|c|}
 \hline
 \textbf{Kette} & t_{\text{V5}} & t_{\text{V6}} \\
 \hline
@@ -188,7 +204,8 @@ $$\begin{array}{|l|c|c|}
 [0.8]^4 & 0.256 & 0.640 \\
 [0.9]^{10} & 0.348 & 0.713 \\
 \hline
-\end{array}$$
+\end{array}
+$$
 
 ---
 
@@ -208,12 +225,15 @@ $$t_{\text{prop}} = \left(\prod_i t_i\right)^{1/\sqrt{5}} = 0.321^{0.447} \appro
 ### Ψ12.7 Test-Fixtures
 
 **Fixture-Algebra:**
-$$\begin{aligned}
+
+$$
+\begin{aligned}
 \text{new\_user}() &\coloneqq (n=1, \mathbb{A}=1, \|\mathbb{W}\|=0.5, |\mathbb{C}|=1, \mathcal{S}=3.0) \\
 \text{active}() &\coloneqq (n=500, \mathbb{A}=50/90, \|\mathbb{W}\|=0.8, |\mathbb{C}|=200, \mathcal{S}=1.5) \\
 \text{veteran}() &\coloneqq (n=10^4, \mathbb{A}=100/365, \|\mathbb{W}\|=0.9, |\mathbb{C}|=5000, \mathcal{S}=0.3) \\
 \text{suspicious}() &\coloneqq (n=50, \mathbb{A}=50/2, \|\mathbb{W}\|=0.4, |\mathbb{C}|=10, \mathcal{S}=4.5)
-\end{aligned}$$
+\end{aligned}
+$$
 
 ---
 
@@ -221,16 +241,16 @@ $$\begin{aligned}
 
 $$\mathcal{V}_{\text{release}} = \bigwedge_{i=1}^{8} v_i$$
 
-| $v_i$ | Prädikat |
-|-------|----------|
-| $v_1$ | $\forall t \in \mathcal{T}_U: \text{pass}(t)$ |
-| $v_2$ | $\forall t \in \mathcal{T}_I: \text{pass}(t)$ |
-| $v_3$ | $\forall t \in \mathcal{T}_P: \text{pass}(t, n=10^4)$ |
-| $v_4$ | $\forall t \in \mathcal{T}_R: \text{pass}(t)$ |
+| $v_i$ | Prädikat                                                        |
+| ----- | --------------------------------------------------------------- |
+| $v_1$ | $\forall t \in \mathcal{T}_U: \text{pass}(t)$                   |
+| $v_2$ | $\forall t \in \mathcal{T}_I: \text{pass}(t)$                   |
+| $v_3$ | $\forall t \in \mathcal{T}_P: \text{pass}(t, n=10^4)$           |
+| $v_4$ | $\forall t \in \mathcal{T}_R: \text{pass}(t)$                   |
 | $v_5$ | $\text{perf}(\text{V6}) \geq 0.95 \cdot \text{perf}(\text{V5})$ |
-| $v_6$ | $\neg\exists x: \text{overflow}(x) \lor \text{underflow}(x)$ |
-| $v_7$ | $\neg\exists x: \text{div\_zero}(x)$ |
-| $v_8$ | $\text{doc} \equiv \text{impl}$ |
+| $v_6$ | $\neg\exists x: \text{overflow}(x) \lor \text{underflow}(x)$    |
+| $v_7$ | $\neg\exists x: \text{div\_zero}(x)$                            |
+| $v_8$ | $\text{doc} \equiv \text{impl}$                                 |
 
 ---
 
@@ -251,7 +271,8 @@ $$\epsilon_{\text{V6}} = O(n \cdot \epsilon_{\text{mach}}) \quad\text{vs}\quad \
 
 ### Ν13.2 Numerische Vergleichsmatrix
 
-$$\begin{array}{|l|c|c|}
+$$
+\begin{array}{|l|c|c|}
 \hline
 \textbf{Operation} & \text{V5 Risiko} & \text{V6 Risiko} \\
 \hline
@@ -259,7 +280,8 @@ $$\begin{array}{|l|c|c|}
 \exp() \text{ groß} & \text{Overflow} & \text{Keins } (/\kappa) \\
 \prod \text{ lang} & \text{Akkumulation} & \text{Minimiert} \\
 \hline
-\end{array}$$
+\end{array}
+$$
 
 ---
 
@@ -280,5 +302,4 @@ $$\text{API}_{\text{V6}} \supseteq \text{API}_{\text{V5}} \quad\text{(Superset-S
 ---
 
 **∎ QED**
-
 ```

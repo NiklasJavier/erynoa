@@ -17,6 +17,7 @@ $$\boxed{\text{URL} = \texttt{erynoa://} \langle \text{authority} \rangle / \lan
 $$\text{URL} \coloneqq \langle \mathcal{A}, \tau, \pi, \phi, \psi \rangle$$
 
 **Wobei:**
+
 - $\mathcal{A} \in \text{DID} \cup \text{Alias}$ — Authority (Realm-ID)
 - $\tau \in \mathcal{T}$ — Resource-Type
 - $\pi \in \Sigma^*$ — Path-Segments
@@ -25,14 +26,14 @@ $$\text{URL} \coloneqq \langle \mathcal{A}, \tau, \pi, \phi, \psi \rangle$$
 
 ### Δ1.3 Symboltafel
 
-| Symbol | Definition | Domäne |
-|--------|-----------|--------|
-| $\mathcal{A}$ | Authority | $\text{DID} \cup \text{Alias}$ |
-| $\tau$ | Resource-Type | $\{$store, profile, contract, asset, event, meta, governance, trust$\}$ |
-| $\pi$ | Path | $[\text{String}]$ |
-| $\phi$ | Query-Params | Map$\langle$String, String$\rangle$ |
-| $\mathcal{R}$ | Resolver | $\{$Storage, Identity, ECLVM, EventLog$\}$ |
-| $\mathcal{S}$ | Schema | $\text{Type} \to \text{Def}$ |
+| Symbol        | Definition    | Domäne                                                                  |
+| ------------- | ------------- | ----------------------------------------------------------------------- |
+| $\mathcal{A}$ | Authority     | $\text{DID} \cup \text{Alias}$                                          |
+| $\tau$        | Resource-Type | $\{$store, profile, contract, asset, event, meta, governance, trust$\}$ |
+| $\pi$         | Path          | $[\text{String}]$                                                       |
+| $\phi$        | Query-Params  | Map$\langle$String, String$\rangle$                                     |
+| $\mathcal{R}$ | Resolver      | $\{$Storage, Identity, ECLVM, EventLog$\}$                              |
+| $\mathcal{S}$ | Schema        | $\text{Type} \to \text{Def}$                                            |
 
 ---
 
@@ -40,16 +41,21 @@ $$\text{URL} \coloneqq \langle \mathcal{A}, \tau, \pi, \phi, \psi \rangle$$
 
 ### Α2.1 Realm-ID Auflösung
 
-$$\boxed{\text{resolve}(\mathcal{A}) = \begin{cases}
+$$
+\boxed{\text{resolve}(\mathcal{A}) = \begin{cases}
 \mathcal{A} & \text{if } \mathcal{A} \in \text{DID} \\
 \text{Registry}(\mathcal{A}) & \text{if } \mathcal{A} \in \text{Alias}
-\end{cases}}$$
+\end{cases}}
+$$
 
 **Authority-Typen:**
-$$\begin{aligned}
+
+$$
+\begin{aligned}
 \text{DID:} \quad & \texttt{did:erynoa:circle:abc123...} \\
 \text{Alias:} \quad & \texttt{gaming-dao}
-\end{aligned}$$
+\end{aligned}
+$$
 
 ### Α2.2 Alias-Registrierung
 
@@ -70,16 +76,16 @@ $$\text{TypeDef} = \langle \text{pattern}, \mathcal{R}, \text{access}, \text{fie
 
 ### Σ3.2 Standard-Types
 
-| Type | Pattern | Resolver | Access |
-|------|---------|----------|--------|
-| store | `store/<name>/<key>` | Storage | realm-policy |
-| profile | `profile/<did>` | Identity | owner-or-public |
-| contract | `contract/<name>/<method>` | ECLVM | contract-policy |
-| asset | `asset/<category>/<id>` | Storage | policy-controlled |
-| event | `event/<type>/<ts>` | EventLog | members-only |
-| meta | `meta/<key>` | Metadata | public |
-| governance | `governance/<proposal-id>` | Governance | members-only |
-| trust | `trust/<did>` | TrustCore | members-only |
+| Type       | Pattern                    | Resolver   | Access            |
+| ---------- | -------------------------- | ---------- | ----------------- |
+| store      | `store/<name>/<key>`       | Storage    | realm-policy      |
+| profile    | `profile/<did>`            | Identity   | owner-or-public   |
+| contract   | `contract/<name>/<method>` | ECLVM      | contract-policy   |
+| asset      | `asset/<category>/<id>`    | Storage    | policy-controlled |
+| event      | `event/<type>/<ts>`        | EventLog   | members-only      |
+| meta       | `meta/<key>`               | Metadata   | public            |
+| governance | `governance/<proposal-id>` | Governance | members-only      |
+| trust      | `trust/<did>`              | TrustCore  | members-only      |
 
 ### Σ3.3 Schema-Vererbung (Κ1)
 
@@ -102,13 +108,15 @@ $$\text{URL} \xrightarrow{\text{parse}} \langle \mathcal{A}, \tau, \pi \rangle \
 
 ### Ρ4.2 Resolver-Dispatch
 
-$$\boxed{\mathcal{R}(\tau) = \begin{cases}
+$$
+\boxed{\mathcal{R}(\tau) = \begin{cases}
 \text{StorageResolver} & \tau \in \{\text{store}, \text{asset}\} \\
 \text{IdentityResolver} & \tau = \text{profile} \\
 \text{ECLVMResolver} & \tau = \text{contract} \\
 \text{EventLogResolver} & \tau = \text{event} \\
 \text{MetadataResolver} & \tau = \text{meta}
-\end{cases}}$$
+\end{cases}}
+$$
 
 ### Ρ4.3 Storage-Mapping
 
@@ -122,20 +130,24 @@ $$\texttt{erynoa://R/store/inventory/items} \mapsto \texttt{realm:\{R\}:shared:s
 
 ### Ο5.1 Access-Dichotomie
 
-$$\boxed{\text{Access} = \begin{cases}
+$$
+\boxed{\text{Access} = \begin{cases}
 \text{Allow}(\mathcal{F}) & \text{if } \text{policy} \vdash \text{requester} \\
 \text{Deny} & \text{otherwise}
-\end{cases}}$$
+\end{cases}}
+$$
 
 **Wobei:** $\mathcal{F}$ — erlaubte Felder
 
 ### Ο5.2 Member vs. Non-Member
 
-$$\text{eval}(r, \text{req}) = \begin{cases}
+$$
+\text{eval}(r, \text{req}) = \begin{cases}
 \text{member-access}(\tau, \pi) & \text{if } \text{req} \in \mathcal{M}(\mathcal{R}) \\
 \text{open-access}(\tau, \text{req}) & \text{if } \tau \in \mathcal{T}_{\text{public}} \land \text{policy}(\tau) \\
 \text{Deny} & \text{otherwise}
-\end{cases}$$
+\end{cases}
+$$
 
 ### Ο5.3 Trust-Requirements für Non-Members
 
@@ -164,13 +176,13 @@ $$\text{Member} \succ \text{Open-Policy} \succ \text{Crossing-Eval} \succ \text{
 
 ### Ε6.3 Matrix
 
-| Requester | Type | Policy | Result |
-|-----------|------|--------|--------|
-| Member | private | any | ✓ Allow |
-| Member | public | any | ✓ Allow |
-| Non-Member | public | Κ28 | ✓ Allow(filtered) |
-| Non-Member | private | any | ✗ Deny |
-| Cross-Realm | any | Κ23+Κ28 | ⚖ Crossing-Eval |
+| Requester   | Type    | Policy  | Result            |
+| ----------- | ------- | ------- | ----------------- |
+| Member      | private | any     | ✓ Allow           |
+| Member      | public  | any     | ✓ Allow           |
+| Non-Member  | public  | Κ28     | ✓ Allow(filtered) |
+| Non-Member  | private | any     | ✗ Deny            |
+| Cross-Realm | any     | Κ23+Κ28 | ⚖ Crossing-Eval   |
 
 ---
 
@@ -194,16 +206,16 @@ $$\texttt{erynoa://R_1/link/erynoa://R_2/asset/item}$$
 
 ### Φ8.1 Standard-Parameter
 
-| Param | Typ | Beschreibung |
-|-------|-----|--------------|
-| `view` | enum | `{public, full, raw}` |
-| `fields` | list | Feld-Selektion |
-| `version` | semver | Spezifische Version |
-| `at` | ISO8601 | Historischer Zeitpunkt |
-| `limit` | int | Pagination |
-| `offset` | int | Pagination |
-| `sort` | expr | `field:asc|desc` |
-| `filter` | expr | `field:value` |
+| Param     | Typ     | Beschreibung           |
+| --------- | ------- | ---------------------- | ----- |
+| `view`    | enum    | `{public, full, raw}`  |
+| `fields`  | list    | Feld-Selektion         |
+| `version` | semver  | Spezifische Version    |
+| `at`      | ISO8601 | Historischer Zeitpunkt |
+| `limit`   | int     | Pagination             |
+| `offset`  | int     | Pagination             |
+| `sort`    | expr    | `field:asc             | desc` |
+| `filter`  | expr    | `field:value`          |
 
 ### Φ8.2 Kombinierte Query
 
@@ -281,30 +293,32 @@ $$\boxed{\mathcal{U} = \langle \text{Κ26}, \text{Κ27}, \text{Κ28} \rangle}$$
 
 ### Ζ12.2 Konstanten-Definitionen
 
-| Konstante | Definition |
-|-----------|------------|
-| **Κ26** | $\text{url}(\mathcal{R}, \tau, \pi) \to \texttt{erynoa://}\mathcal{R}/\tau/\pi$ |
-| **Κ27** | $\text{resolve}(\text{url}, \text{ctx}) \to \text{resource} \iff \mathcal{S}(\mathcal{R}).\text{match}(\tau, \pi)$ |
-| **Κ28** | $\text{access}(\text{url}, \text{req}) = \text{policy}(\mathcal{R}).\text{eval}(\tau, \text{req})$ |
+| Konstante | Definition                                                                                                         |
+| --------- | ------------------------------------------------------------------------------------------------------------------ |
+| **Κ26**   | $\text{url}(\mathcal{R}, \tau, \pi) \to \texttt{erynoa://}\mathcal{R}/\tau/\pi$                                    |
+| **Κ27**   | $\text{resolve}(\text{url}, \text{ctx}) \to \text{resource} \iff \mathcal{S}(\mathcal{R}).\text{match}(\tau, \pi)$ |
+| **Κ28**   | $\text{access}(\text{url}, \text{req}) = \text{policy}(\mathcal{R}).\text{eval}(\tau, \text{req})$                 |
 
 ### Ζ12.3 Invarianten
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 &\forall \text{url}: \text{resolve}(\text{url}) \text{ terminiert} \implies O(1) \text{ Realm-Lookup} + O(\log n) \text{ Path} \\
 &\forall \mathcal{R}: \mathcal{S}(\mathcal{R}) \supseteq \mathcal{S}(\text{parent}(\mathcal{R})) \\
 &\forall \text{req}: \text{access}(\text{url}, \text{req}) \in \{\text{Allow}(\mathcal{F}), \text{Deny}\} \\
 &\forall \text{non-member}: \text{access}(\text{url}, \text{non-member}) \to \text{Κ28 policy evaluation} \\
 &\forall \text{cross-realm}: \text{resolve}(\text{url}) \to \text{Κ23 dampening applied}
-\end{aligned}$$
+\end{aligned}
+$$
 
 ### Ζ12.4 Pluto-Integration
 
-| Konstante | Integration |
-|-----------|-------------|
-| Κ1 | Schema-Vererbung folgt Regel-Vererbung |
-| Κ17/Κ18 | Membership-Status → Access |
-| Κ23 | Cross-Realm mit Crossing-Dampening |
-| Κ24 | Lokaler Trust bleibt unabhängig bei URL-Access |
+| Konstante | Integration                                    |
+| --------- | ---------------------------------------------- |
+| Κ1        | Schema-Vererbung folgt Regel-Vererbung         |
+| Κ17/Κ18   | Membership-Status → Access                     |
+| Κ23       | Cross-Realm mit Crossing-Dampening             |
+| Κ24       | Lokaler Trust bleibt unabhängig bei URL-Access |
 
 ---
 
@@ -312,11 +326,13 @@ $$\begin{aligned}
 
 ### Β13.1 Basis-Zugriffe
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 &\texttt{erynoa://gaming-dao/store/inventory/items} \\
 &\texttt{erynoa://social-hub/profile/\textasciitilde{}alice?view=public} \\
 &\texttt{erynoa://defi-realm/contract/staking/state}
-\end{aligned}$$
+\end{aligned}
+$$
 
 ### Β13.2 Komplexe Queries
 

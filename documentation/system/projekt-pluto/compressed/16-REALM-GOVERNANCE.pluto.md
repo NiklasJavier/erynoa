@@ -12,17 +12,21 @@
 $$\boxed{\mathcal{G} \iff \exists\, \mathcal{R} : \mathcal{G} \subseteq \mathcal{R}}$$
 
 **Begründung:**
-$$\begin{aligned}
+
+$$
+\begin{aligned}
 \neg\mathcal{G}(\text{Identity}) &\quad \text{(keine Identitäts-Governance)} \\
 \neg\mathcal{G}(\text{Package}) &\quad \text{(keine Package-Governance)} \\
 \neg\mathcal{G}(\text{Global}) &\quad \text{(keine globale direktdemokratische Governance)}
-\end{aligned}$$
+\end{aligned}
+$$
 
 ### Δ1.2 Stimmgewicht-Hauptformel
 
 $$\boxed{W(m) = G(m) \cdot \left(1 + \alpha \cdot T_{\text{rel}}(m)\right)}$$
 
 **Komponenten:**
+
 - $W(m)$ — Finales Stimmgewicht des Members $m$
 - $G(m)$ — Governance-Basis-Gewicht (aus GovernanceType)
 - $\alpha \in [0, 1]$ — Trust-Einfluss-Faktor (Realm-konfiguriert)
@@ -30,17 +34,17 @@ $$\boxed{W(m) = G(m) \cdot \left(1 + \alpha \cdot T_{\text{rel}}(m)\right)}$$
 
 ### Δ1.3 Symboltafel
 
-| Symbol | Definition | Domäne |
-|--------|-----------|--------|
-| $\mathcal{G}$ | Governance-System | $\mathcal{G} \subseteq \mathcal{R}$ |
-| $W$ | Stimmgewicht-Funktion | $\mathbb{R}_{\geq 0}$ |
-| $G$ | Basis-Gewicht | $\mathbb{R}_{\geq 0}$ |
-| $\alpha$ | Trust-Einfluss | $[0, 1]$ |
-| $T_{\text{rel}}$ | Relativer Trust | $[-1, 1]$ |
-| $T_{\text{avg}}$ | Realm-Trust-Durchschnitt | $(0, 1]$ |
-| $\mathcal{P}$ | Proposal-Menge | $\mathcal{P} \subseteq \mathcal{R}$ |
-| $q$ | Quorum | $(0, 1]$ |
-| $\theta$ | Approval-Threshold | $(0.5, 1]$ |
+| Symbol           | Definition               | Domäne                              |
+| ---------------- | ------------------------ | ----------------------------------- |
+| $\mathcal{G}$    | Governance-System        | $\mathcal{G} \subseteq \mathcal{R}$ |
+| $W$              | Stimmgewicht-Funktion    | $\mathbb{R}_{\geq 0}$               |
+| $G$              | Basis-Gewicht            | $\mathbb{R}_{\geq 0}$               |
+| $\alpha$         | Trust-Einfluss           | $[0, 1]$                            |
+| $T_{\text{rel}}$ | Relativer Trust          | $[-1, 1]$                           |
+| $T_{\text{avg}}$ | Realm-Trust-Durchschnitt | $(0, 1]$                            |
+| $\mathcal{P}$    | Proposal-Menge           | $\mathcal{P} \subseteq \mathcal{R}$ |
+| $q$              | Quorum                   | $(0, 1]$                            |
+| $\theta$         | Approval-Threshold       | $(0.5, 1]$                          |
 
 ---
 
@@ -51,11 +55,14 @@ $$\boxed{W(m) = G(m) \cdot \left(1 + \alpha \cdot T_{\text{rel}}(m)\right)}$$
 $$\boxed{T_{\text{rel}}(m) = \frac{T(m) - T_{\text{avg}}}{T_{\text{avg}}}}$$
 
 **Eigenschaften:**
-$$\begin{aligned}
+
+$$
+\begin{aligned}
 T(m) > T_{\text{avg}} &\implies T_{\text{rel}}(m) > 0 \quad \text{(Bonus)} \\
 T(m) = T_{\text{avg}} &\implies T_{\text{rel}}(m) = 0 \quad \text{(Neutral)} \\
 T(m) < T_{\text{avg}} &\implies T_{\text{rel}}(m) < 0 \quad \text{(Malus)}
-\end{aligned}$$
+\end{aligned}
+$$
 
 ### Τ2.2 Aggregierter Trust
 
@@ -74,38 +81,41 @@ $\Omega$ (Axiom-Treue) ist doppelt gewichtet.
 
 ### Γ3.1 Typ-Algebra
 
-$$\boxed{G(m) = \begin{cases}
+$$
+\boxed{G(m) = \begin{cases}
 \sqrt{\tau(m)} & \text{Quadratic} \\
 \tau(m) & \text{Token} \\
 T(m) & \text{Reputation} \\
 1 & \text{MemberEqual} \\
 G_{\text{base}}(m) + \sum_{d \in D(m)} G(d) \cdot \delta^{\text{depth}(d)} & \text{Delegated}
-\end{cases}}$$
+\end{cases}}
+$$
 
 **Wobei:**
+
 - $\tau(m)$ — Token-Balance
 - $D(m)$ — Delegatoren zu $m$
 - $\delta \in (0, 1)$ — Delegation-Decay-Faktor
 
 ### Γ3.2 Vergleichsmatrix
 
-| Typ | $G(m)$ | $\alpha$ | Anwendung |
-|-----|--------|----------|-----------|
-| Quadratic | $\sqrt{\tau}$ | Optional | DAOs |
-| Token | $\tau$ | Optional | Investment-DAOs |
-| Reputation | $T$ | $1.0$ | Merit-Guilds |
-| Delegated | rekursiv | Via Base | Große Communities |
-| MemberEqual | $1$ | Optional | Cooperatives |
+| Typ         | $G(m)$        | $\alpha$ | Anwendung         |
+| ----------- | ------------- | -------- | ----------------- |
+| Quadratic   | $\sqrt{\tau}$ | Optional | DAOs              |
+| Token       | $\tau$        | Optional | Investment-DAOs   |
+| Reputation  | $T$           | $1.0$    | Merit-Guilds      |
+| Delegated   | rekursiv      | Via Base | Große Communities |
+| MemberEqual | $1$           | Optional | Cooperatives      |
 
 ### Γ3.3 Trust-Einfluss-Skalierung
 
 $$W_\alpha(m) = G(m) \cdot (1 + \alpha \cdot T_{\text{rel}}(m))$$
 
 | $\alpha$ | $T_{\text{rel}} = +1$ | $T_{\text{rel}} = -0.5$ |
-|----------|----------------------|------------------------|
-| $0.0$ | $1.00 \cdot G$ | $1.00 \cdot G$ |
-| $0.5$ | $1.50 \cdot G$ | $0.75 \cdot G$ |
-| $1.0$ | $2.00 \cdot G$ | $0.50 \cdot G$ |
+| -------- | --------------------- | ----------------------- |
+| $0.0$    | $1.00 \cdot G$        | $1.00 \cdot G$          |
+| $0.5$    | $1.50 \cdot G$        | $0.75 \cdot G$          |
+| $1.0$    | $2.00 \cdot G$        | $0.50 \cdot G$          |
 
 ---
 
@@ -122,14 +132,18 @@ $$(m_1, m_2) \in \mathcal{D} \iff m_1 \text{ delegiert an } m_2$$
 $$\boxed{W_{\text{del}}(m) = G(m) + \sum_{d \in D(m)} G(d) \cdot t_d^{\text{depth}(d)}}$$
 
 **Wobei:**
+
 - $t_d$ — Trust des Delegators $d$
 - $\text{depth}(d)$ — Kettentiefe der Delegation
 
 **Invarianten:**
-$$\begin{aligned}
+
+$$
+\begin{aligned}
 \text{depth}(d) &\leq \text{depth}_{\max} \\
 t_d^{\text{depth}(d)} &\geq \delta_{\min}
-\end{aligned}$$
+\end{aligned}
+$$
 
 ---
 
@@ -140,14 +154,17 @@ t_d^{\text{depth}(d)} &\geq \delta_{\min}
 $$\mathcal{S}_\mathcal{P} = \{\text{Draft}, \text{Discussion}, \text{Voting}, \text{Timelock}, \text{Executed}, \text{Defeated}, \text{Vetoed}\}$$
 
 **Transitionen:**
-$$\begin{aligned}
+
+$$
+\begin{aligned}
 \text{Draft} &\xrightarrow{\text{submit}} \text{Discussion} \\
 \text{Discussion} &\xrightarrow{t \geq t_{\text{disc}}} \text{Voting} \\
 \text{Voting} &\xrightarrow{v \geq q \land a \geq \theta} \text{Timelock} \\
 \text{Voting} &\xrightarrow{v < q \lor a < \theta} \text{Defeated} \\
 \text{Timelock} &\xrightarrow{t \geq t_{\text{lock}} \land \neg\text{veto}} \text{Executed} \\
 \text{Timelock} &\xrightarrow{\text{veto} \geq \theta_v} \text{Vetoed}
-\end{aligned}$$
+\end{aligned}
+$$
 
 ### Π5.2 Quorum & Approval
 
@@ -164,13 +181,13 @@ $$q_{\text{dyn}} = \min\left(q_{\text{base}} + \beta \cdot \text{participation}_
 
 $$\boxed{\theta_c = f_c(\text{severity})}$$
 
-| Kategorie | $\theta$ | Timelock | Supermajority |
-|-----------|----------|----------|---------------|
-| ParameterChange | $0.50$ | 24h | ✗ |
-| TreasurySpend | $0.60$ | 48h | ✗ |
-| RuleChange | $0.67$ | 72h | ✓ |
-| MemberAction | $0.75$ | 24h | ✓ |
-| GovernanceChange | $0.80$ | 7d | ✓ |
+| Kategorie        | $\theta$ | Timelock | Supermajority |
+| ---------------- | -------- | -------- | ------------- |
+| ParameterChange  | $0.50$   | 24h      | ✗             |
+| TreasurySpend    | $0.60$   | 48h      | ✗             |
+| RuleChange       | $0.67$   | 72h      | ✓             |
+| MemberAction     | $0.75$   | 24h      | ✓             |
+| GovernanceChange | $0.80$   | 7d       | ✓             |
 
 ---
 
@@ -211,11 +228,13 @@ $$\text{Cost}_{\text{sybil}} = n \cdot (\text{Mana}_{\text{join}} + t_{\text{tru
 
 ### Ρ9.1 Governance-Mana
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 \text{Mana}_{\text{proposal}} &= \kappa_p \quad \text{(Anti-Spam)} \\
 \text{Mana}_{\text{vote}} &= \kappa_v \quad \text{(minimal)} \\
 \text{Mana}_{\text{execute}} &\leq \mu_{\max}
-\end{aligned}$$
+\end{aligned}
+$$
 
 ### Ρ9.2 Token-Deposit
 
@@ -227,14 +246,16 @@ $$\text{Deposit} = \tau_d \quad \text{(refundable bei Nicht-Spam)}$$
 
 ### Β10.1 Governance → Trust
 
-$$\Delta T = \begin{cases}
+$$
+\Delta T = \begin{cases}
 +0.02 & \text{ProposalAccepted} \\
 -0.01 & \text{ProposalRejected} \\
 -0.10 & \text{ProposalSpam} \\
 +0.005 & \text{VotingParticipation} \\
 +0.01 & \text{DelegationReceived} \\
 +0.02 & \text{SuccessfulVeto}
-\end{cases}$$
+\end{cases}
+$$
 
 ### Β10.2 Trust → Governance
 
@@ -262,22 +283,24 @@ $$\boxed{\mathcal{G} = \langle W, T_{\text{rel}}, \alpha, \mathcal{P}, q, \theta
 
 ### Ζ12.2 Invarianten
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 &\forall m \in \mathcal{M}: W(m) \geq 0 \\
 &\forall p \in \mathcal{P}: \text{state}(p) \in \mathcal{S}_\mathcal{P} \\
 &\forall \text{category}: \theta_c \in (0.5, 1] \\
 &\alpha \in [0, 1] \implies \text{Trust-Einfluss begrenzt} \\
 &T_{\text{rel}} = 0 \iff T(m) = T_{\text{avg}} \quad \text{(Neutralität)}
-\end{aligned}$$
+\end{aligned}
+$$
 
 ### Ζ12.3 Pluto-Integration
 
-| Konstante | Integration |
-|-----------|-------------|
-| Κ4 | Asymmetrische Trust-Evolution → Sybil-Schutz |
-| Κ8 | Trust-Decay bei Delegation |
-| Κ17/Κ18 | Membership als Governance-Basis |
-| Κ24 | Lokaler Trust für $T_{\text{rel}}$ |
+| Konstante | Integration                                  |
+| --------- | -------------------------------------------- |
+| Κ4        | Asymmetrische Trust-Evolution → Sybil-Schutz |
+| Κ8        | Trust-Decay bei Delegation                   |
+| Κ17/Κ18   | Membership als Governance-Basis              |
+| Κ24       | Lokaler Trust für $T_{\text{rel}}$           |
 
 ---
 

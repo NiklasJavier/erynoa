@@ -15,16 +15,16 @@ $$\boxed{\mathfrak{R} = \langle \mathcal{I}_R, \mathcal{M}, \mathcal{R}, \mathca
 
 ### Δ1.2 Symboltafel
 
-| Symbol | Definition | Domäne |
-|--------|-----------|--------|
-| $\mathfrak{R}$ | Realm (souveräne Einheit) | $\mathfrak{R} \subseteq \mathcal{U}$ |
-| $\mathcal{I}_R$ | Realm-Identifikator | $\text{DID}$ |
-| $\mathcal{M}$ | Mitgliedermenge | $\mathcal{P}(\text{UniversalId})$ |
-| $\mathcal{R}$ | Regelmenge | $\mathcal{P}(\text{Rule})$ |
-| $\mathcal{T}_{\text{local}}$ | Lokaler Trust-Raum | $\mathbb{R}^6$ |
-| $\mathcal{S}$ | Speicherpartitionen | $\text{Map}(\text{Key}, \text{Value})$ |
-| $\mathcal{P}$ | Policies (ECL) | $\text{Set}(\text{Policy})$ |
-| $\mathcal{Q}$ | Quota (Mana/Storage) | $\mathbb{N}^2$ |
+| Symbol                       | Definition                | Domäne                                 |
+| ---------------------------- | ------------------------- | -------------------------------------- |
+| $\mathfrak{R}$               | Realm (souveräne Einheit) | $\mathfrak{R} \subseteq \mathcal{U}$   |
+| $\mathcal{I}_R$              | Realm-Identifikator       | $\text{DID}$                           |
+| $\mathcal{M}$                | Mitgliedermenge           | $\mathcal{P}(\text{UniversalId})$      |
+| $\mathcal{R}$                | Regelmenge                | $\mathcal{P}(\text{Rule})$             |
+| $\mathcal{T}_{\text{local}}$ | Lokaler Trust-Raum        | $\mathbb{R}^6$                         |
+| $\mathcal{S}$                | Speicherpartitionen       | $\text{Map}(\text{Key}, \text{Value})$ |
+| $\mathcal{P}$                | Policies (ECL)            | $\text{Set}(\text{Policy})$            |
+| $\mathcal{Q}$                | Quota (Mana/Storage)      | $\mathbb{N}^2$                         |
 
 ---
 
@@ -56,11 +56,11 @@ $$\mathcal{H}_{\mathfrak{R}} : \mathfrak{R}_{\text{root}} \to \mathfrak{R}_{\tex
 
 $$\text{RealmType} \in \{\text{Root}, \text{Virtual}, \text{Partition}\}$$
 
-| Typ | Eigenschaften |
-|-----|---------------|
-| $\mathfrak{R}_{\text{root}}$ | 28 Kern-Axiome, $\min_{\tau} = 0$ |
-| $\mathfrak{R}_{\text{virtual}}$ | $\mathcal{R} \supseteq \mathcal{R}_{\text{parent}}$ |
-| $\mathfrak{R}_{\text{partition}}$ | Sharding, Read-Replicas |
+| Typ                               | Eigenschaften                                       |
+| --------------------------------- | --------------------------------------------------- |
+| $\mathfrak{R}_{\text{root}}$      | 28 Kern-Axiome, $\min_{\tau} = 0$                   |
+| $\mathfrak{R}_{\text{virtual}}$   | $\mathcal{R} \supseteq \mathcal{R}_{\text{parent}}$ |
+| $\mathfrak{R}_{\text{partition}}$ | Sharding, Read-Replicas                             |
 
 ---
 
@@ -87,11 +87,14 @@ $$\text{validate}_{\text{K1}} : \mathcal{R}_c \to \mathcal{R}_p \to \text{Result
 $$\boxed{v(s) = \sqrt{\text{tokens}(s)}}$$
 
 **Eigenschaften:**
-$$\begin{aligned}
+
+$$
+\begin{aligned}
 \text{(i)}\quad   & v : \mathbb{N} \to \mathbb{R}^+ \\
 \text{(ii)}\quad  & \frac{dv}{d\text{tokens}} = \frac{1}{2\sqrt{\text{tokens}}} > 0 \\
 \text{(iii)}\quad & \frac{d^2v}{d\text{tokens}^2} < 0 \quad\text{(konkav → Plutokratie-Dämpfung)}
-\end{aligned}$$
+\end{aligned}
+$$
 
 **Governance-Typen:**
 $$\mathcal{G} \in \{\text{Quadratic}, \text{Token}, \text{Reputation}, \text{Delegated}\}$$
@@ -103,14 +106,18 @@ $$\mathcal{G} \in \{\text{Quadratic}, \text{Token}, \text{Reputation}, \text{Del
 $$\boxed{\text{Saga} = \langle S_1, ..., S_n, C_1, ..., C_n \rangle}$$
 
 **wobei:**
+
 - $S_i$ = Schritt $i$ (forward action)
 - $C_i$ = Compensation für $S_i$ (rollback action)
 
 **Atomarität:**
-$$\text{execute}(\text{Saga}) \Rightarrow \begin{cases}
+
+$$
+\text{execute}(\text{Saga}) \Rightarrow \begin{cases}
 \text{commit all } S_i & \text{bei Erfolg} \\
 \text{apply } C_k, ..., C_1 & \text{bei Fehler in } S_k
-\end{cases}$$
+\end{cases}
+$$
 
 **Cross-Realm-Saga:**
 $$\text{Saga}_{\text{cross}} : \mathfrak{R}_A \times \mathfrak{R}_B \to \text{Result}$$
@@ -124,13 +131,13 @@ $$\boxed{\tau_{\text{eff}}(\mathfrak{R}_B) = \tau(\mathfrak{R}_A) \cdot \gamma_{
 **wobei Crossing-Faktor:**
 $$\gamma_{A \to B} \in (0, 1] \quad\text{abhängig von:}$$
 
-| Bedingung | $\gamma$ |
-|-----------|----------|
-| Sibling-Realms | $0.8$ |
-| Parent-Child | $0.9$ |
-| Allowlist | $1.0$ |
-| Blocklist | $0.0$ |
-| Neutral | Policy-abhängig |
+| Bedingung      | $\gamma$        |
+| -------------- | --------------- |
+| Sibling-Realms | $0.8$           |
+| Parent-Child   | $0.9$           |
+| Allowlist      | $1.0$           |
+| Blocklist      | $0.0$           |
+| Neutral        | Policy-abhängig |
 
 **Beispiel:**
 $$\tau_{\text{Alice}}(\text{EU}) = 0.9 \implies \tau_{\text{Alice}}(\text{Gaming}) = 0.9 \times 0.8 = 0.72$$
@@ -184,23 +191,28 @@ $$\mathcal{M}_{\mathfrak{R}} = \mathcal{M}_{\text{active}} \uplus \mathcal{M}_{\
 
 $$\text{IsoLevel} \in \{0, 1, 2\}$$
 
-| Level | Name | Eigenschaften |
-|-------|------|---------------|
-| $0$ | Public | $\forall$ read, open join, crossing erlaubt |
-| $1$ | Members | Members read, invite-only, crossing mit Status |
-| $2$ | Strict | E2E-verschlüsselt, Multi-Vouch, keine Crossings |
+| Level | Name    | Eigenschaften                                   |
+| ----- | ------- | ----------------------------------------------- |
+| $0$   | Public  | $\forall$ read, open join, crossing erlaubt     |
+| $1$   | Members | Members read, invite-only, crossing mit Status  |
+| $2$   | Strict  | E2E-verschlüsselt, Multi-Vouch, keine Crossings |
 
 **Formal:**
-$$\text{canRead}(s, \mathfrak{R}) = \begin{cases}
+
+$$
+\text{canRead}(s, \mathfrak{R}) = \begin{cases}
 \top & \text{if } \text{level} = 0 \\
 s \in \mathcal{M}_{\mathfrak{R}} & \text{if } \text{level} \geq 1
-\end{cases}$$
+\end{cases}
+$$
 
-$$\text{canCross}(s, \mathfrak{R}_A, \mathfrak{R}_B) = \begin{cases}
+$$
+\text{canCross}(s, \mathfrak{R}_A, \mathfrak{R}_B) = \begin{cases}
 \top & \text{if } \text{level}(\mathfrak{R}_B) = 0 \\
 s \in \mathcal{M}_{\mathfrak{R}_B} & \text{if } \text{level}(\mathfrak{R}_B) = 1 \\
 \bot & \text{if } \text{level}(\mathfrak{R}_B) = 2
-\end{cases}$$
+\end{cases}
+$$
 
 ---
 
@@ -215,10 +227,12 @@ $$h_{\mathcal{Q}} = 1 - \frac{q_{\text{used}}}{q_{\text{limit}}} \in [0, 1]$$
 
 ### Θ6.2 Self-Healing-Mechanismus
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 h_{\mathcal{Q}} < 0.2 &\Rightarrow \text{Throttling} + \text{Alert} \\
 h_{\mathcal{Q}} = 0 &\Rightarrow \text{ReadOnly-Mode}
-\end{aligned}$$
+\end{aligned}
+$$
 
 **Regeneration:**
 $$q_{\text{mana}}(t+\Delta t) = \min(q_{\text{mana}}(t) + \dot{q}_{\text{regen}} \cdot \Delta t, q_{\text{limit}})$$
@@ -232,6 +246,7 @@ $$q_{\text{mana}}(t+\Delta t) = \min(q_{\text{mana}}(t) + \dot{q}_{\text{regen}}
 $$\text{GatewayPolicy} = \langle \mathcal{R}_{\text{eq}}, \mathcal{V}, \mathcal{A}_{\text{join}}, c_{\text{join}} \rangle$$
 
 **wobei:**
+
 - $\mathcal{R}_{\text{eq}}$ = Trust-Requirements: $\min(\tau_R), \min(\tau_\Omega)$
 - $\mathcal{V}$ = Verification: KYC oder Vouching
 - $\mathcal{A}_{\text{join}}$ = Actions bei Join
@@ -277,10 +292,12 @@ $$\text{Subscribers}(\text{Topic}_{\mathfrak{R}}) \subseteq \mathcal{M}_{\mathfr
 
 ### Ρ9.2 Cross-Realm-Topics
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 \text{Topic}_{\text{saga}} &= \texttt{/erynoa/cross-realm/sagas} \\
 \text{Topic}_{\text{announce}} &= \texttt{/erynoa/cross-realm/announcements}
-\end{aligned}$$
+\end{aligned}
+$$
 
 ### Ρ9.3 Peer-Discovery
 
@@ -292,27 +309,33 @@ $$\text{DHT-Key}_{\mathfrak{R}} = \texttt{/realm/}\langle\mathfrak{R}_{\text{id}
 
 ### Ε10.1 Lifecycle-Events
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 \text{RealmCreated} &: \mathfrak{R}_{\text{id}} \times \text{Name} \times \mathfrak{R}_{\text{parent}}? \times \text{DID} \times \mathcal{G} \\
 \text{MemberJoined} &: \mathfrak{R}_{\text{id}} \times \text{DID} \times \text{DID}_{\mathfrak{R}}? \times \text{Role} \times \mathbb{N} \\
 \text{MemberBanned} &: \mathfrak{R}_{\text{id}} \times \text{DID} \times \text{DID} \times \text{String}
-\end{aligned}$$
+\end{aligned}
+$$
 
 ### Ε10.2 Crossing-Events
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 \text{CrossingAttempted} &: \mathfrak{R}_{\text{from}} \times \mathfrak{R}_{\text{to}} \times \text{DID} \times \gamma \\
 \text{CrossingSucceeded} &: \mathfrak{R}_{\text{from}} \times \mathfrak{R}_{\text{to}} \times \text{DID} \times \tau_{\text{eff}} \\
 \text{CrossingDenied} &: \mathfrak{R}_{\text{from}} \times \mathfrak{R}_{\text{to}} \times \text{DID} \times \text{Reason}
-\end{aligned}$$
+\end{aligned}
+$$
 
 ### Ε10.3 Saga-Events
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 \text{SagaStarted} &: \text{SagaId} \times \text{Type} \times [\mathfrak{R}] \times \text{DID} \\
 \text{SagaStepCompleted} &: \text{SagaId} \times \text{StepId} \times \mathfrak{R} \\
 \text{SagaCompleted} &: \text{SagaId} \times \mathbb{B} \times \mathbb{N}
-\end{aligned}$$
+\end{aligned}
+$$
 
 ---
 
@@ -320,7 +343,8 @@ $$\begin{aligned}
 
 ### Σ11.1 Dependency-Graph
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 \mathfrak{R} &\xrightarrow{\text{DependsOn}} \text{Identity} \\
 \mathfrak{R} &\xrightarrow{\text{DependsOn}} \text{Trust} \\
 \mathfrak{R} &\xrightarrow{\text{DependsOn}} \text{Mana} \\
@@ -330,7 +354,8 @@ $$\begin{aligned}
 \mathfrak{R} &\xrightarrow{\text{Validates}} \text{Rules} \\
 \mathfrak{R} &\xleftrightarrow{\text{Bidirectional}} \text{P2P} \\
 \mathfrak{R} &\xleftrightarrow{\text{Bidirectional}} \text{ECLVM}
-\end{aligned}$$
+\end{aligned}
+$$
 
 ---
 
@@ -364,7 +389,8 @@ $$\text{Saga}(S_1, ..., S_n) \in \{\text{All-Commit}, \text{All-Rollback}\}$$
 
 ## §13 Zusammenfassung
 
-$$\begin{array}{|l|c|l|}
+$$
+\begin{array}{|l|c|l|}
 \hline
 \textbf{Komponente} & \textbf{Axiom} & \textbf{Eigenschaft} \\
 \hline
@@ -374,7 +400,8 @@ $$\begin{array}{|l|c|l|}
 \text{Crossing-Dämpfung} & K23 & \tau_{\text{eff}} = \tau \cdot \gamma \\
 \text{Lokaler Trust} & K24 & \mathcal{T}_A \perp\!\!\!\perp \mathcal{T}_B \\
 \hline
-\end{array}$$
+\end{array}
+$$
 
 **Kernaussage:**
 $$\mathfrak{R} = \text{Souveräne Einheit mit isolierter Governance, Trust und Storage}$$

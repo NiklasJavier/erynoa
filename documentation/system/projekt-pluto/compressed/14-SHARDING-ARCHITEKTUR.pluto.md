@@ -12,6 +12,7 @@
 $$\boxed{\mathcal{L} = \langle \mathcal{S}, h, \mathcal{C}, \mathcal{E}, \mathcal{M} \rangle}$$
 
 **Komponenten:**
+
 - $\mathcal{S} = \{S_0, S_1, \ldots, S_{n-1}\}$ — Shard-Menge
 - $h: \text{RealmID} \to [0, n)$ — Hash-Funktion (Shard-Selektion)
 - $\mathcal{C}: \mathcal{S} \to 2^{\text{Realm}}$ — Cache-Mapping
@@ -20,15 +21,15 @@ $$\boxed{\mathcal{L} = \langle \mathcal{S}, h, \mathcal{C}, \mathcal{E}, \mathca
 
 ### Δ1.2 Symboltafel
 
-| Symbol | Definition | Domäne |
-|--------|-----------|--------|
-| $\mathcal{S}$ | Shard-Menge | $|\mathcal{S}| \in \{4, 64, 128, 256\}$ |
-| $h$ | FxHash-Funktion | $\mathbb{Z}_n$ |
-| $\mathcal{C}$ | Cache (DashMap) | lock-free Map |
-| $\mathcal{E}$ | LRU-Eviction | time-based |
-| $\rho$ | Shard-Reputation | $[0, 1]$ |
-| $\eta$ | Shard-Entropy | $[0, 1]$ |
-| $\gamma$ | Gas-Multiplikator | $[1, \gamma_{\max}]$ |
+| Symbol        | Definition        | Domäne               |
+| ------------- | ----------------- | -------------------- | ----------- | ------------------------ |
+| $\mathcal{S}$ | Shard-Menge       | $                    | \mathcal{S} | \in \{4, 64, 128, 256\}$ |
+| $h$           | FxHash-Funktion   | $\mathbb{Z}_n$       |
+| $\mathcal{C}$ | Cache (DashMap)   | lock-free Map        |
+| $\mathcal{E}$ | LRU-Eviction      | time-based           |
+| $\rho$        | Shard-Reputation  | $[0, 1]$             |
+| $\eta$        | Shard-Entropy     | $[0, 1]$             |
+| $\gamma$      | Gas-Multiplikator | $[1, \gamma_{\max}]$ |
 
 ---
 
@@ -39,11 +40,14 @@ $$\boxed{\mathcal{L} = \langle \mathcal{S}, h, \mathcal{C}, \mathcal{E}, \mathca
 $$h(r) \coloneqq \text{FxHash}(r) \mod n$$
 
 **Eigenschaften:**
-$$\begin{aligned}
+
+$$
+\begin{aligned}
 \text{(i)}\quad   & h : \text{RealmID} \to \mathbb{Z}_n \quad\text{(deterministisch)} \\
 \text{(ii)}\quad  & \mathbb{E}[|S_i|] = \frac{|\mathcal{R}|}{n} \quad\text{(gleichverteilung)} \\
 \text{(iii)}\quad & O(1) \text{ Berechnung}
-\end{aligned}$$
+\end{aligned}
+$$
 
 ### Σ2.2 Shard-Index
 
@@ -55,17 +59,21 @@ $$\forall r \in \mathcal{R}: \quad \text{shard}(r) = S_{h(r)}$$
 
 ### Κ3.1 Lookup (synchron)
 
-$$\text{get\_cached}(r) = \begin{cases}
+$$
+\text{get\_cached}(r) = \begin{cases}
 \mathcal{C}(S_{h(r)})[r] & \text{if } r \in \text{dom}(\mathcal{C}(S_{h(r)})) \\
 \bot & \text{otherwise}
-\end{cases}$$
+\end{cases}
+$$
 
 ### Κ3.2 Lazy Loading (asynchron)
 
-$$\text{get\_or\_load}(r) = \begin{cases}
+$$
+\text{get\_or\_load}(r) = \begin{cases}
 \mathcal{C}(S_{h(r)})[r] & \text{cache-hit} \\
 \text{load}(r) \circ \text{replay}(r) \circ \text{insert}(r) & \text{cache-miss}
-\end{cases}$$
+\end{cases}
+$$
 
 **Pipeline:**
 $$\text{Storage} \xrightarrow{\text{load}} \text{Snapshot} \xrightarrow{\text{replay}} \text{State} \xrightarrow{\text{insert}} \mathcal{C}$$
@@ -114,10 +122,10 @@ $$\boxed{\gamma(S_i) = 1 + (1 - \rho(S_i)) \cdot \gamma_{\max}}$$
 $$\text{gas}_{\text{eff}} = \text{gas}_{\text{base}} \cdot \gamma(S_{\text{source}})$$
 
 | $\rho$ | $\gamma$ (bei $\gamma_{\max}=5$) |
-|--------|----------------------------------|
-| 1.0 | 1.0× |
-| 0.5 | 3.0× |
-| 0.0 | 5.0× |
+| ------ | -------------------------------- |
+| 1.0    | 1.0×                             |
+| 0.5    | 3.0×                             |
+| 0.0    | 5.0×                             |
 
 ### Χ5.2 Trust-Dämpfung
 
@@ -132,21 +140,21 @@ $$Q(S_{\text{source}}) \implies \Delta T_{\text{eff}} = 0$$
 
 ### Π6.1 Parametertafel
 
-| Profil | $n$ | $\kappa_{\max}$ | $\tau_{\text{evict}}$ | Use Case |
-|--------|-----|-----------------|----------------------|----------|
-| minimal | 4 | 100 | 60s | Tests |
-| default | 64 | 20.000 | 600s | Dev |
-| production | 128 | 50.000 | 300s | Prod |
-| auto | $4 \cdot \text{CPU}$ | 30.000 | 600s | Auto |
+| Profil     | $n$                  | $\kappa_{\max}$ | $\tau_{\text{evict}}$ | Use Case |
+| ---------- | -------------------- | --------------- | --------------------- | -------- |
+| minimal    | 4                    | 100             | 60s                   | Tests    |
+| default    | 64                   | 20.000          | 600s                  | Dev      |
+| production | 128                  | 50.000          | 300s                  | Prod     |
+| auto       | $4 \cdot \text{CPU}$ | 30.000          | 600s                  | Auto     |
 
 ### Π6.2 Monitor-Parameter
 
-| Parameter | Symbol | Default | Strict |
-|-----------|--------|---------|--------|
-| Bias-Threshold | $\theta_{\text{bias}}$ | 0.5 | 0.7 |
-| Quarantäne-Threshold | $\phi_Q$ | 100 | 50 |
-| Max Penalty | $\gamma_{\max}$ | 5.0 | 10.0 |
-| Entropy-Decay | $\alpha$ | 0.9 | 0.95 |
+| Parameter            | Symbol                 | Default | Strict |
+| -------------------- | ---------------------- | ------- | ------ |
+| Bias-Threshold       | $\theta_{\text{bias}}$ | 0.5     | 0.7    |
+| Quarantäne-Threshold | $\phi_Q$               | 100     | 50     |
+| Max Penalty          | $\gamma_{\max}$        | 5.0     | 10.0   |
+| Entropy-Decay        | $\alpha$               | 0.9     | 0.95   |
 
 ---
 
@@ -182,7 +190,8 @@ $$\lim_{t \to \infty} \rho(S_i) = \frac{\lambda_{\text{success}}}{\lambda_{\text
 
 ### ℜ8.1 StateGraph-Integration
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 \text{Sharding} &\xrightarrow{\text{DependsOn}} \text{Realm} \\
 \text{Sharding} &\xrightarrow{\text{DependsOn}} \text{Storage} \\
 \text{Sharding} &\xrightarrow{\text{Aggregates}} \text{Trust} \\
@@ -190,7 +199,8 @@ $$\begin{aligned}
 \text{Sharding} &\xrightarrow{\text{Triggers}} \text{Event} \\
 \text{Sharding} &\xrightarrow{\text{Validates}} \text{Protection} \\
 \text{Sharding} &\xleftrightarrow{\text{Bidir}} \text{P2P}
-\end{aligned}$$
+\end{aligned}
+$$
 
 ### ℜ8.2 Datenfluss
 
@@ -267,7 +277,7 @@ $$\forall S_i: \hat{\eta}(S_i) \in [0, 1]$$
 
 ```
 𝕊 ≡ ShardingSystem
-ℒ ≡ LazyShardedRealmState  
+ℒ ≡ LazyShardedRealmState
 ℳ ≡ ShardMonitor
 
 h: RealmID → ℤₙ              # Shard-Selektion
@@ -292,13 +302,13 @@ evict(Sᵢ)        ≡ {r ∈ 𝒞(Sᵢ) : t(r) < τ}
 
 ## §13 Referenzen
 
-| Ref | Beschreibung |
-|-----|-------------|
+| Ref | Beschreibung                        |
+| --- | ----------------------------------- |
 | Κ19 | Trust-Calibration (← Shard-Entropy) |
 | Κ23 | Realm-Crossing (← Shard-Reputation) |
-| Κ14 | Protection-State (← ShardMonitor) |
-| Κ08 | Gas/Mana (← Cross-Shard-Penalty) |
-| Κ11 | P2P-Gossip (← Shard-Topics) |
+| Κ14 | Protection-State (← ShardMonitor)   |
+| Κ08 | Gas/Mana (← Cross-Shard-Penalty)    |
+| Κ11 | P2P-Gossip (← Shard-Topics)         |
 | Κ06 | Event-Sourcing (← Lazy-Load-Replay) |
 
 ---

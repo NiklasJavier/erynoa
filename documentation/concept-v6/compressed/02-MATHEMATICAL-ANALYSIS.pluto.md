@@ -13,17 +13,17 @@ $$\boxed{\mathbb{E} = \sum_{s \in \mathcal{C}} \mathbb{A}(s) \cdot \sigma\!\left
 
 ### Δ1.2 Symboltafel
 
-| Symbol | Definition | Domäne |
-|--------|-----------|--------|
-| $\mathcal{C}$ | Subjektmenge (DIDs) | $\mathcal{C} \subseteq \text{DID}$ |
-| $\mathbb{A}$ | Aktivitätsfunktion | $[0,1)$ |
-| $\sigma$ | Sigmoidfunktion | $(0,1)$ |
-| $\mathbb{W}$ | Trust-Vektor | $\mathbb{R}^6$ |
-| $\mathbb{C}$ | Kausale Historie | $\mathbb{N}$ |
-| $\mathcal{S}$ | Trust-gedämpfte Surprisal | $\mathbb{R}_{\geq 0}$ |
-| $\hat{H}$ | Human-Faktor | $\{1.0, 1.2, 1.5\}$ |
-| $w$ | Temporalgewicht | $[0,1]$ |
-| $\kappa$ | Skalierungskonstante | $15.0$ |
+| Symbol        | Definition                | Domäne                             |
+| ------------- | ------------------------- | ---------------------------------- |
+| $\mathcal{C}$ | Subjektmenge (DIDs)       | $\mathcal{C} \subseteq \text{DID}$ |
+| $\mathbb{A}$  | Aktivitätsfunktion        | $[0,1)$                            |
+| $\sigma$      | Sigmoidfunktion           | $(0,1)$                            |
+| $\mathbb{W}$  | Trust-Vektor              | $\mathbb{R}^6$                     |
+| $\mathbb{C}$  | Kausale Historie          | $\mathbb{N}$                       |
+| $\mathcal{S}$ | Trust-gedämpfte Surprisal | $\mathbb{R}_{\geq 0}$              |
+| $\hat{H}$     | Human-Faktor              | $\{1.0, 1.2, 1.5\}$                |
+| $w$           | Temporalgewicht           | $[0,1]$                            |
+| $\kappa$      | Skalierungskonstante      | $15.0$                             |
 
 ---
 
@@ -34,11 +34,14 @@ $$\boxed{\mathbb{E} = \sum_{s \in \mathcal{C}} \mathbb{A}(s) \cdot \sigma\!\left
 $$\mathbb{A}(s) \coloneqq \frac{n}{n + \kappa_A} \quad\text{mit}\quad \kappa_A = 10$$
 
 **Eigenschaften:**
-$$\begin{aligned}
+
+$$
+\begin{aligned}
 \text{(i)}\quad   & \mathbb{A} : \mathbb{N} \to [0,1) \\
 \text{(ii)}\quad  & \frac{d\mathbb{A}}{dn} = \frac{\kappa_A}{(n+\kappa_A)^2} > 0 \quad\text{(monoton)} \\
 \text{(iii)}\quad & \frac{d^2\mathbb{A}}{dn^2} < 0 \quad\text{(konkav → diminishing returns)}
-\end{aligned}$$
+\end{aligned}
+$$
 
 ---
 
@@ -47,11 +50,14 @@ $$\begin{aligned}
 $$\sigma(x) \coloneqq \frac{1}{1 + e^{-x}}$$
 
 **Eigenschaften:**
-$$\begin{aligned}
+
+$$
+\begin{aligned}
 \sigma(0) &= 0.5 \\
 \sigma'(x) &= \sigma(x)(1-\sigma(x)) \\
 \lim_{x\to-\infty}\sigma(x) &= 0, \quad \lim_{x\to+\infty}\sigma(x) = 1
-\end{aligned}$$
+\end{aligned}
+$$
 
 **Skalierungsproblem V5:**
 $$\text{inner}_{\max} \approx 2817.5 \implies \sigma(\text{inner}) \approx 1 - 10^{-1223}$$
@@ -70,13 +76,13 @@ $$\|\mathbb{W}\|_w \coloneqq \sqrt{\sum_{i=1}^{6} w_i \cdot W_i^2}$$
 **Gewichtsmatrix:**
 $$\mathbf{w}_{\text{ctx}} = \begin{pmatrix} w_R & w_I & w_C & w_P & w_V & w_\Omega \end{pmatrix}$$
 
-| ctx | R | I | C | P | V | Ω |
-|-----|---|---|---|---|---|---|
-| Default | .17 | .17 | .17 | .17 | .16 | .16 |
-| Finance | .25 | .25 | .15 | .15 | .10 | .10 |
-| Social | .10 | .15 | .10 | .30 | .25 | .10 |
+| ctx        | R   | I   | C   | P   | V   | Ω   |
+| ---------- | --- | --- | --- | --- | --- | --- |
+| Default    | .17 | .17 | .17 | .17 | .16 | .16 |
+| Finance    | .25 | .25 | .15 | .15 | .10 | .10 |
+| Social     | .10 | .15 | .10 | .30 | .25 | .10 |
 | Governance | .15 | .20 | .10 | .10 | .10 | .35 |
-| Technical | .15 | .15 | .35 | .10 | .15 | .10 |
+| Technical  | .15 | .15 | .35 | .10 | .15 | .10 |
 
 **Invariante:** $\sum_i w_i = 1$
 
@@ -117,11 +123,13 @@ $$\boxed{t_{\text{chain}} = \left(\prod_{i=1}^{n} t_i\right)^{1/\sqrt{n}}}$$
 
 **Beweis der Eigenschaften:**
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 \text{(i) Identität:}\quad   & t_{\text{chain}}([t_1]) = t_1^{1/1} = t_1 \quad\checkmark \\[6pt]
 \text{(ii) Monotonie:}\quad & t_{\text{chain}} = t^{\sqrt{n}} \quad\text{(fällt für } t < 1\text{)} \\[6pt]
 \text{(iii) Dämpfung:}\quad & t^{\sqrt{n}} > t^n \quad\text{für } n > 1, t \in (0,1)
-\end{aligned}$$
+\end{aligned}
+$$
 
 **V5→V6 Fix:** Numerische Stabilität via direkter Produktberechnung statt log-sum-exp.
 
@@ -159,17 +167,18 @@ $$\frac{\partial \mathbb{E}}{\partial |\mathbb{C}|} = \mathbb{A} \cdot \sigma' \
 ### ∂4.2 κ-Sensitivität
 
 | $\kappa$ | $\sigma_{\text{newcomer}}$ | $\sigma_{\text{etabliert}}$ | Differenzierung |
-|----------|---------------------------|----------------------------|-----------------|
-| 10 | 0.52 | 0.998 | saturiert |
-| **15** | **0.51** | **0.88** | **optimal** |
-| 20 | 0.50 | 0.82 | komprimiert |
-| 30 | 0.50 | 0.73 | überkomprimiert |
+| -------- | -------------------------- | --------------------------- | --------------- |
+| 10       | 0.52                       | 0.998                       | saturiert       |
+| **15**   | **0.51**                   | **0.88**                    | **optimal**     |
+| 20       | 0.50                       | 0.82                        | komprimiert     |
+| 30       | 0.50                       | 0.73                        | überkomprimiert |
 
 ---
 
 ## §5 Zusammenfassung
 
-$$\begin{array}{|l|c|l|}
+$$
+\begin{array}{|l|c|l|}
 \hline
 \textbf{Komponente} & \textbf{Fix V6} & \textbf{Begründung} \\
 \hline
@@ -177,7 +186,8 @@ $$\begin{array}{|l|c|l|}
 \text{Konnektivität} & \ln(|\mathbb{C}|+1) & \text{Laplace-Smoothing} \\
 \text{Chain-Trust} & \text{Direkt-Produkt} & \text{Numerische Stabilität} \\
 \hline
-\end{array}$$
+\end{array}
+$$
 
 ---
 

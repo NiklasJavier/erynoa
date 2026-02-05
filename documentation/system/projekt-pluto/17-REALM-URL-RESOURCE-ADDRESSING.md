@@ -79,7 +79,7 @@ Jedes Realm definiert sein eigenes **ResourceSchema**, das die verfügbaren Ress
 // ECL-Definition eines Realm-Resource-Schemas
 resource_schema "gaming-realm-schema" {
     version: "1.0.0",
-    
+
     // Definierte Ressourcentypen
     types: {
         // Assets
@@ -88,51 +88,51 @@ resource_schema "gaming-realm-schema" {
             resolver: "storage",
             store: "assets",
             access: "policy-controlled",
-            
+
             // Felder die bei Auflösung verfügbar sind
             fields: ["id", "name", "rarity", "owner", "metadata"],
         },
-        
+
         // Benutzerprofile
         profile: {
             path_pattern: "profile/<did-suffix>",
             resolver: "identity",
             personal: true,
             access: "owner-or-public",
-            
+
             fields: ["display_name", "avatar", "bio", "achievements"],
         },
-        
+
         // Shared Stores
         store: {
             path_pattern: "store/<store-name>/<key>",
             resolver: "storage",
             access: "realm-policy",
-            
+
             // Dynamisch basierend auf Store-Schema
             fields: "dynamic",
         },
-        
+
         // Contracts
         contract: {
             path_pattern: "contract/<contract-name>/<method>",
             resolver: "eclvm",
             access: "contract-policy",
-            
+
             // Callable methods
             methods: ["state", "call", "events"],
         },
-        
+
         // Events
         event: {
             path_pattern: "event/<event-type>/<timestamp>",
             resolver: "event-log",
             access: "members-only",
-            
+
             fields: ["type", "data", "emitter", "timestamp"],
         },
     },
-    
+
     // Default für unbekannte Typen
     fallback: {
         resolver: "storage",
@@ -217,20 +217,20 @@ pub trait ResourceResolver {
 pub fn resolve_url(url: &str, requester: &DID) -> Result<ResolvedResource> {
     // 1. Parse URL
     let parsed = ErnyoaUrl::parse(url)?;
-    
+
     // 2. Resolve Realm-ID (Alias → DID wenn nötig)
     let realm_id = resolve_realm_id(&parsed.authority)?;
-    
+
     // 3. Lade Realm-Schema
     let schema = load_realm_schema(&realm_id)?;
-    
+
     // 4. Match Resource-Type gegen Schema
     let type_def = schema.match_type(&parsed.resource_type)
         .ok_or(Error::UnknownResourceType)?;
-    
+
     // 5. Parse Path gemäß Type-Pattern
     let path_components = type_def.parse_path(&parsed.resource_path)?;
-    
+
     // 6. Prüfe Access-Policy
     let access_ctx = AccessContext {
         requester: requester.clone(),
@@ -238,13 +238,13 @@ pub fn resolve_url(url: &str, requester: &DID) -> Result<ResolvedResource> {
         resource_type: parsed.resource_type.clone(),
         path: path_components.clone(),
     };
-    
+
     let access_result = evaluate_access(&type_def.access, &access_ctx)?;
-    
+
     if !access_result.allowed {
         return Err(Error::AccessDenied(access_result.reason));
     }
-    
+
     // 7. Resolve via Resolver
     let resolver = get_resolver(&type_def.resolver)?;
     resolver.resolve(&ResolutionContext {
@@ -342,50 +342,50 @@ pub fn resolve_url(url: &str, requester: &DID) -> Result<ResolvedResource> {
 ```ecl
 // ECL: Open-Access-Policy für Realm
 open_access_policy "public-gaming-assets" {
-    
+
     // Welche Resource-Types sind öffentlich?
     public_types: {
-        
+
         // Asset-Metadata ist öffentlich lesbar
         "asset": {
             operations: ["read"],
-            
+
             // Nur bestimmte Felder
             fields: ["id", "name", "rarity", "image_url", "description"],
-            
+
             // Keine Ownership-Info
             exclude_fields: ["owner", "history", "internal_value"],
-            
+
             // Rate-Limiting für Non-Members
             rate_limit: {
                 requests_per_minute: 60,
                 burst: 10,
             },
         },
-        
+
         // Profile ist public wenn Owner erlaubt
         "profile": {
             operations: ["read"],
             condition: "resource.public == true",
             fields: ["display_name", "avatar", "bio"],
         },
-        
+
         // Realm-Meta ist immer public
         "meta": {
             operations: ["read"],
             fields: "*",  // Alle Felder
         },
     },
-    
+
     // Trust-Anforderungen für Non-Member-Zugriff
     non_member_requirements: {
         // Minimaler globaler Trust
         min_global_trust_omega: 0.1,
-        
+
         // Oder Mitglied in vertrautem Realm
         trusted_realms: ["root", "verified-users"],
     },
-    
+
     // Mana-Cost für Non-Member-Requests
     non_member_mana_cost: 2,  // 2× Standardkosten
 }
@@ -421,24 +421,24 @@ open_access_policy "public-gaming-assets" {
 ```ecl
 // Access-Evaluation mit Trust-Faktoren
 access_evaluation "trust-enhanced" {
-    
+
     // Base-Access aus Policy
     base_access: open_access_policy.evaluate(resource),
-    
+
     // Trust-Modifikation
     trust_modifier: {
         // Höherer Trust = mehr Access
         if requester.global_trust_omega > 0.8 {
             unlock_fields: ["history", "statistics"],
         },
-        
+
         // Negativer Trust = eingeschränkt
         if requester.global_trust_omega < 0.2 {
             rate_limit_factor: 0.5,  // Halb so viele Requests
             deny_fields: ["contact_info"],
         },
     },
-    
+
     // Crossing-Dampening (Κ23)
     if requester.is_cross_realm {
         trust_factor: crossing_trust(requester.home_realm, this.realm),
@@ -639,19 +639,19 @@ pub enum UrlOperation {
         version: Option<String>,
         at: Option<DateTime>,
     },
-    
+
     /// Write-Operationen (benötigen Signatur)
     Write {
         data: serde_json::Value,
         nonce: u64,
         signature: Signature,
     },
-    
+
     /// Subscribe (WebSocket/Gossip)
     Subscribe {
         events: Vec<String>,
     },
-    
+
     /// Execute (Contract-Call)
     Execute {
         method: String,
@@ -710,32 +710,32 @@ impl ErnyoaUrl {
         if !url.starts_with("erynoa://") {
             return Err(UrlParseError::InvalidScheme);
         }
-        
+
         let rest = &url[9..]; // Strip "erynoa://"
         let (authority_str, rest) = rest.split_once('/')
             .ok_or(UrlParseError::MissingAuthority)?;
-        
+
         let authority = if authority_str.starts_with("did:erynoa:") {
             RealmAuthority::Did(DID::parse(authority_str)?)
         } else {
             RealmAuthority::Alias(authority_str.to_string())
         };
-        
+
         // Parse rest (type/path?params#fragment)
         let (path_str, fragment) = rest.split_once('#')
             .map(|(p, f)| (p, Some(f.to_string())))
             .unwrap_or((rest, None));
-        
+
         let (path_str, params) = path_str.split_once('?')
             .map(|(p, q)| (p, Self::parse_query(q)))
             .unwrap_or((path_str, HashMap::new()));
-        
+
         let path_parts: Vec<&str> = path_str.split('/').collect();
         let resource_type = path_parts.first()
             .ok_or(UrlParseError::MissingResourceType)?
             .to_string();
         let path = path_parts[1..].iter().map(|s| s.to_string()).collect();
-        
+
         Ok(Self {
             authority,
             resource_type,
@@ -744,20 +744,20 @@ impl ErnyoaUrl {
             fragment,
         })
     }
-    
+
     /// Build URL String
     pub fn to_string(&self) -> String {
         let authority = match &self.authority {
             RealmAuthority::Did(did) => did.to_string(),
             RealmAuthority::Alias(alias) => alias.clone(),
         };
-        
+
         let path = if self.path.is_empty() {
             self.resource_type.clone()
         } else {
             format!("{}/{}", self.resource_type, self.path.join("/"))
         };
-        
+
         let query = if self.params.is_empty() {
             String::new()
         } else {
@@ -766,14 +766,14 @@ impl ErnyoaUrl {
                 .collect::<Vec<_>>()
                 .join("&"))
         };
-        
+
         let fragment = self.fragment.as_ref()
             .map(|f| format!("#{}", f))
             .unwrap_or_default();
-        
+
         format!("erynoa://{}/{}{}{}", authority, path, query, fragment)
     }
-    
+
     fn parse_query(query: &str) -> HashMap<String, String> {
         query.split('&')
             .filter_map(|pair| {
@@ -901,38 +901,38 @@ impl OpenAccessPolicy {
         if requester_trust.omega < self.non_member_requirements.min_global_trust_omega {
             return AccessResult::Denied("Insufficient global trust".into());
         }
-        
+
         // Check if type is public
         let type_access = match self.public_types.get(resource_type) {
             Some(ta) => ta,
             None => return AccessResult::Denied("Resource type not public".into()),
         };
-        
+
         // Check operation
         if !type_access.operations.contains(&operation.to_string()) {
             return AccessResult::Denied("Operation not allowed".into());
         }
-        
+
         // Evaluate condition if present
         if let Some(condition) = &type_access.condition {
             if !Self::evaluate_condition(condition, resource) {
                 return AccessResult::Denied("Condition not met".into());
             }
         }
-        
+
         // Build filtered fields
         let allowed_fields: Vec<String> = type_access.fields.iter()
             .filter(|f| !type_access.exclude_fields.contains(f))
             .cloned()
             .collect();
-        
+
         AccessResult::Allowed {
             fields: allowed_fields,
             rate_limit: type_access.rate_limit.clone(),
             mana_multiplier: self.non_member_mana_multiplier,
         }
     }
-    
+
     fn evaluate_condition(condition: &str, resource: &serde_json::Value) -> bool {
         // Simple condition evaluation (e.g., "resource.public == true")
         // Full implementation would use ECL evaluator
@@ -1023,19 +1023,19 @@ impl UrlResolver for ErnyoaUrlResolver {
     ) -> Result<ResolvedResource, ResolveError> {
         // 1. Resolve Realm Authority
         let realm_id = self.resolve_authority(&url.authority).await?;
-        
+
         // 2. Load Schema
         let schema = self.schema_cache.get_or_load(&realm_id).await?;
-        
+
         // 3. Get Type Definition
         let type_def = schema.types.get(&url.resource_type)
             .ok_or(ResolveError::UnknownResourceType)?;
-        
+
         // 4. Get Requester Context
         let membership = self.realm_registry
             .get_membership(&realm_id, requester).await.ok();
         let trust = self.get_requester_trust(requester, &realm_id).await?;
-        
+
         let ctx = ResolutionContext {
             realm_id: &realm_id,
             schema: &schema,
@@ -1043,13 +1043,13 @@ impl UrlResolver for ErnyoaUrlResolver {
             requester_membership: membership.as_ref(),
             requester_trust: &trust,
         };
-        
+
         // 5. Evaluate Access
         let access = self.access_evaluator.evaluate(&ctx, type_def, operation).await?;
         if let AccessResult::Denied(reason) = access {
             return Err(ResolveError::AccessDenied(reason));
         }
-        
+
         // 6. Resolve via appropriate resolver
         let data = match type_def.resolver.as_str() {
             "storage" => self.storage_resolver.resolve(&ctx, &url.path, type_def).await?,
@@ -1057,10 +1057,10 @@ impl UrlResolver for ErnyoaUrlResolver {
             "eclvm" => self.eclvm_resolver.resolve(&ctx, &url.path, operation).await?,
             _ => return Err(ResolveError::UnknownResolver),
         };
-        
+
         // 7. Filter fields based on access
         let filtered_data = self.filter_fields(data, &access)?;
-        
+
         Ok(ResolvedResource {
             url: url.to_string(),
             realm_id,
@@ -1151,20 +1151,20 @@ $ erynoa url access-policy gaming-dao
 
 ### 10.1 Neue Konstanten
 
-| Konstante | Name | Beschreibung |
-|-----------|------|--------------|
-| **Κ26** | URL-Schema | Erynoa URL Format: `erynoa://<realm>/<type>/<path>` |
-| **Κ27** | Resource-Resolution | Schema-basierte Auflösung von Ressourcen im Realm-Kontext |
-| **Κ28** | Open-Access-Policy | Policy-gesteuerte öffentliche Ressourcen für Non-Members |
+| Konstante | Name                | Beschreibung                                              |
+| --------- | ------------------- | --------------------------------------------------------- |
+| **Κ26**   | URL-Schema          | Erynoa URL Format: `erynoa://<realm>/<type>/<path>`       |
+| **Κ27**   | Resource-Resolution | Schema-basierte Auflösung von Ressourcen im Realm-Kontext |
+| **Κ28**   | Open-Access-Policy  | Policy-gesteuerte öffentliche Ressourcen für Non-Members  |
 
 ### 10.2 Integration mit bestehenden Konstanten
 
-| Konstante | Integration |
-|-----------|-------------|
-| Κ1 | Schema-Vererbung folgt Regel-Vererbung |
-| Κ17/Κ18 | Membership-Status beeinflusst Access |
-| Κ23 | Cross-Realm URL-Resolution mit Crossing-Dampening |
-| Κ24 | Lokaler Trust bleibt unabhängig bei URL-Access |
+| Konstante | Integration                                       |
+| --------- | ------------------------------------------------- |
+| Κ1        | Schema-Vererbung folgt Regel-Vererbung            |
+| Κ17/Κ18   | Membership-Status beeinflusst Access              |
+| Κ23       | Cross-Realm URL-Resolution mit Crossing-Dampening |
+| Κ24       | Lokaler Trust bleibt unabhängig bei URL-Access    |
 
 ### 10.3 Erynoa-URL DNA
 

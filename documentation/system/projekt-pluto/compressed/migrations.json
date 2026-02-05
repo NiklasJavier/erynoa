@@ -1,182 +1,197 @@
 {
-  "meta": {
-    "version": "2.0.0",
-    "phase": "1.5: Migration Script Formalization",
-    "source_documents": ["05-MIGRATION-SCRIPTS.md"],
-    "description": "Mathematische Formalisierung der Projekt-Pluto Migrationslogik"
-  },
-  "migration_algebra": {
-    "domain": {
-      "FileSystem": "FS = (Paths: 𝒫(String), Contents: Map<Path, Bytes>)",
-      "GitState": "G = (Commits: List<Hash>, Branches: Map<Name, Hash>, WorkTree: FS)",
-      "CompilationState": "C ∈ {Success, Failure(Errors)}",
-      "TestState": "T = (Passed: ℕ, Failed: ℕ, Skipped: ℕ)"
-    },
-    "state_tuple": "M = (FS, G, C, T)"
-  },
-  "operations": {
-    "Φ_setup": {
-      "symbol": "Φ_setup",
-      "signature": "FS → FS'",
-      "precondition": "∃ src: Path ∧ IsDir(src)",
-      "postcondition": "∀d ∈ TargetDirs: IsDir(d) ∧ ∃ mod.rs ∈ d",
-      "target_dirs": [
-        "nervous_system/{event_sourcing, merkle, components, graph, infrastructure}",
-        "synapses/adapters",
-        "realm/{sharding, quota, gateway, saga}",
-        "storage/{kv, event_store, identity_store, trust_store, content_store, archive, realm, blueprint, metrics}",
-        "identity",
-        "engines"
-      ],
-      "idempotent": true,
-      "description": "Erstellt die Zielverzeichnisstruktur. Idempotent (mehrfach ausführbar)."
-    },
-    "Φ_extract": {
-      "symbol": "Φ_extract",
-      "signature": "(FS, Source, Target, LineRange) → FS'",
-      "precondition": "∃ Source ∧ |Lines(Source)| ≥ max(LineRange)",
-      "postcondition": "Content(Target) = Header ⊕ Slice(Source, LineRange)",
-      "formula": "FS'[Target] = inject_header(extract_lines(FS[Source], start, end))",
-      "instances": {
-        "EventBus": {
-          "source": "core/state.rs",
-          "target": "nervous_system/infrastructure/event_bus.rs",
-          "range": "[39, 400]"
-        }
-      },
-      "description": "Extrahiert Code-Segmente mit Header-Injektion."
-    },
-    "Φ_backup": {
-      "symbol": "Φ_backup",
-      "signature": "(FS, G) → (FS', BackupRef)",
-      "formula": "BackupRef = 'pluto_' ⊕ timestamp(now())",
-      "postcondition": "∃ BackupDir ∧ Content(BackupDir) ≅ Content(src)",
-      "reversible": true,
-      "description": "Erstellt timestamped Backup vor destruktiven Operationen."
-    },
-    "Φ_check": {
-      "symbol": "Φ_check",
-      "signature": "FS → (C, T)",
-      "formula": "C = cargo_check(FS) ∧ T = cargo_test(FS)",
-      "oracle": "Compiler + TestSuite",
-      "description": "Validiert Kompilierbarkeit und Testintegrität."
-    },
-    "Φ_imports": {
-      "symbol": "Φ_imports",
-      "signature": "FS → FS'",
-      "transformations": [
-        { "pattern": "crate::core::state::", "replacement": "crate::nervous_system::" },
-        { "pattern": "crate::peer::p2p::", "replacement": "crate::p2p::" },
-        { "pattern": "crate::local::", "replacement": "crate::storage::" }
-      ],
-      "formula": "∀f ∈ RustFiles(FS): FS'[f] = sed_replace(FS[f], transformations)",
-      "description": "Globale Import-Pfad-Transformation via sed."
-    },
-    "Φ_deprecate": {
-      "symbol": "Φ_deprecate",
-      "signature": "(OldPath, NewPath) → ReExportDecl",
-      "formula": "#[deprecated(since='0.5.0', note='Use {NewPath}')] pub use ...",
-      "purpose": "Backwards-Compatibility während Migration",
-      "description": "Generiert deprecated Re-Exports für sanfte Migration."
-    },
-    "Φ_rollback": {
-      "symbol": "Φ_rollback",
-      "signature": "(FS, BackupRef) → FS'",
-      "precondition": "∃ BackupRef ∧ IsValid(BackupRef)",
-      "postcondition": "FS' ≅ Snapshot(BackupRef)",
-      "inverse_of": "Φ_extract, Φ_imports",
-      "description": "Stellt vorherigen Zustand aus Backup wieder her."
-    }
-  },
-  "execution_graph": {
-    "nodes": ["Φ_backup", "Φ_setup", "Φ_extract", "Φ_check_1", "Φ_imports", "Φ_check_2", "Φ_deprecate"],
-    "edges": [
-      { "from": "START", "to": "Φ_backup", "label": "init" },
-      { "from": "Φ_backup", "to": "Φ_setup", "label": "seq" },
-      { "from": "Φ_setup", "to": "Φ_extract", "label": "seq" },
-      { "from": "Φ_extract", "to": "Φ_check_1", "label": "validate" },
-      { "from": "Φ_check_1", "to": "Φ_imports", "condition": "C = Success" },
-      { "from": "Φ_check_1", "to": "Φ_rollback", "condition": "C = Failure", "label": "abort" },
-      { "from": "Φ_imports", "to": "Φ_check_2", "label": "validate" },
-      { "from": "Φ_check_2", "to": "Φ_deprecate", "condition": "C = Success" },
-      { "from": "Φ_check_2", "to": "Φ_rollback", "condition": "C = Failure", "label": "abort" },
-      { "from": "Φ_deprecate", "to": "END", "label": "complete" }
-    ],
-    "formula": "Pipeline = Φ_backup ; Φ_setup ; (Φ_extract ; Φ_check)* ; Φ_imports ; Φ_check ; Φ_deprecate"
-  },
-  "constraints": {
-    "M1": {
-      "id": "M1",
-      "name": "BackupBeforeDestruction",
-      "formalism": "∀ Φ_destructive: ∃ Φ_backup < Φ_destructive",
-      "description": "Jede destruktive Operation muss ein Backup vorausgehen."
-    },
-    "M2": {
-      "id": "M2",
-      "name": "CheckAfterMutation",
-      "formalism": "∀ Φ_mutate ∈ {Φ_extract, Φ_imports}: Φ_mutate → Φ_check",
-      "description": "Nach jeder Mutation muss validiert werden."
-    },
-    "M3": {
-      "id": "M3",
-      "name": "RollbackSafety",
-      "formalism": "Φ_rollback(Φ_rollback(s, ref), ref) = Φ_rollback(s, ref)",
-      "description": "Rollback ist idempotent."
-    },
-    "M4": {
-      "id": "M4",
-      "name": "AtomicPhase",
-      "formalism": "Phase_complete ⟺ (C = Success ∧ T.Failed = 0)",
-      "description": "Eine Phase gilt nur bei grünem Build + Tests als abgeschlossen."
-    },
-    "M5": {
-      "id": "M5",
-      "name": "GitTrace",
-      "formalism": "∀ Phase_i: ∃ commit_i ∈ G.Commits",
-      "description": "Jede Phase muss als Git-Commit dokumentiert sein."
-    }
-  },
-  "git_workflow": {
-    "branch_formula": "Branch = 'refactor/projekt-pluto'",
-    "commit_pattern": "Phase {i}: {description}",
-    "merge_condition": "∀ Φ_check: C = Success",
-    "tag": "v0.5.0",
-    "operations": {
-      "create_branch": "G' = G[branches += {Branch → HEAD}]",
-      "commit": "G' = G[commits += {Hash(diff)}, HEAD → Hash]",
-      "merge": "G' = G[main → merge(main, Branch)]",
-      "tag": "G' = G[tags += {'v0.5.0' → HEAD}]"
-    }
-  },
-  "metrics": {
-    "line_count": {
-      "formula": "Lines(module) = Σ |file| for file ∈ RustFiles(module)",
-      "purpose": "Validierung der Code-Verteilung nach Refactoring",
-      "target_modules": [
-        "nervous_system", "synapses", "identity", "engines", 
-        "realm", "protection", "p2p", "storage", "eclvm"
-      ]
-    },
-    "extraction_ratio": {
-      "formula": "Ratio = Lines(extracted) / Lines(original)",
-      "validation": "Ratio ≈ 1.0 (keine Code-Verluste)"
-    }
-  },
-  "synergies": {
-    "Migration->Git": {
-      "name": "Atomic Commits",
-      "formula": "Phase_complete ⟹ Commit",
-      "description": "Jede erfolgreich abgeschlossene Phase wird committet."
-    },
-    "Backup->Rollback": {
-      "name": "Reversibility Chain",
-      "formula": "Φ_rollback ∘ Φ_backup = id",
-      "description": "Backup + Rollback sind inverse Operationen."
-    },
-    "Check->Pipeline": {
-      "name": "Fail-Fast",
-      "formula": "C = Failure ⟹ ¬continue(Pipeline)",
-      "description": "Fehler stoppen die Pipeline sofort."
-    }
-  }
+	"meta": {
+		"version": "2.0.0",
+		"phase": "1.5: Migration Script Formalization",
+		"source_documents": ["05-MIGRATION-SCRIPTS.md"],
+		"description": "Mathematische Formalisierung der Projekt-Pluto Migrationslogik"
+	},
+	"migration_algebra": {
+		"domain": {
+			"FileSystem": "FS = (Paths: 𝒫(String), Contents: Map<Path, Bytes>)",
+			"GitState": "G = (Commits: List<Hash>, Branches: Map<Name, Hash>, WorkTree: FS)",
+			"CompilationState": "C ∈ {Success, Failure(Errors)}",
+			"TestState": "T = (Passed: ℕ, Failed: ℕ, Skipped: ℕ)"
+		},
+		"state_tuple": "M = (FS, G, C, T)"
+	},
+	"operations": {
+		"Φ_setup": {
+			"symbol": "Φ_setup",
+			"signature": "FS → FS'",
+			"precondition": "∃ src: Path ∧ IsDir(src)",
+			"postcondition": "∀d ∈ TargetDirs: IsDir(d) ∧ ∃ mod.rs ∈ d",
+			"target_dirs": [
+				"nervous_system/{event_sourcing, merkle, components, graph, infrastructure}",
+				"synapses/adapters",
+				"realm/{sharding, quota, gateway, saga}",
+				"storage/{kv, event_store, identity_store, trust_store, content_store, archive, realm, blueprint, metrics}",
+				"identity",
+				"engines"
+			],
+			"idempotent": true,
+			"description": "Erstellt die Zielverzeichnisstruktur. Idempotent (mehrfach ausführbar)."
+		},
+		"Φ_extract": {
+			"symbol": "Φ_extract",
+			"signature": "(FS, Source, Target, LineRange) → FS'",
+			"precondition": "∃ Source ∧ |Lines(Source)| ≥ max(LineRange)",
+			"postcondition": "Content(Target) = Header ⊕ Slice(Source, LineRange)",
+			"formula": "FS'[Target] = inject_header(extract_lines(FS[Source], start, end))",
+			"instances": {
+				"EventBus": {
+					"source": "core/state.rs",
+					"target": "nervous_system/infrastructure/event_bus.rs",
+					"range": "[39, 400]"
+				}
+			},
+			"description": "Extrahiert Code-Segmente mit Header-Injektion."
+		},
+		"Φ_backup": {
+			"symbol": "Φ_backup",
+			"signature": "(FS, G) → (FS', BackupRef)",
+			"formula": "BackupRef = 'pluto_' ⊕ timestamp(now())",
+			"postcondition": "∃ BackupDir ∧ Content(BackupDir) ≅ Content(src)",
+			"reversible": true,
+			"description": "Erstellt timestamped Backup vor destruktiven Operationen."
+		},
+		"Φ_check": {
+			"symbol": "Φ_check",
+			"signature": "FS → (C, T)",
+			"formula": "C = cargo_check(FS) ∧ T = cargo_test(FS)",
+			"oracle": "Compiler + TestSuite",
+			"description": "Validiert Kompilierbarkeit und Testintegrität."
+		},
+		"Φ_imports": {
+			"symbol": "Φ_imports",
+			"signature": "FS → FS'",
+			"transformations": [
+				{ "pattern": "crate::core::state::", "replacement": "crate::nervous_system::" },
+				{ "pattern": "crate::peer::p2p::", "replacement": "crate::p2p::" },
+				{ "pattern": "crate::local::", "replacement": "crate::storage::" }
+			],
+			"formula": "∀f ∈ RustFiles(FS): FS'[f] = sed_replace(FS[f], transformations)",
+			"description": "Globale Import-Pfad-Transformation via sed."
+		},
+		"Φ_deprecate": {
+			"symbol": "Φ_deprecate",
+			"signature": "(OldPath, NewPath) → ReExportDecl",
+			"formula": "#[deprecated(since='0.5.0', note='Use {NewPath}')] pub use ...",
+			"purpose": "Backwards-Compatibility während Migration",
+			"description": "Generiert deprecated Re-Exports für sanfte Migration."
+		},
+		"Φ_rollback": {
+			"symbol": "Φ_rollback",
+			"signature": "(FS, BackupRef) → FS'",
+			"precondition": "∃ BackupRef ∧ IsValid(BackupRef)",
+			"postcondition": "FS' ≅ Snapshot(BackupRef)",
+			"inverse_of": "Φ_extract, Φ_imports",
+			"description": "Stellt vorherigen Zustand aus Backup wieder her."
+		}
+	},
+	"execution_graph": {
+		"nodes": [
+			"Φ_backup",
+			"Φ_setup",
+			"Φ_extract",
+			"Φ_check_1",
+			"Φ_imports",
+			"Φ_check_2",
+			"Φ_deprecate"
+		],
+		"edges": [
+			{ "from": "START", "to": "Φ_backup", "label": "init" },
+			{ "from": "Φ_backup", "to": "Φ_setup", "label": "seq" },
+			{ "from": "Φ_setup", "to": "Φ_extract", "label": "seq" },
+			{ "from": "Φ_extract", "to": "Φ_check_1", "label": "validate" },
+			{ "from": "Φ_check_1", "to": "Φ_imports", "condition": "C = Success" },
+			{ "from": "Φ_check_1", "to": "Φ_rollback", "condition": "C = Failure", "label": "abort" },
+			{ "from": "Φ_imports", "to": "Φ_check_2", "label": "validate" },
+			{ "from": "Φ_check_2", "to": "Φ_deprecate", "condition": "C = Success" },
+			{ "from": "Φ_check_2", "to": "Φ_rollback", "condition": "C = Failure", "label": "abort" },
+			{ "from": "Φ_deprecate", "to": "END", "label": "complete" }
+		],
+		"formula": "Pipeline = Φ_backup ; Φ_setup ; (Φ_extract ; Φ_check)* ; Φ_imports ; Φ_check ; Φ_deprecate"
+	},
+	"constraints": {
+		"M1": {
+			"id": "M1",
+			"name": "BackupBeforeDestruction",
+			"formalism": "∀ Φ_destructive: ∃ Φ_backup < Φ_destructive",
+			"description": "Jede destruktive Operation muss ein Backup vorausgehen."
+		},
+		"M2": {
+			"id": "M2",
+			"name": "CheckAfterMutation",
+			"formalism": "∀ Φ_mutate ∈ {Φ_extract, Φ_imports}: Φ_mutate → Φ_check",
+			"description": "Nach jeder Mutation muss validiert werden."
+		},
+		"M3": {
+			"id": "M3",
+			"name": "RollbackSafety",
+			"formalism": "Φ_rollback(Φ_rollback(s, ref), ref) = Φ_rollback(s, ref)",
+			"description": "Rollback ist idempotent."
+		},
+		"M4": {
+			"id": "M4",
+			"name": "AtomicPhase",
+			"formalism": "Phase_complete ⟺ (C = Success ∧ T.Failed = 0)",
+			"description": "Eine Phase gilt nur bei grünem Build + Tests als abgeschlossen."
+		},
+		"M5": {
+			"id": "M5",
+			"name": "GitTrace",
+			"formalism": "∀ Phase_i: ∃ commit_i ∈ G.Commits",
+			"description": "Jede Phase muss als Git-Commit dokumentiert sein."
+		}
+	},
+	"git_workflow": {
+		"branch_formula": "Branch = 'refactor/projekt-pluto'",
+		"commit_pattern": "Phase {i}: {description}",
+		"merge_condition": "∀ Φ_check: C = Success",
+		"tag": "v0.5.0",
+		"operations": {
+			"create_branch": "G' = G[branches += {Branch → HEAD}]",
+			"commit": "G' = G[commits += {Hash(diff)}, HEAD → Hash]",
+			"merge": "G' = G[main → merge(main, Branch)]",
+			"tag": "G' = G[tags += {'v0.5.0' → HEAD}]"
+		}
+	},
+	"metrics": {
+		"line_count": {
+			"formula": "Lines(module) = Σ |file| for file ∈ RustFiles(module)",
+			"purpose": "Validierung der Code-Verteilung nach Refactoring",
+			"target_modules": [
+				"nervous_system",
+				"synapses",
+				"identity",
+				"engines",
+				"realm",
+				"protection",
+				"p2p",
+				"storage",
+				"eclvm"
+			]
+		},
+		"extraction_ratio": {
+			"formula": "Ratio = Lines(extracted) / Lines(original)",
+			"validation": "Ratio ≈ 1.0 (keine Code-Verluste)"
+		}
+	},
+	"synergies": {
+		"Migration->Git": {
+			"name": "Atomic Commits",
+			"formula": "Phase_complete ⟹ Commit",
+			"description": "Jede erfolgreich abgeschlossene Phase wird committet."
+		},
+		"Backup->Rollback": {
+			"name": "Reversibility Chain",
+			"formula": "Φ_rollback ∘ Φ_backup = id",
+			"description": "Backup + Rollback sind inverse Operationen."
+		},
+		"Check->Pipeline": {
+			"name": "Fail-Fast",
+			"formula": "C = Failure ⟹ ¬continue(Pipeline)",
+			"description": "Fehler stoppen die Pipeline sofort."
+		}
+	}
 }

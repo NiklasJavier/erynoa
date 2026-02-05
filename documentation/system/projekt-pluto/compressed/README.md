@@ -11,13 +11,14 @@ The Pluto Universe $\mathbb{U}$ is defined as a 7-tuple:
 $$ \mathbb{U} := \langle \Sigma, \mathcal{E}, \mathcal{R}, \mathcal{N}, \mathcal{K}, \mathcal{O}, \Phi \rangle $$
 
 Where:
-*   $\Sigma$: **State Space** (The set of all possible valid system states)
-*   $\mathcal{E}$: **Entity Algebra** (Fundamental types, objects, and their structures)
-*   $\mathcal{R}$: **Relation Topology** (Static dependencies and structural graph)
-*   $\mathcal{N}$: **Nervous System** (Dynamic event propagation and integration)
-*   $\mathcal{K}$: **Invariant Space** (Axioms that define validity: $s \in \Sigma \iff \bigwedge K(s)$)
-*   $\mathcal{O}$: **Operational Dynamics** (Cost functions $\mathbb{C}$ and transition functions $\delta$)
-*   $\Phi$: **Meta-Evolution** (Algebra of code transformations and migration)
+
+- $\Sigma$: **State Space** (The set of all possible valid system states)
+- $\mathcal{E}$: **Entity Algebra** (Fundamental types, objects, and their structures)
+- $\mathcal{R}$: **Relation Topology** (Static dependencies and structural graph)
+- $\mathcal{N}$: **Nervous System** (Dynamic event propagation and integration)
+- $\mathcal{K}$: **Invariant Space** (Axioms that define validity: $s \in \Sigma \iff \bigwedge K(s)$)
+- $\mathcal{O}$: **Operational Dynamics** (Cost functions $\mathbb{C}$ and transition functions $\delta$)
+- $\Phi$: **Meta-Evolution** (Algebra of code transformations and migration)
 
 ---
 
@@ -36,8 +37,9 @@ $$
 $$
 
 **Core Properties:**
-*   $\text{address}(\text{blob}) \equiv \text{hash}(\text{content})$ (Content-Addressing)
-*   $\text{id}(\iota) \equiv \text{did:erynoa:...}$ (Decentralized Identity)
+
+- $\text{address}(\text{blob}) \equiv \text{hash}(\text{content})$ (Content-Addressing)
+- $\text{id}(\iota) \equiv \text{did:erynoa:...}$ (Decentralized Identity)
 
 ---
 
@@ -45,10 +47,10 @@ $$
 
 The Unified State $\Sigma$ is the Cartesian product of domain-specific substates:
 
-$$ \Sigma_{Global} = \Sigma_{\tau} \times \Sigma_{\text{Event}} \times \Sigma_{\rho} \times \Sigma_{\Omega} \times \Sigma_{\text{Prot}} $$
+$$ \Sigma*{Global} = \Sigma*{\tau} \times \Sigma*{\text{Event}} \times \Sigma*{\rho} \times \Sigma*{\Omega} \times \Sigma*{\text{Prot}} $$
 
 Defined recursively as:
-$$ S_{t+1} = \delta(S_t, e_t) $$
+$$ S\_{t+1} = \delta(S_t, e_t) $$
 Where $e_t$ is an event and $\delta$ is the transition function.
 
 ---
@@ -56,6 +58,7 @@ Where $e_t$ is an event and $\delta$ is the transition function.
 ## 4. Interaction Topology ($\mathcal{R}$) & Nervous System ($\mathcal{N}$)
 
 ### 4.1 Integration Layers ($L$)
+
 The system is stratified into layers $L_0 \dots L_4$:
 
 $$
@@ -69,22 +72,26 @@ L_4 = \{ \text{Protection} \} & \text{(Immune System)}
 $$
 
 ### 4.2 Relational Logic ($\mathcal{R}$)
+
 Let relation operators be defined as:
-*   $A \rhd B$: "A depends on B" (Structural Dependency)
-*   $A \to B$: "A triggers B" (Event Causality)
-*   $A \vdash B$: "A validates B" (Constraint Enforcement)
+
+- $A \rhd B$: "A depends on B" (Structural Dependency)
+- $A \to B$: "A triggers B" (Event Causality)
+- $A \vdash B$: "A validates B" (Constraint Enforcement)
 
 **The System Graph:**
-$$ G_{\text{Pluto}} = (V, E) \text{ where } V = \bigcup L_i, \ E \subseteq V \times V \times \{\rhd, \to, \vdash\} $$
+$$ G\_{\text{Pluto}} = (V, E) \text{ where } V = \bigcup L_i, \ E \subseteq V \times V \times \{\rhd, \to, \vdash\} $$
 
 **Key Theorems:**
-*   **Isolation Theorem**: $\forall x \in L_i, y \in L_j: i < j \implies \neg (y \rhd x)$ (Higher layers cannot strictly depend on lower layers, except via inversion/events).
-*   **Trust Dependence**: $\forall \text{Action } \alpha: \text{execute}(\alpha) \rhd \tau(\text{actor}) > \theta_{\alpha}$
+
+- **Isolation Theorem**: $\forall x \in L_i, y \in L_j: i < j \implies \neg (y \rhd x)$ (Higher layers cannot strictly depend on lower layers, except via inversion/events).
+- **Trust Dependence**: $\forall \text{Action } \alpha: \text{execute}(\alpha) \rhd \tau(\text{actor}) > \theta_{\alpha}$
 
 ### 4.3 Nervous Dispatch Logic ($\mathcal{N}$)
+
 The propagation function $\mathcal{P}$ models the SynapseHub:
 
-$$ \mathcal{P}(e) = \bigcup_{o \in \text{Observers}(e)} o.\text{notify}(e) $$
+$$ \mathcal{P}(e) = \bigcup\_{o \in \text{Observers}(e)} o.\text{notify}(e) $$
 
 **Cycle:** `Input` $\xrightarrow{P2P}$ `Ingress` $\xrightarrow{\Sigma.\text{apply}}$ `State Change` $\xrightarrow{\text{Hub}}$ `Dispatch` $\xrightarrow{\text{Observer}}$ `Reaction`
 
@@ -93,34 +100,39 @@ $$ \mathcal{P}(e) = \bigcup_{o \in \text{Observers}(e)} o.\text{notify}(e) $$
 ## 5. Axiomatic Basis ($\mathcal{K}$)
 
 A state $S$ is valid iff it satisfies all constraint predicates:
-$$ \text{Valid}(S) \iff \bigwedge_{k \in \mathcal{K}} k(S) \equiv \top $$
+$$ \text{Valid}(S) \iff \bigwedge\_{k \in \mathcal{K}} k(S) \equiv \top $$
 
 ### Subspace $\mathcal{K}_{\text{Realm}}$
-*   **K1 (Monotonicity)**: $\rho_{child} \subset \rho_{parent} \implies \text{Rules}(\rho_{parent}) \subseteq \text{Rules}(\rho_{child})$
-*   **K22 (Isolation)**: $\text{Access}(\iota, \rho) \iff \iota \in \text{Members}(\rho) \lor \text{Crossing}(\iota, \rho)$
+
+- **K1 (Monotonicity)**: $\rho_{child} \subset \rho_{parent} \implies \text{Rules}(\rho_{parent}) \subseteq \text{Rules}(\rho_{child})$
+- **K22 (Isolation)**: $\text{Access}(\iota, \rho) \iff \iota \in \text{Members}(\rho) \lor \text{Crossing}(\iota, \rho)$
 
 ### Subspace $\mathcal{K}_{\text{Trust}}$
-*   **K2 (Boundedness)**: $\forall \vec{v} \in \vec{\tau}: 0 \le v_i \le 1$
-*   **K4 (Asymmetry)**: $|\Delta\tau_{\text{neg}}| = \lambda \cdot |\Delta\tau_{\text{pos}}| \quad (\lambda > 1)$
-*   **K6 (Sovereignty)**: $\text{Keys}(\iota) \subset \text{Control}(\iota)$
+
+- **K2 (Boundedness)**: $\forall \vec{v} \in \vec{\tau}: 0 \le v_i \le 1$
+- **K4 (Asymmetry)**: $|\Delta\tau_{\text{neg}}| = \lambda \cdot |\Delta\tau_{\text{pos}}| \quad (\lambda > 1)$
+- **K6 (Sovereignty)**: $\text{Keys}(\iota) \subset \text{Control}(\iota)$
 
 ### Subspace $\mathcal{K}_{\text{System}}$
-*   **K9 (Causality)**: $e_2 \to e_1 \implies t(e_2) > t(e_1)$
-*   **K19 (Homeostasis)**: $\text{Gini}(\Sigma_{\tau}) > \theta_{\text{calc}} \implies \text{Trigger}(\text{SystemMode::Degraded})$
+
+- **K9 (Causality)**: $e_2 \to e_1 \implies t(e_2) > t(e_1)$
+- **K19 (Homeostasis)**: $\text{Gini}(\Sigma_{\tau}) > \theta_{\text{calc}} \implies \text{Trigger}(\text{SystemMode::Degraded})$
 
 ---
 
 ## 6. Operational Dynamics ($\mathcal{O}$) & Synergies ($\mathcal{S}$)
 
 ### 6.1 Cost Functions ($\mathbb{C}$)
+
 Execution is constrained by resource availability (Mana $\mu$, Gas $\gamma$).
 
-$$ \text{Cost}(\alpha) = \gamma(\alpha) \cdot P_{\text{gas}} + \mu(\alpha) \cdot P_{\text{mana}} $$
+$$ \text{Cost}(\alpha) = \gamma(\alpha) \cdot P*{\text{gas}} + \mu(\alpha) \cdot P*{\text{mana}} $$
 
-*   **Storage**: $\mathbb{C}_{\text{store}}(b) = \text{size}(b) \cdot \mu_{\text{rent}} + \text{ops} \cdot \gamma$
-*   **Execution**: $\mathbb{C}_{\text{exec}}(\Psi) = \int \text{cycles}(t) dt \cdot \gamma$
+- **Storage**: $\mathbb{C}_{\text{store}}(b) = \text{size}(b) \cdot \mu_{\text{rent}} + \text{ops} \cdot \gamma$
+- **Execution**: $\mathbb{C}_{\text{exec}}(\Psi) = \int \text{cycles}(t) dt \cdot \gamma$
 
 ### 6.2 Synergy Coefficients ($Syn$)
+
 Coupling strength between modules $A, B$ is defined as $S(A,B) \in [0,1]$:
 
 $$
@@ -137,12 +149,13 @@ $$
 
 Refactoring and migration are formalized as a transformation algebra on the Source Code $SC$.
 
-$$ \Phi_{\text{Migration}} = \langle \Phi_{\text{safe}}, \Phi_{\text{trans}}, \Phi_{\text{verify}} \rangle $$
+$$ \Phi*{\text{Migration}} = \langle \Phi*{\text{safe}}, \Phi*{\text{trans}}, \Phi*{\text{verify}} \rangle $$
 
 **The Universal Migration Function:**
-$$ SC_{new} = \Phi_{\text{deprecate}} \circ \Phi_{\text{check}} \circ \Phi_{\text{imports}} \circ \Phi_{\text{extract}} \circ \Phi_{\text{setup}} \circ \Phi_{\text{backup}}(SC_{old}) $$
+$$ SC*{new} = \Phi*{\text{deprecate}} \circ \Phi*{\text{check}} \circ \Phi*{\text{imports}} \circ \Phi*{\text{extract}} \circ \Phi*{\text{setup}} \circ \Phi*{\text{backup}}(SC*{old}) $$
 
 **Invariants:**
+
 1.  **Safety**: $\Phi_{\text{rollback}}(\Phi_{\text{backup}}(S)) \equiv S$
 2.  **Atomic**: $\text{Commit}(S') \iff \text{Build}(S') \land \text{Test}(S') \equiv \top$
 
