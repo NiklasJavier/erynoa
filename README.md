@@ -1,6 +1,6 @@
 <div align="center">
 
-# Erynoa
+# Erynoa (λ-𝕌ₚ)
 
 **Dezentrales Protokoll für vertrauensbasierte Zusammenarbeit**
 
